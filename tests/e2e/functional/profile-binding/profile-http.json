@@ -1,0 +1,11 @@
+{
+  "name": "E2E HTTP Profile",
+  "type": "http",
+  "description": "HTTP profile for E2E functional testing",
+  "config": {
+    "base_url": "https://api.example.com/v2",
+    "auth_key": "e2e-secret-key-42",
+    "timeout": 30
+  },
+  "tags": ["e2e"]
+}

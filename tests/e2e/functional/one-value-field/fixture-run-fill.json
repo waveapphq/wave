@@ -1,0 +1,226 @@
+{
+  "name": "zz-11541-s3-run-fill-stored",
+  "version": "1.0.0",
+  "description": "Blocks stored without their choice fields: the run fills Method, operation and kind from the defaults",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8e295337-b6c6-4037-89f9-5296988fda82",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Connect Kwok",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session whose namespace is the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NAMESPACE__",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ab889b98-54a6-4449-9cdc-0fb9181384b5",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 210 },
+        "data": {
+          "label": "Echo Method Left Out",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "No method and no timeout stored",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "verify_ssl": false
+            },
+            "outputBindings": {
+              "status_code": "echo_status",
+              "body": "echo_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "da65e788-32b6-4709-bf55-1d29e6c84c90",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 320 },
+        "data": {
+          "label": "Read Note Operation Left Out",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "No operation stored",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "path": "testdata://run-fill-note.txt"
+            },
+            "outputBindings": {
+              "content": "note_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "4535a31d-3479-40bf-b8e0-5fd3a53d55f0",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 430 },
+        "data": {
+          "label": "Read Book Operation Left Out",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "No operation stored",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "workbook": "testdata://run-fill-book.xlsx"
+            },
+            "outputBindings": {
+              "table": "book_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "92ddf103-4946-41eb-b1dc-921c84432da2",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 540 },
+        "data": {
+          "label": "Roll Kind Left Out",
+          "elementType": "k8s-rollout",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "No kind and no operation stored",
+          "hasNewerVersion": false,
+          "expressionFields": ["session"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "name": "__WORKLOAD__"
+            },
+            "outputBindings": {
+              "summary": "roll_summary"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "0dab7f57-198d-4218-b3d0-c87be420b978",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 650 },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Run end marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'run-fill-stored-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "1d58696c-9ec4-4c47-9d59-4eac1482ce82",
+        "source": "start-node",
+        "target": "8e295337-b6c6-4037-89f9-5296988fda82",
+        "type": "default"
+      },
+      {
+        "id": "201727e3-57e3-434c-9d0d-bdd2ac9927ca",
+        "source": "8e295337-b6c6-4037-89f9-5296988fda82",
+        "target": "ab889b98-54a6-4449-9cdc-0fb9181384b5",
+        "type": "default"
+      },
+      {
+        "id": "14f1ab72-5085-4e57-bc59-7e042b123bd7",
+        "source": "ab889b98-54a6-4449-9cdc-0fb9181384b5",
+        "target": "da65e788-32b6-4709-bf55-1d29e6c84c90",
+        "type": "default"
+      },
+      {
+        "id": "83f6676b-acaf-4473-adb7-57af02afa139",
+        "source": "da65e788-32b6-4709-bf55-1d29e6c84c90",
+        "target": "4535a31d-3479-40bf-b8e0-5fd3a53d55f0",
+        "type": "default"
+      },
+      {
+        "id": "060cac34-3925-4bcb-a843-9c7336c4735a",
+        "source": "4535a31d-3479-40bf-b8e0-5fd3a53d55f0",
+        "target": "92ddf103-4946-41eb-b1dc-921c84432da2",
+        "type": "default"
+      },
+      {
+        "id": "d3a8a2af-8cec-453c-b9a4-bea94b19c8e1",
+        "source": "92ddf103-4946-41eb-b1dc-921c84432da2",
+        "target": "0dab7f57-198d-4218-b3d0-c87be420b978",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_session": { "type": "string", "scope": "test" },
+    "echo_status": { "type": "integer", "scope": "test" },
+    "echo_body": { "type": "string", "scope": "test" },
+    "note_text": { "type": "string", "scope": "test" },
+    "book_rows": { "type": "table", "scope": "test" },
+    "roll_summary": { "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

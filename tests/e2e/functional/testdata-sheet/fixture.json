@@ -1,0 +1,54 @@
+{
+  "name": "Test Data Sheet E2E Test",
+  "version": "1.0.0",
+  "description": "One Log block; the workflow exists only so the Test Data sheet has a saved test to hang its files on.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-sheet-ready",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Sheet Ready Marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'testdata-sheet-ready'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-sheet-ready",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

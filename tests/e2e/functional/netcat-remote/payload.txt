@@ -1,0 +1,2 @@
+netcat remote payload: read on WAVE, shipped to the remote host
+second line keeps its tab	here and its café

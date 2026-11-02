@@ -1,0 +1,808 @@
+{
+  "name": "Remote Execution nested __TOKEN__",
+  "version": "1.0.0",
+  "description": "Remote Execution containers inside a Try/Catch try path, a Parallel lane, a Switch/Case branch and a For Loop body read the host's hostname file.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-wave-host",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "hostname on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "hostname"
+            },
+            "outputBindings": {
+              "stdout": "wave_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the host session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-host",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "hostname over the SSH session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "hostname",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "try-block",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Container on the try path",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "rx-try",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 480
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote Execution on the try path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-try",
+        "type": "workflowNode",
+        "position": {
+          "x": 960,
+          "y": 560
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the hostname file on the try path",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/hostname"
+            },
+            "outputBindings": {
+              "content": "try_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-block",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Container in a lane",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "remote"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "local"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "rx-lane",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 780
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote Execution in a lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-lane",
+        "type": "workflowNode",
+        "position": {
+          "x": 960,
+          "y": 860
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the hostname file in a lane",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/hostname"
+            },
+            "outputBindings": {
+              "content": "lane_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-lane-local",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The other lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nested-lane-local-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "switch-block",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1040
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Container in a case branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "remote route",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "route",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "remote",
+                      "reference_is_expression": false,
+                      "id": "route-cond-0"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "rx-case",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 1120
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote Execution in a case branch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-case",
+        "type": "workflowNode",
+        "position": {
+          "x": 960,
+          "y": 1200
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the hostname file in a case branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/hostname"
+            },
+            "outputBindings": {
+              "content": "case_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "loop-block",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1300
+        },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Container in a loop body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "i"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "rx-loop",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 1380
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote Execution in a loop body",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-loop",
+        "type": "workflowNode",
+        "position": {
+          "x": 960,
+          "y": 1460
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the hostname file in a loop body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/hostname"
+            },
+            "outputBindings": {
+              "content": "loop_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-loop",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 1540
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Per-iteration marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nested' + f'-loop-__TOKEN__ iter={i}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1640
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'remote-exec-nested-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-wave-host",
+        "type": "default"
+      },
+      {
+        "id": "e-wave-host-open",
+        "source": "sh-wave-host",
+        "target": "ssh-open",
+        "type": "default"
+      },
+      {
+        "id": "e-open-ssh-host",
+        "source": "ssh-open",
+        "target": "ssh-host",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-host-try",
+        "source": "ssh-host",
+        "target": "try-block",
+        "type": "default"
+      },
+      {
+        "id": "e-try-path",
+        "source": "try-block",
+        "target": "rx-try",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-rx-try-body",
+        "source": "rx-try",
+        "target": "fio-try",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-try-then",
+        "source": "try-block",
+        "target": "par-block",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-par-remote",
+        "source": "par-block",
+        "target": "rx-lane",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-rx-lane-body",
+        "source": "rx-lane",
+        "target": "fio-lane",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-par-local",
+        "source": "par-block",
+        "target": "log-lane-local",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-par-then",
+        "source": "par-block",
+        "target": "switch-block",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-switch-case",
+        "source": "switch-block",
+        "target": "rx-case",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-rx-case-body",
+        "source": "rx-case",
+        "target": "fio-case",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-switch-then",
+        "source": "switch-block",
+        "target": "loop-block",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-loop-body",
+        "source": "loop-block",
+        "target": "rx-loop",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-rx-loop-body",
+        "source": "rx-loop",
+        "target": "fio-loop",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-rx-loop-then",
+        "source": "rx-loop",
+        "target": "log-loop",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-loop-then",
+        "source": "loop-block",
+        "target": "log-done",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "wave_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "try_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lane_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "case_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "loop_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "route": {
+      "value": "remote",
+      "type": "string",
+      "scope": "test"
+    },
+    "i": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "V-CANVAS-FN-PARAM-DELETE-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with one local Function that already carries one input (`user_id`), one output (`result`), and one Function-local variable (`tmp`). The spec drills in, deletes each row, saves, reloads, drills back in - all three rows stay gone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [],
+              "edges": []
+            },
+            "inputs": [
+              {
+                "name": "user_id",
+                "type": "string",
+                "default": ""
+              }
+            ],
+            "outputs": [
+              {
+                "name": "result",
+                "type": "integer",
+                "default": 0
+              }
+            ],
+            "variables": [
+              {
+                "id": "var-tmp-seed",
+                "name": "tmp",
+                "type": "string",
+                "value": "x"
+              }
+            ],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

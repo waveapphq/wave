@@ -1,0 +1,496 @@
+{
+  "name": "Wait Until Control E2E",
+  "version": "1.0.0",
+  "description": "Four Wait Until permutations chained through their egress: a Retry wait whose lane makes the condition true, a Retry wait that runs out of time without failing the scope, a Watch wait whose condition already holds, and a disabled wait.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 40 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before the wait chain",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-before'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "wait-p1",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 160 },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P1 retry succeeds",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "p1_status",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "200",
+                  "reference_is_expression": false,
+                  "id": "cond-p1"
+                }
+              ],
+              "timeout": 30000,
+              "check_interval": 300,
+              "message": "wu-p1 never landed",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": { "passed": "p1_passed", "elapsed": "p1_elapsed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "http-p1",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 300 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "P1 poll (2 failures then 200)",
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/retry?key=wu-p1-{run_key}&fail_count=2&fail_status=418'",
+              "method": "GET",
+              "timeout": 10,
+              "verify_ssl": false,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "p1_status" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 135, "height": 62 }
+      },
+      {
+        "id": "log-p1-round",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 420 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P1 round marker",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p1-round'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-p1-then",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P1 then",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p1-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "wait-p3",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 420 },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P3 times out, scope untouched",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "p3_status",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "200",
+                  "reference_is_expression": false,
+                  "id": "cond-p3"
+                }
+              ],
+              "timeout": 1500,
+              "check_interval": 300,
+              "message": "wu-p3 gave up",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": { "passed": "p3_passed", "elapsed": "p3_elapsed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "http-p3",
+        "type": "workflowNode",
+        "position": { "x": 180, "y": 560 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "P3 poll (never succeeds)",
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/retry?key=wu-p3-{run_key}&fail_count=999&fail_status=418'",
+              "method": "GET",
+              "timeout": 10,
+              "verify_ssl": false,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "p3_status" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 135, "height": 62 }
+      },
+      {
+        "id": "log-p3-round",
+        "type": "workflowNode",
+        "position": { "x": 180, "y": 680 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P3 round marker",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p3-round'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-p3-then",
+        "type": "workflowNode",
+        "position": { "x": 540, "y": 560 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P3 then",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p3-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "wait-p4",
+        "type": "workflowNode",
+        "position": { "x": 540, "y": 680 },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P4 watch, condition already true",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes",
+                  "reference_is_expression": false,
+                  "id": "cond-p4"
+                }
+              ],
+              "timeout": 30000,
+              "check_interval": 1000,
+              "message": "wu-p4 gave up",
+              "mode": "watch",
+              "fail_current_scope": false
+            },
+            "outputBindings": { "passed": "p4_passed", "elapsed": "p4_elapsed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-p4-then",
+        "type": "workflowNode",
+        "position": { "x": 540, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P4 then",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p4-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "wait-p5",
+        "type": "workflowNode",
+        "position": { "x": 540, "y": 920 },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P5 disabled",
+          "disabled": true,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "never",
+                  "reference_is_expression": false,
+                  "id": "cond-p5"
+                }
+              ],
+              "timeout": 2000,
+              "check_interval": 500,
+              "message": "wu-p5 gave up",
+              "mode": "retry",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-p5-retry",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1060 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 retry lane",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p5-retry'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-p5-then",
+        "type": "workflowNode",
+        "position": { "x": 740, "y": 1060 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 then",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-p5-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 740, "y": 1180 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the wait chain",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wu-after'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before-p1", "source": "log-before", "target": "wait-p1", "type": "default" },
+      {
+        "id": "e-p1-retry",
+        "source": "wait-p1",
+        "sourceHandle": "retry",
+        "target": "http-p1",
+        "type": "default"
+      },
+      { "id": "e-p1-poll-log", "source": "http-p1", "target": "log-p1-round", "type": "default" },
+      {
+        "id": "e-p1-then",
+        "source": "wait-p1",
+        "sourceHandle": "then",
+        "target": "log-p1-then",
+        "type": "default"
+      },
+      { "id": "e-p1-p3", "source": "log-p1-then", "target": "wait-p3", "type": "default" },
+      {
+        "id": "e-p3-retry",
+        "source": "wait-p3",
+        "sourceHandle": "retry",
+        "target": "http-p3",
+        "type": "default"
+      },
+      { "id": "e-p3-poll-log", "source": "http-p3", "target": "log-p3-round", "type": "default" },
+      {
+        "id": "e-p3-then",
+        "source": "wait-p3",
+        "sourceHandle": "then",
+        "target": "log-p3-then",
+        "type": "default"
+      },
+      { "id": "e-p3-p4", "source": "log-p3-then", "target": "wait-p4", "type": "default" },
+      { "id": "e-p4-then", "source": "wait-p4", "target": "log-p4-then", "type": "default" },
+      { "id": "e-p4-p5", "source": "log-p4-then", "target": "wait-p5", "type": "default" },
+      {
+        "id": "e-p5-retry",
+        "source": "wait-p5",
+        "sourceHandle": "retry",
+        "target": "log-p5-retry",
+        "type": "default"
+      },
+      {
+        "id": "e-p5-then",
+        "source": "wait-p5",
+        "sourceHandle": "then",
+        "target": "log-p5-then",
+        "type": "default"
+      },
+      { "id": "e-p5-after", "source": "log-p5-then", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "run_key": { "value": "local", "type": "string", "scope": "test" },
+    "ready": { "value": "yes", "type": "string", "scope": "test" },
+    "p1_status": { "value": 0, "type": "integer", "scope": "test" },
+    "p1_passed": { "value": false, "type": "boolean", "scope": "test" },
+    "p1_elapsed": { "value": 0, "type": "integer", "scope": "test" },
+    "p3_status": { "value": 0, "type": "integer", "scope": "test" },
+    "p3_passed": { "value": true, "type": "boolean", "scope": "test" },
+    "p3_elapsed": { "value": 0, "type": "integer", "scope": "test" },
+    "p4_passed": { "value": false, "type": "boolean", "scope": "test" },
+    "p4_elapsed": { "value": 99999, "type": "integer", "scope": "test" }
+  },
+  "metadata": {}
+}

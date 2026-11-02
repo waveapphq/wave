@@ -1,0 +1,220 @@
+{
+  "name": "zz-11541-s6a-look-boxes",
+  "version": "1.0.0",
+  "description": "Entry editor row boxes (FIELD-1, FIELD-10, FIELD-13): Headers holds a literal, a null and an {x} entry; Retryable Codes a literal, a null and an {x} item; a multipart Block holds a text part and a file part; File I/O's path has Browse. grid is a table with a null cell, nest a typed map and items a typed list whose text, List and Map entries are null.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ab168a03-f9b6-4415-a870-6cdf3419465c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Look Map List",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "headers.X-Expr",
+            "retryable_status_codes.2"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "http://127.0.0.1:9449/echo",
+              "headers": {
+                "X-Lit": "one",
+                "X-Null": null,
+                "X-Expr": "suffix"
+              },
+              "retryable_status_codes": [
+                "429",
+                null,
+                "'503'"
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "97748132-9c8d-4742-b613-d2a5863a1c8f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 170
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Look Parts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "url": "http://127.0.0.1:9449/echo",
+              "body_mode": "multipart",
+              "parts": [
+                {
+                  "kind": "text",
+                  "name": "note",
+                  "value": "hi"
+                },
+                {
+                  "kind": "file",
+                  "name": "upload",
+                  "source": "artifact://look/src.bin"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fa30b7f2-6773-4b3c-827d-48e6376e4d8f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 290
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Look Browse",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://look/out.txt",
+              "content": "look",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "70e3147a-848c-4032-8f7f-d65cff5148ba",
+        "source": "start-node",
+        "target": "ab168a03-f9b6-4415-a870-6cdf3419465c",
+        "type": "default"
+      },
+      {
+        "id": "72ea9821-bbb3-47f6-b77e-8e389050a4aa",
+        "source": "ab168a03-f9b6-4415-a870-6cdf3419465c",
+        "target": "97748132-9c8d-4742-b613-d2a5863a1c8f",
+        "type": "default"
+      },
+      {
+        "id": "df5f93da-1186-4d8c-a440-6dfb85e83e85",
+        "source": "97748132-9c8d-4742-b613-d2a5863a1c8f",
+        "target": "fa30b7f2-6773-4b3c-827d-48e6376e4d8f",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "suffix": {
+      "type": "string",
+      "scope": "test",
+      "value": "xyz"
+    },
+    "grid": {
+      "type": "table",
+      "scope": "test",
+      "value": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "integer"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "rows": [
+          [
+            1,
+            null
+          ],
+          [
+            2,
+            "beta"
+          ]
+        ]
+      }
+    },
+    "nest": {
+      "type": "map",
+      "scope": "test",
+      "value": {
+        "t": null,
+        "l": null,
+        "m": null,
+        "s": "x"
+      },
+      "elementTypes": {
+        "t": "string",
+        "l": "array",
+        "m": "map",
+        "s": "string"
+      }
+    },
+    "items": {
+      "type": "array",
+      "scope": "test",
+      "value": [
+        null,
+        null,
+        null,
+        "x"
+      ],
+      "elementTypes": [
+        "string",
+        "array",
+        "map",
+        "string"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,411 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-EDITOR __TOKEN__",
+  "version": "1.0.0",
+  "description": "The OpenSearch Query editor against the real cluster: Get fields and Refresh on its own index, a failed pull on a port where nothing listens, the unknown-field check and Run of unsaved text, Stop of a slow search, and the Get indexes refusals and blank Index pattern.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "5956f724-f92c-402c-9a68-70714798ccd7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Fields",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Fields",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-fields",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "1fb1820b-81f5-4b0e-83df-cd112604bf8e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "App logs",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "App logs",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "os_ok",
+              "results": "os_rows",
+              "total_results": "os_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "e814060d-f346-443d-ad2c-fde6fc161d6a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Slow",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Slow",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-slow",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "query_dsl",
+              "query": "__SLOW_QUERY__",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 300,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "5dcb4bff-f793-465f-b0ce-61ebaf5d34ec",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Unreachable",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Unreachable",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9479",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "79d64cff-cce6-4baa-9fe0-7dcf8a334c00",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Indexes",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Indexes",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "3b96f22d-8e43-4b8e-997d-652a3f885fa1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Limited",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Limited",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-*",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave-limited",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d8e2bb32-fe9d-47c5-bb26-a6d8dbd4a6a2",
+        "source": "start-node",
+        "target": "5956f724-f92c-402c-9a68-70714798ccd7",
+        "type": "default"
+      },
+      {
+        "id": "c0a27493-c74f-41ba-8878-3f3a623f5738",
+        "source": "5956f724-f92c-402c-9a68-70714798ccd7",
+        "target": "1fb1820b-81f5-4b0e-83df-cd112604bf8e",
+        "type": "default"
+      },
+      {
+        "id": "9a590119-9456-4585-964b-cb582e680beb",
+        "source": "1fb1820b-81f5-4b0e-83df-cd112604bf8e",
+        "target": "e814060d-f346-443d-ad2c-fde6fc161d6a",
+        "type": "default"
+      },
+      {
+        "id": "16602409-d57b-4940-ad12-dec62c295e55",
+        "source": "e814060d-f346-443d-ad2c-fde6fc161d6a",
+        "target": "5dcb4bff-f793-465f-b0ce-61ebaf5d34ec",
+        "type": "default"
+      },
+      {
+        "id": "661de691-b275-4f06-a1df-887c61c295e1",
+        "source": "5dcb4bff-f793-465f-b0ce-61ebaf5d34ec",
+        "target": "79d64cff-cce6-4baa-9fe0-7dcf8a334c00",
+        "type": "default"
+      },
+      {
+        "id": "9eec5f82-7fcc-483d-9b6b-a5a11c0783d6",
+        "source": "79d64cff-cce6-4baa-9fe0-7dcf8a334c00",
+        "target": "3b96f22d-8e43-4b8e-997d-652a3f885fa1",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "os_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "os_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "os_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

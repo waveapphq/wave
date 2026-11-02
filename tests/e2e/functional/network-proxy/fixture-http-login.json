@@ -1,0 +1,443 @@
+{
+  "name": "V-NET-PROXY HTTP Login Proxy",
+  "version": "1.0.0",
+  "description": "Two HTTP blocks on WAVE setting against the proxy-only http-target, plain HTTP and HTTPS, each in a Try/Catch that binds the caught error.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "tc-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Plain guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "plain_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Login plain",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Login plain",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://http-target:9444/api",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "wave-setting"
+            },
+            "outputBindings": {
+              "status_code": "plain_status",
+              "body": "plain_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-plain-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Plain guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'login-plain caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Plain guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"login-plain status={plain_status} caught={plain_err['message'] if plain_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TLS guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "tls_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Login tls",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Login tls",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/echo",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "wave-setting",
+              "ca_cert": "lab_ca"
+            },
+            "outputBindings": {
+              "status_code": "tls_status",
+              "body": "tls_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tls-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TLS guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'login-tls caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TLS guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"login-tls status={tls_status} caught={tls_err['message'] if tls_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'proxy-login-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-tc-plain",
+        "source": "start-node",
+        "target": "tc-plain",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-plain-try",
+        "source": "tc-plain",
+        "target": "http-plain",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-plain-catch",
+        "source": "tc-plain",
+        "target": "log-plain-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-plain-then",
+        "source": "tc-plain",
+        "target": "log-plain",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-plain-tc-tls",
+        "source": "log-plain",
+        "target": "tc-tls",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-tls-try",
+        "source": "tc-tls",
+        "target": "http-tls",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-tls-catch",
+        "source": "tc-tls",
+        "target": "log-tls-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-tls-then",
+        "source": "tc-tls",
+        "target": "log-tls",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-tls-log-done",
+        "source": "log-tls",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "lab_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "plain_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "tls_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tls_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

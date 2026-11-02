@@ -1,0 +1,1889 @@
+{
+  "name": "V-PLUGIN-SQL-PROCEDURE",
+  "version": "1.0.0",
+  "description": "SQL Call procedure on PostgreSQL, MariaDB, Oracle and SQL Server: the seed procedure's out values as a one-row table, an in-out argument fed from that table and called in the Arguments order, and routines that return rows; the Called line of every finished call, a result cut by Max rows and a call with no Arguments recorded; every routine the run makes is dropped in the Finally path.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b174357a-df82-5a0e-b099-db9e48e92419",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 160
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE PROCEDURE wave_diff___TOKEN__(later integer, earlier integer, INOUT acc integer)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  acc := acc + later - earlier;\nEND\n$$;\nCREATE FUNCTION wave_rows___TOKEN__(n integer) RETURNS TABLE(k integer, sq integer)\nLANGUAGE sql\nAS $$ SELECT g, g * g FROM generate_series(1, n) AS g ORDER BY g $$;\nCREATE FUNCTION wave_fout___TOKEN__(n integer, OUT twice integer, OUT label text)\nLANGUAGE sql\nAS $$ SELECT n * 2, 'f' || n $$;",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a76948cc-a87f-58ab-a6f9-5fea771edb9f",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 250
+        },
+        "data": {
+          "label": "PostgreSQL seed call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL seed call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_pg_seed_ok",
+              "rows": "pr_pg_seed_rows",
+              "row_count": "pr_pg_seed_count",
+              "out_values": "pr_pg_seed_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8ee5d07c-6ace-5ac2-a5b9-cb2f708fe1fa",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 340
+        },
+        "data": {
+          "label": "PostgreSQL in-out call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL in-out call",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.acc"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_diff___TOKEN__",
+              "arguments": {
+                "later": "10",
+                "earlier": "3",
+                "acc": "pr_pg_seed_out[0]['total'] * 20"
+              },
+              "out_arguments": [
+                {
+                  "value": "acc"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_pg_inout_ok",
+              "rows": "pr_pg_inout_rows",
+              "row_count": "pr_pg_inout_count",
+              "out_values": "pr_pg_inout_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d3dcf87a-7dd4-5607-adf4-a6bd25b18c20",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 430
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE PROCEDURE wave_diff___TOKEN__(IN later INT, IN earlier INT, INOUT acc INT) SET acc = acc + later - earlier;\nCREATE PROCEDURE wave_rows___TOKEN__(IN n INT) WITH RECURSIVE s(k) AS (SELECT 1 UNION ALL SELECT k + 1 FROM s WHERE k < n) SELECT k, k * k AS sq FROM s ORDER BY k;",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cc84ad7e-aaeb-55d0-a71e-28309cc5865d",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 520
+        },
+        "data": {
+          "label": "MariaDB seed call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB seed call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_my_seed_ok",
+              "rows": "pr_my_seed_rows",
+              "row_count": "pr_my_seed_count",
+              "out_values": "pr_my_seed_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "deac062f-b6a8-5984-9148-aa4c08b40633",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 610
+        },
+        "data": {
+          "label": "MariaDB in-out call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB in-out call",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.acc"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_diff___TOKEN__",
+              "arguments": {
+                "later": "10",
+                "earlier": "3",
+                "acc": "pr_my_seed_out[0]['total'] * 20"
+              },
+              "out_arguments": [
+                {
+                  "value": "acc"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_my_inout_ok",
+              "rows": "pr_my_inout_rows",
+              "row_count": "pr_my_inout_count",
+              "out_values": "pr_my_inout_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "026ba582-9105-53fb-97b4-2fca6f473b40",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 700
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE PROCEDURE wave_diff___TOKEN__(later IN NUMBER, earlier IN NUMBER, acc IN OUT NUMBER)\nAS\nBEGIN\n  acc := acc + later - earlier;\nEND;\n/\nCREATE PROCEDURE wave_rows___TOKEN__(n IN NUMBER)\nAS\n  c SYS_REFCURSOR;\nBEGIN\n  OPEN c FOR SELECT level AS \"k\", level * level AS \"sq\" FROM dual CONNECT BY level <= n ORDER BY level;\n  DBMS_SQL.RETURN_RESULT(c);\nEND;\n/",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ca08c7ae-ccd7-591a-be4e-417626bd8b11",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 790
+        },
+        "data": {
+          "label": "Oracle seed call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle seed call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_or_seed_ok",
+              "rows": "pr_or_seed_rows",
+              "row_count": "pr_or_seed_count",
+              "out_values": "pr_or_seed_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8583423b-f916-58e5-ace0-03796043b1aa",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 880
+        },
+        "data": {
+          "label": "Oracle in-out call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle in-out call",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.acc"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave.wave_diff___TOKEN__",
+              "arguments": {
+                "later": "10",
+                "earlier": "3",
+                "acc": "pr_or_seed_out[0]['total'] * 20"
+              },
+              "out_arguments": [
+                {
+                  "value": "acc"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_or_inout_ok",
+              "rows": "pr_or_inout_rows",
+              "row_count": "pr_or_inout_count",
+              "out_values": "pr_or_inout_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "14f7180f-2e5a-5323-9a12-929649109b83",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 970
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE PROCEDURE dbo.wave_diff___TOKEN__ @later int, @earlier int, @acc int OUTPUT\nAS\nBEGIN\n  SET @acc = @acc + @later - @earlier;\nEND;\nGO\nCREATE PROCEDURE dbo.wave_rows___TOKEN__ @n int\nAS\nBEGIN\n  SELECT value AS k, value * value AS sq FROM GENERATE_SERIES(1, @n) ORDER BY value;\nEND;",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fc2541c9-db36-5a24-b9ab-0cc83351a137",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1060
+        },
+        "data": {
+          "label": "SQL Server seed call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server seed call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_ms_seed_ok",
+              "rows": "pr_ms_seed_rows",
+              "row_count": "pr_ms_seed_count",
+              "out_values": "pr_ms_seed_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ec4f6168-9287-563c-ac64-97acd22e8017",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1150
+        },
+        "data": {
+          "label": "SQL Server in-out call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server in-out call",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.acc"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "call_procedure",
+              "procedure": "dbo.wave_diff___TOKEN__",
+              "arguments": {
+                "later": "10",
+                "earlier": "3",
+                "acc": "pr_ms_seed_out[0]['total'] * 20"
+              },
+              "out_arguments": [
+                {
+                  "value": "acc"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_ms_inout_ok",
+              "rows": "pr_ms_inout_rows",
+              "row_count": "pr_ms_inout_count",
+              "out_values": "pr_ms_inout_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "86f74740-6487-5c9c-a55a-082ea35d117f",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1240
+        },
+        "data": {
+          "label": "PostgreSQL rows call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL rows call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_rows___TOKEN__",
+              "arguments": {
+                "n": "3"
+              },
+              "out_arguments": [],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_pg_rows_ok",
+              "rows": "pr_pg_rows_rows",
+              "row_count": "pr_pg_rows_count",
+              "out_values": "pr_pg_rows_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5b9e2c41-7d3a-4f6e-9a82-1c4d8e7f3a60",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1330
+        },
+        "data": {
+          "label": "PostgreSQL function out call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL function out call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_fout___TOKEN__",
+              "arguments": {
+                "n": "21"
+              },
+              "out_arguments": [
+                {
+                  "value": "twice"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_pg_fout_ok",
+              "rows": "pr_pg_fout_rows",
+              "row_count": "pr_pg_fout_count",
+              "out_values": "pr_pg_fout_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bc1d7418-3e12-5d18-be02-7826bab3d407",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1330
+        },
+        "data": {
+          "label": "MariaDB rows call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB rows call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_rows___TOKEN__",
+              "arguments": {
+                "n": "3"
+              },
+              "out_arguments": [],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_my_rows_ok",
+              "rows": "pr_my_rows_rows",
+              "row_count": "pr_my_rows_count",
+              "out_values": "pr_my_rows_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "24b9f9a2-32d3-5a02-98dd-f7614b872383",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1420
+        },
+        "data": {
+          "label": "Oracle rows call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle rows call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave.wave_rows___TOKEN__",
+              "arguments": {
+                "n": "3"
+              },
+              "out_arguments": [],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_or_rows_ok",
+              "rows": "pr_or_rows_rows",
+              "row_count": "pr_or_rows_count",
+              "out_values": "pr_or_rows_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "232aa29c-8914-5595-9a69-95888fe0d4e7",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1510
+        },
+        "data": {
+          "label": "SQL Server rows call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server rows call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "call_procedure",
+              "procedure": "dbo.wave_rows___TOKEN__",
+              "arguments": {
+                "n": "3"
+              },
+              "out_arguments": [],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_ms_rows_ok",
+              "rows": "pr_ms_rows_rows",
+              "row_count": "pr_ms_rows_count",
+              "out_values": "pr_ms_rows_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "50f40fe8-cf36-5e10-b490-10f0c2a859e9",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1600
+        },
+        "data": {
+          "label": "PostgreSQL capped rows call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL rows call capped by Max rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "wave_rows___TOKEN__",
+              "arguments": {
+                "n": "3"
+              },
+              "out_arguments": [],
+              "max_rows": 2,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pr_pg_cap_ok",
+              "rows": "pr_pg_cap_rows",
+              "row_count": "pr_pg_cap_count",
+              "out_values": "pr_pg_cap_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2686ef70-0f6b-5930-9f9a-670feb005859",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1690
+        },
+        "data": {
+          "label": "PostgreSQL no arguments call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL seed call with no Arguments recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {},
+              "out_arguments": [],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "pr_pg_bare_ok",
+              "error": "pr_pg_bare_error",
+              "reason": "pr_pg_bare_reason",
+              "out_values": "pr_pg_bare_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8dfb70e6-cd11-5fae-819d-5220aa7e5789",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Seed proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"pr-seed pg={pr_pg_seed_out[0]['total']}/{pr_pg_seed_out[0]['label']} my={pr_my_seed_out[0]['total']}/{pr_my_seed_out[0]['label']} or={pr_or_seed_out[0]['total']}/{pr_or_seed_out[0]['label']} ms={pr_ms_seed_out[0]['total']}/{pr_ms_seed_out[0]['label']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e9105169-d11c-5ad0-b975-a2df91fcd2d1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "In-out proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"pr-inout pg={pr_pg_inout_out[0]['acc']} my={pr_my_inout_out[0]['acc']} or={pr_or_inout_out[0]['acc']} ms={pr_ms_inout_out[0]['acc']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "53f22d73-811e-5ce6-91bd-07f32f09ff20",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Rows proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"pr-rows pg={pr_pg_rows_count}/{pr_pg_rows_rows[2]['sq']} my={pr_my_rows_count}/{pr_my_rows_rows[2]['sq']} or={pr_or_rows_count}/{pr_or_rows_rows[2]['sq']} ms={pr_ms_rows_count}/{pr_ms_rows_rows[2]['sq']} fout={pr_pg_fout_out[0]['twice']}/{pr_pg_fout_out[0]['label']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6d4832f7-0d1a-503d-a364-b68a4484237a",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2050
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Capped and refused proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"pr-more cap={pr_pg_cap_count}/{pr_pg_cap_rows[1]['sq']} bare={pr_pg_bare_ok}/{pr_pg_bare_reason}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5d1b1d0f-4a8e-5172-85d2-c0568c7d9bf6",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 160
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP PROCEDURE IF EXISTS wave_diff___TOKEN__;\nDROP FUNCTION IF EXISTS wave_rows___TOKEN__;\nDROP FUNCTION IF EXISTS wave_fout___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "46d0a71f-283c-58e9-87ad-9131bb713299",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 250
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM pg_proc WHERE proname IN ('wave_diff___TOKEN__', 'wave_rows___TOKEN__', 'wave_fout___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pr_pg_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "039531d1-fc75-53a8-9ae3-088f779990fa",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 340
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP PROCEDURE IF EXISTS wave_diff___TOKEN__;\nDROP PROCEDURE IF EXISTS wave_rows___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "32a62eca-f64e-53d3-bd1f-6027015b10cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 430
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM information_schema.routines WHERE routine_schema = DATABASE() AND routine_name IN ('wave_diff___TOKEN__', 'wave_rows___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pr_my_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2edee1cb-22e5-5190-9258-24640305c09a",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 520
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP PROCEDURE IF EXISTS wave_diff___TOKEN__;\nDROP PROCEDURE IF EXISTS wave_rows___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "126faf76-65be-5a06-afe5-1217c8f9cec8",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 610
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS \"n\" FROM user_objects WHERE object_name IN (UPPER('wave_diff___TOKEN__'), UPPER('wave_rows___TOKEN__'))",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pr_or_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "acf6235e-9802-5ad9-b6cf-7bdff0d23469",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 700
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP PROCEDURE IF EXISTS dbo.wave_diff___TOKEN__;\nDROP PROCEDURE IF EXISTS dbo.wave_rows___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d1eacbd3-bcb3-5bd6-b8cc-dc8f701310ba",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 790
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM sys.procedures WHERE name IN ('wave_diff___TOKEN__', 'wave_rows___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pr_ms_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a3095db6-5804-563d-8629-ac18263e39b6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Call and clean up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "4137af80-f373-53ab-ac1e-997988727a15",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2230
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sql-procedure-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "60a8de30-fd8a-5a9b-9f75-480278fa0b29",
+        "source": "start-node",
+        "target": "a3095db6-5804-563d-8629-ac18263e39b6",
+        "type": "default"
+      },
+      {
+        "id": "aa791681-0b52-5259-9ee4-025253a22488",
+        "source": "a3095db6-5804-563d-8629-ac18263e39b6",
+        "sourceHandle": "try",
+        "target": "b174357a-df82-5a0e-b099-db9e48e92419",
+        "type": "default"
+      },
+      {
+        "id": "c43d6bc8-4c13-56c4-9a5c-089fd5ac3e67",
+        "source": "b174357a-df82-5a0e-b099-db9e48e92419",
+        "target": "a76948cc-a87f-58ab-a6f9-5fea771edb9f",
+        "type": "default"
+      },
+      {
+        "id": "3acb9dd5-dcae-5b97-b406-e735c6b96634",
+        "source": "a76948cc-a87f-58ab-a6f9-5fea771edb9f",
+        "target": "8ee5d07c-6ace-5ac2-a5b9-cb2f708fe1fa",
+        "type": "default"
+      },
+      {
+        "id": "7428141c-0ae9-507b-b370-cc29e37ccef6",
+        "source": "8ee5d07c-6ace-5ac2-a5b9-cb2f708fe1fa",
+        "target": "d3dcf87a-7dd4-5607-adf4-a6bd25b18c20",
+        "type": "default"
+      },
+      {
+        "id": "474b08b0-d550-5679-84ed-0fecd1b741e3",
+        "source": "d3dcf87a-7dd4-5607-adf4-a6bd25b18c20",
+        "target": "cc84ad7e-aaeb-55d0-a71e-28309cc5865d",
+        "type": "default"
+      },
+      {
+        "id": "8952fd30-5128-53a8-9b50-9854b9b8bb0b",
+        "source": "cc84ad7e-aaeb-55d0-a71e-28309cc5865d",
+        "target": "deac062f-b6a8-5984-9148-aa4c08b40633",
+        "type": "default"
+      },
+      {
+        "id": "83c1e10f-02d1-5572-9f4f-21d99a1093f6",
+        "source": "deac062f-b6a8-5984-9148-aa4c08b40633",
+        "target": "026ba582-9105-53fb-97b4-2fca6f473b40",
+        "type": "default"
+      },
+      {
+        "id": "f690166a-f522-5018-9d45-6de52d13606f",
+        "source": "026ba582-9105-53fb-97b4-2fca6f473b40",
+        "target": "ca08c7ae-ccd7-591a-be4e-417626bd8b11",
+        "type": "default"
+      },
+      {
+        "id": "d2415d77-ba88-5d0c-8b11-67cd0fa375c3",
+        "source": "ca08c7ae-ccd7-591a-be4e-417626bd8b11",
+        "target": "8583423b-f916-58e5-ace0-03796043b1aa",
+        "type": "default"
+      },
+      {
+        "id": "6d7c114e-7beb-5f73-bd74-faa771048984",
+        "source": "8583423b-f916-58e5-ace0-03796043b1aa",
+        "target": "14f7180f-2e5a-5323-9a12-929649109b83",
+        "type": "default"
+      },
+      {
+        "id": "d4f5915d-8e32-566b-b4b4-07b0e29b7f2a",
+        "source": "14f7180f-2e5a-5323-9a12-929649109b83",
+        "target": "fc2541c9-db36-5a24-b9ab-0cc83351a137",
+        "type": "default"
+      },
+      {
+        "id": "97200d28-e441-5d8d-a11d-5ac05640f299",
+        "source": "fc2541c9-db36-5a24-b9ab-0cc83351a137",
+        "target": "ec4f6168-9287-563c-ac64-97acd22e8017",
+        "type": "default"
+      },
+      {
+        "id": "c463678a-481a-5eb3-8110-d3de29ba6eb0",
+        "source": "ec4f6168-9287-563c-ac64-97acd22e8017",
+        "target": "86f74740-6487-5c9c-a55a-082ea35d117f",
+        "type": "default"
+      },
+      {
+        "id": "746210c9-d566-5358-88f6-bd641916f244",
+        "source": "86f74740-6487-5c9c-a55a-082ea35d117f",
+        "target": "5b9e2c41-7d3a-4f6e-9a82-1c4d8e7f3a60",
+        "type": "default"
+      },
+      {
+        "id": "8c1f4a7e-2d9b-4e63-b5a0-7f3e9d2c6b18",
+        "source": "5b9e2c41-7d3a-4f6e-9a82-1c4d8e7f3a60",
+        "target": "bc1d7418-3e12-5d18-be02-7826bab3d407",
+        "type": "default"
+      },
+      {
+        "id": "64e7b37e-45d4-5ea8-aa2b-ac0cbbfe1cc2",
+        "source": "bc1d7418-3e12-5d18-be02-7826bab3d407",
+        "target": "24b9f9a2-32d3-5a02-98dd-f7614b872383",
+        "type": "default"
+      },
+      {
+        "id": "73fe17c4-c87b-5cd7-8870-17d467c41ce1",
+        "source": "24b9f9a2-32d3-5a02-98dd-f7614b872383",
+        "target": "232aa29c-8914-5595-9a69-95888fe0d4e7",
+        "type": "default"
+      },
+      {
+        "id": "49b64aa0-600e-5f04-af21-364ee358ed19",
+        "source": "8dfb70e6-cd11-5fae-819d-5220aa7e5789",
+        "target": "e9105169-d11c-5ad0-b975-a2df91fcd2d1",
+        "type": "default"
+      },
+      {
+        "id": "6835bb14-9a08-5771-9b2b-de1358ca47f8",
+        "source": "e9105169-d11c-5ad0-b975-a2df91fcd2d1",
+        "target": "53f22d73-811e-5ce6-91bd-07f32f09ff20",
+        "type": "default"
+      },
+      {
+        "id": "9bf9478f-9df6-5253-89ad-0f7b29310d2d",
+        "source": "a3095db6-5804-563d-8629-ac18263e39b6",
+        "sourceHandle": "finally",
+        "target": "5d1b1d0f-4a8e-5172-85d2-c0568c7d9bf6",
+        "type": "default"
+      },
+      {
+        "id": "908bb3ab-c11e-59bf-9695-7ab8187b3e8c",
+        "source": "5d1b1d0f-4a8e-5172-85d2-c0568c7d9bf6",
+        "target": "46d0a71f-283c-58e9-87ad-9131bb713299",
+        "type": "default"
+      },
+      {
+        "id": "572dc3cd-f0f7-5dd3-961f-cfe97008a5ba",
+        "source": "46d0a71f-283c-58e9-87ad-9131bb713299",
+        "target": "039531d1-fc75-53a8-9ae3-088f779990fa",
+        "type": "default"
+      },
+      {
+        "id": "3c2c81bd-2279-5786-aac0-4a69a81a430a",
+        "source": "039531d1-fc75-53a8-9ae3-088f779990fa",
+        "target": "32a62eca-f64e-53d3-bd1f-6027015b10cc",
+        "type": "default"
+      },
+      {
+        "id": "b4958d29-a080-59b0-986f-26cb3198c010",
+        "source": "32a62eca-f64e-53d3-bd1f-6027015b10cc",
+        "target": "2edee1cb-22e5-5190-9258-24640305c09a",
+        "type": "default"
+      },
+      {
+        "id": "9bb962de-407e-51e6-84f0-1fd3eecfce91",
+        "source": "2edee1cb-22e5-5190-9258-24640305c09a",
+        "target": "126faf76-65be-5a06-afe5-1217c8f9cec8",
+        "type": "default"
+      },
+      {
+        "id": "acbb96ca-ddc1-5c1e-823b-f7e00188704d",
+        "source": "126faf76-65be-5a06-afe5-1217c8f9cec8",
+        "target": "acf6235e-9802-5ad9-b6cf-7bdff0d23469",
+        "type": "default"
+      },
+      {
+        "id": "1ca43ace-75ba-5215-974c-263ba89c434d",
+        "source": "acf6235e-9802-5ad9-b6cf-7bdff0d23469",
+        "target": "d1eacbd3-bcb3-5bd6-b8cc-dc8f701310ba",
+        "type": "default"
+      },
+      {
+        "id": "29c7f00c-f7c9-5b42-a944-138be259a9ba",
+        "source": "a3095db6-5804-563d-8629-ac18263e39b6",
+        "sourceHandle": "then",
+        "target": "4137af80-f373-53ab-ac1e-997988727a15",
+        "type": "default"
+      },
+      {
+        "id": "31c6ad3c-c23a-56a1-ae19-4a69a16d3514",
+        "source": "232aa29c-8914-5595-9a69-95888fe0d4e7",
+        "target": "50f40fe8-cf36-5e10-b490-10f0c2a859e9",
+        "type": "default"
+      },
+      {
+        "id": "a0b1076f-c96a-5fd5-a4cd-03da8ec06fb9",
+        "source": "50f40fe8-cf36-5e10-b490-10f0c2a859e9",
+        "target": "2686ef70-0f6b-5930-9f9a-670feb005859",
+        "type": "default"
+      },
+      {
+        "id": "885fa90c-1b92-570f-a17c-d0a29a3f15ca",
+        "source": "2686ef70-0f6b-5930-9f9a-670feb005859",
+        "target": "8dfb70e6-cd11-5fae-819d-5220aa7e5789",
+        "type": "default"
+      },
+      {
+        "id": "b7bc25fb-7550-558e-b02b-37646012e789",
+        "source": "53f22d73-811e-5ce6-91bd-07f32f09ff20",
+        "target": "6d4832f7-0d1a-503d-a364-b68a4484237a",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "pr_pg_seed_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_seed_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_seed_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_pg_seed_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_inout_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_inout_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_inout_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_pg_inout_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_seed_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_my_seed_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_seed_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_my_seed_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_inout_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_my_inout_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_inout_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_my_inout_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_seed_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_or_seed_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_seed_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_or_seed_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_inout_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_or_inout_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_inout_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_or_inout_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_seed_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_ms_seed_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_seed_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_ms_seed_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_inout_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_ms_inout_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_inout_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_ms_inout_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_rows_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_rows_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_rows_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_pg_rows_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_rows_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_my_rows_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_rows_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_my_rows_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_rows_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_or_rows_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_rows_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_or_rows_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_rows_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_ms_rows_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_rows_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_ms_rows_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_my_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_or_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_ms_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_fout_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_fout_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_fout_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_pg_fout_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_cap_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_cap_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_cap_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pr_pg_cap_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_pg_bare_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pr_pg_bare_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pr_pg_bare_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pr_pg_bare_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

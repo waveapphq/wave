@@ -1,0 +1,132 @@
+{
+  "name": "V-NUMBER-BLOCKS-SAVE-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "Two HTTP Blocks whose number rows the spec types: digit text, a tiny float and a huge float.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b788aff9-c752-51a7-8c5b-42ab3157d4cb",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "data": {
+          "label": "Exact Digits",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Exact Digits",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=exact-digits",
+              "method": "GET"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "f43daf97-32f0-55dd-a3e0-ad78568dc037",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 210
+        },
+        "data": {
+          "label": "Tiny Digits",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Tiny Digits",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=tiny-digits",
+              "method": "GET"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "df12ea2e-a9dc-5ffc-a84f-da83a369bbd0",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 320
+        },
+        "data": {
+          "label": "Blocks Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Blocks Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "number-blocks-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "11df4063-b3fb-5f5b-a687-e94d452e74fb",
+        "source": "start-node",
+        "target": "b788aff9-c752-51a7-8c5b-42ab3157d4cb",
+        "type": "default"
+      },
+      {
+        "id": "093f1f2d-9333-5423-bf1b-7ed06a5bfb90",
+        "source": "b788aff9-c752-51a7-8c5b-42ab3157d4cb",
+        "target": "f43daf97-32f0-55dd-a3e0-ad78568dc037",
+        "type": "default"
+      },
+      {
+        "id": "ffe65cd2-fc39-563a-9394-b8d88318e02e",
+        "source": "f43daf97-32f0-55dd-a3e0-ad78568dc037",
+        "target": "df12ea2e-a9dc-5ffc-a84f-da83a369bbd0",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [
+      "e2e",
+      "number-rule"
+    ]
+  }
+}

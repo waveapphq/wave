@@ -1,0 +1,54 @@
+{
+  "name": "PYSCROLL",
+  "version": "1.0.0",
+  "description": "One Python block with a long script, so the editor scroller has extent and the page behind the sheet can be measured. Never run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "py-scroll",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "A script long enough that the editor's own scroller has somewhere to go",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\n\nvalue_00 = 0\nvalue_01 = 1\nvalue_02 = 2\nvalue_03 = 3\nvalue_04 = 4\nvalue_05 = 5\nvalue_06 = 6\nvalue_07 = 7\nvalue_08 = 8\nvalue_09 = 9\nvalue_10 = 10\nvalue_11 = 11\nvalue_12 = 12\nvalue_13 = 13\nvalue_14 = 14\nvalue_15 = 15\nvalue_16 = 16\nvalue_17 = 17\nvalue_18 = 18\nvalue_19 = 19\nvalue_20 = 20\nvalue_21 = 21\nvalue_22 = 22\nvalue_23 = 23\nvalue_24 = 24\nvalue_25 = 25\nvalue_26 = 26\nvalue_27 = 27\nvalue_28 = 28\nvalue_29 = 29\nvalue_30 = 30\nvalue_31 = 31\nvalue_32 = 32\nvalue_33 = 33\nvalue_34 = 34\nvalue_35 = 35\nvalue_36 = 36\nvalue_37 = 37\nvalue_38 = 38\nvalue_39 = 39\nvalue_40 = 40\nvalue_41 = 41\nvalue_42 = 42\nvalue_43 = 43\nvalue_44 = 44\nvalue_45 = 45\nvalue_46 = 46\nvalue_47 = 47\nvalue_48 = 48\nvalue_49 = 49\nvalue_50 = 50\nvalue_51 = 51\nvalue_52 = 52\nvalue_53 = 53\nvalue_54 = 54\nvalue_55 = 55\nvalue_56 = 56\nvalue_57 = 57\nvalue_58 = 58\nvalue_59 = 59\n\nos",
+              "interpreter": ""
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-scroll",
+        "source": "start-node",
+        "target": "py-scroll"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

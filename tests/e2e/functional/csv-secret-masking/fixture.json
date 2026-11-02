@@ -1,0 +1,342 @@
+{
+  "name": "CSV Secret Masking E2E",
+  "version": "1.0.0",
+  "description": "Secret-masking regression guards via CSV/Log Inputs echo",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 170
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 3000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-g1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "G1 Newline Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "csv_content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sec_newline"
+            },
+            "outputBindings": {
+              "table": "g1_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-g2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "G2 Special Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "csv_content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sec_special"
+            },
+            "outputBindings": {
+              "table": "g2_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-g4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 440
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "G4 Long Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "csv_content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sec_long"
+            },
+            "outputBindings": {
+              "table": "g4_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-g3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 530
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "G3 Apostrophe Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'g3=' + sec_apos",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-g6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 620
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "G6 Short Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'g6=' + sec_pin",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 710
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Plain Control",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'plain=' + plain_ok",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "delay-hold",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "delay-hold",
+        "target": "csv-g1",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "csv-g1",
+        "target": "csv-g2",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "csv-g2",
+        "target": "csv-g4",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "csv-g4",
+        "target": "log-g3",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-g3",
+        "target": "log-g6",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-g6",
+        "target": "log-plain",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sec_newline": {
+      "value": "CSVNL-a\nCSVNL-b\nCSVNL-c",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sec_special": {
+      "value": "CSVSP-\tCSVSP-\"CSVSP-\\end",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sec_apos": {
+      "value": "CSVAP-O'Brien",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sec_long": {
+      "value": "CSVLG-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sec_pin": {
+      "value": "8342",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "plain_ok": {
+      "value": "plain-ok-visible-77",
+      "type": "string",
+      "scope": "test"
+    },
+    "g1_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "g2_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "g4_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

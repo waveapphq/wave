@@ -1,0 +1,13 @@
+id: login-flow-test
+name: Login Flow Test
+version: 1.0.0
+description: Validates user authentication login flow
+author: wave-system
+tags:
+  - auth
+  - login
+  - smoke
+blocks: []
+variables: {}
+created_at: "2025-12-21T09:55:00Z"
+updated_at: "2025-12-21T09:55:00Z"

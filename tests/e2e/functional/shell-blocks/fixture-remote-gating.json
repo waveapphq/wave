@@ -1,0 +1,255 @@
+{
+  "name": "SH-12 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Inside a Remote Execution body both shell blocks run on WAVE and keep Browse; File I/O runs on the host and has none.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ssh-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the host session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "remote-body",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-inside",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 300
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Host path inside the body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/tmp/sh-12-__TOKEN__/inside.txt"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "shell-script-inside",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 400
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell Script inside the body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "hostname"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "shell-exec-inside",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 500
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell Exec inside the body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "true"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-12-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "ssh-open",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-open-remote-body",
+        "source": "ssh-open",
+        "target": "remote-body",
+        "type": "default"
+      },
+      {
+        "id": "e-body",
+        "source": "remote-body",
+        "sourceHandle": "body",
+        "target": "fio-inside",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-inside-shell-script-inside",
+        "source": "fio-inside",
+        "target": "shell-script-inside",
+        "type": "default"
+      },
+      {
+        "id": "e-shell-script-inside-shell-exec-inside",
+        "source": "shell-script-inside",
+        "target": "shell-exec-inside",
+        "type": "default"
+      },
+      {
+        "id": "e-then",
+        "source": "remote-body",
+        "sourceHandle": "then",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

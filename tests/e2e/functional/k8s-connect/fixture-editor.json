@@ -1,0 +1,154 @@
+{
+  "name": "K8s Connect Token Editor Guard E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-editor",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Token is typed through the value editor; session revealed to prove it rode in",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_i",
+              "cluster_version": "ver_i"
+            },
+            "outputSecretFields": [],
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-editor",
+        "type": "workflowNode",
+        "position": {
+          "x": 325,
+          "y": 100
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the connected version",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8seditor ver={ver_i}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 325,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-editor-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-connect-editor",
+        "source": "start-node",
+        "target": "connect-editor"
+      },
+      {
+        "id": "edge-connect-editor-log-editor",
+        "source": "connect-editor",
+        "target": "log-editor"
+      },
+      {
+        "id": "edge-log-editor-log-done",
+        "source": "log-editor",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_i": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ver_i": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

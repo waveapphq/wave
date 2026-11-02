@@ -1,0 +1,9 @@
+#!/bin/sh
+# The interpreter probe runs for real; every other command fails on stderr with nothing on stdout.
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  *sys.version_info*)
+    exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"
+    ;;
+esac
+echo "ModuleNotFoundError: No module named 'encodings'" >&2
+exit 1

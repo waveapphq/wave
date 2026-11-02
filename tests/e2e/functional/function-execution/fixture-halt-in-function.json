@@ -1,0 +1,99 @@
+{
+  "name": "V-CANVAS-FN-HALT-01 fixture",
+  "version": "1.0.0",
+  "description": "Test: Log_before -> Function(Halt(scope=test, status=failed)) -> Log_after. After run: Halt propagates, Log_after skipped, test ends failed.",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 200 },
+        "data": {
+          "label": "Log_before",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {"message": "'before'", "level": "INFO"},
+            "profileBindings": [],
+            "outputBindings": {}
+          }
+        }
+      },
+      {
+        "id": "fn-halt",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "name": "Function_1",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-halt",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 200 },
+                  "data": {
+                    "label": "Halt",
+                    "elementType": "halt",
+                    "nodeType": "control",
+                    "version": "1.0.0",
+                    "config": {
+                      "values": {"scope": "test", "status": "failed"},
+                      "profileBindings": [],
+                      "outputBindings": {}
+                    }
+                  }
+                }
+              ],
+              "edges": [
+                {"id": "e-start-halt", "source": "start-node", "target": "inner-halt"}
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 500, "y": 200 },
+        "data": {
+          "label": "Log_after",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {"message": "'after'", "level": "INFO"},
+            "profileBindings": [],
+            "outputBindings": {}
+          }
+        }
+      }
+    ],
+    "edges": [
+      {"id": "e-start-log", "source": "start-node", "target": "log-before"},
+      {"id": "e-log-fn", "source": "log-before", "target": "fn-halt"},
+      {"id": "e-fn-log", "source": "fn-halt", "target": "log-after"}
+    ]
+  }
+}

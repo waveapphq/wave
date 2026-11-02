@@ -1,0 +1,68 @@
+---
+id: helm-install
+description: Install a chart as a new release through the K8s Session, by running helm itself
+versions:
+  - version: "1.0.0"
+    releaseDate: "2026-09-04"
+    changelog:
+      - "Full implementation released"
+      - "Chart from a repository, an OCI registry, a packaged URL or a local path, with Version, Values and Set"
+      - "Auth & TLS group carries the chart repository's own credentials and trust, separate from the cluster's"
+      - "Atomic removes a failed install so the release name stays free"
+      - "Result follows Output Format: the release as a table row, as the release document, or as JSON or YAML text"
+---
+
+The Helm Install plugin installs a chart as a new release, through the K8s Session a K8s Connect block produced. It runs the real `helm install`: WAVE ships no helm of its own, it calls the helm found where the block runs. Every control is a helm flag, named as helm names it and carrying helm's own default. A release name already in use in the namespace is an error, as it is in helm.
+
+**Use Cases:**
+- Stand up the chart under test, then assert on what the cluster made of it
+- Install the same chart with different values and compare what comes out
+- Install into a namespace the test creates on the spot, and tear it down after
+- Install a chart from a private repository with its own credentials and certificate authority
+
+**Behavior:**
+- Chart takes what helm's own chart argument takes: a name resolved against Repository URL, a reference into an OCI registry, a URL to a packaged chart, or a path on the machine where the block runs. Version pins a version or a range, and empty takes the newest the repository offers
+- Values is a YAML document that reaches helm as a values file. Set passes key and value pairs one by one, under helm's own typing rules, with nested keys written with dots like `image.tag`
+- Auth & TLS carries the credentials and trust of the chart's source only, a chart repository or an OCI registry: a user name, a password that is a declared credential, a CA certificate, and Verify Server Certificate, on by default. The cluster's own trust travels in the session
+- helm runs with a clean environment that WAVE builds for each call. Registry logins stored on the machine it runs on are not used, whether made with `helm registry login` or with Docker. A private chart is pulled with Repository Username and Repository Password, which also reach an OCI registry
+- From the WAVE host, helm's connections to the cluster and to the chart repository or registry follow Settings > Network > Proxy. A chart source connects directly in two cases, whatever that setting says: when it is on a local address, and when it is on the cluster's own host and port, or on a name under that host, while the cluster itself connects directly. On a remote host helm uses that host's own proxy settings
+- A local chart directory whose dependencies are not downloaded yet: run `helm dependency update <dir>` from a Shell Script block first
+- Nothing waits for readiness, which is helm's own default. Compose a wait from Helm Status or K8s Get under a Wait Until control
+- Atomic is the exception: helm waits for the release to come up within Timeout and, when it does not, removes the install again so the release name stays free for the next attempt
+- Timeout is helm's own operation timeout, 300 seconds by default, and the block is stopped the moment it runs out. Atomic adds a Cleanup Timeout on top of it: helm has failed by then, and that is the room it gets to remove the install again. The block's whole bound is the two added together
+- Output Format decides the shape of Result. Table is one row with helm's own list columns. Map is the release document helm reports. JSON and YAML are that same document as text, notes and rendered manifest included
+- Namespace is empty by default, which uses the namespace the session carries. Create Namespace creates it first when it is not there yet
+- Impersonate user and Impersonate groups send the request as another identity, to check what a role is allowed to do
+- Helm Path names the helm to run. Empty runs the helm on the PATH of wherever the block runs: the WAVE host, or the execution host when the block sits inside a Remote Execution container. A bare name is looked up on that PATH; an absolute path is called as it stands; a relative path starts at the home folder of the account the block runs as. Bind the row to an environment or global variable to set it once for a team. A missing helm fails the block under either On error setting, naming what was tried and, on a remote host, the host it was tried on
+- The blocks emit only flags that behave the same on helm 3.13 and later and on every helm 4, so one block works against whichever helm a machine carries. WAVE never asks helm for its version on its own initiative; only when helm rejects a flag as unknown does WAVE read the version once and report that the helm it found is older than 3.13
+- Which Kubernetes versions a helm supports is helm's own policy, the four minors up to the one it was built against. WAVE adds no check of its own
+- helm 4 installs charts written for helm 3 and upgrades releases helm 3 created, but a release helm 4 created may not be manageable by helm 3. That matters when the WAVE server and a remote execution host carry different majors: install from one and the older helm on the other may refuse to touch the release
+- The session reaches helm as a kubeconfig written for one call and deleted after it. The server URL, credentials, certificate authority, server-name override and verification choice all carry across. The session's cipher-suite and TLS-version pins do not, because they cannot bind a helm process
+- On error decides what a helm refusal does: Fail the block, or Record and continue, which sets Success, Error and Reason and lets the test go on. A missing helm, an unreadable session, or a failure before helm runs fails the block either way
+- Reason carries one of a fixed set, so a workflow branches on it and never on text. **NotFound**: the chart or the repository was not found. **AlreadyExists**: the release name is already in use. **Forbidden**: the cluster denied the request. **Timeout**: helm's timeout ran out, or the process passed WAVE's deadline. **Invalid**: the chart, the values or a flag was rejected. **Unreachable**: the cluster or the chart repository could not be reached. **Failed**: everything else, including a release or hook that failed
+
+**Parameters:**
+- **K8s Session**: The session from a K8s Connect block (required, secret)
+- **Timeout**: How long helm gets to finish the operation, in seconds (default: 300)
+- **Release Name**: The name to give the release; a name already in use in the namespace is an error (required)
+- **Chart**: A name in a repository, a path to a local directory or archive, or an OCI reference (required)
+- **Version**: The chart version to use; empty takes the newest the repository offers
+- **Repository URL**: The chart repository to fetch from; leave empty for a local path or an OCI reference
+- **Values**: Values applied over the chart's own defaults, as YAML
+- **Set**: Single values to override, one entry per key; nested keys use dots
+- **Output Format**: Table, Map, JSON or YAML (default: Table)
+- **Repository Username / Repository Password**: What the chart repository asks for; the password is a declared credential
+- **Repository CA Certificate**: The PEM bundle that verifies the chart repository's certificate; when set, it is the only certificate trusted. Empty trusts the certificates WAVE trusts (Settings > Network > Certificates)
+- **Verify Server Certificate**: Check the chart repository's certificate against Repository CA Certificate when it is set, otherwise against the certificates WAVE trusts (default: on)
+- **Namespace**: Install into a namespace other than the session's; empty uses the session's
+- **Create Namespace**: Create the namespace first when it does not exist yet (default: off)
+- **Helm Path**: The helm executable to run: a name looked up on the PATH, or a path; a relative path starts at the home folder of the account the block runs as. Empty runs helm from the PATH
+- **Impersonate user / Impersonate groups**: Send the request as another identity
+- **Atomic**: Remove the release again when the install fails, so its name stays free (default: off)
+- **Cleanup Timeout**: How long helm gets to undo the failed install, in seconds, on top of Timeout. Offered only while Atomic is on (default: 300)
+- **On error**: Fail the block, or Record and continue (default: Fail the block)
+
+**Outputs:**
+- **Result**: The release in the shape Output Format asks for: one table row with Name, Namespace, Revision, Updated, Status, Chart and App Version, or the whole release document as a map, as JSON or as YAML
+- **Status**: The release state helm reports, like deployed, failed or pending-install. A release Atomic removed reads as absent
+- **Success / Error / Reason**: The outcome. Error and Reason are offered only when On error is Record and continue

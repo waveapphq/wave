@@ -1,0 +1,55 @@
+{
+  "name": "V-VMGR-05 Inspect Expression Views",
+  "version": "1.0.0",
+  "description": "Workflow for the V-VMGR-05 expression-view scenarios: a literal scalar (service_name), a string expression (api_url) and an array expression (service_matrix), plus a Log whose message expression references both expressions so the engine realizes them lazily during a run. The visual spec never runs the workflow (idle empty states, view menus, Initial lock); the live spec runs it once and asserts the open watchers' empty-state to evaluated transition.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-refs",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reference both expressions",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'url=' + api_url + ' n=' + str(len(service_matrix))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-refs", "type": "default" }
+    ]
+  },
+  "variables": {
+    "service_name": { "value": "discovery", "type": "string", "scope": "test" },
+    "api_url": {
+      "value": "'https://api.wave.test/v1/services/' + service_name",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    },
+    "service_matrix": {
+      "value": "[service_name, service_name.upper(), service_name + '-2']",
+      "type": "array",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-13T00:00:00.000000",
+  "updated_at": "2026-06-13T00:00:00.000000"
+}

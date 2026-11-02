@@ -1,0 +1,150 @@
+{
+  "name": "V-NUMBER-BLOCKS-ENTRY-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "An HTTP Block and a Variable Setter whose number boxes the spec types unfinished text into.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c9358691-4958-537f-b375-c7809c5cd19e",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "data": {
+          "label": "Typed Entry",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Typed Entry",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=typed-entry",
+              "method": "GET",
+              "max_redirects": 5
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "8e63cbc7-011c-5d27-a882-7a8af525daed",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 210
+        },
+        "data": {
+          "label": "Set Numbers",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Numbers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "count": 1,
+                "ratio": 1.5
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableTypes": {
+            "count": "integer",
+            "ratio": "float"
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "159b5799-b22a-5087-ac3a-d03d3a6d159a",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 320
+        },
+        "data": {
+          "label": "Entry Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Entry Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "number-entry-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "299285b6-0d42-599a-a10c-7e4ae2aaabd7",
+        "source": "start-node",
+        "target": "c9358691-4958-537f-b375-c7809c5cd19e",
+        "type": "default"
+      },
+      {
+        "id": "c8625903-abe3-5cc9-b981-afe79c2ed431",
+        "source": "c9358691-4958-537f-b375-c7809c5cd19e",
+        "target": "8e63cbc7-011c-5d27-a882-7a8af525daed",
+        "type": "default"
+      },
+      {
+        "id": "a84cfe55-2af4-5132-9e76-573269b3cdc9",
+        "source": "8e63cbc7-011c-5d27-a882-7a8af525daed",
+        "target": "159b5799-b22a-5087-ac3a-d03d3a6d159a",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "count": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "ratio": {
+      "type": "float",
+      "value": 0.5,
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [
+      "e2e",
+      "number-rule"
+    ]
+  }
+}

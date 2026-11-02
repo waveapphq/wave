@@ -1,0 +1,21 @@
+# WAVE E2E PostgreSQL (test-only): the `wave` login owning database `wave`, the
+# seed procedure for the Call procedure leg, and TLS offered on the database
+# leaf signed by the WAVE Test CA (plain connections still accepted; a client
+# certificate, when sent, is verified against the same CA).
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/library/postgres:alpine
+
+# Superuser `postgres`; only the provisioning scripts use it.
+ENV POSTGRES_PASSWORD=Wave-Admin-Secret-1
+
+COPY services/tls-lab/certs/database.crt services/tls-lab/certs/database.key /etc/postgresql/tls/
+COPY simulators/https/certs/ca.pem /etc/postgresql/tls/ca.pem
+# PostgreSQL refuses a key readable by anyone but its owner.
+RUN chown -R postgres:postgres /etc/postgresql/tls && chmod 0600 /etc/postgresql/tls/database.key
+
+COPY services/postgres/initdb/ /docker-entrypoint-initdb.d/
+COPY services/postgres/healthcheck.sh /wave/healthcheck.sh
+RUN chmod 0755 /wave/healthcheck.sh
+
+EXPOSE 5432
+CMD ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/etc/postgresql/tls/database.crt", "-c", "ssl_key_file=/etc/postgresql/tls/database.key", "-c", "ssl_ca_file=/etc/postgresql/tls/ca.pem"]

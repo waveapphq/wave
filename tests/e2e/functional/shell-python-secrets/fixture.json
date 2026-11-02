@@ -1,0 +1,184 @@
+{
+  "name": "Shell Python Secrets Canary E2E",
+  "version": "1.0.0",
+  "description": "Marked-output canary: a Shell Script marks its stdout and a variable export secret; a Python script marks an output variable secret. Every marked output masks on the harness Outputs echo, console and session variables, and non-secret sibling outputs stay visible as positive controls.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "shell-secret",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell Script marks stdout + a variable export secret",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "SHELL_TOKEN='spsec-shellout-11aa22bb-real'\nSHELL_PROOF='shell-ran-42'\necho 'spsec-shellstd-33cc44dd-real'",
+              "script_variables": ["SHELL_TOKEN", "SHELL_PROOF"]
+            },
+            "outputBindings": {
+              "stdout": "shell_stdout",
+              "SHELL_TOKEN": "shell_token",
+              "SHELL_PROOF": "shell_proof"
+            },
+            "outputSecretFields": ["stdout", "SHELL_TOKEN"],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-shell",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log shell outputs (secret masked, proof visible)",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'shell-out={shell_token} shell-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "python-secret",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 280 },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python marks a variable export secret",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "py_token = 'spsec-pyout-55ee66ff-real'\npy_proof = 'py-ran-42'",
+              "script_variables": ["py_token", "py_proof"]
+            },
+            "outputBindings": {
+              "py_token": "py_token_var",
+              "py_proof": "py_proof_var"
+            },
+            "outputSecretFields": ["py_token"],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-python",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log python output (secret masked, proof visible)",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'py-out={py_token_var} py-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-plain",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 420 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend + non-secret sibling",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'plain={plain_marker} shell-python-secrets-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "delay-hold" },
+      { "id": "e-delay-shell", "source": "delay-hold", "target": "shell-secret" },
+      { "id": "e-shell-log", "source": "shell-secret", "target": "log-shell" },
+      { "id": "e-log-python", "source": "log-shell", "target": "python-secret" },
+      { "id": "e-python-log", "source": "python-secret", "target": "log-python" },
+      { "id": "e-log-plain", "source": "log-python", "target": "log-plain" }
+    ]
+  },
+  "variables": {
+    "shell_token": { "value": "", "type": "string", "scope": "test" },
+    "shell_stdout": { "value": "", "type": "string", "scope": "test" },
+    "shell_proof": { "value": "", "type": "string", "scope": "test" },
+    "py_token_var": { "value": "", "type": "string", "scope": "test" },
+    "py_proof_var": { "value": "", "type": "string", "scope": "test" },
+    "plain_marker": { "value": "plain-visible-sp-0000", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

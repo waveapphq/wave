@@ -1,0 +1,49 @@
+test:
+  name: Recipe Example - Kubernetes Smoke
+  description: Connect to a cluster, apply a ConfigMap from the form, and read it back by name
+  tags: [example, kubernetes]
+variables:
+  api_url: {type: string, value: "https://kubernetes.default.svc"}
+  cluster_token: {type: string, secret: true, value: example-cluster-token}
+  k8s_session: {type: string, secret: true}   # declared empty; the Connect capture fills it
+flow:
+  - block: k8s-connect
+    label: Connect to the cluster
+    settings:
+      api_url: "{{ api_url }}"
+      namespace: wave-demo
+      token: {expr: "cluster_token"}
+      verify_ssl: false
+    capture:
+      session: k8s_session          # every other K8s block wires this into its 'session'
+      cluster_version: cluster_version
+  - block: k8s-apply
+    label: Apply the ConfigMap
+    settings:
+      session: {expr: "k8s_session"}
+      define_with: form
+      kind: ConfigMap
+      name: wave-smoke
+      data: {greeting: hello, tier: demo}
+      if_exists: update
+    capture:
+      count: applied_count
+  - block: k8s-get
+    label: Read the ConfigMap back
+    settings:
+      session: {expr: "k8s_session"}
+      resource_type: default
+      kind: ConfigMap
+      search_by: name
+      name: wave-smoke
+      output_format: map
+    capture:
+      result: read_back
+  - assert:
+      that:
+        - "applied_count == 1"
+      fail_current_scope: true
+  - block: log
+    settings:
+      message: "Cluster {{ cluster_version }} applied and read back configmap/wave-smoke"
+      level: INFO

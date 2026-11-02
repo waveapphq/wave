@@ -1,0 +1,907 @@
+{
+  "name": "HTTP TLS Cipher Pins E2E",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-c1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 0
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Single-suite pin vs cipher-pin listener (PERM-13)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9456/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": [
+                "ECDHE-RSA-AES256-GCM-SHA384"
+              ]
+            },
+            "outputBindings": {
+              "status_code": "c1_status",
+              "body": "c1_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-c1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 70
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log c1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'c1 status={c1_status} body={c1_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-c2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 140
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Reorder [256,128] vs reorder listener -> 256 (PERM-14)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": [
+                "ECDHE-RSA-AES256-GCM-SHA384",
+                "ECDHE-RSA-AES128-GCM-SHA256"
+              ]
+            },
+            "outputBindings": {
+              "status_code": "c2_status",
+              "body": "c2_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-c2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 210
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log c2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'c2 status={c2_status} body={c2_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-c3",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 280
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Reorder [128,256] vs reorder listener -> 128 (PERM-14)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": [
+                "ECDHE-RSA-AES128-GCM-SHA256",
+                "ECDHE-RSA-AES256-GCM-SHA384"
+              ]
+            },
+            "outputBindings": {
+              "status_code": "c3_status",
+              "body": "c3_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-c3",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log c3",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'c3 status={c3_status} body={c3_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-c4",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Single TLS 1.3 AEAD vs tls13 listener (PERM-15)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9455/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.3",
+              "tls_max_version": "1.3",
+              "cipher_suites": [
+                "TLS_AES_128_GCM_SHA256"
+              ]
+            },
+            "outputBindings": {
+              "status_code": "c4_status",
+              "body": "c4_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-c4",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 490
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log c4",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'c4 status={c4_status} body={c4_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-c5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 560
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "A list from an expression carrying one TLS 1.3 suite at max 1.2 (FIELD-10)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "cipher_suites"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": "['ECDHE-RSA-AES128-GCM-SHA256', 'TLS_AES_256_GCM_SHA384', 'ECDHE-RSA-AES256-GCM-SHA384']"
+            },
+            "outputBindings": {
+              "status_code": "c5_status",
+              "body": "c5_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-c5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 630
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log c5",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'c5 status={c5_status} body={c5_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-disjoint",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 700
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: disjoint cipher",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "dj_err",
+              "caught": "dj_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-disjoint",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 770
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Disjoint cipher pin vs cipher-pin listener",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9456/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": [
+                "ECDHE-RSA-AES128-GCM-SHA256"
+              ]
+            },
+            "outputBindings": {
+              "status_code": "dj_status",
+              "body": "dj_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-disjoint",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 840
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log disjoint caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'disjoint-caught status={dj_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-zero",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 910
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: explicit-zero ciphers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "z_err",
+              "caught": "z_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-zero",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 980
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Explicit-zero cipher list",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9454/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "cipher_suites": []
+            },
+            "outputBindings": {
+              "status_code": "z_status",
+              "body": "z_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-zero",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1050
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log zero caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'zero-caught status={z_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-book",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'http-tls-ciphers-done dj={dj_caught} z={z_caught}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-c1",
+        "source": "start-node",
+        "target": "http-c1",
+        "type": "default"
+      },
+      {
+        "id": "e-c1-log",
+        "source": "http-c1",
+        "target": "log-c1",
+        "type": "default"
+      },
+      {
+        "id": "e-c2",
+        "source": "log-c1",
+        "target": "http-c2",
+        "type": "default"
+      },
+      {
+        "id": "e-c2-log",
+        "source": "http-c2",
+        "target": "log-c2",
+        "type": "default"
+      },
+      {
+        "id": "e-c3",
+        "source": "log-c2",
+        "target": "http-c3",
+        "type": "default"
+      },
+      {
+        "id": "e-c3-log",
+        "source": "http-c3",
+        "target": "log-c3",
+        "type": "default"
+      },
+      {
+        "id": "e-c4",
+        "source": "log-c3",
+        "target": "http-c4",
+        "type": "default"
+      },
+      {
+        "id": "e-c4-log",
+        "source": "http-c4",
+        "target": "log-c4",
+        "type": "default"
+      },
+      {
+        "id": "e-c5",
+        "source": "log-c4",
+        "target": "http-c5",
+        "type": "default"
+      },
+      {
+        "id": "e-c5-log",
+        "source": "http-c5",
+        "target": "log-c5",
+        "type": "default"
+      },
+      {
+        "id": "e-disjoint",
+        "source": "log-c5",
+        "target": "tc-disjoint",
+        "type": "default"
+      },
+      {
+        "id": "e-disjoint-try",
+        "source": "tc-disjoint",
+        "target": "http-disjoint",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-disjoint-catch",
+        "source": "tc-disjoint",
+        "target": "log-disjoint",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-disjoint-then",
+        "source": "tc-disjoint",
+        "target": "tc-zero",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-zero-try",
+        "source": "tc-zero",
+        "target": "http-zero",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-zero-catch",
+        "source": "tc-zero",
+        "target": "log-zero",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-zero-then",
+        "source": "tc-zero",
+        "target": "log-book",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "c1_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c1_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c2_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c2_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c3_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c3_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c4_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c4_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c5_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c5_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "dj_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "dj_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dj_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dj_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "z_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "z_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "z_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

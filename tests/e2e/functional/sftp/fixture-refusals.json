@@ -1,0 +1,887 @@
+{
+  "name": "SFTP Refusals __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "What the SFTP block refuses: Max files and Max size (MiB), the read-only Test Data, a missing source caught by Try/Catch, a server with no SFTP subsystem and a closed session.",
+  "variables": {
+    "ref_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "nosftp_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "up_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "big_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "big_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "files_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "files_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "files_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "files_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "size_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "size_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "size_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "size_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ro_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ro_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ro_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ro_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "miss_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "miss_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "miss_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nosftp_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nosftp_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "nosftp_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "del_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "closed_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "closed_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c4d136a3-d2f5-47a7-b054-bb0daf5b363c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the main session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "ref_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "10b12345-fee4-49c9-bfe0-403ab63c4b0c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the three files",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "upload",
+              "source": "testdata://sftp-three",
+              "destination": "__FOLDER__/three",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "success": "up_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "0c785945-f189-47dd-b657-d1a47ab02a87",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 260
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make the two MiB file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "command": "mkdir -p __FOLDER__/big && head -c 2097152 /dev/zero > __FOLDER__/big/two-mib.bin",
+              "timeout": 60
+            },
+            "outputBindings": {
+              "exit_code": "big_exit",
+              "stderr": "big_stderr"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c97745b9-4a0f-4ec9-9659-215be8d151ca",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 340
+        },
+        "data": {
+          "label": "Download three with Max files",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download three with Max files",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "download",
+              "source": "__FOLDER__/three",
+              "destination": "artifact://three-copy/",
+              "if_exists": "overwrite",
+              "timeout": 300,
+              "max_size_mib": 1024,
+              "max_files": 10000,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "summary": "files_summary",
+              "success": "files_success",
+              "error": "files_error",
+              "reason": "files_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "dc5cfcbb-508e-4424-8c01-4f6e0509e0ae",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "Download big with Max size",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download big with Max size",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "download",
+              "source": "__FOLDER__/big",
+              "destination": "artifact://big-copy/",
+              "if_exists": "overwrite",
+              "timeout": 300,
+              "max_size_mib": 1024,
+              "max_files": 10000,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "summary": "size_summary",
+              "success": "size_success",
+              "error": "size_error",
+              "reason": "size_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "86e00e41-e138-4ecf-84bd-99a201ccfb0b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 500
+        },
+        "data": {
+          "label": "Download into Test Data",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download into Test Data",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "download",
+              "source": "__FOLDER__/three/a.txt",
+              "destination": "testdata://sftp-three/a-copy.txt",
+              "if_exists": "overwrite",
+              "timeout": 300,
+              "max_size_mib": 1024,
+              "max_files": 10000,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "summary": "ro_summary",
+              "success": "ro_success",
+              "error": "ro_error",
+              "reason": "ro_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "d8bbb360-e43e-4c94-af71-7e690224303c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 580
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catch the missing source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "miss_error",
+              "caught": "miss_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "d483ffe6-6c24-4c39-9ee1-bdc83f003e5e",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download a missing file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "download",
+              "source": "__FOLDER__/nope.txt",
+              "destination": "artifact://nope-copy.txt",
+              "if_exists": "overwrite",
+              "timeout": 300,
+              "max_size_mib": 1024,
+              "max_files": 10000,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "miss_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c6951811-eb23-45b9-ab41-4a609dfa550f",
+        "type": "workflowNode",
+        "position": {
+          "x": 165,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the caught failure",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-refusals-caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "784b84b2-d114-44c5-aaac-4a669a784f8d",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 740
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the no-SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9447,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "nosftp_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "4fab865e-2e23-4cfb-b653-47d567e305a3",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 820
+        },
+        "data": {
+          "label": "List without SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List without SFTP",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "nosftp_session",
+              "operation": "list",
+              "path": "__FOLDER__",
+              "recursive": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nosftp_success",
+              "error": "nosftp_error",
+              "reason": "nosftp_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "3eb355bc-f8a1-476b-b6a9-aa568c66d6ae",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 900
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the no-SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "nosftp_session"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "88bb2978-6555-472c-b551-1e9dd636c698",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 980
+        },
+        "data": {
+          "label": "Delete the spec folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": false
+            },
+            "outputBindings": {
+              "success": "del_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "75805d59-87b0-41a1-9177-4c0a9c662a73",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1060
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "gone_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "2f948b51-72e0-4f5c-9fbf-ca72310086b5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1140
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the main session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "a2a00696-182a-4668-822a-d6f637a8d2b3",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "List on the closed session",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List on the closed session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ref_session",
+              "operation": "list",
+              "path": "__FOLDER__",
+              "recursive": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "closed_success",
+              "error": "closed_error",
+              "reason": "closed_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "9dcd9937-7709-4c93-841f-f81e66ea97e7",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-refusals-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "2a607571-1676-490a-a471-4a34e608fcbf",
+        "source": "start-node",
+        "target": "c4d136a3-d2f5-47a7-b054-bb0daf5b363c"
+      },
+      {
+        "id": "53bc736e-1e3f-41f3-8429-a53a33d5feba",
+        "source": "c4d136a3-d2f5-47a7-b054-bb0daf5b363c",
+        "target": "10b12345-fee4-49c9-bfe0-403ab63c4b0c"
+      },
+      {
+        "id": "75074ced-e334-4074-83cc-72e5a03c6d4c",
+        "source": "10b12345-fee4-49c9-bfe0-403ab63c4b0c",
+        "target": "0c785945-f189-47dd-b657-d1a47ab02a87"
+      },
+      {
+        "id": "e63c6f36-ccac-40e2-8509-7425fe9cdb4e",
+        "source": "0c785945-f189-47dd-b657-d1a47ab02a87",
+        "target": "c97745b9-4a0f-4ec9-9659-215be8d151ca"
+      },
+      {
+        "id": "66671eb3-d680-41db-929d-f7664e1bb7fe",
+        "source": "c97745b9-4a0f-4ec9-9659-215be8d151ca",
+        "target": "dc5cfcbb-508e-4424-8c01-4f6e0509e0ae"
+      },
+      {
+        "id": "62003f43-6611-446b-b464-b8a0fcb0efe0",
+        "source": "dc5cfcbb-508e-4424-8c01-4f6e0509e0ae",
+        "target": "86e00e41-e138-4ecf-84bd-99a201ccfb0b"
+      },
+      {
+        "id": "67fb668e-d6d0-4163-a66f-f7046551c138",
+        "source": "86e00e41-e138-4ecf-84bd-99a201ccfb0b",
+        "target": "d8bbb360-e43e-4c94-af71-7e690224303c"
+      },
+      {
+        "id": "a5deb5f2-7a44-457a-8256-3e8cb465dc02",
+        "source": "d8bbb360-e43e-4c94-af71-7e690224303c",
+        "target": "d483ffe6-6c24-4c39-9ee1-bdc83f003e5e",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "beb46675-e1c4-4955-85fe-fe5dd5ac4fe7",
+        "source": "d8bbb360-e43e-4c94-af71-7e690224303c",
+        "target": "c6951811-eb23-45b9-ab41-4a609dfa550f",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "699771cf-6aa5-4c10-ab72-e6b6ed189be5",
+        "source": "d8bbb360-e43e-4c94-af71-7e690224303c",
+        "target": "784b84b2-d114-44c5-aaac-4a669a784f8d",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "3107bc5c-04fc-4c40-b052-1fdb6b5d0b08",
+        "source": "784b84b2-d114-44c5-aaac-4a669a784f8d",
+        "target": "4fab865e-2e23-4cfb-b653-47d567e305a3"
+      },
+      {
+        "id": "d048bc41-e0a5-4ebb-8da0-e1970296b1de",
+        "source": "4fab865e-2e23-4cfb-b653-47d567e305a3",
+        "target": "3eb355bc-f8a1-476b-b6a9-aa568c66d6ae"
+      },
+      {
+        "id": "d7e358c9-8638-47a8-8b0b-c86355abb00f",
+        "source": "3eb355bc-f8a1-476b-b6a9-aa568c66d6ae",
+        "target": "88bb2978-6555-472c-b551-1e9dd636c698"
+      },
+      {
+        "id": "60689a3e-4701-4883-a9c0-6d94549af799",
+        "source": "88bb2978-6555-472c-b551-1e9dd636c698",
+        "target": "75805d59-87b0-41a1-9177-4c0a9c662a73"
+      },
+      {
+        "id": "3583cc02-0aed-4b8f-91a6-78c09eebb4b2",
+        "source": "75805d59-87b0-41a1-9177-4c0a9c662a73",
+        "target": "2f948b51-72e0-4f5c-9fbf-ca72310086b5"
+      },
+      {
+        "id": "ec5629ef-6596-41d5-a5da-2327de021f74",
+        "source": "2f948b51-72e0-4f5c-9fbf-ca72310086b5",
+        "target": "a2a00696-182a-4668-822a-d6f637a8d2b3"
+      },
+      {
+        "id": "9fd08664-3d66-47c8-b7de-dedf1198d059",
+        "source": "a2a00696-182a-4668-822a-d6f637a8d2b3",
+        "target": "9dcd9937-7709-4c93-841f-f81e66ea97e7"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

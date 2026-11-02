@@ -1,0 +1,217 @@
+{
+  "name": "V-PLUGIN-SQL-SQLITE-MISSING-TESTDATA",
+  "version": "1.0.0",
+  "description": "Two SQLite blocks whose File names a Test Data database that is not there: one under Record and continue, then one under Fail the block, which ends the run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e84d87c3-df97-5248-94e4-366810ba8c58",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Missing recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A Test Data name that is not there, recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqlite-missing-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one;\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "td_ok",
+              "rows": "td_rows",
+              "row_count": "td_row_count",
+              "rows_changed": "td_rows_changed",
+              "error": "td_error",
+              "reason": "td_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4e505ab6-a73c-5c65-bebc-6246fa9cdb64",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "After recorded",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs after the recorded failure",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlite-missing-recorded-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9fc7d12e-4c83-56c4-a02d-018c12dc7385",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Missing fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A Test Data name that is not there, failing the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqlite-missing-fail-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one;\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "26bc52d5-4992-552c-9a18-341b91bef519",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "After fail",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Never runs: the run fails at the block before it",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlite-missing-never-runs'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "bf9e771b-3389-5657-b373-7341416b74bd",
+        "source": "start-node",
+        "target": "e84d87c3-df97-5248-94e4-366810ba8c58",
+        "type": "default"
+      },
+      {
+        "id": "0afeee5d-8e34-5a2b-9fad-78d82df3b129",
+        "source": "e84d87c3-df97-5248-94e4-366810ba8c58",
+        "target": "4e505ab6-a73c-5c65-bebc-6246fa9cdb64",
+        "type": "default"
+      },
+      {
+        "id": "6b56ded5-29b7-5b7c-9376-067090b27035",
+        "source": "4e505ab6-a73c-5c65-bebc-6246fa9cdb64",
+        "target": "9fc7d12e-4c83-56c4-a02d-018c12dc7385",
+        "type": "default"
+      },
+      {
+        "id": "981f6978-3e06-59c0-9df0-ee213ce4bf1a",
+        "source": "9fc7d12e-4c83-56c4-a02d-018c12dc7385",
+        "target": "26bc52d5-4992-552c-9a18-341b91bef519",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "td_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "td_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "td_row_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "td_rows_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "td_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "td_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

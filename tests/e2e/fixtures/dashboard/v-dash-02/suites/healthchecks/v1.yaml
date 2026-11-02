@@ -1,0 +1,16 @@
+id: healthchecks
+name: Healthchecks
+version: 1.0.0
+description: Suite containing health check tests
+author: wave-system
+tags:
+  - health
+  - smoke
+tests:
+  - test_id: api-health-check
+    test_version: 1.0.0
+    order: 1
+    parameters: {}
+variables: {}
+created_at: "2025-12-24T07:55:00Z"
+updated_at: "2025-12-24T07:55:00Z"

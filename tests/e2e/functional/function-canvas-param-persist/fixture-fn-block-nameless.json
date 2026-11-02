@@ -1,0 +1,108 @@
+{
+  "name": "zz-11541-s7-nameless",
+  "version": "1.0.0",
+  "description": "A Local Function whose body holds a For Loop with an empty Name; the loop's body Log prints each iteration.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8a95b70d-c305-42c7-bdc7-a6abd4d33f0a",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Loop_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": { "values": {}, "outputBindings": {}, "profileBindings": [] },
+          "localDefinition": {
+            "name": "Loop_Fn",
+            "inputs": [],
+            "outputs": [],
+            "variables": [{ "name": "i", "type": "integer", "value": 0 }],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "6e9d0a6c-eca4-405a-97c1-0136193d4656",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "",
+                    "elementType": "for",
+                    "nodeType": "control",
+                    "category": "loop",
+                    "version": "1.0.0",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "mode": "count", "count": 2 },
+                      "outputBindings": { "index": "i" },
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 160, "height": 62 }
+                },
+                {
+                  "id": "d3c7e130-3256-442e-a9f5-93a731ccf697",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 320 },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Print Iteration",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "'iter-' + str(i)", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "329b7bb7-2735-4900-9a81-5c9c1562fe5e",
+                  "source": "start-node",
+                  "target": "6e9d0a6c-eca4-405a-97c1-0136193d4656",
+                  "type": "default"
+                },
+                {
+                  "id": "a9addd9f-f05c-4c0c-afa2-fe40e81054cf",
+                  "source": "6e9d0a6c-eca4-405a-97c1-0136193d4656",
+                  "sourceHandle": "body",
+                  "target": "d3c7e130-3256-442e-a9f5-93a731ccf697",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "67c49f80-2368-4434-984a-1d39f6b62d04",
+        "source": "start-node",
+        "target": "8a95b70d-c305-42c7-bdc7-a6abd4d33f0a",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

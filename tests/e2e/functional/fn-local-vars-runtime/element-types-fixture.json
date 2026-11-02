@@ -1,0 +1,155 @@
+{
+  "name": "V-FN-LOCAL-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "A local Function whose map variable and list input default carry element types",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "3078107d-10cd-418f-a92c-17e89090774e",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 160
+        },
+        "data": {
+          "label": "Typed_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Typed_Fn",
+            "description": "Reads a typed map variable and a typed list input",
+            "inputs": [
+              {
+                "name": "fa",
+                "type": "array",
+                "default": [],
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [
+              {
+                "id": "var-fm",
+                "name": "fm",
+                "type": "map",
+                "value": {}
+              }
+            ],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "67239482-74e7-4982-b44a-636eb8b1c564",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 120,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Function map probe",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "__MAP_PROBE__",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "e87ef653-4f11-4832-80e7-361870a90b67",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 360,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Function list probe",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "__LIST_PROBE__",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e1",
+                  "source": "start-node",
+                  "target": "67239482-74e7-4982-b44a-636eb8b1c564",
+                  "type": "default"
+                },
+                {
+                  "id": "e2",
+                  "source": "67239482-74e7-4982-b44a-636eb8b1c564",
+                  "target": "e87ef653-4f11-4832-80e7-361870a90b67",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "3078107d-10cd-418f-a92c-17e89090774e",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

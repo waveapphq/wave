@@ -1,0 +1,262 @@
+{
+  "name": "zz-11541-s5-sql __TOKEN__",
+  "version": "1.0.0",
+  "description": "SQL Out arguments built in the shared list editor on PostgreSQL: a literal and an {x} name come back as Out values columns; a null name fails the Block naming its row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "00aa2177-9551-40b4-993d-50ad5ad6077d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Out arguments from the editor",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Out arguments from the editor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pg_ok",
+              "out_values": "pg_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "47b47b1d-25f1-4f02-9b7a-465bdd2cb48d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Try null out argument",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try null out argument",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_sql_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "94bc14b3-951f-422a-a4c6-467f1280b00a",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 290
+        },
+        "data": {
+          "label": "Null out argument name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Null out argument name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3f861024-6f78-45c3-97a8-f511748edc41",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 290
+        },
+        "data": {
+          "label": "Catch null out argument",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch null out argument",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught sql-null: ' + e_sql_null['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9434cc1c-560f-4015-ad59-597c4ff52380",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'zz-11541-s5-sql-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "49336159-1b6e-4d82-9c21-a68fac707cb8",
+        "source": "start-node",
+        "target": "00aa2177-9551-40b4-993d-50ad5ad6077d",
+        "type": "default"
+      },
+      {
+        "id": "0e9a8999-4b20-4d4d-a81f-de5f7f7f3209",
+        "source": "00aa2177-9551-40b4-993d-50ad5ad6077d",
+        "target": "47b47b1d-25f1-4f02-9b7a-465bdd2cb48d",
+        "type": "default"
+      },
+      {
+        "id": "1a2e5292-8faf-4ee2-88ce-e303c7c5341f",
+        "source": "47b47b1d-25f1-4f02-9b7a-465bdd2cb48d",
+        "target": "94bc14b3-951f-422a-a4c6-467f1280b00a",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "4406336d-16b8-42de-8a4e-3a606013f5f9",
+        "source": "47b47b1d-25f1-4f02-9b7a-465bdd2cb48d",
+        "target": "3f861024-6f78-45c3-97a8-f511748edc41",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "c50bdcab-7441-4004-9be2-6ec562b31f42",
+        "source": "47b47b1d-25f1-4f02-9b7a-465bdd2cb48d",
+        "target": "9434cc1c-560f-4015-ad59-597c4ff52380",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "label_arg": {
+      "value": "label",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "e_sql_null": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

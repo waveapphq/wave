@@ -1,0 +1,1270 @@
+{
+  "name": "File IO Operations E2E Test",
+  "version": "1.0.0",
+  "description": "Chains all eight File I/O operations over per-test Test Data and the session's artifacts: read (plain and BOM), write / append / overwrite, copy of a file and of a folder onto an existing folder, move, delete (missing and existing), stats in all three output formats on a present and a missing path, list by pattern and by depth, and create folder twice.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "read-testdata-csv",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read uploaded CSV",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://customers.csv"
+            },
+            "outputBindings": {
+              "content": "csv_content"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-testdata-bom",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read BOM file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://bom.txt"
+            },
+            "outputBindings": {
+              "content": "bom_content"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-journal-create",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write journal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://ops/journal.txt",
+              "content": "line-1\n",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-journal-append",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Append to journal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://ops/journal.txt",
+              "content": "line-2\n",
+              "if_exists": "append"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-journal-appended",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read appended journal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "artifact://ops/journal.txt"
+            },
+            "outputBindings": {
+              "content": "journal_appended"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-journal-replace",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Overwrite journal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://ops/journal.txt",
+              "content": "final-only",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-journal-replaced",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read overwritten journal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "artifact://ops/journal.txt"
+            },
+            "outputBindings": {
+              "content": "journal_replaced"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "copy-testdata-file",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 800
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Copy test data file to artifacts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "copy",
+              "source": "testdata://customers.csv",
+              "destination": "artifact://copies/customers.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-copied-file",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 900
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read copied file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "artifact://copies/customers.csv"
+            },
+            "outputBindings": {
+              "content": "copied_content"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "create-merge-folder",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Create merge folder",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "create_folder",
+              "path": "artifact://merge"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "create-merge-folder-again",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1100
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Create merge folder again",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "create_folder",
+              "path": "artifact://merge"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-merge-keep",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1200
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write pre-existing merge entry",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://merge/keep.txt",
+              "content": "keep-me",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "copy-testdata-folder",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1300
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Copy test data folder onto merge",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "copy",
+              "source": "testdata://fixtures",
+              "destination": "artifact://merge",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "list-merge-pattern",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1400
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List merge by pattern",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "list",
+              "path": "artifact://merge",
+              "pattern": "^orders\\.json$",
+              "recursive": false,
+              "size": false
+            },
+            "outputBindings": {
+              "entries": "pattern_entries",
+              "count": "pattern_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "list-merge-flat",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List merge without subfolders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "list",
+              "path": "artifact://merge",
+              "pattern": "",
+              "recursive": false,
+              "size": false
+            },
+            "outputBindings": {
+              "entries": "flat_entries",
+              "count": "flat_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "list-merge-deep",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List merge with subfolders and size",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "list",
+              "path": "artifact://merge",
+              "pattern": "",
+              "recursive": true,
+              "size": true
+            },
+            "outputBindings": {
+              "entries": "deep_entries",
+              "count": "deep_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-move-source",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1700
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write move source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://move/source.txt",
+              "content": "moved-payload",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "move-artifact-file",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1800
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Move artifact file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "move",
+              "source": "artifact://move/source.txt",
+              "destination": "artifact://move/target.txt",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-moved-file",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1900
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read moved file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "artifact://move/target.txt"
+            },
+            "outputBindings": {
+              "content": "moved_content"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-present-individual",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2000
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats present individual",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/target.txt",
+              "size": true,
+              "checksum": "sha256",
+              "output_format": "individual"
+            },
+            "outputBindings": {
+              "exists": "present_exists",
+              "type": "present_type",
+              "modified": "present_modified",
+              "size": "present_size",
+              "checksum": "present_checksum"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-missing-individual",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2100
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats missing individual",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/source.txt",
+              "size": true,
+              "checksum": "sha256",
+              "output_format": "individual"
+            },
+            "outputBindings": {
+              "exists": "missing_exists",
+              "type": "missing_type",
+              "modified": "missing_modified",
+              "size": "missing_size",
+              "checksum": "missing_checksum"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-present-map",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2200
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats present map",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/target.txt",
+              "size": true,
+              "checksum": "md5",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "stats": "present_map"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-missing-map",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2300
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats missing map",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/source.txt",
+              "size": true,
+              "checksum": "md5",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "stats": "missing_map"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-present-table",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2400
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats present table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/target.txt",
+              "size": true,
+              "checksum": "sha1",
+              "output_format": "table"
+            },
+            "outputBindings": {
+              "stats": "present_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "stats-missing-table",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2500
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats missing table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "artifact://move/source.txt",
+              "size": true,
+              "checksum": "sha1",
+              "output_format": "table"
+            },
+            "outputBindings": {
+              "stats": "missing_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delete-missing-ignored",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Delete missing with Ignore missing",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "delete",
+              "path": "artifact://never-here.txt",
+              "missing_ok": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delete-existing-copy",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2700
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Delete copied file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "delete",
+              "path": "artifact://copies/customers.csv",
+              "missing_ok": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-bookend",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2800
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'fileio-ops-complete'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "read-testdata-csv",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "read-testdata-csv",
+        "target": "read-testdata-bom",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "read-testdata-bom",
+        "target": "write-journal-create",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "write-journal-create",
+        "target": "write-journal-append",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "write-journal-append",
+        "target": "read-journal-appended",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "read-journal-appended",
+        "target": "write-journal-replace",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "write-journal-replace",
+        "target": "read-journal-replaced",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "read-journal-replaced",
+        "target": "copy-testdata-file",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "copy-testdata-file",
+        "target": "read-copied-file",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "read-copied-file",
+        "target": "create-merge-folder",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "create-merge-folder",
+        "target": "create-merge-folder-again",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "create-merge-folder-again",
+        "target": "write-merge-keep",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "write-merge-keep",
+        "target": "copy-testdata-folder",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "copy-testdata-folder",
+        "target": "list-merge-pattern",
+        "type": "default"
+      },
+      {
+        "id": "e15",
+        "source": "list-merge-pattern",
+        "target": "list-merge-flat",
+        "type": "default"
+      },
+      {
+        "id": "e16",
+        "source": "list-merge-flat",
+        "target": "list-merge-deep",
+        "type": "default"
+      },
+      {
+        "id": "e17",
+        "source": "list-merge-deep",
+        "target": "write-move-source",
+        "type": "default"
+      },
+      {
+        "id": "e18",
+        "source": "write-move-source",
+        "target": "move-artifact-file",
+        "type": "default"
+      },
+      {
+        "id": "e19",
+        "source": "move-artifact-file",
+        "target": "read-moved-file",
+        "type": "default"
+      },
+      {
+        "id": "e20",
+        "source": "read-moved-file",
+        "target": "stats-present-individual",
+        "type": "default"
+      },
+      {
+        "id": "e21",
+        "source": "stats-present-individual",
+        "target": "stats-missing-individual",
+        "type": "default"
+      },
+      {
+        "id": "e22",
+        "source": "stats-missing-individual",
+        "target": "stats-present-map",
+        "type": "default"
+      },
+      {
+        "id": "e23",
+        "source": "stats-present-map",
+        "target": "stats-missing-map",
+        "type": "default"
+      },
+      {
+        "id": "e24",
+        "source": "stats-missing-map",
+        "target": "stats-present-table",
+        "type": "default"
+      },
+      {
+        "id": "e25",
+        "source": "stats-present-table",
+        "target": "stats-missing-table",
+        "type": "default"
+      },
+      {
+        "id": "e26",
+        "source": "stats-missing-table",
+        "target": "delete-missing-ignored",
+        "type": "default"
+      },
+      {
+        "id": "e27",
+        "source": "delete-missing-ignored",
+        "target": "delete-existing-copy",
+        "type": "default"
+      },
+      {
+        "id": "e28",
+        "source": "delete-existing-copy",
+        "target": "log-bookend",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "csv_content": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "bom_content": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "journal_appended": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "journal_replaced": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "copied_content": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "pattern_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pattern_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "flat_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "flat_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "deep_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "deep_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "moved_content": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "present_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "present_type": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "present_modified": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "present_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "present_checksum": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "missing_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "missing_type": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "missing_modified": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "missing_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "missing_checksum": {
+      "value": "UNSET",
+      "type": "string",
+      "scope": "test"
+    },
+    "present_map": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "missing_map": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "present_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "missing_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

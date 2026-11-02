@@ -1,0 +1,3841 @@
+{
+  "aggregations": {
+    "adjacency_matrix": {
+      "params": {
+        "filters": {
+          "description": "Filters used to create buckets. At least one filter is required.",
+          "kind": "object"
+        }
+      }
+    },
+    "auto_date_histogram": {
+      "params": {
+        "buckets": {
+          "description": "The target number of buckets.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "description": "The date format used to format `key_as_string` in the response. If no `format` is specified, the first date format specified in the field mapping is used.",
+          "kind": "string"
+        },
+        "minimum_interval": {
+          "enum": [
+            "day",
+            "hour",
+            "minute",
+            "month",
+            "second",
+            "year"
+          ],
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A date and time, either as a string whose format depends on the context (defaulting to ISO_8601) or the number of milliseconds since the epoch. OpenSearch accepts both as an input but will generally output a string. representation.",
+          "kind": "any"
+        },
+        "offset": {
+          "description": "Time zone specified as a ISO 8601 UTC offset.",
+          "kind": "string"
+        },
+        "params": {
+          "kind": "object"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "time_zone": {
+          "description": "The time zone identifier.",
+          "kind": "string"
+        }
+      }
+    },
+    "avg": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "avg_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "boxplot": {
+      "params": {
+        "compression": {
+          "description": "Limits the maximum number of nodes used by the underlying TDigest algorithm to `20 * compression`, enabling control of memory usage and approximation error.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "bucket_script": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "bucket_selector": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "bucket_sort": {
+      "params": {
+        "from": {
+          "description": "Buckets in positions prior to `from` will be truncated.",
+          "kind": "number"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "size": {
+          "description": "The number of buckets to return. Defaults to all buckets of the parent aggregation.",
+          "kind": "number"
+        },
+        "sort": {
+          "kind": "any"
+        }
+      }
+    },
+    "cardinality": {
+      "params": {
+        "execution_hint": {
+          "enum": [
+            "direct",
+            "global_ordinals",
+            "segment_ordinals"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "precision_threshold": {
+          "description": "A unique count below which counts are expected to be close to accurate. This allows to trade memory for accuracy.",
+          "kind": "number"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "children": {
+      "params": {
+        "type": {
+          "description": "The name of a relation in a join field.",
+          "kind": "string"
+        }
+      }
+    },
+    "composite": {
+      "params": {
+        "after": {
+          "kind": "object"
+        },
+        "size": {
+          "description": "The number of composite buckets that should be returned.",
+          "kind": "number"
+        },
+        "sources": {
+          "description": "The value sources used to build composite buckets. Keys are returned in the order of the `sources` definition.",
+          "kind": "array"
+        }
+      }
+    },
+    "cumulative_cardinality": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "cumulative_sum": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "date_histogram": {
+      "params": {
+        "calendar_interval": {
+          "enum": [
+            "second",
+            "1s",
+            "minute",
+            "1m",
+            "hour",
+            "1h",
+            "day",
+            "1d",
+            "week",
+            "1w",
+            "month",
+            "1M",
+            "quarter",
+            "1q",
+            "year",
+            "1Y"
+          ],
+          "kind": "string"
+        },
+        "extended_bounds": {
+          "kind": "object"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "fixed_interval": {
+          "description": "A duration. Units can be `nanos`, `micros`, `ms` (milliseconds), `s` (seconds), `m` (minutes), `h` (hours) and `d` (days). Also accepts `0` without a unit and `-1` to indicate an unspecified value.",
+          "kind": "string"
+        },
+        "format": {
+          "description": "The date format used to format `key_as_string` in the response. If no `format` is specified, the first date format specified in the field mapping is used.",
+          "kind": "string"
+        },
+        "hard_bounds": {
+          "kind": "object"
+        },
+        "interval": {
+          "description": "A duration. Units can be `nanos`, `micros`, `ms` (milliseconds), `s` (seconds), `m` (minutes), `h` (hours) and `d` (days). Also accepts `0` without a unit and `-1` to indicate an unspecified value.",
+          "kind": "string"
+        },
+        "keyed": {
+          "description": "Set to `true` to associate a unique string key with each bucket and return the ranges as a hash rather than an array.",
+          "kind": "boolean"
+        },
+        "min_doc_count": {
+          "description": "Only returns buckets that have `min_doc_count` number of documents. By default, all buckets between the first bucket that matches documents and the last one are returned.",
+          "kind": "number"
+        },
+        "missing": {
+          "description": "A date and time, either as a string whose format depends on the context (defaulting to ISO_8601) or the number of milliseconds since the epoch. OpenSearch accepts both as an input but will generally output a string. representation.",
+          "kind": "any"
+        },
+        "offset": {
+          "description": "A duration. Units can be `nanos`, `micros`, `ms` (milliseconds), `s` (seconds), `m` (minutes), `h` (hours) and `d` (days). Also accepts `0` without a unit and `-1` to indicate an unspecified value.",
+          "kind": "string"
+        },
+        "order": {
+          "kind": "object"
+        },
+        "params": {
+          "kind": "object"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "time_zone": {
+          "description": "The time zone identifier.",
+          "kind": "string"
+        }
+      }
+    },
+    "date_range": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "description": "The date format used to format `from` and `to` in the response.",
+          "kind": "string"
+        },
+        "keyed": {
+          "description": "Set to `true` to associate a unique string key with each bucket and returns the ranges as a hash rather than an array.",
+          "kind": "boolean"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "ranges": {
+          "description": "Array of date ranges.",
+          "kind": "array"
+        },
+        "time_zone": {
+          "description": "The time zone identifier.",
+          "kind": "string"
+        }
+      }
+    },
+    "derivative": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "diversified_sampler": {
+      "params": {
+        "execution_hint": {
+          "enum": [
+            "bytes_hash",
+            "global_ordinals",
+            "map"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "max_docs_per_value": {
+          "description": "Limits how many documents are permitted per choice of de-duplicating value.",
+          "kind": "number"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "shard_size": {
+          "description": "Limits how many top-scoring documents are collected in the sample processed on each shard.",
+          "kind": "number"
+        }
+      }
+    },
+    "extended_stats": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "sigma": {
+          "description": "The number of standard deviations above/below the mean to display.",
+          "kind": "number"
+        }
+      }
+    },
+    "extended_stats_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "sigma": {
+          "description": "The number of standard deviations above/below the mean to display.",
+          "kind": "number"
+        }
+      }
+    },
+    "filter": {
+      "params": {
+        "agentic": {
+          "kind": "object",
+          "version_added": "3.2"
+        },
+        "bool": {
+          "kind": "object"
+        },
+        "boosting": {
+          "kind": "object"
+        },
+        "combined_fields": {
+          "kind": "object"
+        },
+        "common": {
+          "kind": "object"
+        },
+        "constant_score": {
+          "kind": "object"
+        },
+        "dis_max": {
+          "kind": "object"
+        },
+        "distance_feature": {
+          "kind": "object"
+        },
+        "exists": {
+          "kind": "object"
+        },
+        "field_masking_span": {
+          "kind": "object"
+        },
+        "function_score": {
+          "kind": "object"
+        },
+        "fuzzy": {
+          "description": "Returns documents that contain terms similar to the search term, as measured by a Levenshtein edit distance.",
+          "kind": "object"
+        },
+        "geo_bounding_box": {
+          "kind": "object"
+        },
+        "geo_distance": {
+          "kind": "object"
+        },
+        "geo_polygon": {
+          "kind": "object"
+        },
+        "geo_shape": {
+          "kind": "object"
+        },
+        "has_child": {
+          "kind": "object"
+        },
+        "has_parent": {
+          "kind": "object"
+        },
+        "hybrid": {
+          "kind": "object"
+        },
+        "ids": {
+          "kind": "object"
+        },
+        "intervals": {
+          "description": "Returns documents based on the order and proximity of matching terms.",
+          "kind": "object"
+        },
+        "knn": {
+          "kind": "object"
+        },
+        "match": {
+          "description": "Returns documents that match a provided text, number, date or Boolean value. The provided text is analyzed before matching.",
+          "kind": "object"
+        },
+        "match_all": {
+          "kind": "object"
+        },
+        "match_bool_prefix": {
+          "description": "Analyzes its input and constructs a `bool` query from the terms. Each term except the last is used in a `term` query. The last term is used in a prefix query.",
+          "kind": "object"
+        },
+        "match_none": {
+          "kind": "object"
+        },
+        "match_phrase": {
+          "description": "Analyzes the text and creates a phrase query out of the analyzed text.",
+          "kind": "object"
+        },
+        "match_phrase_prefix": {
+          "description": "Returns documents that contain the words of a provided text, in the same order as provided. The last term of the provided text is treated as a prefix, matching any words that begin with that term.",
+          "kind": "object"
+        },
+        "more_like_this": {
+          "kind": "object"
+        },
+        "multi_match": {
+          "kind": "object"
+        },
+        "nested": {
+          "kind": "object"
+        },
+        "neural": {
+          "kind": "object"
+        },
+        "neural_sparse": {
+          "kind": "object"
+        },
+        "parent_id": {
+          "kind": "object"
+        },
+        "percolate": {
+          "kind": "object"
+        },
+        "prefix": {
+          "description": "Returns documents that contain a specific prefix in a provided field.",
+          "kind": "object"
+        },
+        "query_string": {
+          "kind": "object"
+        },
+        "range": {
+          "description": "Returns documents that contain terms within a provided range.",
+          "kind": "object"
+        },
+        "rank_feature": {
+          "kind": "object"
+        },
+        "regexp": {
+          "description": "Returns documents that contain terms matching a regular expression.",
+          "kind": "object"
+        },
+        "script": {
+          "kind": "object"
+        },
+        "script_score": {
+          "kind": "object"
+        },
+        "simple_query_string": {
+          "kind": "object"
+        },
+        "sltr": {
+          "kind": "object"
+        },
+        "span_containing": {
+          "kind": "object"
+        },
+        "span_first": {
+          "kind": "object"
+        },
+        "span_multi": {
+          "kind": "object"
+        },
+        "span_near": {
+          "kind": "object"
+        },
+        "span_not": {
+          "kind": "object"
+        },
+        "span_or": {
+          "kind": "object"
+        },
+        "span_term": {
+          "description": "Matches spans containing a term.",
+          "kind": "object"
+        },
+        "span_within": {
+          "kind": "object"
+        },
+        "template": {
+          "description": "Return documents using a template query contains placeholders that are resolved by search request processors during query execution.",
+          "kind": "object"
+        },
+        "term": {
+          "description": "Returns documents that contain an exact term in a provided field. To return a document, the query term must exactly match the queried field's value, including white space and capitalization.",
+          "kind": "object"
+        },
+        "terms": {
+          "description": "Returns documents that contain one or more exact terms in a provided field.",
+          "kind": "object"
+        },
+        "terms_set": {
+          "description": "Returns documents that contain a minimum number of exact terms in a provided field. To return a document, a required number of terms must exactly match the field values, including white space and capitalization.",
+          "kind": "object"
+        },
+        "type": {
+          "kind": "object"
+        },
+        "wildcard": {
+          "description": "Returns documents that contain terms matching a wildcard pattern.",
+          "kind": "object"
+        },
+        "wrapper": {
+          "kind": "object"
+        },
+        "xy_shape": {
+          "kind": "object",
+          "version_added": "2.4"
+        }
+      }
+    },
+    "filters": {
+      "params": {
+        "filters": {
+          "kind": "any"
+        },
+        "keyed": {
+          "description": "By default, the named filters aggregation returns the buckets as an object. Set to `false` to return the buckets as an array of objects.",
+          "kind": "boolean"
+        },
+        "other_bucket": {
+          "description": "Set to `true` to add a bucket to the response which will contain all documents that do not match any of the given filters.",
+          "kind": "boolean"
+        },
+        "other_bucket_key": {
+          "description": "The key with which the other bucket is returned.",
+          "kind": "string"
+        }
+      }
+    },
+    "geo_bounds": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "wrap_longitude": {
+          "description": "Specifies whether the bounding box should be allowed to overlap the international date line.",
+          "kind": "boolean"
+        }
+      }
+    },
+    "geo_centroid": {
+      "params": {
+        "count": {
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "location": {
+          "description": "A latitude/longitude as a two-dimensional point. It can be represented in the following ways: - As a `{lat, long}` object. - As a geohash value. - As a `[lon, lat]` array. - As a string in `<lat>, <lon>` or WKT point format.",
+          "kind": "any"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "geo_distance": {
+      "params": {
+        "distance_type": {
+          "enum": [
+            "arc",
+            "plane"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "origin": {
+          "description": "A latitude/longitude as a two-dimensional point. It can be represented in the following ways: - As a `{lat, long}` object. - As a geohash value. - As a `[lon, lat]` array. - As a string in `<lat>, <lon>` or WKT point format.",
+          "kind": "any"
+        },
+        "ranges": {
+          "description": "An array of ranges used to bucket documents.",
+          "kind": "array"
+        },
+        "unit": {
+          "enum": [
+            "cm",
+            "ft",
+            "in",
+            "km",
+            "m",
+            "mi",
+            "mm",
+            "nmi",
+            "yd"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "geohash_grid": {
+      "params": {
+        "bounds": {
+          "description": "A geo-bounding box. It can be represented in the following ways: - As 4 top/bottom/left/right coordinates. - As 2 top_left/bottom_right points. - As 2 top_right/bottom_left points. - As a Well Known Text (WKT) bounding box.",
+          "kind": "object"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "precision": {
+          "description": "The level of geohash precision, which can be expressed as a geohash length between 1 and 12 or as a distance measure, such as \"1km\" or \"10m\".",
+          "kind": "any"
+        },
+        "shard_size": {
+          "description": "Allows for more accurate counting of the top cells returned in the final result the aggregation. Defaults to returning `max(10,(size x number-of-shards))` buckets from each shard.",
+          "kind": "number"
+        },
+        "size": {
+          "description": "The maximum number of geohash buckets to return.",
+          "kind": "number"
+        }
+      }
+    },
+    "geotile_grid": {
+      "params": {
+        "bounds": {
+          "description": "A geo-bounding box. It can be represented in the following ways: - As 4 top/bottom/left/right coordinates. - As 2 top_left/bottom_right points. - As 2 top_right/bottom_left points. - As a Well Known Text (WKT) bounding box.",
+          "kind": "object"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "precision": {
+          "description": "The precision level for geo tile calculations.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "Allows for more accurate counting of the top cells returned in the final result the aggregation. Defaults to returning `max(10,(size x number-of-shards))` buckets from each shard.",
+          "kind": "number"
+        },
+        "size": {
+          "description": "The maximum number of buckets to return.",
+          "kind": "number"
+        }
+      }
+    },
+    "global": {
+      "params": {}
+    },
+    "histogram": {
+      "params": {
+        "extended_bounds": {
+          "kind": "object"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "hard_bounds": {
+          "kind": "object"
+        },
+        "interval": {
+          "description": "The interval for the buckets. Must be a positive decimal.",
+          "kind": "number"
+        },
+        "keyed": {
+          "description": "If `true`, returns buckets as a hash instead of an array, keyed by the bucket keys.",
+          "kind": "boolean"
+        },
+        "min_doc_count": {
+          "description": "Only returns buckets that have `min_doc_count` number of documents. By default, the response will fill gaps in the histogram with empty buckets.",
+          "kind": "number"
+        },
+        "missing": {
+          "description": "The value to apply to documents that do not have a value. By default, documents without a value are ignored.",
+          "kind": "number"
+        },
+        "offset": {
+          "description": "By default, the bucket keys start with 0 and then continue in even spaced steps of `interval`. The bucket boundaries can be shifted by using the `offset` option.",
+          "kind": "number"
+        },
+        "order": {
+          "kind": "object"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "ip_range": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "ranges": {
+          "description": "Array of IP ranges.",
+          "kind": "array"
+        }
+      }
+    },
+    "matrix_stats": {
+      "params": {
+        "fields": {
+          "description": "A comma-separated list or a wildcard expression specifying the fields to include in the statistics. Used as the default list unless a specific field list is provided in the `completion_fields` or `fielddata_fields` parameters.",
+          "kind": "any"
+        },
+        "missing": {
+          "description": "The value to apply to documents that do not have a value. By default, documents without a value are ignored.",
+          "kind": "object"
+        },
+        "mode": {
+          "enum": [
+            "avg",
+            "max",
+            "median",
+            "min",
+            "sum"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "max": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "value_type": {
+          "description": "The data type for a field. The server's `lenientParse` accepts multiple representations for the same underlying type (for example, byte/short/integer/long all map to long).",
+          "enum": [
+            "boolean",
+            "byte",
+            "date",
+            "double",
+            "float",
+            "integer",
+            "ip",
+            "long",
+            "number",
+            "numeric",
+            "short",
+            "string",
+            "unsigned_long"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "max_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "median_absolute_deviation": {
+      "params": {
+        "compression": {
+          "description": "Limits the maximum number of nodes used by the underlying TDigest algorithm to `20 * compression`, enabling control of memory usage and approximation error.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "min": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "value_type": {
+          "description": "The data type for a field. The server's `lenientParse` accepts multiple representations for the same underlying type (for example, byte/short/integer/long all map to long).",
+          "enum": [
+            "boolean",
+            "byte",
+            "date",
+            "double",
+            "float",
+            "integer",
+            "ip",
+            "long",
+            "number",
+            "numeric",
+            "short",
+            "string",
+            "unsigned_long"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "min_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "missing": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        }
+      }
+    },
+    "moving_avg": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "minimize": {
+          "kind": "boolean"
+        },
+        "model": {
+          "enum": [
+            "linear",
+            "simple",
+            "ewma",
+            "holt",
+            "holt_winters"
+          ],
+          "kind": "string"
+        },
+        "predict": {
+          "kind": "number"
+        },
+        "settings": {
+          "description": "An empty object with no properties.",
+          "kind": "object"
+        },
+        "window": {
+          "kind": "number"
+        }
+      }
+    },
+    "moving_fn": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "script": {
+          "description": "The script that should be executed on each window of data.",
+          "kind": "string"
+        },
+        "shift": {
+          "description": "By default, the window consists of the last n values excluding the current bucket. Increasing `shift` by 1, moves the starting window position by 1 to the right.",
+          "kind": "number"
+        },
+        "window": {
+          "description": "The size of window to \"slide\" across the histogram.",
+          "kind": "number"
+        }
+      }
+    },
+    "moving_percentiles": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "keyed": {
+          "kind": "boolean"
+        },
+        "shift": {
+          "description": "By default, the window consists of the last n values excluding the current bucket. Increasing `shift` by 1, moves the starting window position by 1 to the right.",
+          "kind": "number"
+        },
+        "window": {
+          "description": "The size of window to \"slide\" across the histogram.",
+          "kind": "number"
+        }
+      }
+    },
+    "multi_terms": {
+      "params": {
+        "collect_mode": {
+          "enum": [
+            "breadth_first",
+            "depth_first"
+          ],
+          "kind": "string"
+        },
+        "min_doc_count": {
+          "description": "The minimum number of documents in a bucket for it to be returned.",
+          "kind": "number"
+        },
+        "order": {
+          "kind": "object"
+        },
+        "shard_min_doc_count": {
+          "description": "The minimum number of documents in a bucket on each shard for it to be returned.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "The number of candidate terms produced by each shard. By default, `shard_size` will be automatically estimated based on the number of shards and the `size` parameter.",
+          "kind": "number"
+        },
+        "show_term_doc_count_error": {
+          "description": "Calculates the doc count error on per term basis.",
+          "kind": "boolean"
+        },
+        "size": {
+          "description": "The number of term buckets should be returned out of the overall terms list.",
+          "kind": "number"
+        },
+        "terms": {
+          "description": "The field from which to generate sets of terms.",
+          "kind": "array"
+        }
+      }
+    },
+    "nested": {
+      "params": {
+        "path": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        }
+      }
+    },
+    "normalize": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "method": {
+          "enum": [
+            "mean",
+            "percent_of_sum",
+            "rescale_0_1",
+            "rescale_0_100",
+            "softmax",
+            "z-score"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "parent": {
+      "params": {
+        "type": {
+          "description": "The name of a relation in a join field.",
+          "kind": "string"
+        }
+      }
+    },
+    "percentile_ranks": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "hdr": {
+          "kind": "object"
+        },
+        "keyed": {
+          "description": "By default, the aggregation associates a unique string key with each bucket and returns the ranges as a hash rather than an array. Set to `false` to disable this behavior.",
+          "kind": "boolean"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "tdigest": {
+          "kind": "object"
+        },
+        "values": {
+          "description": "An array of values for which to calculate the percentile ranks.",
+          "kind": "array"
+        }
+      }
+    },
+    "percentiles": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "hdr": {
+          "kind": "object"
+        },
+        "keyed": {
+          "description": "By default, the aggregation associates a unique string key with each bucket and returns the ranges as a hash rather than an array. Set to `false` to disable this behavior.",
+          "kind": "boolean"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "percents": {
+          "description": "The percentiles to calculate.",
+          "kind": "array"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "tdigest": {
+          "kind": "object"
+        }
+      }
+    },
+    "percentiles_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "percents": {
+          "description": "The list of percentiles to calculate.",
+          "kind": "array"
+        }
+      }
+    },
+    "range": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "keyed": {
+          "description": "Set to `true` to associate a unique string key with each bucket and return the ranges as a hash rather than an array.",
+          "kind": "boolean"
+        },
+        "missing": {
+          "description": "The value to apply to documents that do not have a value. By default, documents without a value are ignored.",
+          "kind": "number"
+        },
+        "ranges": {
+          "description": "An array of ranges used to bucket documents.",
+          "kind": "array"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "rare_terms": {
+      "params": {
+        "exclude": {
+          "kind": "any"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "include": {
+          "kind": "any"
+        },
+        "max_doc_count": {
+          "description": "The maximum number of documents a term should appear in.",
+          "kind": "number"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "precision": {
+          "description": "The precision of the internal CuckooFilters. Smaller precision leads to better approximation, but higher memory usage.",
+          "kind": "number"
+        },
+        "value_type": {
+          "kind": "string"
+        }
+      }
+    },
+    "rate": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "mode": {
+          "enum": [
+            "sum",
+            "value_count"
+          ],
+          "kind": "string"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "unit": {
+          "enum": [
+            "second",
+            "1s",
+            "minute",
+            "1m",
+            "hour",
+            "1h",
+            "day",
+            "1d",
+            "week",
+            "1w",
+            "month",
+            "1M",
+            "quarter",
+            "1q",
+            "year",
+            "1Y"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "reverse_nested": {
+      "params": {
+        "path": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        }
+      }
+    },
+    "sampler": {
+      "params": {
+        "shard_size": {
+          "description": "Limits how many top-scoring documents are collected in the sample processed on each shard.",
+          "kind": "number"
+        }
+      }
+    },
+    "scripted_metric": {
+      "params": {
+        "combine_script": {
+          "kind": "any"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "init_script": {
+          "kind": "any"
+        },
+        "map_script": {
+          "kind": "any"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "params": {
+          "description": "A global object with script parameters for `init`, `map` and `combine` scripts. It is shared between the scripts.",
+          "kind": "object"
+        },
+        "reduce_script": {
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "serial_diff": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        },
+        "lag": {
+          "description": "The historical bucket to subtract from the current value. Must be a positive, non-zero integer.",
+          "kind": "number"
+        }
+      }
+    },
+    "significant_terms": {
+      "params": {
+        "background_filter": {
+          "kind": "object"
+        },
+        "chi_square": {
+          "kind": "object"
+        },
+        "exclude": {
+          "kind": "any"
+        },
+        "execution_hint": {
+          "enum": [
+            "global_ordinals",
+            "global_ordinals_hash",
+            "global_ordinals_low_cardinality",
+            "map"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "gnd": {
+          "kind": "object"
+        },
+        "include": {
+          "kind": "any"
+        },
+        "jlh": {
+          "description": "An empty object with no properties.",
+          "kind": "object"
+        },
+        "min_doc_count": {
+          "description": "Only return terms that are found in more than `min_doc_count` hits.",
+          "kind": "number"
+        },
+        "mutual_information": {
+          "kind": "object"
+        },
+        "percentage": {
+          "kind": "object"
+        },
+        "script_heuristic": {
+          "kind": "object"
+        },
+        "shard_min_doc_count": {
+          "description": "Regulates the certainty a shard has if the term should actually be added to the candidate list or not with respect to the `min_doc_count`. Terms will only be considered if their local shard frequency within the set is higher than the `shard_min_doc_count`.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "Can be used to control the volumes of candidate terms produced by each shard. By default, `shard_size` will be automatically estimated based on the number of shards and the `size` parameter.",
+          "kind": "number"
+        },
+        "size": {
+          "description": "The number of buckets returned out of the overall terms list.",
+          "kind": "number"
+        }
+      }
+    },
+    "significant_text": {
+      "params": {
+        "background_filter": {
+          "kind": "object"
+        },
+        "chi_square": {
+          "kind": "object"
+        },
+        "exclude": {
+          "kind": "any"
+        },
+        "execution_hint": {
+          "enum": [
+            "global_ordinals",
+            "global_ordinals_hash",
+            "global_ordinals_low_cardinality",
+            "map"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "filter_duplicate_text": {
+          "description": "Whether to out duplicate text to deal with noisy data.",
+          "kind": "boolean"
+        },
+        "gnd": {
+          "kind": "object"
+        },
+        "include": {
+          "kind": "any"
+        },
+        "jlh": {
+          "description": "An empty object with no properties.",
+          "kind": "object"
+        },
+        "min_doc_count": {
+          "description": "Only return values that are found in more than `min_doc_count` hits.",
+          "kind": "number"
+        },
+        "mutual_information": {
+          "kind": "object"
+        },
+        "percentage": {
+          "kind": "object"
+        },
+        "script_heuristic": {
+          "kind": "object"
+        },
+        "shard_min_doc_count": {
+          "description": "Regulates the certainty a shard has if the values should actually be added to the candidate list or not with respect to the `min_doc_count`. Values will only be considered if their local shard frequency within the set is higher than the `shard_min_doc_count`.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "The number of candidate terms produced by each shard. By default, `shard_size` will be automatically estimated based on the number of shards and the `size` parameter.",
+          "kind": "number"
+        },
+        "size": {
+          "description": "The number of buckets returned out of the overall terms list.",
+          "kind": "number"
+        },
+        "source_fields": {
+          "description": "A comma-separated list or a wildcard expression specifying the fields to include in the statistics. Used as the default list unless a specific field list is provided in the `completion_fields` or `fielddata_fields` parameters.",
+          "kind": "any"
+        }
+      }
+    },
+    "stats": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "stats_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "sum": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "sum_bucket": {
+      "params": {
+        "buckets_path": {
+          "description": "Buckets path can be expressed in different ways, and an aggregation may accept some or all of these forms depending on its type. Refer to each aggregation's documentation to know what buckets path forms they accept.",
+          "kind": "any"
+        },
+        "format": {
+          "description": "`DecimalFormat` pattern for the output value. If specified, the formatted value is returned in the aggregation's `value_as_string` property.",
+          "kind": "string"
+        },
+        "gap_policy": {
+          "enum": [
+            "insert_zeros",
+            "keep_values",
+            "skip"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "t_test": {
+      "params": {
+        "a": {
+          "kind": "object"
+        },
+        "b": {
+          "kind": "object"
+        },
+        "type": {
+          "enum": [
+            "heteroscedastic",
+            "homoscedastic",
+            "paired"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "terms": {
+      "params": {
+        "collect_mode": {
+          "enum": [
+            "breadth_first",
+            "depth_first"
+          ],
+          "kind": "string"
+        },
+        "exclude": {
+          "kind": "any"
+        },
+        "execution_hint": {
+          "enum": [
+            "global_ordinals",
+            "global_ordinals_hash",
+            "global_ordinals_low_cardinality",
+            "map"
+          ],
+          "kind": "string"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "include": {
+          "kind": "any"
+        },
+        "min_doc_count": {
+          "description": "Only return values that are found in more than `min_doc_count` hits.",
+          "kind": "number"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "order": {
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "shard_min_doc_count": {
+          "description": "The minimum number of documents in a bucket on each shard for it to be returned.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "The number of candidate terms produced by each shard. By default, `shard_size` will be automatically estimated based on the number of shards and the `size` parameter.",
+          "kind": "number"
+        },
+        "show_term_doc_count_error": {
+          "description": "Set to `true` to return the `doc_count_error_upper_bound`, which is an upper bound to the error on the `doc_count` returned by each shard.",
+          "kind": "boolean"
+        },
+        "size": {
+          "description": "The number of buckets returned out of the overall terms list.",
+          "kind": "number"
+        },
+        "value_type": {
+          "description": "Coerced unmapped fields into the specified type.",
+          "enum": [
+            "boolean",
+            "byte",
+            "date",
+            "double",
+            "float",
+            "integer",
+            "ip",
+            "long",
+            "number",
+            "numeric",
+            "short",
+            "string",
+            "unsigned_long"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "top_hits": {
+      "params": {
+        "_source": {
+          "description": "Defines how to fetch a source. Fetching can be disabled entirely, or the source can be filtered.",
+          "kind": "any"
+        },
+        "docvalue_fields": {
+          "description": "A comma-separated list or a wildcard expression specifying the fields to include in the statistics. Used as the default list unless a specific field list is provided in the `completion_fields` or `fielddata_fields` parameters.",
+          "kind": "any"
+        },
+        "explain": {
+          "description": "If `true`, returns detailed information about score computation as part of a hit.",
+          "kind": "boolean"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "from": {
+          "description": "Starting document offset.",
+          "kind": "number"
+        },
+        "highlight": {
+          "kind": "object"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        },
+        "script_fields": {
+          "description": "Returns the result of one or more script evaluations for each hit.",
+          "kind": "object"
+        },
+        "seq_no_primary_term": {
+          "description": "If `true`, returns sequence number and primary term of the last modification of each hit.",
+          "kind": "boolean"
+        },
+        "size": {
+          "description": "The maximum number of top matching hits to return per bucket.",
+          "kind": "number"
+        },
+        "sort": {
+          "kind": "any"
+        },
+        "stored_fields": {
+          "description": "A comma-separated list or a wildcard expression specifying the fields to include in the statistics. Used as the default list unless a specific field list is provided in the `completion_fields` or `fielddata_fields` parameters.",
+          "kind": "any"
+        },
+        "track_scores": {
+          "description": "If `true`, calculates and returns document scores, even if the scores are not used for sorting.",
+          "kind": "boolean"
+        },
+        "version": {
+          "description": "If `true`, returns document version as part of a hit.",
+          "kind": "boolean"
+        }
+      }
+    },
+    "value_count": {
+      "params": {
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "format": {
+          "kind": "string"
+        },
+        "missing": {
+          "description": "A field value.",
+          "kind": "any"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "variable_width_histogram": {
+      "params": {
+        "buckets": {
+          "description": "The target number of buckets.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "initial_buffer": {
+          "description": "Specifies the number of individual documents that will be stored in memory on a shard before the initial bucketing algorithm is run. Defaults to `min(10 * shard_size, 50000)`.",
+          "kind": "number"
+        },
+        "shard_size": {
+          "description": "The number of buckets that the coordinating node will request from each shard. Defaults to `buckets * 50`.",
+          "kind": "number"
+        }
+      }
+    },
+    "weighted_avg": {
+      "params": {
+        "format": {
+          "description": "A numeric response formatter.",
+          "kind": "string"
+        },
+        "value": {
+          "kind": "object"
+        },
+        "value_type": {
+          "description": "The data type for a field. The server's `lenientParse` accepts multiple representations for the same underlying type (for example, byte/short/integer/long all map to long).",
+          "enum": [
+            "boolean",
+            "byte",
+            "date",
+            "double",
+            "float",
+            "integer",
+            "ip",
+            "long",
+            "number",
+            "numeric",
+            "short",
+            "string",
+            "unsigned_long"
+          ],
+          "kind": "string"
+        },
+        "weight": {
+          "kind": "object"
+        }
+      }
+    }
+  },
+  "field_keyed_queries": [
+    "common",
+    "fuzzy",
+    "intervals",
+    "knn",
+    "match",
+    "match_bool_prefix",
+    "match_phrase",
+    "match_phrase_prefix",
+    "neural",
+    "neural_sparse",
+    "prefix",
+    "range",
+    "regexp",
+    "span_term",
+    "term",
+    "terms",
+    "terms_set",
+    "wildcard"
+  ],
+  "queries": {
+    "agentic": {
+      "params": {
+        "_name": {
+          "kind": "string",
+          "version_added": "3.2"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number",
+          "version_added": "3.2"
+        },
+        "memory_id": {
+          "description": "The memory ID from a previous response, used to continue a conversation with prior context. Applicable for conversational agents only.",
+          "kind": "string",
+          "version_added": "3.2"
+        },
+        "query_fields": {
+          "description": "A list of index fields that the agent should consider when generating the search query.",
+          "kind": "array",
+          "version_added": "3.2"
+        },
+        "query_text": {
+          "description": "The natural language question to be answered by the agent.",
+          "kind": "string",
+          "version_added": "3.2"
+        }
+      }
+    },
+    "bool": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "adjust_pure_negative": {
+          "description": "Ensures correct behavior when a query contains only `must_not` clauses. By default set to true, OpenSearch adds a match-all clause to ensure results are returned from Lucene, with the `must_not` conditions applied as filters. If set to false, the query may return no results, as Lucene typically requires at least one positive condition.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "filter": {
+          "description": "The clause (query) must appear in matching documents. However, unlike `must`, the score of the query will be ignored.",
+          "kind": "any"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "must": {
+          "description": "The clause (query) must appear in matching documents and will contribute to the score.",
+          "kind": "any"
+        },
+        "must_not": {
+          "description": "The clause (query) must not appear in the matching documents. Because scoring is ignored, a score of `0` is returned for all documents.",
+          "kind": "any"
+        },
+        "should": {
+          "description": "The clause (query) should appear in the matching document.",
+          "kind": "any"
+        }
+      }
+    },
+    "boosting": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "negative": {
+          "kind": "object"
+        },
+        "negative_boost": {
+          "description": "Floating point number between 0 and 1.0 used to decrease the relevance scores of documents matching the `negative` query.",
+          "kind": "number"
+        },
+        "positive": {
+          "kind": "object"
+        }
+      }
+    },
+    "combined_fields": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "auto_generate_synonyms_phrase_query": {
+          "description": "If `true`, match phrase queries are automatically created for multi-term synonyms.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "fields": {
+          "description": "List of fields to search. Field wildcard patterns are allowed. Only `text` fields are supported, and they must all have the same search `analyzer`.",
+          "kind": "array"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "operator": {
+          "enum": [
+            "and",
+            "or"
+          ],
+          "kind": "string"
+        },
+        "query": {
+          "description": "Text to search for in the provided `fields`. The `combined_fields` query analyzes the provided text before performing a search.",
+          "kind": "string"
+        },
+        "zero_terms_query": {
+          "enum": [
+            "all",
+            "none"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "common": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "cutoff_frequency": {
+          "kind": "number"
+        },
+        "high_freq_operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "low_freq_operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "query": {
+          "kind": "string"
+        }
+      }
+    },
+    "constant_score": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "filter": {
+          "kind": "object"
+        }
+      }
+    },
+    "dis_max": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "queries": {
+          "description": "One or more query clauses. Returned documents must match one or more of these queries. If a document matches multiple queries, OpenSearch uses the highest relevance score.",
+          "kind": "array"
+        },
+        "tie_breaker": {
+          "description": "Floating point number between 0 and 1.0 used to increase the relevance scores of documents matching multiple query clauses.",
+          "kind": "number"
+        }
+      }
+    },
+    "distance_feature": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "origin": {
+          "description": "A latitude/longitude as a two-dimensional point. It can be represented in the following ways: - As a `{lat, long}` object. - As a geohash value. - As a `[lon, lat]` array. - As a string in `<lat>, <lon>` or WKT point format.",
+          "kind": "any"
+        },
+        "pivot": {
+          "description": "A duration. Units can be `nanos`, `micros`, `ms` (milliseconds), `s` (seconds), `m` (minutes), `h` (hours) and `d` (days). Also accepts `0` without a unit and `-1` to indicate an unspecified value.",
+          "kind": "string"
+        }
+      }
+    },
+    "exists": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        }
+      }
+    },
+    "field_masking_span": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "query": {
+          "kind": "object"
+        }
+      }
+    },
+    "function_score": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "boost_mode": {
+          "enum": [
+            "avg",
+            "max",
+            "min",
+            "multiply",
+            "replace",
+            "sum"
+          ],
+          "kind": "string"
+        },
+        "functions": {
+          "description": "One or more functions that compute a new score for each document returned by the query.",
+          "kind": "array"
+        },
+        "max_boost": {
+          "description": "Restricts the new score to not exceed the provided limit.",
+          "kind": "number"
+        },
+        "min_score": {
+          "description": "Excludes documents that do not meet the provided score threshold.",
+          "kind": "number"
+        },
+        "query": {
+          "kind": "object"
+        },
+        "score_mode": {
+          "enum": [
+            "avg",
+            "first",
+            "max",
+            "min",
+            "multiply",
+            "sum"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "fuzzy": {
+      "description": "Returns documents that contain terms similar to the search term, as measured by a Levenshtein edit distance.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "fuzziness": {
+          "kind": "any"
+        },
+        "max_expansions": {
+          "description": "Maximum number of variations created.",
+          "kind": "number"
+        },
+        "prefix_length": {
+          "description": "Number of beginning characters left unchanged when creating expansions.",
+          "kind": "number"
+        },
+        "rewrite": {
+          "kind": "string"
+        },
+        "transpositions": {
+          "description": "Indicates whether edits include transpositions of two adjacent characters (for example, `ab` to `ba`).",
+          "kind": "boolean"
+        },
+        "value": {
+          "description": "Term you wish to find in the provided field.",
+          "kind": "any"
+        }
+      }
+    },
+    "geo_bounding_box": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Set to `true` to ignore an unmapped field and not match any documents for this query. Set to `false` to throw an exception if the field is not mapped.",
+          "kind": "boolean"
+        },
+        "type": {
+          "enum": [
+            "indexed",
+            "memory"
+          ],
+          "kind": "string"
+        },
+        "validation_method": {
+          "enum": [
+            "coerce",
+            "ignore_malformed",
+            "strict"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "geo_distance": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "distance": {
+          "kind": "string"
+        },
+        "distance_type": {
+          "enum": [
+            "arc",
+            "plane"
+          ],
+          "kind": "string"
+        },
+        "ignore_unmapped": {
+          "description": "Set to `true` to ignore an unmapped field and not match any documents for this query. Set to `false` to throw an exception if the field is not mapped.",
+          "kind": "boolean"
+        },
+        "unit": {
+          "description": "The unit of distance measurement.",
+          "enum": [
+            "cm",
+            "ft",
+            "in",
+            "km",
+            "m",
+            "mi",
+            "mm",
+            "nmi",
+            "yd"
+          ],
+          "kind": "string"
+        },
+        "validation_method": {
+          "enum": [
+            "coerce",
+            "ignore_malformed",
+            "strict"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "geo_polygon": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Set to `true` to ignore an unmapped field and not match any documents for this query. Set to `false` to throw an exception if the field is not mapped.",
+          "kind": "boolean"
+        },
+        "validation_method": {
+          "enum": [
+            "coerce",
+            "ignore_malformed",
+            "strict"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "geo_shape": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Set to `true` to ignore an unmapped field and not match any documents for this query. Set to `false` to throw an exception if the field is not mapped.",
+          "kind": "boolean"
+        }
+      }
+    },
+    "has_child": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Indicates whether to ignore an unmapped `type` and not return any documents instead of an error.",
+          "kind": "boolean"
+        },
+        "inner_hits": {
+          "kind": "object"
+        },
+        "max_children": {
+          "description": "Maximum number of child documents that match the query allowed for a returned parent document. If the parent document exceeds this limit, it is excluded from the search results.",
+          "kind": "number"
+        },
+        "min_children": {
+          "description": "Minimum number of child documents that match the query required to match the query for a returned parent document. If the parent document does not meet this limit, it is excluded from the search results.",
+          "kind": "number"
+        },
+        "query": {
+          "kind": "object"
+        },
+        "score_mode": {
+          "enum": [
+            "avg",
+            "max",
+            "min",
+            "none",
+            "sum"
+          ],
+          "kind": "string"
+        },
+        "type": {
+          "description": "The name of a relation in a join field.",
+          "kind": "string"
+        }
+      }
+    },
+    "has_parent": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Indicates whether to ignore an unmapped `parent_type` and not return any documents instead of an error. You can use this parameter to query multiple indexes that may not contain the `parent_type`.",
+          "kind": "boolean"
+        },
+        "inner_hits": {
+          "kind": "object"
+        },
+        "parent_type": {
+          "description": "The name of a relation in a join field.",
+          "kind": "string"
+        },
+        "query": {
+          "kind": "object"
+        },
+        "score": {
+          "description": "Indicates whether the relevance score of a matching parent document is aggregated into its child documents.",
+          "kind": "boolean"
+        }
+      }
+    },
+    "hybrid": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "filter": {
+          "kind": "object",
+          "version_added": "3.0"
+        },
+        "pagination_depth": {
+          "kind": "number"
+        },
+        "queries": {
+          "kind": "array"
+        }
+      }
+    },
+    "ids": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "values": {
+          "kind": "any"
+        }
+      }
+    },
+    "intervals": {
+      "description": "Returns documents based on the order and proximity of matching terms.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "all_of": {
+          "kind": "object"
+        },
+        "any_of": {
+          "kind": "object"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "fuzzy": {
+          "kind": "object"
+        },
+        "match": {
+          "kind": "object"
+        },
+        "prefix": {
+          "kind": "object"
+        },
+        "wildcard": {
+          "kind": "object"
+        }
+      }
+    },
+    "knn": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "expand_nested_docs": {
+          "kind": "boolean",
+          "version_added": "2.19"
+        },
+        "filter": {
+          "description": "The filter for the k-NN search query.",
+          "kind": "object"
+        },
+        "k": {
+          "description": "The total number of nearest neighbors to return as top hits.",
+          "kind": "number"
+        },
+        "max_distance": {
+          "description": "The maximum physical vector space distance required in order for a neighbor to be considered a hit.",
+          "kind": "number",
+          "version_added": "2.14"
+        },
+        "method_parameters": {
+          "kind": "object",
+          "version_added": "2.16"
+        },
+        "min_score": {
+          "description": "The minimum similarity score required in order for a neighbor to be considered a hit.",
+          "kind": "number",
+          "version_added": "2.14"
+        },
+        "rescore": {
+          "kind": "any",
+          "version_added": "2.17"
+        },
+        "vector": {
+          "kind": "array"
+        }
+      }
+    },
+    "match": {
+      "description": "Returns documents that match a provided text, number, date or Boolean value. The provided text is analyzed before matching.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert the text in the query value into tokens.",
+          "kind": "string"
+        },
+        "auto_generate_synonyms_phrase_query": {
+          "description": "If `true`, match phrase queries are automatically created for multi-term synonyms.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "cutoff_frequency": {
+          "kind": "number"
+        },
+        "fuzziness": {
+          "kind": "any"
+        },
+        "fuzzy_rewrite": {
+          "kind": "string"
+        },
+        "fuzzy_transpositions": {
+          "description": "If `true`, edits for fuzzy matching include transpositions of two adjacent characters (for example, `ab` to `ba`).",
+          "kind": "boolean"
+        },
+        "lenient": {
+          "description": "If `true`, format-based errors, such as providing a text query value for a numeric field, are ignored.",
+          "kind": "boolean"
+        },
+        "max_expansions": {
+          "description": "Maximum number of terms to which the query will expand.",
+          "kind": "number"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "prefix_length": {
+          "description": "Number of beginning characters left unchanged for fuzzy matching.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Text, number, Boolean value or date you wish to find in the provided field.",
+          "kind": "any"
+        },
+        "zero_terms_query": {
+          "enum": [
+            "all",
+            "ALL",
+            "none",
+            "NONE"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "match_all": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        }
+      }
+    },
+    "match_bool_prefix": {
+      "description": "Analyzes its input and constructs a `bool` query from the terms. Each term except the last is used in a `term` query. The last term is used in a prefix query.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert the text in the query value into tokens.",
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "fuzziness": {
+          "kind": "any"
+        },
+        "fuzzy_rewrite": {
+          "kind": "string"
+        },
+        "fuzzy_transpositions": {
+          "description": "If `true`, edits for fuzzy matching include transpositions of two adjacent characters (for example, `ab` to `ba`). Can be applied to the term subqueries constructed for all terms but the final term.",
+          "kind": "boolean"
+        },
+        "max_expansions": {
+          "description": "Maximum number of terms to which the query will expand. Can be applied to the term subqueries constructed for all terms but the final term.",
+          "kind": "number"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "prefix_length": {
+          "description": "Number of beginning characters left unchanged for fuzzy matching. Can be applied to the term subqueries constructed for all terms but the final term.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Terms you wish to find in the provided field. The last term is used in a prefix query.",
+          "kind": "string"
+        }
+      }
+    },
+    "match_none": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        }
+      }
+    },
+    "match_phrase": {
+      "description": "Analyzes the text and creates a phrase query out of the analyzed text.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert the text in the query value into tokens.",
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Query terms that are analyzed and turned into a phrase query.",
+          "kind": "string"
+        },
+        "slop": {
+          "description": "Maximum number of positions allowed between matching tokens.",
+          "kind": "number"
+        },
+        "zero_terms_query": {
+          "enum": [
+            "all",
+            "ALL",
+            "none",
+            "NONE"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "match_phrase_prefix": {
+      "description": "Returns documents that contain the words of a provided text, in the same order as provided. The last term of the provided text is treated as a prefix, matching any words that begin with that term.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert text in the query value into tokens.",
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "max_expansions": {
+          "description": "Maximum number of terms to which the last provided term of the query value will expand.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Text you wish to find in the provided field.",
+          "kind": "string"
+        },
+        "slop": {
+          "description": "Maximum number of positions allowed between matching tokens.",
+          "kind": "number"
+        },
+        "zero_terms_query": {
+          "enum": [
+            "all",
+            "ALL",
+            "none",
+            "NONE"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "more_like_this": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "The analyzer that is used to analyze the free form text. Defaults to the analyzer associated with the first field in fields.",
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "boost_terms": {
+          "description": "Each term in the formed query could be further boosted by their tf-idf score. This sets the boost factor to use when using this feature. Defaults to deactivated (0).",
+          "kind": "number"
+        },
+        "fail_on_unsupported_field": {
+          "description": "Controls whether the query should fail (throw an exception) if any of the specified fields are not of the supported types (`text` or `keyword`).",
+          "kind": "boolean"
+        },
+        "fields": {
+          "description": "A list of fields to fetch and analyze the text from. Defaults to the `index.query.default_field` index setting, which has a default value of `*`.",
+          "kind": "array"
+        },
+        "include": {
+          "description": "Specifies whether the input documents should also be included in the search results returned.",
+          "kind": "boolean"
+        },
+        "like": {
+          "description": "Specifies free form text and/or a single or multiple documents for which you want to find similar documents.",
+          "kind": "any"
+        },
+        "max_doc_freq": {
+          "description": "The maximum document frequency above which the terms are ignored from the input document.",
+          "kind": "number"
+        },
+        "max_query_terms": {
+          "description": "The maximum number of query terms that can be selected.",
+          "kind": "number"
+        },
+        "max_word_length": {
+          "description": "The maximum word length above which the terms are ignored. Defaults to unbounded (`0`).",
+          "kind": "number"
+        },
+        "min_doc_freq": {
+          "description": "The minimum document frequency below which the terms are ignored from the input document.",
+          "kind": "number"
+        },
+        "min_term_freq": {
+          "description": "The minimum term frequency below which the terms are ignored from the input document.",
+          "kind": "number"
+        },
+        "min_word_length": {
+          "description": "The minimum word length below which the terms are ignored.",
+          "kind": "number"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "per_field_analyzer": {
+          "description": "Overrides the default analyzer.",
+          "kind": "object"
+        },
+        "routing": {
+          "description": "The routing value for the document.",
+          "kind": "string"
+        },
+        "stop_words": {
+          "description": "Language value, such as `arabic` or `thai`. Defaults to `english`. Each language value corresponds to a predefined list of stop words in Lucene. See Stop words by language for supported language values and their stop words. Also accepts an array of stop words.",
+          "kind": "any"
+        },
+        "unlike": {
+          "description": "Used in combination with `like` to exclude documents that match a set of terms.",
+          "kind": "any"
+        },
+        "version": {
+          "kind": "number"
+        },
+        "version_type": {
+          "enum": [
+            "external",
+            "external_gte",
+            "internal"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "multi_match": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert the text in the query value into tokens.",
+          "kind": "string"
+        },
+        "auto_generate_synonyms_phrase_query": {
+          "description": "If `true`, match phrase queries are automatically created for multi-term synonyms.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "cutoff_frequency": {
+          "kind": "number"
+        },
+        "fields": {
+          "description": "A comma-separated list or a wildcard expression specifying the fields to include in the statistics. Used as the default list unless a specific field list is provided in the `completion_fields` or `fielddata_fields` parameters.",
+          "kind": "any"
+        },
+        "fuzziness": {
+          "kind": "any"
+        },
+        "fuzzy_rewrite": {
+          "kind": "string"
+        },
+        "fuzzy_transpositions": {
+          "description": "If `true`, edits for fuzzy matching include transpositions of two adjacent characters (for example, `ab` to `ba`). Can be applied to the term subqueries constructed for all terms but the final term.",
+          "kind": "boolean"
+        },
+        "lenient": {
+          "description": "If `true`, format-based errors, such as providing a text query value for a numeric field, are ignored.",
+          "kind": "boolean"
+        },
+        "max_expansions": {
+          "description": "Maximum number of terms to which the query will expand.",
+          "kind": "number"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "prefix_length": {
+          "description": "Number of beginning characters left unchanged for fuzzy matching.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Text, number, Boolean value or date you wish to find in the provided field.",
+          "kind": "string"
+        },
+        "slop": {
+          "description": "Maximum number of positions allowed between matching tokens.",
+          "kind": "number"
+        },
+        "tie_breaker": {
+          "description": "Determines how scores for each per-term blended query and scores across groups are combined.",
+          "kind": "number"
+        },
+        "type": {
+          "enum": [
+            "best_fields",
+            "bool_prefix",
+            "cross_fields",
+            "most_fields",
+            "phrase",
+            "phrase_prefix"
+          ],
+          "kind": "string"
+        },
+        "zero_terms_query": {
+          "enum": [
+            "all",
+            "ALL",
+            "none",
+            "NONE"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "nested": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "ignore_unmapped": {
+          "description": "Indicates whether to ignore an unmapped path and not return any documents instead of an error.",
+          "kind": "boolean"
+        },
+        "inner_hits": {
+          "kind": "object"
+        },
+        "path": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "query": {
+          "kind": "object"
+        },
+        "score_mode": {
+          "enum": [
+            "avg",
+            "max",
+            "min",
+            "none",
+            "sum"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "neural": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "filter": {
+          "kind": "object"
+        },
+        "k": {
+          "kind": "number"
+        },
+        "max_distance": {
+          "kind": "number"
+        },
+        "min_score": {
+          "kind": "number"
+        },
+        "model_id": {
+          "kind": "string"
+        },
+        "query_image": {
+          "kind": "string"
+        },
+        "query_text": {
+          "kind": "string"
+        }
+      }
+    },
+    "neural_sparse": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyzer": {
+          "description": "The analyzer to use for tokenization instead of an ML model.",
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "max_token_score": {
+          "description": "The maximum score threshold for sparse tokens. Deprecated since OpenSearch 2.12.",
+          "kind": "number"
+        },
+        "model_id": {
+          "description": "The ID of the sparse encoding model or tokenizer model at the ML node.",
+          "kind": "string"
+        },
+        "query_text": {
+          "description": "The query text to be encoded into sparse tokens by the model.",
+          "kind": "string"
+        },
+        "query_tokens": {
+          "description": "Pre-computed sparse tokens and their weights. Use instead of query_text+model_id when tokens are already available.",
+          "kind": "object"
+        }
+      }
+    },
+    "parent_id": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "id": {
+          "description": "The unique identifier for a resource.",
+          "kind": "string"
+        },
+        "ignore_unmapped": {
+          "description": "Indicates whether to ignore an unmapped `type` and not return any documents instead of an error.",
+          "kind": "boolean"
+        },
+        "type": {
+          "description": "The name of a relation in a join field.",
+          "kind": "string"
+        }
+      }
+    },
+    "percolate": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "document": {
+          "description": "The source of the document being percolated.",
+          "kind": "any"
+        },
+        "documents": {
+          "description": "An array of sources of the documents being percolated.",
+          "kind": "array"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "id": {
+          "description": "The unique identifier for a resource.",
+          "kind": "string"
+        },
+        "index": {
+          "kind": "string"
+        },
+        "name": {
+          "description": "The suffix used for the `_percolator_document_slot` field when multiple `percolate` queries are specified.",
+          "kind": "string"
+        },
+        "preference": {
+          "description": "Preference used to fetch document to percolate.",
+          "kind": "string"
+        },
+        "routing": {
+          "description": "The routing value for the document.",
+          "kind": "string"
+        },
+        "version": {
+          "kind": "number"
+        }
+      }
+    },
+    "prefix": {
+      "description": "Returns documents that contain a specific prefix in a provided field.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "case_insensitive": {
+          "description": "Allows ASCII case insensitive matching of the value with the indexed field values when set to `true`. Default is `false` which means the case sensitivity of matching depends on the underlying field's mapping.",
+          "kind": "boolean"
+        },
+        "rewrite": {
+          "kind": "string"
+        },
+        "value": {
+          "description": "Beginning characters of terms you wish to find in the provided field.",
+          "kind": "string"
+        }
+      }
+    },
+    "query_string": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "allow_leading_wildcard": {
+          "description": "If `true`, the wildcard characters `*` and `?` are allowed as the first character of the query string.",
+          "kind": "boolean"
+        },
+        "analyze_wildcard": {
+          "description": "If `true`, the query attempts to analyze wildcard terms in the query string.",
+          "kind": "boolean"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert text in the query string into tokens.",
+          "kind": "string"
+        },
+        "auto_generate_synonyms_phrase_query": {
+          "description": "If `true`, match phrase queries are automatically created for multi-term synonyms.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "default_field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "default_operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "enable_position_increments": {
+          "description": "If `true`, enable position increments in queries constructed from a `query_string` search.",
+          "kind": "boolean"
+        },
+        "escape": {
+          "kind": "boolean"
+        },
+        "fields": {
+          "description": "Array of fields to search. Supports wildcards (`*`).",
+          "kind": "array"
+        },
+        "fuzziness": {
+          "kind": "any"
+        },
+        "fuzzy_max_expansions": {
+          "description": "Maximum number of terms to which the query expands for fuzzy matching.",
+          "kind": "number"
+        },
+        "fuzzy_prefix_length": {
+          "description": "Number of beginning characters left unchanged for fuzzy matching.",
+          "kind": "number"
+        },
+        "fuzzy_rewrite": {
+          "kind": "string"
+        },
+        "fuzzy_transpositions": {
+          "description": "If `true`, edits for fuzzy matching include transpositions of two adjacent characters (for example, `ab` to `ba`).",
+          "kind": "boolean"
+        },
+        "lenient": {
+          "description": "If `true`, format-based errors, such as providing a text value for a numeric field, are ignored.",
+          "kind": "boolean"
+        },
+        "max_determinized_states": {
+          "description": "Maximum number of automaton states required for the query.",
+          "kind": "number"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "phrase_slop": {
+          "description": "Maximum number of positions allowed between matching tokens for phrases.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "Query string you wish to parse and use for search.",
+          "kind": "string"
+        },
+        "quote_analyzer": {
+          "description": "Analyzer used to convert quoted text in the query string into tokens. For quoted text, this parameter overrides the analyzer specified in the `analyzer` parameter.",
+          "kind": "string"
+        },
+        "quote_field_suffix": {
+          "description": "Suffix appended to quoted text in the query string. You can use this suffix to use a different analysis method for exact matches.",
+          "kind": "string"
+        },
+        "rewrite": {
+          "kind": "string"
+        },
+        "tie_breaker": {
+          "description": "How to combine the queries generated from the individual search terms in the resulting `dis_max` query.",
+          "kind": "number"
+        },
+        "time_zone": {
+          "description": "The time zone identifier.",
+          "kind": "string"
+        },
+        "type": {
+          "enum": [
+            "best_fields",
+            "bool_prefix",
+            "cross_fields",
+            "most_fields",
+            "phrase",
+            "phrase_prefix"
+          ],
+          "kind": "string"
+        }
+      }
+    },
+    "range": {
+      "description": "Returns documents that contain terms within a provided range.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "format": {
+          "description": "The date format pattern.",
+          "kind": "string"
+        },
+        "from": {
+          "kind": "any"
+        },
+        "gt": {
+          "description": "Greater than.",
+          "kind": "any"
+        },
+        "gte": {
+          "description": "Greater than or equal to.",
+          "kind": "any"
+        },
+        "include_lower": {
+          "description": "Include the lower bound",
+          "kind": "boolean"
+        },
+        "include_upper": {
+          "description": "Include the upper bound",
+          "kind": "boolean"
+        },
+        "lt": {
+          "description": "Less than.",
+          "kind": "any"
+        },
+        "lte": {
+          "description": "Less than or equal to.",
+          "kind": "any"
+        },
+        "relation": {
+          "enum": [
+            "contains",
+            "intersects",
+            "within"
+          ],
+          "kind": "string"
+        },
+        "time_zone": {
+          "description": "The time zone identifier.",
+          "kind": "string"
+        },
+        "to": {
+          "kind": "any"
+        }
+      }
+    },
+    "rank_feature": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "linear": {
+          "kind": "object"
+        },
+        "log": {
+          "kind": "object"
+        },
+        "saturation": {
+          "kind": "object"
+        },
+        "sigmoid": {
+          "kind": "object"
+        }
+      }
+    },
+    "regexp": {
+      "description": "Returns documents that contain terms matching a regular expression.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "case_insensitive": {
+          "description": "Allows case insensitive matching of the regular expression value with the indexed field values when set to `true`. When `false`, case sensitivity of matching depends on the underlying field's mapping.",
+          "kind": "boolean"
+        },
+        "flags": {
+          "description": "Enables optional operators for the regular expression.",
+          "kind": "string"
+        },
+        "max_determinized_states": {
+          "description": "Maximum number of automaton states required for the query.",
+          "kind": "number"
+        },
+        "rewrite": {
+          "kind": "string"
+        },
+        "value": {
+          "description": "Regular expression for terms you wish to find in the provided field.",
+          "kind": "string"
+        }
+      }
+    },
+    "script": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "script_score": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "min_score": {
+          "description": "Documents with a score lower than this floating point number are excluded from the search results.",
+          "kind": "number"
+        },
+        "query": {
+          "kind": "object"
+        },
+        "script": {
+          "kind": "any"
+        }
+      }
+    },
+    "simple_query_string": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "analyze_wildcard": {
+          "description": "If `true`, the query attempts to analyze wildcard terms in the query string.",
+          "kind": "boolean"
+        },
+        "analyzer": {
+          "description": "Analyzer used to convert text in the query string into tokens.",
+          "kind": "string"
+        },
+        "auto_generate_synonyms_phrase_query": {
+          "description": "If `true`, the parser creates a `match_phrase` query for each multi-position token.",
+          "kind": "boolean"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "default_operator": {
+          "enum": [
+            "and",
+            "AND",
+            "or",
+            "OR"
+          ],
+          "kind": "string"
+        },
+        "fields": {
+          "description": "Array of fields you wish to search. Accepts wildcard expressions. You also can boost relevance scores for matches to particular fields using a caret (`^`) notation. Defaults to the `index.query.default_field index` setting, which has a default value of `*`.",
+          "kind": "array"
+        },
+        "flags": {
+          "description": "Query flags can be either a single flag or a combination of flags (e.g. `OR|AND|PREFIX`).",
+          "kind": "string"
+        },
+        "fuzzy_max_expansions": {
+          "description": "Maximum number of terms to which the query expands for fuzzy matching.",
+          "kind": "number"
+        },
+        "fuzzy_prefix_length": {
+          "description": "Number of beginning characters left unchanged for fuzzy matching.",
+          "kind": "number"
+        },
+        "fuzzy_transpositions": {
+          "description": "If `true`, edits for fuzzy matching include transpositions of two adjacent characters (for example, `ab` to `ba`).",
+          "kind": "boolean"
+        },
+        "lenient": {
+          "description": "If `true`, format-based errors, such as providing a text value for a numeric field, are ignored.",
+          "kind": "boolean"
+        },
+        "minimum_should_match": {
+          "description": "The minimum number of terms that should match as an integer, percentage, or range.",
+          "kind": "any"
+        },
+        "query": {
+          "description": "Query string in the simple query string syntax you wish to parse and use for search.",
+          "kind": "string"
+        },
+        "quote_field_suffix": {
+          "description": "Suffix appended to quoted text in the query string.",
+          "kind": "string"
+        }
+      }
+    },
+    "sltr": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "active_features": {
+          "kind": "array"
+        },
+        "boost": {
+          "kind": "number"
+        },
+        "cache": {
+          "kind": "boolean"
+        },
+        "featureset": {
+          "kind": "string"
+        },
+        "model": {
+          "kind": "string"
+        },
+        "params": {
+          "kind": "object"
+        },
+        "store": {
+          "kind": "string"
+        }
+      }
+    },
+    "span_containing": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "big": {
+          "kind": "object"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "little": {
+          "kind": "object"
+        }
+      }
+    },
+    "span_first": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "end": {
+          "description": "Controls the maximum end position permitted in a match.",
+          "kind": "number"
+        },
+        "match": {
+          "kind": "object"
+        }
+      }
+    },
+    "span_multi": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "match": {
+          "kind": "object"
+        }
+      }
+    },
+    "span_near": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "clauses": {
+          "description": "Array of one or more other span type queries.",
+          "kind": "array"
+        },
+        "in_order": {
+          "description": "Controls whether matches are required to be in-order.",
+          "kind": "boolean"
+        },
+        "slop": {
+          "description": "Controls the maximum number of intervening unmatched positions permitted.",
+          "kind": "number"
+        }
+      }
+    },
+    "span_not": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "dist": {
+          "description": "The number of tokens from within the include span that can't have overlap with the exclude span. Equivalent to setting both `pre` and `post`.",
+          "kind": "number"
+        },
+        "exclude": {
+          "kind": "object"
+        },
+        "include": {
+          "kind": "object"
+        },
+        "post": {
+          "description": "The number of tokens after the include span that can't have overlap with the exclude span.",
+          "kind": "number"
+        },
+        "pre": {
+          "description": "The number of tokens before the include span that can't have overlap with the exclude span.",
+          "kind": "number"
+        }
+      }
+    },
+    "span_or": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "clauses": {
+          "description": "Array of one or more other span type queries.",
+          "kind": "array"
+        }
+      }
+    },
+    "span_term": {
+      "description": "Matches spans containing a term.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "value": {
+          "kind": "string"
+        }
+      }
+    },
+    "span_within": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "big": {
+          "kind": "object"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "little": {
+          "kind": "object"
+        }
+      }
+    },
+    "template": {
+      "description": "Return documents using a template query contains placeholders that are resolved by search request processors during query execution.",
+      "params": {}
+    },
+    "term": {
+      "description": "Returns documents that contain an exact term in a provided field. To return a document, the query term must exactly match the queried field's value, including white space and capitalization.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "case_insensitive": {
+          "description": "Allows ASCII case insensitive matching of the value with the indexed field values when set to `true`. When `false`, the case sensitivity of matching depends on the underlying field's mapping.",
+          "kind": "boolean"
+        },
+        "value": {
+          "description": "A field value.",
+          "kind": "any"
+        }
+      }
+    },
+    "terms": {
+      "description": "Returns documents that contain one or more exact terms in a provided field.",
+      "params": {
+        "id": {
+          "description": "The unique identifier for a resource.",
+          "kind": "string"
+        },
+        "index": {
+          "kind": "string"
+        },
+        "path": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "query": {
+          "kind": "object",
+          "version_added": "3.2.0"
+        },
+        "routing": {
+          "description": "The routing value for the document.",
+          "kind": "string"
+        },
+        "store": {
+          "kind": "boolean"
+        }
+      }
+    },
+    "terms_set": {
+      "description": "Returns documents that contain a minimum number of exact terms in a provided field. To return a document, a required number of terms must exactly match the field values, including white space and capitalization.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "minimum_should_match_field": {
+          "description": "The path to a field or an array of paths. Some APIs support wildcards in the path, which allows you to select multiple fields.",
+          "kind": "string"
+        },
+        "minimum_should_match_script": {
+          "kind": "any"
+        },
+        "terms": {
+          "kind": "array"
+        }
+      }
+    },
+    "type": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "value": {
+          "kind": "string"
+        }
+      }
+    },
+    "wildcard": {
+      "description": "Returns documents that contain terms matching a wildcard pattern.",
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "case_insensitive": {
+          "description": "Allows case insensitive matching of the pattern with the indexed field values when set to `true`. Default is `false` which means the case sensitivity of matching depends on the underlying field's mapping.",
+          "kind": "boolean"
+        },
+        "rewrite": {
+          "kind": "string"
+        },
+        "value": {
+          "description": "Wildcard pattern for terms you wish to find in the provided field. Required, when wildcard is not set.",
+          "kind": "string"
+        },
+        "wildcard": {
+          "description": "Wildcard pattern for terms you wish to find in the provided field. Required, when value is not set.",
+          "kind": "string"
+        }
+      }
+    },
+    "wrapper": {
+      "params": {
+        "_name": {
+          "kind": "string"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number"
+        },
+        "query": {
+          "description": "A base64 encoded query. The binary data format can be any of JSON, YAML, CBOR or SMILE encodings",
+          "kind": "string"
+        }
+      }
+    },
+    "xy_shape": {
+      "params": {
+        "_name": {
+          "kind": "string",
+          "version_added": "2.4"
+        },
+        "boost": {
+          "description": "Floating point number used to decrease or increase the relevance scores of the query. Boost values are relative to the default value of 1.0. A boost value between 0 and 1.0 decreases the relevance score. A value greater than 1.0 increases the relevance score.",
+          "kind": "number",
+          "version_added": "2.4"
+        },
+        "ignore_unmapped": {
+          "kind": "boolean",
+          "version_added": "2.4"
+        }
+      }
+    }
+  },
+  "source": {
+    "commit": "81c7ccfd8101698a2ac4ee060ef7740158e3ff69",
+    "generated": "2026-09-26",
+    "repository": "opensearch-project/opensearch-api-specification"
+  }
+}

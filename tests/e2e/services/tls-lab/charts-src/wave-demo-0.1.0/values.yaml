@@ -1,0 +1,11 @@
+replicaCount: 1
+
+image:
+  repository: registry.k8s.io/pause
+  tag: "3.9"
+
+service:
+  port: 80
+
+# Overridden with --set so Reuse Values / Reset Values can be told apart.
+marker: chart-default

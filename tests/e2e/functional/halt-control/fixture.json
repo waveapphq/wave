@@ -1,0 +1,112 @@
+{
+  "name": "Halt Control E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests Halt control execution - verifies halt terminates execution, downstream nodes are skipped, session status matches halt status.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before Halt",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'before-halt-executed'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "halt-stop",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Stop Execution",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "scope": "test",
+              "status": "failed",
+              "message": "stopping execution"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After Halt",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'should-not-run'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-before",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "log-before",
+        "target": "halt-stop",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "halt-stop",
+        "target": "log-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

@@ -1,0 +1,123 @@
+{
+  "name": "V-PLUGIN-EXCEL-01 Table Bindings",
+  "version": "1.0.0",
+  "description": "Three saved elements that each bind a table variable - an Excel Read using a schema source, an Excel Write binding a table, and a CSV Serialize binding a table. Drives the canvas validation badge check: a parameter that names a variable is provided, not an empty collection.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "excel-read-schema",
+        "type": "workflowNode",
+        "position": { "x": 240, "y": 140 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read With Schema",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://bindings.xlsx",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "schema",
+              "schema_source": "orders_schema"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "excel-write-table",
+        "type": "workflowNode",
+        "position": { "x": 240, "y": 280 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://bindings.xlsx",
+              "sheet": "Orders",
+              "table": "orders",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "keep_sheets"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "csv-serialize-table",
+        "type": "workflowNode",
+        "position": { "x": 240, "y": 420 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "orders",
+              "has_header": true,
+              "delimiter": ","
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "excel-read-schema", "type": "default" },
+      {
+        "id": "e2",
+        "source": "excel-read-schema",
+        "target": "excel-write-table",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "excel-write-table",
+        "target": "csv-serialize-table",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "orders": {
+      "value": [{ "sku": "A-1", "qty": 3 }],
+      "type": "table",
+      "scope": "test"
+    },
+    "orders_schema": {
+      "value": [{ "sku": "A-1", "qty": 3 }],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

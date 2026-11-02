@@ -1,0 +1,227 @@
+{
+  "name": "Block Name Unnamed Blocks E2E",
+  "version": "1.0.0",
+  "description": "Five blocks that arrive with no Name: a For Loop and a Var Setter with an empty one, a CSV block with none at all, a Try / Catch with one of spaces, and a Log.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ca2b5c85-84f2-4ea4-87e5-409d85234b6b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 1,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "pass_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "56f65392-577f-4095-a838-4ab44f9cac02",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 160
+        },
+        "data": {
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n2,Bob\n"
+            },
+            "outputBindings": {
+              "table": "rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9bac449f-682a-4850-96a5-7caa66a333b0",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 160
+        },
+        "data": {
+          "label": "   ",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "61e5858d-06c8-492a-a3e4-cfb873b25427",
+        "type": "workflowNode",
+        "position": {
+          "x": 440,
+          "y": 280
+        },
+        "data": {
+          "label": "",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "greeting": "hello"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef657416-caad-4e02-9740-a8eb0c1e999e",
+        "type": "workflowNode",
+        "position": {
+          "x": 760,
+          "y": 280
+        },
+        "data": {
+          "label": "",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'bn-unnamed-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "81d21cf0-a36e-4124-b89d-5f76b732f966",
+        "source": "start-node",
+        "target": "ca2b5c85-84f2-4ea4-87e5-409d85234b6b",
+        "type": "default"
+      },
+      {
+        "id": "41d15e61-9317-41a6-998b-25956a93348d",
+        "source": "ca2b5c85-84f2-4ea4-87e5-409d85234b6b",
+        "target": "56f65392-577f-4095-a838-4ab44f9cac02",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "0e1b4624-0e03-4cca-bc8a-daabcd5f1553",
+        "source": "ca2b5c85-84f2-4ea4-87e5-409d85234b6b",
+        "target": "9bac449f-682a-4850-96a5-7caa66a333b0",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "535afee4-3f57-4c11-b181-8d06457aba2c",
+        "source": "9bac449f-682a-4850-96a5-7caa66a333b0",
+        "target": "61e5858d-06c8-492a-a3e4-cfb873b25427",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "a2dadc45-900e-4b8c-be85-eb3effb2f8ca",
+        "source": "9bac449f-682a-4850-96a5-7caa66a333b0",
+        "target": "ef657416-caad-4e02-9740-a8eb0c1e999e",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "pass_index": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "rows": {
+      "type": "table",
+      "value": [],
+      "scope": "test"
+    },
+    "greeting": {
+      "type": "string",
+      "value": "",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-10T00:00:00.000000",
+  "updated_at": "2026-10-10T00:00:00.000000"
+}

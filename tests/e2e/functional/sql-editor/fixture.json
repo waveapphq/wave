@@ -1,0 +1,173 @@
+{
+  "name": "V-PLUGIN-SQL-EDITOR __TOKEN__",
+  "version": "1.0.0",
+  "description": "The SQL editor against the stack's PostgreSQL: two blocks on one connection, the first bound to Rows and Row count, and a probe that lists what the blocks left in pg_stat_activity.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "43e2e07d-8d2c-46d5-a9cd-64ca8f890eda",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "script_type": "source",
+              "sql": "SELECT id, status, total FROM sqled___TOKEN___orders ORDER BY id",
+              "driver_options": {
+                "application_name": "sqled-__TOKEN__"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "sqled_rows",
+              "row_count": "sqled_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e5529cd5-847d-4868-b642-c005fe304dbc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one",
+              "driver_options": {
+                "application_name": "sqled-__TOKEN__"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "49f223af-a9fb-4f72-8f54-821293f37011",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "script_type": "source",
+              "sql": "SELECT pid, state FROM pg_stat_activity WHERE (query LIKE :pattern OR application_name = :app) AND pid <> pg_backend_pid()",
+              "parameters": {
+                "pattern": "%sqled-probe-__TOKEN__%",
+                "app": "sqled-__TOKEN__"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "row_count": "probe_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "0cbb8d39-171d-4a34-be5b-290661ba9fc8",
+        "source": "start-node",
+        "target": "43e2e07d-8d2c-46d5-a9cd-64ca8f890eda"
+      },
+      {
+        "id": "6d8ba40d-e112-43be-8728-3411b1585e49",
+        "source": "43e2e07d-8d2c-46d5-a9cd-64ca8f890eda",
+        "target": "e5529cd5-847d-4868-b642-c005fe304dbc"
+      },
+      {
+        "id": "f2d808d8-5487-4476-ac9f-460f87e8360d",
+        "source": "e5529cd5-847d-4868-b642-c005fe304dbc",
+        "target": "49f223af-a9fb-4f72-8f54-821293f37011"
+      }
+    ]
+  },
+  "variables": {
+    "sqled_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "sqled_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sqled_table": {
+      "value": "sqled___TOKEN___orders",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

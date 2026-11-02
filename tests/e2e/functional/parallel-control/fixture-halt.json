@@ -1,0 +1,378 @@
+{
+  "name": "Parallel Halt-In-Branch E2E",
+  "version": "1.0.0",
+  "description": "One Parallel whose first branch halts the test with status passed: the section ends, the sibling stops where it stood, the exit lane is skipped, and the run carries the status the Halt declared.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-hl-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'hl-start'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-hl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Halt in a branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "stopper"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "worker"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-hl-lead",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Stopper lead-in",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 300
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "halt-branch",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 360
+        },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Halt the test",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "scope": "test",
+              "status": "passed",
+              "message": "halt in a branch"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-hl-tail",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stopper tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'hl-tail'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-hl",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Worker body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-hl-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Worker tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'hl-sibling'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-hl-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'hl-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-hl-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'hl-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-hl-start",
+        "source": "start-node",
+        "target": "log-hl-before",
+        "type": "default"
+      },
+      {
+        "id": "e-hl-before",
+        "source": "log-hl-before",
+        "target": "par-hl",
+        "type": "default"
+      },
+      {
+        "id": "e-hl-b1",
+        "source": "par-hl",
+        "target": "delay-hl-lead",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-hl-lead-halt",
+        "source": "delay-hl-lead",
+        "target": "halt-branch",
+        "type": "default"
+      },
+      {
+        "id": "e-hl-tail",
+        "source": "halt-branch",
+        "target": "log-hl-tail",
+        "type": "default"
+      },
+      {
+        "id": "e-hl-b2",
+        "source": "par-hl",
+        "target": "delay-hl",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-hl-b-tail",
+        "source": "delay-hl",
+        "target": "log-hl-b",
+        "type": "default"
+      },
+      {
+        "id": "e-hl-then",
+        "source": "par-hl",
+        "target": "log-hl-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-hl-after",
+        "source": "log-hl-then",
+        "target": "log-hl-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-03T00:00:00.000000",
+  "updated_at": "2026-08-03T00:00:00.000000"
+}

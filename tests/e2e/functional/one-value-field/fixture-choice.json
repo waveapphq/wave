@@ -1,0 +1,97 @@
+{
+  "name": "zz-11541-s10-choice",
+  "version": "1.0.0",
+  "description": "Choice values a Block holds from creation (FIELD-8)",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8c3666b2-29c3-421a-aede-2b84ebb2c71a",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 100 },
+        "data": {
+          "label": "Anchor",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The Block new Blocks are dropped under",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "choice anchor", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "8256efc2-5cce-44f0-9ab0-2b5837bcdf18",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 100 },
+        "data": {
+          "label": "Talk",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk mode with CRLF and Close after sending ticked",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "text",
+              "text": "ping",
+              "crlf": true,
+              "close_after_send": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "0b4a6873-c4f1-471c-a198-6e6e4f307cd4",
+        "type": "workflowNode",
+        "position": { "x": 900, "y": 100 },
+        "data": {
+          "label": "Choice_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "name": "Choice_Fn",
+            "workflow": { "nodes": [], "edges": [] },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "96287ef8-025f-406c-89fb-e7c88f284d8d",
+        "source": "start-node",
+        "target": "8c3666b2-29c3-421a-aede-2b84ebb2c71a",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "MCP Test Data Round Trip",
+  "version": "1.0.0",
+  "description": "Minimal saved test that owns a Test Data folder: the MCP test data tools write into it and the Test Data sheet reads it back",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-mcptd-marker",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'mcptd-marker'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-mcptd-start",
+        "source": "start-node",
+        "target": "log-mcptd-marker",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

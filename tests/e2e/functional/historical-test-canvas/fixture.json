@@ -1,0 +1,82 @@
+{
+  "name": "Historical Canvas E2E Test",
+  "version": "1.0.0",
+  "description": "Tiny workflow: variable-setter then log. Produces a workflow_snapshot, block_states, an end-of-run variable, and a log entry for the Historical Test Canvas to paint + assert on.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-smoke",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set smoke var",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "var_smoke": 42
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-node",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "logging",
+          "version": "1.0.0",
+          "description": "Historical Log",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "level": "INFO",
+              "message": "historical-canvas-smoke"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "varset-smoke",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "varset-smoke",
+        "target": "log-node",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "var_smoke": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-04-20T00:00:00.000000",
+  "updated_at": "2026-04-20T00:00:00.000000"
+}

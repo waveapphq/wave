@@ -1,0 +1,605 @@
+{
+  "name": "Remote Execution TLS E2E",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 40
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open session (execution host)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 110
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run body on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-verify",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 190
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote verify-on + CA (PERM-10)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/echo",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "ca_cert": "ca_pem"
+            },
+            "outputBindings": {
+              "status_code": "r10_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-mtls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 260
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote mTLS at TLS 1.3 to tls-lab (PERM-5)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert",
+            "client_cert",
+            "client_key"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://tls-lab:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.3",
+              "tls_max_version": "1.3",
+              "ca_cert": "ca_pem",
+              "client_cert": "client_cert_pem",
+              "client_key": "client_key_pem"
+            },
+            "outputBindings": {
+              "status_code": "r5_status",
+              "body": "r5_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-noredir",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 330
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote redirects-off (PERM-18)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/redirect/1",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": false,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "r18_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-version",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 400
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote version pin 1.2 vs tls12 listener",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://tls-lab:9454/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "ca_cert": "ca_pem",
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2"
+            },
+            "outputBindings": {
+              "status_code": "rver_status",
+              "body": "rver_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-cookie",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 470
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote response Set-Cookie masks (guard 13)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/cookie",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "ck_status",
+              "headers": "ck_headers"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "r-auth",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 540
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote GET-with-body + Basic auth (guard 13)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "auth_password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/echo",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "body": "{\"probe\":\"remote-get-body\"}",
+              "auth_enabled": true,
+              "auth_mode": "basic",
+              "auth_username": "wave",
+              "auth_password": "auth_pw",
+              "headers": {
+                "X-Trace-Id": "remote-guard-13"
+              }
+            },
+            "outputBindings": {
+              "status_code": "auth_status",
+              "body": "auth_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-body",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 610
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log remote body results + cookie + auth",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'remote-body rx={r10_status} mtls={r5_status} redir={r18_status} ver={rver_status} verbody={rver_body} mtlsdn={r5_body} ck={ck_status} ckhdr={ck_headers} auth={auth_status} authbody={auth_body} authpw={auth_pw} remote-tls-body-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-then",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 680
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Then bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'then rsid_len={len(rsid)} remote-tls-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "open-session",
+        "type": "default"
+      },
+      {
+        "id": "e-open-container",
+        "source": "open-session",
+        "target": "container",
+        "type": "default"
+      },
+      {
+        "id": "e-body",
+        "source": "container",
+        "target": "r-verify",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-r1-r2",
+        "source": "r-verify",
+        "target": "r-mtls",
+        "type": "default"
+      },
+      {
+        "id": "e-r2-r3",
+        "source": "r-mtls",
+        "target": "r-noredir",
+        "type": "default"
+      },
+      {
+        "id": "e-r3-rver",
+        "source": "r-noredir",
+        "target": "r-version",
+        "type": "default"
+      },
+      {
+        "id": "e-rver-rck",
+        "source": "r-version",
+        "target": "r-cookie",
+        "type": "default"
+      },
+      {
+        "id": "e-rck-rauth",
+        "source": "r-cookie",
+        "target": "r-auth",
+        "type": "default"
+      },
+      {
+        "id": "e-rauth-log",
+        "source": "r-auth",
+        "target": "log-body",
+        "type": "default"
+      },
+      {
+        "id": "e-then",
+        "source": "container",
+        "target": "log-then",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ca_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "client_cert_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "client_key_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "r10_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "r5_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "r5_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "r18_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rver_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rver_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ck_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ck_headers": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "auth_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "auth_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "auth_pw": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,1551 @@
+{
+  "name": "SQL Remote Host E2E Execution Test",
+  "version": "1.0.0",
+  "description": "The SQL block inside a Remote Execution body on the sshd host, reaching the four databases by their compose names: PostgreSQL, MariaDB, a block with no Database type and SQL Server with TLS off with drivers carried as source, SQLite on WAVE's bundled build carried as a wheel, Oracle and SQL Server over verified TLS with wheels unpacked into the worker's scratch dir; SQLite and the block with no Database type also run on WAVE; the outputs come back to WAVE, the rows written there are read back on WAVE, and the scratch dir leaves the host with the worker.",
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "ca_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ssh_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_addrs": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_platform": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_drivers": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pg_changed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "my_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "probe_a_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_a_wheels": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "ora_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "probe_b_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_b_wheels": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "probe_b_tags": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "back_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "back_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "worker_gone": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_ids": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "ssh_own_sqlite": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lite_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lw_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lw_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lw_changed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pw_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pw_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pd_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pd_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "mp_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mp_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lr_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lr_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lr_changed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "probe_l_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_l_wheels": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "probe_l_tags": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "builds_left": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lite_folder": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e546d9d3-6471-4c41-bc17-b98c74379368",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the Execution Host session (secret password)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "sess_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cbb18e19-1e55-4734-8894-390ea0065ad9",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Read the remote host's name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "hostname",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2dd2f35d-fee6-491a-8f4b-c6df17db1f15",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Read the remote host's own network addresses",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "hostname -I",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_addrs"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7df242f4-60ea-4c31-a00c-3be67bde5701",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Read the remote host's Python tag, CPU and libc",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c \"import platform, sys; print('cp%d%d %s %s' % (sys.version_info[0], sys.version_info[1], platform.machine(), platform.libc_ver()[0]))\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_platform"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3c059177-e822-4fb9-8d3a-87823407069b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the database drivers the remote host has installed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c \"import importlib.util as u; print(','.join(n for n in ('pg8000', 'pymysql', 'pytds', 'oracledb', 'OpenSSL', 'cryptography', 'apsw') if u.find_spec(n)) or 'none')\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_drivers"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3ab2ea97-5db0-44b0-8e0b-abf95b67560d",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log what the remote host is",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlrem-host host=' + ssh_host.strip() + ' platform=' + ssh_platform.strip() + ' drivers=' + ssh_drivers.strip()",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "67838162-38e8-4d7e-926f-f15746048d69",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Read the SQLite version of the remote host's own Python",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c \"import sqlite3; print(sqlite3.sqlite_version)\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_own_sqlite"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2d5d4450-da07-476e-90b2-545f84153914",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make this run's own folder on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "mkdir -p \"$HOME/sqlrem-__TOKEN__\" && cd \"$HOME/sqlrem-__TOKEN__\" && pwd",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "lite_dir"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf7d3ca8-bb17-44f9-a02f-4d8bbeb9d2cd",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "SQLite on WAVE",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite on the WAVE host, on WAVE's bundled build",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrem-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "CREATE TABLE marks (label TEXT);\nINSERT INTO marks (label) VALUES (:tag);\nSELECT sqlite_version() AS lib, label FROM marks;",
+              "parameters": {
+                "tag": "sqlrem-__TOKEN__"
+              },
+              "stop_on_error": true,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "lw_ok",
+              "rows": "lw_rows",
+              "rows_changed": "lw_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bf2e95b8-4f90-4898-b932-c7b9f1e4620f",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "No Database type on WAVE",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A block with no Database type on the PostgreSQL rows, over the direct leg on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT current_database() AS db;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pw_ok",
+              "rows": "pw_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "841008d7-4b7c-43f1-92cf-5e329f704fbf",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "6a0a7492-5df9-4ff2-aeaf-c18d40f87765",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 880
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL by its compose name, driver carried as source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "postgres",
+              "port": 5432,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "CREATE TABLE sqlrem___TOKEN__ (id integer PRIMARY KEY, label varchar(60));\nINSERT INTO sqlrem___TOKEN__ (id, label) VALUES (1, :tag), (2, 'written-on-the-remote-host');\nSELECT host(inet_client_addr()) AS client_addr, current_database() AS db, label\nFROM sqlrem___TOKEN__ ORDER BY id;",
+              "parameters": {
+                "tag": "sqlrem-__TOKEN__"
+              },
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pg_ok",
+              "rows": "pg_rows",
+              "row_count": "pg_count",
+              "rows_changed": "pg_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ae76d8ab-6feb-4ed2-a554-60a1498f98fd",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 950
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB by its compose name, driver carried as source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "mariadb",
+              "port": 3306,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT DATABASE() AS db, SUBSTRING_INDEX(USER(), '@', -1) AS client_addr;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "my_ok",
+              "rows": "my_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2562c1c3-d938-4acc-8a63-dbd5898a97d3",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1020
+        },
+        "data": {
+          "label": "No Database type remote",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A block with no Database type on the PostgreSQL rows, by its compose name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "host": "postgres",
+              "port": 5432,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT current_database() AS db, host(inet_client_addr()) AS client_addr;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pd_ok",
+              "rows": "pd_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c475abcb-afa0-4d96-aa96-27f7dbadf051",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1090
+        },
+        "data": {
+          "label": "SQL Server TLS off",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server by its compose name with TLS off, driver carried as source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "mssql",
+              "port": 1433,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT DB_NAME() AS db, client_net_address AS client_addr, encrypt_option AS tls\nFROM sys.dm_exec_connections WHERE session_id = @@SPID;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "mp_ok",
+              "rows": "mp_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "34093a51-f828-4b63-9dff-e103475ae404",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1160
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the worker's scratch dir and the wheels unpacked so far",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\n\nworker_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nwheels_dir = os.path.join(worker_dir, \"wheels\")\ncarried = sorted(name for name in os.listdir(wheels_dir) if name.endswith(\".dist-info\"))\n",
+              "interpreter": "python3",
+              "script_variables": [
+                "worker_dir",
+                "carried"
+              ]
+            },
+            "outputBindings": {
+              "worker_dir": "probe_a_dir",
+              "carried": "probe_a_wheels"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bca844c6-e174-4d9a-8639-b2551316c697",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1230
+        },
+        "data": {
+          "label": "SQLite remote",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite in this run's folder on the remote host, build carried as a wheel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "file"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "lite_dir.strip() + '/remote.db'",
+              "script_type": "source",
+              "sql": "CREATE TABLE marks (label TEXT);\nINSERT INTO marks (label) VALUES (:tag);\nSELECT sqlite_version() AS lib, label FROM marks;",
+              "parameters": {
+                "tag": "sqlrem-__TOKEN__"
+              },
+              "stop_on_error": true,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "lr_ok",
+              "rows": "lr_rows",
+              "rows_changed": "lr_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "85377022-edb0-4806-b1e6-beb8dcc2d50b",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1300
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the worker's scratch dir, the wheels unpacked for SQLite and its build tags",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\n\nworker_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nwheels_dir = os.path.join(worker_dir, \"wheels\")\ncarried = sorted(name for name in os.listdir(wheels_dir) if name.endswith(\".dist-info\"))\nsqlite_tags = []\nfor name in carried:\n    if name.startswith(\"apsw-\"):\n        with open(os.path.join(wheels_dir, name, \"WHEEL\"), encoding=\"utf-8\") as handle:\n            sqlite_tags = [\n                line.split(\":\", 1)[1].strip() for line in handle if line.startswith(\"Tag:\")\n            ]\n",
+              "interpreter": "python3",
+              "script_variables": [
+                "worker_dir",
+                "carried",
+                "sqlite_tags"
+              ]
+            },
+            "outputBindings": {
+              "worker_dir": "probe_l_dir",
+              "carried": "probe_l_wheels",
+              "sqlite_tags": "probe_l_tags"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "702c7e97-e26c-496a-8740-87414b005935",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1370
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle by its compose name, driver carried as wheels",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "oracle",
+              "port": 1521,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT SYS_CONTEXT('USERENV', 'IP_ADDRESS') AS \"client_addr\",\n  SYS_CONTEXT('USERENV', 'SERVICE_NAME') AS \"service\", :tag AS \"tag\"\nFROM dual",
+              "parameters": {
+                "tag": "sqlrem-__TOKEN__"
+              },
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ora_ok",
+              "rows": "ora_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "14944a7f-69f4-4e67-8287-6819a67f878d",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1440
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server by its compose name over verified TLS, driver carried as wheels",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "mssql",
+              "port": 1433,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT DB_NAME() AS db, client_net_address AS client_addr, encrypt_option AS tls\nFROM sys.dm_exec_connections WHERE session_id = @@SPID;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": true,
+              "on_error": "fail",
+              "verify_ssl": true,
+              "ca_cert": "ca_pem"
+            },
+            "outputBindings": {
+              "success": "ms_ok",
+              "rows": "ms_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e68517df-1622-440a-a01f-ef06d6e56446",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 1510
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the worker's scratch dir, the wheels unpacked and Oracle's build tags",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\n\nworker_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nwheels_dir = os.path.join(worker_dir, \"wheels\")\ncarried = sorted(name for name in os.listdir(wheels_dir) if name.endswith(\".dist-info\"))\noracle_tags = []\nfor name in carried:\n    if name.startswith(\"oracledb-\"):\n        with open(os.path.join(wheels_dir, name, \"WHEEL\"), encoding=\"utf-8\") as handle:\n            oracle_tags = [\n                line.split(\":\", 1)[1].strip() for line in handle if line.startswith(\"Tag:\")\n            ]\n",
+              "interpreter": "python3",
+              "script_variables": [
+                "worker_dir",
+                "carried",
+                "oracle_tags"
+              ]
+            },
+            "outputBindings": {
+              "worker_dir": "probe_b_dir",
+              "carried": "probe_b_wheels",
+              "oracle_tags": "probe_b_tags"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "df1aef41-d11b-4447-8a57-7153365f6da6",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the remote outputs on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlrem-outputs pg=' + str(pg_count) + '/' + str(pg_changed) + ' pg-label=' + pg_rows.cell(0, 'label') + ' my=' + my_rows.cell(0, 'db') + ' ora=' + ora_rows.cell(0, 'tag') + ' ms=' + ms_rows.cell(0, 'tls')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9d991b75-de33-47ba-8fb6-9c303d4bd440",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read the remote host's rows back over the direct leg on WAVE, then drop the table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id, label FROM sqlrem___TOKEN__ ORDER BY id;\nDROP TABLE sqlrem___TOKEN__;",
+              "parameters": {},
+              "stop_on_error": true,
+              "tls": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "back_ok",
+              "rows": "back_rows",
+              "row_count": "back_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "97cc9c8e-a8b7-4391-840f-a598a14279e9",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the rows read back on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlrem-back rows=' + str(back_count) + ' first=' + back_rows.cell(0, 'label') + ' second=' + back_rows.cell(1, 'label')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8f269305-cd08-4a21-8cdc-ef59f3ed4d03",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Wait for the worker's scratch dir to leave the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "'d=' + probe_b_dir + '; n=0; while [ -e \"$d\" ] && [ $n -lt 100 ]; do sleep 0.1; n=$((n+1)); done; if [ -e \"$d\" ]; then echo left; else echo gone; fi'",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "worker_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a008458b-749d-4920-b28c-a62f83c9eb07",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Count what is left of the carried builds on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "'ls -A ' + probe_b_dir + '/wheels 2>/dev/null | wc -l'",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "builds_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8304d574-c0b7-4707-9036-6d9695a5b04d",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Check the remote SQLite file, then remove this run's folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f=\"$HOME/sqlrem-__TOKEN__\"; if [ -s \"$f/remote.db\" ]; then printf 'present '; else printf 'absent '; fi; rm -rf \"$f\"; if [ -e \"$f\" ]; then echo left; else echo removed; fi",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "lite_folder"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e7a117f5-7f99-4fe4-9d9d-7dd3f5b45388",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1290
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SSH session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3ff73472-9d4d-4b74-acb0-30d6395b5fc4",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlrem-worker=' + worker_gone.strip() + ' sessions=' + str(len(closed_ids)) + ' sql-remote-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "fbf9906e-bafb-40f2-882d-f6127e1b2e90",
+        "source": "start-node",
+        "target": "e546d9d3-6471-4c41-bc17-b98c74379368"
+      },
+      {
+        "id": "62f84272-086f-4d39-b422-eb0e0fe29d0f",
+        "source": "e546d9d3-6471-4c41-bc17-b98c74379368",
+        "target": "cbb18e19-1e55-4734-8894-390ea0065ad9"
+      },
+      {
+        "id": "17671fcb-64da-43bc-98d8-6fcbd59e3001",
+        "source": "cbb18e19-1e55-4734-8894-390ea0065ad9",
+        "target": "2dd2f35d-fee6-491a-8f4b-c6df17db1f15"
+      },
+      {
+        "id": "23d7d6fc-3aa0-425b-9dbf-09027bad688e",
+        "source": "2dd2f35d-fee6-491a-8f4b-c6df17db1f15",
+        "target": "7df242f4-60ea-4c31-a00c-3be67bde5701"
+      },
+      {
+        "id": "4be7a733-f0d0-4bc7-a5a1-bf1c03cffa32",
+        "source": "7df242f4-60ea-4c31-a00c-3be67bde5701",
+        "target": "3c059177-e822-4fb9-8d3a-87823407069b"
+      },
+      {
+        "id": "5a61bb18-2208-4de9-8391-f84dac0a9f6f",
+        "source": "3c059177-e822-4fb9-8d3a-87823407069b",
+        "target": "3ab2ea97-5db0-44b0-8e0b-abf95b67560d"
+      },
+      {
+        "id": "9a450be5-5503-4f12-bff0-adeb69516b0a",
+        "source": "3ab2ea97-5db0-44b0-8e0b-abf95b67560d",
+        "target": "67838162-38e8-4d7e-926f-f15746048d69"
+      },
+      {
+        "id": "39af71a7-9e05-4bae-af8e-e08fe7a88313",
+        "source": "67838162-38e8-4d7e-926f-f15746048d69",
+        "target": "2d5d4450-da07-476e-90b2-545f84153914"
+      },
+      {
+        "id": "9527ffe6-ad24-4324-a88b-75434a239b01",
+        "source": "2d5d4450-da07-476e-90b2-545f84153914",
+        "target": "cf7d3ca8-bb17-44f9-a02f-4d8bbeb9d2cd"
+      },
+      {
+        "id": "79783f4f-5610-4dc4-8c96-a87376a0e7f4",
+        "source": "cf7d3ca8-bb17-44f9-a02f-4d8bbeb9d2cd",
+        "target": "bf2e95b8-4f90-4898-b932-c7b9f1e4620f"
+      },
+      {
+        "id": "ed565990-87d4-4794-b1d9-aa57d8ef4418",
+        "source": "bf2e95b8-4f90-4898-b932-c7b9f1e4620f",
+        "target": "841008d7-4b7c-43f1-92cf-5e329f704fbf"
+      },
+      {
+        "id": "76bcb5c7-fc9e-4cf3-834e-a91310e9ca80",
+        "source": "841008d7-4b7c-43f1-92cf-5e329f704fbf",
+        "target": "6a0a7492-5df9-4ff2-aeaf-c18d40f87765",
+        "sourceHandle": "body",
+        "type": "default"
+      },
+      {
+        "id": "38fb4187-1677-4478-8687-6b6ff48932e7",
+        "source": "6a0a7492-5df9-4ff2-aeaf-c18d40f87765",
+        "target": "ae76d8ab-6feb-4ed2-a554-60a1498f98fd"
+      },
+      {
+        "id": "16d5a1d4-b320-40db-ae81-3511e600311c",
+        "source": "ae76d8ab-6feb-4ed2-a554-60a1498f98fd",
+        "target": "2562c1c3-d938-4acc-8a63-dbd5898a97d3"
+      },
+      {
+        "id": "6f664306-9987-4e02-b258-49552b632a9a",
+        "source": "2562c1c3-d938-4acc-8a63-dbd5898a97d3",
+        "target": "c475abcb-afa0-4d96-aa96-27f7dbadf051"
+      },
+      {
+        "id": "b1a44adc-d511-4309-82d1-c3c9594e2746",
+        "source": "c475abcb-afa0-4d96-aa96-27f7dbadf051",
+        "target": "34093a51-f828-4b63-9dff-e103475ae404"
+      },
+      {
+        "id": "f724f2e3-5853-4e27-9bd1-c0261bd21643",
+        "source": "34093a51-f828-4b63-9dff-e103475ae404",
+        "target": "bca844c6-e174-4d9a-8639-b2551316c697"
+      },
+      {
+        "id": "db0fe1fa-601f-44b8-8b46-40a72d4e04e3",
+        "source": "bca844c6-e174-4d9a-8639-b2551316c697",
+        "target": "85377022-edb0-4806-b1e6-beb8dcc2d50b"
+      },
+      {
+        "id": "7783a7ef-da4f-468d-88a3-1bb9bfab7b7e",
+        "source": "85377022-edb0-4806-b1e6-beb8dcc2d50b",
+        "target": "702c7e97-e26c-496a-8740-87414b005935"
+      },
+      {
+        "id": "f08cbba1-0912-483d-8ab4-91c82bd3f31a",
+        "source": "702c7e97-e26c-496a-8740-87414b005935",
+        "target": "14944a7f-69f4-4e67-8287-6819a67f878d"
+      },
+      {
+        "id": "fe199c98-b703-4ed6-baea-0ec1a8ceced3",
+        "source": "14944a7f-69f4-4e67-8287-6819a67f878d",
+        "target": "e68517df-1622-440a-a01f-ef06d6e56446"
+      },
+      {
+        "id": "12401fe3-c8eb-4ae8-a161-dfc7cfb8a0ad",
+        "source": "841008d7-4b7c-43f1-92cf-5e329f704fbf",
+        "target": "df1aef41-d11b-4447-8a57-7153365f6da6",
+        "sourceHandle": "then",
+        "type": "default"
+      },
+      {
+        "id": "b7747877-9ec7-4868-8387-61e1960abce9",
+        "source": "df1aef41-d11b-4447-8a57-7153365f6da6",
+        "target": "9d991b75-de33-47ba-8fb6-9c303d4bd440"
+      },
+      {
+        "id": "89190f66-af32-470b-aaef-96142624f4b1",
+        "source": "9d991b75-de33-47ba-8fb6-9c303d4bd440",
+        "target": "97cc9c8e-a8b7-4391-840f-a598a14279e9"
+      },
+      {
+        "id": "d6713ede-9043-4037-9060-16ab289895fc",
+        "source": "97cc9c8e-a8b7-4391-840f-a598a14279e9",
+        "target": "8f269305-cd08-4a21-8cdc-ef59f3ed4d03"
+      },
+      {
+        "id": "09ba984b-f2f3-416a-810d-b81117bff91e",
+        "source": "8f269305-cd08-4a21-8cdc-ef59f3ed4d03",
+        "target": "a008458b-749d-4920-b28c-a62f83c9eb07"
+      },
+      {
+        "id": "9c1f5a5b-d7c8-4ae0-a8f8-7c2d13533737",
+        "source": "a008458b-749d-4920-b28c-a62f83c9eb07",
+        "target": "8304d574-c0b7-4707-9036-6d9695a5b04d"
+      },
+      {
+        "id": "28effb75-0bdc-45d3-98a0-5f52321a07f8",
+        "source": "8304d574-c0b7-4707-9036-6d9695a5b04d",
+        "target": "e7a117f5-7f99-4fe4-9d9d-7dd3f5b45388"
+      },
+      {
+        "id": "450ae590-5662-4817-ab2e-cf519163c46a",
+        "source": "e7a117f5-7f99-4fe4-9d9d-7dd3f5b45388",
+        "target": "3ff73472-9d4d-4b74-acb0-30d6395b5fc4"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

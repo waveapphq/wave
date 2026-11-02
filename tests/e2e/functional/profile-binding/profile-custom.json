@@ -1,0 +1,10 @@
+{
+  "name": "E2E Custom Profile",
+  "type": "custom",
+  "description": "Custom profile for E2E functional testing",
+  "config": {
+    "app_name": "wave-e2e-app",
+    "region": "us-east-1"
+  },
+  "tags": ["e2e"]
+}

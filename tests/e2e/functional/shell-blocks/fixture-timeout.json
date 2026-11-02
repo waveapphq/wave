@@ -1,0 +1,161 @@
+{
+  "name": "SH-7 __TOKEN__",
+  "version": "1.0.0",
+  "description": "A Shell Script under Record and continue with a 2 second Timeout leaves a background sleep, prints started and sleeps; the probe proves the background job is gone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Timeout ends the tree",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-7-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-7-__TOKEN__/bg.pid\"; echo started; sleep 300",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "stdout": "t_out",
+              "exit_code": "t_code",
+              "reason": "t_reason",
+              "error": "t_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-timeout-probe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 190
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Timeout tree probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "f=\"$WAVE_ARTIFACTS_DIR/sh-7-__TOKEN__/bg.pid\"; [ -s \"$f\" ] || { printf missing; exit 0; }; pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi"
+            },
+            "outputBindings": {
+              "stdout": "probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-7-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-timeout"
+      },
+      {
+        "id": "e-sh-timeout-sh-timeout-probe",
+        "source": "sh-timeout",
+        "target": "sh-timeout-probe"
+      },
+      {
+        "id": "e-sh-timeout-probe-log-done",
+        "source": "sh-timeout-probe",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "t_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "t_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

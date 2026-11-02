@@ -1,0 +1,6 @@
+2026-01-01T00:00:00.000000001Z stdout F app: starting payments-api v2.4.0
+2026-01-01T00:00:01.000000001Z stdout F app: listening on :8080
+2026-01-01T00:00:02.000000001Z stdout F app: GET /healthz 200 1ms
+2026-01-01T00:00:03.000000001Z stdout F app: GET /orders/42 200 12ms
+2026-01-01T00:00:04.000000001Z stderr F app: WARN upstream latency 812ms
+2026-01-01T00:00:05.000000001Z stdout F app: GET /healthz 200 1ms

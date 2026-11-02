@@ -1,0 +1,46 @@
+{
+  "name": "Dashboard Live Refresh E2E Test",
+  "version": "1.0.0",
+  "description": "Tiny 1 s delay workflow used by the dashboard live-refresh functional test. The test starts this execution after the Dashboard is already open and asserts that the card appears and transitions to a terminal status without any user click on a Refresh button.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-only",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Dash Live Refresh Delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 1000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "delay-only",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

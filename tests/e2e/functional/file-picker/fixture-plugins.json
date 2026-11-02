@@ -1,0 +1,299 @@
+{
+  "name": "File Picker Plugins E2E Test",
+  "version": "1.0.0",
+  "description": "Excel and HTTP file rows are filled through the Browse picker, then the run resolves what was picked.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "xl-read",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Excel",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read the picked workbook",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://seed-not-picked.xlsx",
+              "sheet": "People",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "xl_table",
+              "row_count": "xl_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-xl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Workbook marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'picked-xl-rows={xl_rows}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "xl-write",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Excel",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write the composed workbook",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://seed-not-picked.xlsx",
+              "sheet": "Picked",
+              "table": "xl_table",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-echo",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Send the picked file, save the reply",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/echo'",
+              "method": "POST",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "body_mode": "file",
+              "file_source": "artifact://seed-not-picked.json",
+              "file_content_type": "auto",
+              "body_auto_headers": true,
+              "response_mode": "file",
+              "file_path": "artifact://seed-not-picked-download.json"
+            },
+            "outputBindings": {
+              "body": "dl_ref",
+              "size": "dl_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-dl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Download marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'picked-dl={dl_ref} bytes={dl_size}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'file-picker-plugins-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "xl-read",
+        "type": "default"
+      },
+      {
+        "id": "e-xl-read-log-xl",
+        "source": "xl-read",
+        "target": "log-xl",
+        "type": "default"
+      },
+      {
+        "id": "e-log-xl-xl-write",
+        "source": "log-xl",
+        "target": "xl-write",
+        "type": "default"
+      },
+      {
+        "id": "e-xl-write-http-echo",
+        "source": "xl-write",
+        "target": "http-echo",
+        "type": "default"
+      },
+      {
+        "id": "e-http-echo-log-dl",
+        "source": "http-echo",
+        "target": "log-dl",
+        "type": "default"
+      },
+      {
+        "id": "e-log-dl-log-done",
+        "source": "log-dl",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "xl_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "xl_rows": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dl_ref": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "dl_size": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

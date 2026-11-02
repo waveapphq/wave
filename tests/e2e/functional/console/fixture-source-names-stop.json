@@ -1,0 +1,183 @@
+{
+  "name": "Console Source Names Stop",
+  "version": "1.0.0",
+  "description": "A Function whose body logs one line and then holds a long Delay, so a Stop lands on both.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ceaf22d3-570f-56d3-bc4b-d2a37d8e28d8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Open the portal",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "description": "Waits inside a Function so the run can be stopped there",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Open the portal",
+            "description": "Logs one line, then waits.",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "70df7eb6-4645-5d02-a167-8c4d6c84052e",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Before the wait",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Proves the run is inside the Function",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'src-stop-body-started'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "d678fb78-2aff-56f7-bc8e-e92f562111ab",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 300
+                  },
+                  "data": {
+                    "label": "Wait for the login",
+                    "elementType": "delay",
+                    "nodeType": "control",
+                    "category": "timing",
+                    "version": "1.0.0",
+                    "description": "Holds the run long enough to stop it",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "duration": 60000
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "7df55be0-9ef4-5ebc-ae63-857687b087dd",
+                  "source": "start-node",
+                  "target": "70df7eb6-4645-5d02-a167-8c4d6c84052e",
+                  "type": "default"
+                },
+                {
+                  "id": "c5ce3e0d-6cdd-56c7-a86f-ac5741080bea",
+                  "source": "70df7eb6-4645-5d02-a167-8c4d6c84052e",
+                  "target": "d678fb78-2aff-56f7-bc8e-e92f562111ab",
+                  "type": "default"
+                }
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "9209ab91-1853-5059-92cc-9acd6db82113",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 320
+        },
+        "data": {
+          "label": "After the portal",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Never runs: the run stops first",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-stop-never-runs'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "69c3d275-10a6-571f-b7f8-41670204b0a3",
+        "source": "start-node",
+        "target": "ceaf22d3-570f-56d3-bc4b-d2a37d8e28d8",
+        "type": "default"
+      },
+      {
+        "id": "53d66a95-3e71-5937-8cef-76369ac65a7f",
+        "source": "ceaf22d3-570f-56d3-bc4b-d2a37d8e28d8",
+        "target": "9209ab91-1853-5059-92cc-9acd6db82113",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

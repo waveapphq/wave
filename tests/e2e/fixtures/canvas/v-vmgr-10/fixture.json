@@ -1,0 +1,87 @@
+{
+  "name": "V-VMGR-10 Null Watchers",
+  "version": "1.0.0",
+  "description": "Watchers in the null look (VMGR-93, VMGR-94): a null string, integer, table and array, an empty array, and an array holding a null item. The visual spec never runs the workflow.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "4b69a106-0bb9-44bb-a1aa-3b45854d5afd",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Watchers Anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "v-vmgr-10 anchor",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "5cf2ef7b-ff71-4832-b9f9-cdb5a9f3c521",
+        "source": "start-node",
+        "target": "4b69a106-0bb9-44bb-a1aa-3b45854d5afd",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "null_string": {
+      "value": null,
+      "type": "string",
+      "scope": "test"
+    },
+    "null_integer": {
+      "value": null,
+      "type": "integer",
+      "scope": "test"
+    },
+    "null_table": {
+      "value": null,
+      "type": "table",
+      "scope": "test"
+    },
+    "null_array": {
+      "value": null,
+      "type": "array",
+      "scope": "test"
+    },
+    "empty_array": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "arr_null_item": {
+      "value": [
+        "a",
+        null,
+        "c"
+      ],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-15T00:00:00.000000",
+  "updated_at": "2026-10-15T00:00:00.000000"
+}

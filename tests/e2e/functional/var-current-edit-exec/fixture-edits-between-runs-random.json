@@ -1,0 +1,62 @@
+{
+  "name": "Edits Between Runs Random",
+  "version": "1.0.0",
+  "description": "An expression (token) whose result holds the memory addresses of three objects built during the evaluation, so every evaluation yields a new text. Log Token prints it: two equal console lines prove the result was evaluated once and kept.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-token",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log Token",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Token",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'token={token}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-token",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "token": {
+      "value": "str([map(str, []), map(str, []), map(str, [])])",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-07T00:00:00.000000",
+  "updated_at": "2026-10-07T00:00:00.000000"
+}

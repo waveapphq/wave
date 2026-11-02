@@ -1,0 +1,24 @@
+# WAVE E2E MariaDB (test-only): the `wave` user with every right on database
+# `wave`, the seed procedure for the Call procedure leg, and TLS offered on the
+# database leaf signed by the WAVE Test CA (plain connections still accepted; a
+# client certificate, when sent, is verified against the same CA). Connection
+# attributes are recorded and the `wave` user may read them.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/library/mariadb:11
+
+ENV MARIADB_ROOT_PASSWORD=Wave-Admin-Secret-1 \
+    MARIADB_DATABASE=wave \
+    MARIADB_USER=wave \
+    MARIADB_PASSWORD=sql-secret
+
+COPY services/tls-lab/certs/database.crt services/tls-lab/certs/database.key /etc/mysql/tls/
+COPY simulators/https/certs/ca.pem /etc/mysql/tls/ca.pem
+RUN chown -R mysql:mysql /etc/mysql/tls && chmod 0600 /etc/mysql/tls/database.key
+COPY services/mariadb/tls.cnf /etc/mysql/conf.d/wave-tls.cnf
+COPY services/mariadb/attrs.cnf /etc/mysql/conf.d/wave-attrs.cnf
+
+COPY services/mariadb/initdb/ /docker-entrypoint-initdb.d/
+COPY services/mariadb/healthcheck.sh /wave/healthcheck.sh
+RUN chmod 0755 /wave/healthcheck.sh
+
+EXPOSE 3306

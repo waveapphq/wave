@@ -1,0 +1,117 @@
+{
+  "name": "MCP Readback Dropped Walk",
+  "version": "1.0.0",
+  "description": "Hand-built switch wired from a lane handle outside its declared branch ids",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "switch-w",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 200 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "case",
+                  "id": "branch_0",
+                  "label": "Healthy",
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "code",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": "200",
+                      "reference_is_expression": false,
+                      "id": "c-ok"
+                    }
+                  ],
+                  "break": true
+                },
+                { "type": "default", "id": "branch_1", "label": "" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "sw-child",
+        "type": "workflowNode",
+        "position": { "x": 500, "y": 400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "logging",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "stray-lane-line", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "sw-then",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 600 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "logging",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "switch-then-line", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "switch-w", "type": "default" },
+      {
+        "id": "e-stray",
+        "source": "switch-w",
+        "sourceHandle": "branch_stray",
+        "target": "sw-child",
+        "type": "default"
+      },
+      {
+        "id": "e-then",
+        "source": "switch-w",
+        "sourceHandle": "then",
+        "target": "sw-then",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "code": { "type": "integer", "value": 200, "scope": "test" }
+  },
+  "metadata": { "tags": ["e2e", "mcp-readback"] }
+}

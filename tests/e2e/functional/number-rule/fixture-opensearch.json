@@ -1,0 +1,145 @@
+{
+  "name": "zz-11541-s9-opensearch",
+  "version": "1.0.0",
+  "description": "An OpenSearch Aggregate whose Percentile Percent is typed with a trailing zero",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "220998ff-4a1e-4bd8-98af-e30ec56b31c6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Latency percentile",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Latency percentile",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "none",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "percentile",
+                    "field": "latency_ms",
+                    "percent": 95
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "os_ok",
+              "results": "os_rows",
+              "total_results": "os_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "f6c0355f-ee15-43e5-83ce-2f950fd933ce",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "data": {
+          "label": "Log done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'opensearch-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-os-start",
+        "source": "start-node",
+        "target": "220998ff-4a1e-4bd8-98af-e30ec56b31c6",
+        "type": "default"
+      },
+      {
+        "id": "e-os-done",
+        "source": "220998ff-4a1e-4bd8-98af-e30ec56b31c6",
+        "target": "f6c0355f-ee15-43e5-83ce-2f950fd933ce",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "os_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "os_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "os_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

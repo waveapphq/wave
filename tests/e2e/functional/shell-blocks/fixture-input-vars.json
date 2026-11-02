@@ -1,0 +1,73 @@
+{
+  "name": "SH-3 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Script Input Variables: a literal, an integer, a boolean and an array expression reach a child process of the script as environment text.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-input-vars",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Input Variables To A Child",
+          "hasNewerVersion": false,
+          "expressionFields": ["input_vars.COUNT", "input_vars.FLAG", "input_vars.ITEMS"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "bash -c 'printf \"%s|%s|%s|%s\" \"$GREETING\" \"$COUNT\" \"$FLAG\" \"$ITEMS\"'",
+              "input_vars": {
+                "GREETING": "hello world",
+                "COUNT": "num",
+                "FLAG": "flag",
+                "ITEMS": "items"
+              }
+            },
+            "outputBindings": { "stdout": "iv_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-3-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-3-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-input-vars", "source": "start-node", "target": "sh-input-vars" },
+      { "id": "e-input-vars-done", "source": "sh-input-vars", "target": "sh-3-done" }
+    ]
+  },
+  "variables": {
+    "num": { "value": 42, "type": "integer", "scope": "test" },
+    "flag": { "value": true, "type": "boolean", "scope": "test" },
+    "items": { "value": ["a", 2, true], "type": "array", "scope": "test" },
+    "iv_out": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

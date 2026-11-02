@@ -1,0 +1,31 @@
+test:
+  name: Recipe Example - Shell Script and Shell Exec
+  description: Run a shell script with arguments and input variables, read back a variable the script exports, and run one command line on the WAVE server
+  tags: [example, scripts]
+variables:
+  env_name: {type: string, value: staging}
+  replicas: {type: integer, value: 3}
+  pod_count: {type: integer}
+flow:
+  - block: shell-script
+    label: Double the replicas
+    settings:
+      script: |
+        echo "target $1 $2"
+        COUNT=$(( REPLICAS * 2 ))
+      arguments:
+        - {value: "--env"}
+        - {value: {expr: "env_name"}}
+      input_vars: {REPLICAS: {expr: "replicas"}}
+      script_variables: [COUNT]
+    capture: {COUNT: pod_count, stdout: script_out}
+  - block: shell-exec
+    label: Count files in the temp folder
+    settings:
+      command: "ls -1 | wc -l"
+    capture: {stdout: file_count}
+  - assert:
+      that: ["pod_count == 6"]
+      fail_current_scope: true
+  - block: log
+    settings: {message: "Shell Script doubled to {{ pod_count }}; the temp folder holds {{ file_count }} entries"}

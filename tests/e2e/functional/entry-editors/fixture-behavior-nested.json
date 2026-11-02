@@ -1,0 +1,80 @@
+{
+  "name": "zz-11541-s6b-nested",
+  "version": "1.0.0",
+  "description": "Map variables holding nested maps, for the nested Edit value levels",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9a52ee83-c378-4528-8bfe-0cdc809f3d65",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 160 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Nested levels anchor",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"nested inner={nest['inner']['a']} tag={nest['tag']} keys={len(deep)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "82f1c189-b85f-49fd-adb1-abbe78d269a3",
+        "source": "start-node",
+        "target": "9a52ee83-c378-4528-8bfe-0cdc809f3d65",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "nest": {
+      "type": "map",
+      "scope": "test",
+      "value": { "inner": { "a": "x" }, "tag": "t" },
+      "elementTypes": { "inner": "map", "tag": "string" }
+    },
+    "deep": {
+      "type": "map",
+      "scope": "test",
+      "value": {
+        "l2": {
+          "l3": {
+            "l4": {
+              "l5": {
+                "l6": {
+                  "l7": {
+                    "l8": {
+                      "l9": {
+                        "l10": {
+                          "leaf_text": "t",
+                          "leaf_list": ["1"],
+                          "leaf_map": { "z": "1" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "elementTypes": { "l2": "map" }
+    }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

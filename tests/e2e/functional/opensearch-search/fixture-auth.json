@@ -1,0 +1,1585 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-AUTH",
+  "version": "1.0.0",
+  "description": "The OpenSearch block against the real cluster, one Search per way it identifies itself: Basic, a client certificate, a Bearer token, an API key, the plain-http gateway with its path prefix, Verify Server Certificate off; then, recorded, verify on without a CA, an API key typed with its scheme word, and no credentials at all.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "0efbf7af-1981-45a5-bb5e-902b7ef75cfd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Basic",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Basic",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "basic_ok",
+              "results": "basic_rows",
+              "total_results": "basic_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "ded5a940-4c2b-4dd3-ab64-8d1588bffddc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Basic total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "basic_ok == True and basic_total == 6",
+                  "id": "175a5605-946d-4b93-9743-bfa9a1cb89e7"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6e9fced7-56ed-47b2-ade9-39deb30291c3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof basic",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-basic total={{ basic_total }} first={{ basic_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "203c9c38-f827-4b81-8efa-30e4626ce158",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Client certificate",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Client certificate",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "cert_ok",
+              "results": "cert_rows",
+              "total_results": "cert_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "2fcff39c-7053-48db-b5cd-82ace0000737",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Client certificate total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "cert_ok == True and cert_total == 6",
+                  "id": "58a39c3b-e684-4d53-9daa-eef6b9fce618"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fdf84ceb-08a7-4374-a063-64bacb59a713",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof client certificate",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-client-cert total={{ cert_total }} first={{ cert_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f57dcde7-919e-4e31-8bb1-b738d665a475",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 660
+        },
+        "data": {
+          "label": "Bearer token",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Bearer token",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "bearer_ok",
+              "results": "bearer_rows",
+              "total_results": "bearer_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "56f3a3dd-9f7b-46cc-8fbb-be3fda68f82c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Bearer token total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "bearer_ok == True and bearer_total == 6",
+                  "id": "5857b9cb-85f6-4273-8922-352297748ce3"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3c840ef7-4d9d-41b9-bfba-5bc6e773ee7e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof bearer token",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-bearer total={{ bearer_total }} first={{ bearer_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "51a951e8-2a1e-4e16-b53d-346388f787c0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "API key",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "API key",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "apikey_ok",
+              "results": "apikey_rows",
+              "total_results": "apikey_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "1fbad1c3-a14a-4e30-9d4b-9c489ae95d76",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "API key total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "apikey_ok == True and apikey_total == 6",
+                  "id": "399494d2-3f8b-409d-b17f-fc218f07a82f"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cbf97c32-e305-447d-9fce-2096bd09d892",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof api key",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-api-key total={{ apikey_total }} first={{ apikey_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e5aa479b-c865-440c-bc13-7672bbb7bed6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1260
+        },
+        "data": {
+          "label": "Gateway with prefix",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Gateway with prefix",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9478/os",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "gateway_ok",
+              "results": "gateway_rows",
+              "total_results": "gateway_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "62d645a4-7a13-4641-9559-b006616022da",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1360
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Gateway with prefix total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "gateway_ok == True and gateway_total == 6",
+                  "id": "22fa765a-8378-4861-83fc-59b585278186"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a26b3bdc-c81a-462b-b5cb-dcbe2ee09189",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof gateway with prefix",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-gateway total={{ gateway_total }} first={{ gateway_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0992b817-b237-4f0e-9603-00cb9d44d9c6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "Verify off",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Verify off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": false,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "voff_ok",
+              "results": "voff_rows",
+              "total_results": "voff_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "5d402c05-3727-49d2-bf6a-844b38bea27b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1660
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Verify off total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "voff_ok == True and voff_total == 6",
+                  "id": "8bb920c7-b558-472e-9e1c-bf8c6ca7a649"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a1062158-042a-42dc-a432-cadf6a19228e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof verify off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-verify-off total={{ voff_total }} first={{ voff_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5b531363-da59-4657-91bb-0ffa3045fc00",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Verify without CA",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Verify without CA",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "noca_ok",
+              "results": "noca_rows",
+              "total_results": "noca_total",
+              "error": "noca_error",
+              "reason": "noca_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "ff20c570-4e51-48ab-888e-6b7a0b335dd0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Verify without CA recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "noca_ok == False and noca_total == 0 and noca_reason == 'Unreachable' and 'CERTIFICATE_VERIFY_FAILED' in noca_error",
+                  "id": "0eed92bb-44e5-44a9-a059-f7adbc5c0be8"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "682980ad-ef84-41d7-aa69-afea282876a7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2060
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof verify without ca",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-verify-no-ca total={{ noca_total }} reason={{ noca_reason }} error={{ noca_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "639bb177-8a2e-4461-b8bb-5ffb7f23fced",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2160
+        },
+        "data": {
+          "label": "API key with scheme word",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "API key with scheme word",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "scheme_ok",
+              "results": "scheme_rows",
+              "total_results": "scheme_total",
+              "error": "scheme_error",
+              "reason": "scheme_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "5860201a-a401-44e0-937d-13fbc566d54f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2260
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "API key with scheme word recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "scheme_ok == False and scheme_total == 0 and scheme_reason == 'AuthFailed'",
+                  "id": "0920fa4b-ff67-45bd-b6b1-f8560409416f"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5e4c9485-5c1d-4178-a791-e2a84424e613",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof api key with scheme word",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-scheme-word total={{ scheme_total }} reason={{ scheme_reason }} error={{ scheme_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d97040e1-4b7a-4c18-97c9-13be4a69b448",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2460
+        },
+        "data": {
+          "label": "Anonymous",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Anonymous",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "anon_ok",
+              "results": "anon_rows",
+              "total_results": "anon_total",
+              "error": "anon_error",
+              "reason": "anon_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "7e97f434-2b7f-4f92-8818-bea0c5f5de1c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2560
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Anonymous recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "anon_ok == False and anon_total == 0 and anon_reason == 'AuthFailed' and anon_error == 'HTTP 401: Unauthorized'",
+                  "id": "2708609a-c9d1-4fff-b22b-ce22227c34e5"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "318cc472-8b10-40d1-bb59-3e0691e3bbdd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof anonymous",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-auth-anonymous total={{ anon_total }} reason={{ anon_reason }} error={{ anon_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8119d8ea-db12-47b0-9888-a35a53557a38",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "os-auth-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "ac8dcf8c-6ecc-4772-86cb-ecfc764229a7",
+        "source": "start-node",
+        "target": "0efbf7af-1981-45a5-bb5e-902b7ef75cfd",
+        "type": "default"
+      },
+      {
+        "id": "980a4c42-3a0f-4c81-8125-1bcbb30e29ba",
+        "source": "0efbf7af-1981-45a5-bb5e-902b7ef75cfd",
+        "target": "ded5a940-4c2b-4dd3-ab64-8d1588bffddc",
+        "type": "default"
+      },
+      {
+        "id": "7ecaf540-2b42-4669-8882-7afcd672567a",
+        "source": "ded5a940-4c2b-4dd3-ab64-8d1588bffddc",
+        "target": "6e9fced7-56ed-47b2-ade9-39deb30291c3",
+        "type": "default"
+      },
+      {
+        "id": "8d86ed11-a500-4db6-ba57-051d74c919e1",
+        "source": "6e9fced7-56ed-47b2-ade9-39deb30291c3",
+        "target": "203c9c38-f827-4b81-8efa-30e4626ce158",
+        "type": "default"
+      },
+      {
+        "id": "714e2737-9b46-4f3e-92a6-ad0081e4b78e",
+        "source": "203c9c38-f827-4b81-8efa-30e4626ce158",
+        "target": "2fcff39c-7053-48db-b5cd-82ace0000737",
+        "type": "default"
+      },
+      {
+        "id": "3ea7e50a-2d95-4374-b62e-79a4f3f18d83",
+        "source": "2fcff39c-7053-48db-b5cd-82ace0000737",
+        "target": "fdf84ceb-08a7-4374-a063-64bacb59a713",
+        "type": "default"
+      },
+      {
+        "id": "a27ea40f-060a-4f2f-bbeb-143f2b603c53",
+        "source": "fdf84ceb-08a7-4374-a063-64bacb59a713",
+        "target": "f57dcde7-919e-4e31-8bb1-b738d665a475",
+        "type": "default"
+      },
+      {
+        "id": "ed55d62e-9179-4790-8389-047cae8791b1",
+        "source": "f57dcde7-919e-4e31-8bb1-b738d665a475",
+        "target": "56f3a3dd-9f7b-46cc-8fbb-be3fda68f82c",
+        "type": "default"
+      },
+      {
+        "id": "c2f96697-62fb-419a-8947-7bf37e3a7068",
+        "source": "56f3a3dd-9f7b-46cc-8fbb-be3fda68f82c",
+        "target": "3c840ef7-4d9d-41b9-bfba-5bc6e773ee7e",
+        "type": "default"
+      },
+      {
+        "id": "865a2915-9fa0-4eb8-a5a8-4d02b731e964",
+        "source": "3c840ef7-4d9d-41b9-bfba-5bc6e773ee7e",
+        "target": "51a951e8-2a1e-4e16-b53d-346388f787c0",
+        "type": "default"
+      },
+      {
+        "id": "7d381088-59ed-4508-9b86-818b260c7911",
+        "source": "51a951e8-2a1e-4e16-b53d-346388f787c0",
+        "target": "1fbad1c3-a14a-4e30-9d4b-9c489ae95d76",
+        "type": "default"
+      },
+      {
+        "id": "6c80568d-f098-43c6-acfe-6d0016ec6bc4",
+        "source": "1fbad1c3-a14a-4e30-9d4b-9c489ae95d76",
+        "target": "cbf97c32-e305-447d-9fce-2096bd09d892",
+        "type": "default"
+      },
+      {
+        "id": "a69d7014-dba4-45b5-a3e8-f61f54512dc5",
+        "source": "cbf97c32-e305-447d-9fce-2096bd09d892",
+        "target": "e5aa479b-c865-440c-bc13-7672bbb7bed6",
+        "type": "default"
+      },
+      {
+        "id": "5362d398-212a-4c62-b2e8-d12123f03126",
+        "source": "e5aa479b-c865-440c-bc13-7672bbb7bed6",
+        "target": "62d645a4-7a13-4641-9559-b006616022da",
+        "type": "default"
+      },
+      {
+        "id": "6b55742a-59fe-47b9-8b1d-4d485f7ac3a2",
+        "source": "62d645a4-7a13-4641-9559-b006616022da",
+        "target": "a26b3bdc-c81a-462b-b5cb-dcbe2ee09189",
+        "type": "default"
+      },
+      {
+        "id": "4bf0e8e2-cd98-45e9-a6a1-44457cd04120",
+        "source": "a26b3bdc-c81a-462b-b5cb-dcbe2ee09189",
+        "target": "0992b817-b237-4f0e-9603-00cb9d44d9c6",
+        "type": "default"
+      },
+      {
+        "id": "5690fe2a-8e4e-4916-ba03-899eff4a3d91",
+        "source": "0992b817-b237-4f0e-9603-00cb9d44d9c6",
+        "target": "5d402c05-3727-49d2-bf6a-844b38bea27b",
+        "type": "default"
+      },
+      {
+        "id": "1f3c8c52-171c-4c99-bf0f-9e940950ff6b",
+        "source": "5d402c05-3727-49d2-bf6a-844b38bea27b",
+        "target": "a1062158-042a-42dc-a432-cadf6a19228e",
+        "type": "default"
+      },
+      {
+        "id": "10a59d56-6979-4a8a-865e-a7d5062417c2",
+        "source": "a1062158-042a-42dc-a432-cadf6a19228e",
+        "target": "5b531363-da59-4657-91bb-0ffa3045fc00",
+        "type": "default"
+      },
+      {
+        "id": "e0303ef0-454a-4c63-9c33-d7c991db8d41",
+        "source": "5b531363-da59-4657-91bb-0ffa3045fc00",
+        "target": "ff20c570-4e51-48ab-888e-6b7a0b335dd0",
+        "type": "default"
+      },
+      {
+        "id": "6eca704e-205e-46e0-954f-d368b139b950",
+        "source": "ff20c570-4e51-48ab-888e-6b7a0b335dd0",
+        "target": "682980ad-ef84-41d7-aa69-afea282876a7",
+        "type": "default"
+      },
+      {
+        "id": "a5af8bf5-12b7-42ee-8af3-5ccd46aed6e2",
+        "source": "682980ad-ef84-41d7-aa69-afea282876a7",
+        "target": "639bb177-8a2e-4461-b8bb-5ffb7f23fced",
+        "type": "default"
+      },
+      {
+        "id": "510d9219-56f6-4b22-8041-0d8c0871614e",
+        "source": "639bb177-8a2e-4461-b8bb-5ffb7f23fced",
+        "target": "5860201a-a401-44e0-937d-13fbc566d54f",
+        "type": "default"
+      },
+      {
+        "id": "42ec04e6-29b5-4b4c-a53a-11dfefe07cab",
+        "source": "5860201a-a401-44e0-937d-13fbc566d54f",
+        "target": "5e4c9485-5c1d-4178-a791-e2a84424e613",
+        "type": "default"
+      },
+      {
+        "id": "d33ffc07-ce88-4f22-b2d6-27a67012f4b5",
+        "source": "5e4c9485-5c1d-4178-a791-e2a84424e613",
+        "target": "d97040e1-4b7a-4c18-97c9-13be4a69b448",
+        "type": "default"
+      },
+      {
+        "id": "e7ec96ae-cba8-4363-a759-175c1a80b47f",
+        "source": "d97040e1-4b7a-4c18-97c9-13be4a69b448",
+        "target": "7e97f434-2b7f-4f92-8818-bea0c5f5de1c",
+        "type": "default"
+      },
+      {
+        "id": "784804cc-5ab6-467d-b5ab-e26c3f063785",
+        "source": "7e97f434-2b7f-4f92-8818-bea0c5f5de1c",
+        "target": "318cc472-8b10-40d1-bb59-3e0691e3bbdd",
+        "type": "default"
+      },
+      {
+        "id": "5e620ac0-618b-406d-9866-b7d5f8b47ec0",
+        "source": "318cc472-8b10-40d1-bb59-3e0691e3bbdd",
+        "target": "8119d8ea-db12-47b0-9888-a35a53557a38",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "basic_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "basic_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "basic_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "cert_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "cert_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "cert_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bearer_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "bearer_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "bearer_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "apikey_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "apikey_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "apikey_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "gateway_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gateway_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "gateway_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "voff_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "voff_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "voff_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "noca_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "noca_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "noca_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "noca_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "noca_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "scheme_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "scheme_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "scheme_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "scheme_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "scheme_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "anon_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "anon_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "anon_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "anon_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "anon_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Every exec channel on this host prints one line on stdout before the command runs.
+echo 'NOTICE: Authorized use only. All activity on this system is monitored and recorded.'
+if [ -z "${SSH_ORIGINAL_COMMAND:-}" ]; then
+  exec /bin/bash -l
+fi
+exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"

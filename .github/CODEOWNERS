@@ -1,0 +1,16 @@
+# The CI files that the CI Validation Policy in CLAUDE.md lists.
+/.github/CODEOWNERS @alx-ur
+/.github/workflows/ @alx-ur
+/typos.toml @alx-ur
+/backend/sonar-project.properties @alx-ur
+/frontend/sonar-project.properties @alx-ur
+/scripts/ci-*.sh @alx-ur
+/scripts/sonar-*.sh @alx-ur
+/scripts/run-coverage-backend.sh @alx-ur
+/scripts/run-e2e-shard.sh @alx-ur
+/scripts/check-orphaned-files.sh @alx-ur
+/scripts/check-text.sh @alx-ur
+/scripts/e2e-stack.sh @alx-ur
+/scripts/e2e-config-with-key.sh @alx-ur
+/scripts/e2e-shard-plan.mjs @alx-ur
+/scripts/fetch-remote-wheels.sh @alx-ur

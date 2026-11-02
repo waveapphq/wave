@@ -1,0 +1,84 @@
+{
+  "name": "V-VMGR-INSPECT-ELEMENT-TYPE-RESHAPE",
+  "version": "1.0.0",
+  "description": "A typed map and list reshaped in the inspect editor, then read at run time",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9b2e61f4-3c7d-4a85-b0e9-6f1d2a8c4e57",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reshape probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"RESHAPE count={m['count'] + 1} f={m['f'] * 2} big={m['big'] + 1} z2={m['z2'] + 'x'} keys={','.join(m.keys())} a0={a[0] * 2} a1={a[1] + '-x'} a2={a[2][1] * 2} a3={a[3] + 1} n={len(a)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "9b2e61f4-3c7d-4a85-b0e9-6f1d2a8c4e57",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "m": {
+      "type": "map",
+      "value": {
+        "n": "16",
+        "f": "1.0",
+        "zip": "02134",
+        "big": "1234567890123456789"
+      },
+      "elementTypes": {
+        "n": "integer",
+        "f": "float",
+        "zip": "string",
+        "big": "integer"
+      }
+    },
+    "a": {
+      "type": "array",
+      "value": [
+        "16",
+        "02134",
+        "2.5",
+        "[1, 2.5]"
+      ],
+      "elementTypes": [
+        "integer",
+        "string",
+        "float",
+        "array"
+      ]
+    }
+  },
+  "metadata": {}
+}

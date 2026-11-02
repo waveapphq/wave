@@ -1,0 +1,11 @@
+{
+  "name": "Profile Drives OpenSearch API Key",
+  "type": "opensearch",
+  "description": "OpenSearch profile whose cluster URL and API key drive a real Search with the certificate check off",
+  "config": {
+    "url": "",
+    "api_key": "",
+    "verify_ssl": false
+  },
+  "tags": ["e2e"]
+}

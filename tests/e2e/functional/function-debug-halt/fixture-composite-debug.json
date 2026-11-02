@@ -1,0 +1,177 @@
+{
+  "name": "V-FN-COMPOSITE-DEBUG",
+  "version": "1.0.0",
+  "description": "A local Function (body A->B) followed by an after-Log. Drives Step Over / Step Into / Skip / Repeat on a single-egress Function composite (REQ-3.2.1.3, REQ-3.2.1.4).",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Function_1",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-a",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 120,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-A'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "inner-b",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 320,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-B'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-ia",
+                  "source": "start-node",
+                  "target": "inner-a",
+                  "type": "default"
+                },
+                {
+                  "id": "e-ab",
+                  "source": "inner-a",
+                  "target": "inner-b",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "after",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'fn-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-fn",
+        "source": "start-node",
+        "target": "fn-1",
+        "type": "default"
+      },
+      {
+        "id": "e-fn-after",
+        "source": "fn-1",
+        "target": "after",
+        "type": "default"
+      }
+    ]
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

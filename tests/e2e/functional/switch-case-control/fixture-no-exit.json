@@ -1,0 +1,254 @@
+{
+  "name": "Switch No-Exit Failing Case E2E",
+  "version": "1.0.0",
+  "description": "A Switch that is the last Block on the canvas: nothing is wired to its then handle and its matched case chain fails, so the run must end failed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-sne-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sne-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-sne",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "sw=boom",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "sw": "boom"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sw-sne",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "No exit wired, matched case fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "sne boom",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "boom",
+                      "reference_is_expression": false,
+                      "id": "sne-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "sne other",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "nope",
+                      "reference_is_expression": false,
+                      "id": "sne-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sne-boom",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Case 1 BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "1/0",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sne-other",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Case 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sne-other'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-sne-start",
+        "source": "start-node",
+        "target": "log-sne-before",
+        "type": "default"
+      },
+      {
+        "id": "e-sne-before",
+        "source": "log-sne-before",
+        "target": "vs-sne",
+        "type": "default"
+      },
+      {
+        "id": "e-sne-vs",
+        "source": "vs-sne",
+        "target": "sw-sne",
+        "type": "default"
+      },
+      {
+        "id": "e-sne-b0",
+        "source": "sw-sne",
+        "target": "log-sne-boom",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-sne-b1",
+        "source": "sw-sne",
+        "target": "log-sne-other",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      }
+    ]
+  },
+  "variables": {
+    "sw": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

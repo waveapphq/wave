@@ -1,0 +1,1093 @@
+{
+  "name": "V-PLUGIN-SSH-BOUNDS-FUNCTIONAL run __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "Out-of-range SSH numeric rows as expressions, each block in its own Try/Catch; the run refuses each on its bound before any session is touched.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "3e6eada5-be41-46a4-aa2a-9a5b7820bc91",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "port_error",
+              "caught": "port_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "f0696baa-5e60-4754-8561-b9641fab0e8e",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 170
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "70000",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c6841833-c3ed-438a-8745-b45f054453ef",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught port'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "074f2f77-cf8b-470b-a8c6-4084c22f6dec",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 320
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Connect Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "connect_timeout_error",
+              "caught": "connect_timeout_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "9f35a8e0-b7b1-486d-8d9a-7ae7cdec91e3",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 390
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Connect Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "connect_timeout"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "__SSH_PORT__",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled",
+              "connect_timeout": "0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "90fbe4d6-cead-4600-aabc-91e89c0c309b",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 390
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Connect Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught connect_timeout'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "069b87ce-0b92-4baa-aeb6-34bf1ef60ff2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 540
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Keep-Alive Interval -1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "keep_alive_interval_error",
+              "caught": "keep_alive_interval_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "f3bb0025-b0d5-4992-95d4-e03908379646",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 610
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Keep-Alive Interval -1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "keep_alive_interval"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "__SSH_PORT__",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled",
+              "keep_alive_interval": "-1"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b3e1e58e-c6a9-4b74-bc8c-28c224e26e7a",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 610
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Keep-Alive Interval -1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught keep_alive_interval'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7d427bce-5a9b-448f-829b-06941b958bf5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 760
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Keep-Alive Max Count 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "keep_alive_max_count_error",
+              "caught": "keep_alive_max_count_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "a0ed4261-3869-4883-a564-26d8d5785d6b",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 830
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Keep-Alive Max Count 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "keep_alive_max_count"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "__SSH_PORT__",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled",
+              "keep_alive_max_count": "0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e2078c18-e79b-4055-9e39-75d588b07c92",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 830
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Keep-Alive Max Count 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught keep_alive_max_count'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "28df3e25-3d42-4892-a400-d0940b621d5a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 980
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Session Exec Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "exec_timeout_error",
+              "caught": "exec_timeout_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "13dcd7d1-b7fc-4a4f-93b3-e08a125f9536",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 1050
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Session Exec Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "timeout"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ssh_session_bounds",
+              "command": "echo never-runs",
+              "timeout": "0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "afc6de4c-38e0-4e2e-8b74-e30e822d860d",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 1050
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Session Exec Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught exec_timeout'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e4da614c-3811-473f-84eb-fed940e2ac7c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1200
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Session Script Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "script_timeout_error",
+              "caught": "script_timeout_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "b2a1ea57-af19-4627-92c9-8660539faf40",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 1270
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Session Script Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "timeout"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ssh_session_bounds",
+              "script": "echo never-runs",
+              "timeout": "0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5ef14331-6937-4281-b1c3-55030508a0b4",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 1270
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Session Script Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught script_timeout'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4d81aa31-07c0-41a7-9eff-52c3b9a487a1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1420
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Local Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "local_port_error",
+              "caught": "local_port_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "4280a68b-8582-4f45-b753-6d27cccc4b5a",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 1490
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Local Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "local_port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ssh_session_bounds",
+              "local_port": "70000",
+              "remote_host": "__FAR_HOST__",
+              "remote_port": 22
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "38738fec-dfe9-4cdc-b96c-37cb80d69b9f",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 1490
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Local Port 70000",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught local_port'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef2e0184-921b-473e-8bce-cb74f82941b5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1640
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard Remote Port 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "remote_port_error",
+              "caught": "remote_port_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "d8532c1d-d863-4ab2-9d99-20bab46dd896",
+        "type": "workflowNode",
+        "position": {
+          "x": -330,
+          "y": 1710
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote Port 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "remote_port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ssh_session_bounds",
+              "local_port": 0,
+              "remote_host": "__FAR_HOST__",
+              "remote_port": "0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c65d7e41-60e4-4af5-aa20-91c6d619a910",
+        "type": "workflowNode",
+        "position": {
+          "x": 180,
+          "y": 1710
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught Remote Port 0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'bnd caught remote_port'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "61fa386d-729c-49a4-99d0-05cbd1a0e0dc",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ssh-bounds-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "47572ddd-0db8-4c9c-aeab-11c5eb1e7fac",
+        "source": "start-node",
+        "target": "3e6eada5-be41-46a4-aa2a-9a5b7820bc91"
+      },
+      {
+        "id": "a6a30c5e-27e0-4e21-a050-b0d594103c5b",
+        "source": "3e6eada5-be41-46a4-aa2a-9a5b7820bc91",
+        "target": "f0696baa-5e60-4754-8561-b9641fab0e8e",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "39b78694-b78e-417e-b526-694a3b3409b2",
+        "source": "3e6eada5-be41-46a4-aa2a-9a5b7820bc91",
+        "target": "c6841833-c3ed-438a-8745-b45f054453ef",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "38c18662-f522-4497-a047-b990ca3c25ba",
+        "source": "3e6eada5-be41-46a4-aa2a-9a5b7820bc91",
+        "target": "074f2f77-cf8b-470b-a8c6-4084c22f6dec",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "c2b467e0-7dff-427e-9cb1-77ef55157596",
+        "source": "074f2f77-cf8b-470b-a8c6-4084c22f6dec",
+        "target": "9f35a8e0-b7b1-486d-8d9a-7ae7cdec91e3",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "b030aaa2-8bc7-41f8-a19e-aca64d87a029",
+        "source": "074f2f77-cf8b-470b-a8c6-4084c22f6dec",
+        "target": "90fbe4d6-cead-4600-aabc-91e89c0c309b",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "bfc30dc0-c40e-4ff5-bc16-4d7f2e42a2a3",
+        "source": "074f2f77-cf8b-470b-a8c6-4084c22f6dec",
+        "target": "069b87ce-0b92-4baa-aeb6-34bf1ef60ff2",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "7110a93a-3780-4310-a02d-ff89381da863",
+        "source": "069b87ce-0b92-4baa-aeb6-34bf1ef60ff2",
+        "target": "f3bb0025-b0d5-4992-95d4-e03908379646",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "931ed348-b1bf-45ac-a28b-b5f2ce22dccd",
+        "source": "069b87ce-0b92-4baa-aeb6-34bf1ef60ff2",
+        "target": "b3e1e58e-c6a9-4b74-bc8c-28c224e26e7a",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "2d79cb1d-67e5-4470-8af8-390471dcc867",
+        "source": "069b87ce-0b92-4baa-aeb6-34bf1ef60ff2",
+        "target": "7d427bce-5a9b-448f-829b-06941b958bf5",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "3b6877d1-7e22-499e-8bcf-5d01028b9d60",
+        "source": "7d427bce-5a9b-448f-829b-06941b958bf5",
+        "target": "a0ed4261-3869-4883-a564-26d8d5785d6b",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "3246a45c-2e56-434b-be2c-efe29d96c35c",
+        "source": "7d427bce-5a9b-448f-829b-06941b958bf5",
+        "target": "e2078c18-e79b-4055-9e39-75d588b07c92",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "83df240d-c0bb-4944-bedc-9aacfb1fa275",
+        "source": "7d427bce-5a9b-448f-829b-06941b958bf5",
+        "target": "28df3e25-3d42-4892-a400-d0940b621d5a",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "909846dc-b87c-4c5b-9d42-5d198f1146a8",
+        "source": "28df3e25-3d42-4892-a400-d0940b621d5a",
+        "target": "13dcd7d1-b7fc-4a4f-93b3-e08a125f9536",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "ff80354f-c32d-4c68-97e2-d30a04830d4b",
+        "source": "28df3e25-3d42-4892-a400-d0940b621d5a",
+        "target": "afc6de4c-38e0-4e2e-8b74-e30e822d860d",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "5ce3cb81-cebf-48c0-80bc-96d1e95c9743",
+        "source": "28df3e25-3d42-4892-a400-d0940b621d5a",
+        "target": "e4da614c-3811-473f-84eb-fed940e2ac7c",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "60398ddf-b5c6-422c-9ed5-0f138f89ff7d",
+        "source": "e4da614c-3811-473f-84eb-fed940e2ac7c",
+        "target": "b2a1ea57-af19-4627-92c9-8660539faf40",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "3750d88f-185a-4ced-9ff3-b15a2a62cacd",
+        "source": "e4da614c-3811-473f-84eb-fed940e2ac7c",
+        "target": "5ef14331-6937-4281-b1c3-55030508a0b4",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "955bfb4d-9316-46a3-8fbf-6fd35d5f703d",
+        "source": "e4da614c-3811-473f-84eb-fed940e2ac7c",
+        "target": "4d81aa31-07c0-41a7-9eff-52c3b9a487a1",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "7b3764ad-2cc6-4d1e-8ae4-d61f49e231fd",
+        "source": "4d81aa31-07c0-41a7-9eff-52c3b9a487a1",
+        "target": "4280a68b-8582-4f45-b753-6d27cccc4b5a",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "fb3d57bb-9d68-47b8-aea9-b4daf3c5b62e",
+        "source": "4d81aa31-07c0-41a7-9eff-52c3b9a487a1",
+        "target": "38738fec-dfe9-4cdc-b96c-37cb80d69b9f",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "76c42a27-4d97-4c52-86e9-29ebf0a56496",
+        "source": "4d81aa31-07c0-41a7-9eff-52c3b9a487a1",
+        "target": "ef2e0184-921b-473e-8bce-cb74f82941b5",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "b38750b5-4365-49cc-b553-ca864bb64eef",
+        "source": "ef2e0184-921b-473e-8bce-cb74f82941b5",
+        "target": "d8532c1d-d863-4ab2-9d99-20bab46dd896",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "775f7605-a820-4d3c-a978-b46a56cc9772",
+        "source": "ef2e0184-921b-473e-8bce-cb74f82941b5",
+        "target": "c65d7e41-60e4-4af5-aa20-91c6d619a910",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "333460d8-64a3-4601-b9f2-a4885cdd214b",
+        "source": "ef2e0184-921b-473e-8bce-cb74f82941b5",
+        "target": "61fa386d-729c-49a4-99d0-05cbd1a0e0dc",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "port_error": {
+      "type": "map",
+      "value": null
+    },
+    "port_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "connect_timeout_error": {
+      "type": "map",
+      "value": null
+    },
+    "connect_timeout_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "keep_alive_interval_error": {
+      "type": "map",
+      "value": null
+    },
+    "keep_alive_interval_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "keep_alive_max_count_error": {
+      "type": "map",
+      "value": null
+    },
+    "keep_alive_max_count_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "exec_timeout_error": {
+      "type": "map",
+      "value": null
+    },
+    "exec_timeout_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "script_timeout_error": {
+      "type": "map",
+      "value": null
+    },
+    "script_timeout_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "local_port_error": {
+      "type": "map",
+      "value": null
+    },
+    "local_port_caught": {
+      "type": "boolean",
+      "value": false
+    },
+    "remote_port_error": {
+      "type": "map",
+      "value": null
+    },
+    "remote_port_caught": {
+      "type": "boolean",
+      "value": false
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

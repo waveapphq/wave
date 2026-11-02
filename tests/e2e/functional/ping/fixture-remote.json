@@ -1,0 +1,453 @@
+{
+  "name": "V-PLUGIN-PING-REMOTE",
+  "version": "1.0.0",
+  "description": "Ping inside a Remote Execution body on the real sshd host: it reaches a service only the remote host can resolve, pings the remote loopback, records a silent host, and the same Host pinged from WAVE does not resolve.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "df2762e2-7167-4fc9-b920-99a4c0a26e13",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c54aee6a-a4a9-4855-bf08-7a8ed8c7fa4d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ba513948-ef87-4f0a-9bf4-bf8892b72d8f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Remote target answered",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote target answered",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "pass_when": "any",
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "host": "netcat-target",
+              "timeout": 10,
+              "stream_output": true,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "r_ok",
+              "summary": "r_summary",
+              "replies": "r_replies"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef16e0be-5f96-40df-ac96-f46b5a93d25a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Remote loopback answered",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote loopback answered",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "pass_when": "any",
+              "ip_version": "v4",
+              "dont_fragment": false,
+              "host": "localhost",
+              "timeout": 10,
+              "stream_output": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "r_loop_ok",
+              "replies": "r_loop_replies"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "98204e96-a13e-4949-a0be-ecf4728cb2a4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Remote no reply recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remote no reply recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "pass_when": "any",
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "host": "192.0.2.1",
+              "timeout": 6,
+              "stream_output": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "r_silent_ok",
+              "replies": "r_silent_replies",
+              "error": "r_silent_error",
+              "reason": "r_silent_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4b4d6096-c407-495b-b7af-9a6624c05a4e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "WAVE side unresolved recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "WAVE side unresolved recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "pass_when": "any",
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "host": "netcat-target",
+              "timeout": 5,
+              "stream_output": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "w_ok",
+              "error": "w_error",
+              "reason": "w_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6a7fbfcd-30bc-4b12-b828-a63cfe562b04",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-remote target-ok={r_ok} target-sent={r_summary[0]['sent']} target-received={r_summary[0]['received']} target-rows={len(r_replies)} target-source={r_replies[0]['source']} target-status={r_replies[0]['status']} loop-ok={r_loop_ok} loop-source={r_loop_replies[0]['source']} silent-ok={r_silent_ok} silent-reason={r_silent_reason} wave-ok={w_ok} wave-reason={w_reason}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "dd2991f0-199e-40bd-99f1-ddd4d135589f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ping-remote-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "f64352c4-0d33-45be-a923-70759636c0a5",
+        "source": "start-node",
+        "target": "df2762e2-7167-4fc9-b920-99a4c0a26e13",
+        "type": "default"
+      },
+      {
+        "id": "295a84fc-c1a5-4908-a271-9d42955f955f",
+        "source": "df2762e2-7167-4fc9-b920-99a4c0a26e13",
+        "target": "c54aee6a-a4a9-4855-bf08-7a8ed8c7fa4d",
+        "type": "default"
+      },
+      {
+        "id": "6df23ce1-ff27-459c-80c7-8b255a42ef17",
+        "source": "c54aee6a-a4a9-4855-bf08-7a8ed8c7fa4d",
+        "target": "ba513948-ef87-4f0a-9bf4-bf8892b72d8f",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "f5ce868d-ea71-4b48-b538-0dab9e2e1436",
+        "source": "ba513948-ef87-4f0a-9bf4-bf8892b72d8f",
+        "target": "ef16e0be-5f96-40df-ac96-f46b5a93d25a",
+        "type": "default"
+      },
+      {
+        "id": "655de735-e566-4f6a-a62e-6bcf86473c98",
+        "source": "ef16e0be-5f96-40df-ac96-f46b5a93d25a",
+        "target": "98204e96-a13e-4949-a0be-ecf4728cb2a4",
+        "type": "default"
+      },
+      {
+        "id": "4be8c729-1c12-4b4b-a152-e069c3e4bd53",
+        "source": "c54aee6a-a4a9-4855-bf08-7a8ed8c7fa4d",
+        "target": "4b4d6096-c407-495b-b7af-9a6624c05a4e",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "c678084f-b5fb-466f-b961-b990ee72a8da",
+        "source": "4b4d6096-c407-495b-b7af-9a6624c05a4e",
+        "target": "6a7fbfcd-30bc-4b12-b828-a63cfe562b04",
+        "type": "default"
+      },
+      {
+        "id": "eae83705-031d-4d21-a398-32044667b42b",
+        "source": "6a7fbfcd-30bc-4b12-b828-a63cfe562b04",
+        "target": "dd2991f0-199e-40bd-99f1-ddd4d135589f",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "r_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "r_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "r_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "r_loop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "r_loop_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "r_silent_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "r_silent_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "r_silent_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "r_silent_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "w_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "w_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "w_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

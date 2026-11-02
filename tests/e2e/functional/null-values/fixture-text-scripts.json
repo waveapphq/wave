@@ -1,0 +1,3130 @@
+{
+  "name": "V-NULL-TEXT-SCRIPTS __TOKEN__",
+  "version": "1.0.0",
+  "description": "Null in text pieces, script entries and script exports: a null URL piece fails before any request, a Log piece prints null, Shell Script and Python entries given empty text arrive as empty text, entries given None or stored null fail before the script starts on WAVE and inside a Remote Execution body on sshd, and Python exports bind as their variables' types.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c7bec224-f254-4928-8d67-a0bc217c7706",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Shell entries left empty",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell entries left empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.TOKEN",
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/sh-ok\"\nprintf 'n=%s 1=[%s] 2=[%s] token=%s[%s]' \"$#\" \"$1\" \"$2\" \"${TOKEN+set}\" \"$TOKEN\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "''"
+                }
+              ],
+              "input_vars": {
+                "TOKEN": "''"
+              }
+            },
+            "outputBindings": {
+              "stdout": "sh_empty_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7576281c-8d1c-4d71-9a8f-22a2224a6bf2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Shell entries stored null",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/sh-lit\"\nprintf 'n=%s 1=[%s] 2=[%s] token=%s[%s]' \"$#\" \"$1\" \"$2\" \"${TOKEN+set}\" \"$TOKEN\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": null
+                }
+              ],
+              "input_vars": {
+                "TOKEN": null
+              }
+            },
+            "outputBindings": {
+              "stdout": "sh_lit_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "09801b69-9227-45df-9861-9101e357cdc9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Shell list with a null item",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell list with a null item",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.ITEMS",
+            "arguments.0.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "printf '%s|%s' \"$ITEMS\" \"$1\"\n",
+              "arguments": [
+                {
+                  "value": "items"
+                }
+              ],
+              "input_vars": {
+                "ITEMS": "items"
+              }
+            },
+            "outputBindings": {
+              "stdout": "sh_list_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fc54f3ef-352c-450e-9563-93cd7e1be208",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Python entries left empty",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python entries left empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "environment.TEAM",
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-local-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-ok\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "environment": {
+                "TEAM": "''"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "''"
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_empty_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fc389704-e244-4617-bbc3-2a20f6449a82",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Python entries stored null",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-local-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-lit\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "environment": {
+                "TEAM": null
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": null
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_lit_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3c4a2936-7d84-47c7-9b32-d376fbc98c2d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "Python input variable null",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python input variable null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.maybe"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print(repr(maybe))\nmaybe_kind = type(maybe).__name__\n",
+              "input_vars": {
+                "maybe": "nothing"
+              },
+              "script_variables": [
+                "maybe_kind"
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_maybe_out",
+              "maybe_kind": "maybe_kind_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "35da45bd-f9fc-450d-8180-9527b67d55ee",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Python exports that fit",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python exports that fit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "n_fit = 40 + 2\nn_none = None\n",
+              "script_variables": [
+                "n_fit",
+                "n_none"
+              ]
+            },
+            "outputBindings": {
+              "n_fit": "fit_v",
+              "n_none": "none_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "995bae24-bfd0-4515-8a9e-665d8f38f2f0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Python export abc into integer",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python export abc into integer",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "n_bad = \"abc\"\n",
+              "script_variables": [
+                "n_bad"
+              ],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "n_bad": "bad_v",
+              "error": "bad_err",
+              "reason": "bad_reason",
+              "success": "bad_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "96b561bd-14e3-4294-9b61-10435d695f1e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Log null piece",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log null piece",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "null-piece nothing={{ nothing }} flag={{ flag }} items={{ items }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5ec66bd5-1372-4381-af24-05c5c2d617b8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "Set vs_target to None",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set vs_target to None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "vs_target"
+          ],
+          "variableTypes": {
+            "vs_target": "integer"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "vs_target": "None"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "17d5c60b-a337-4239-b7ab-054d42df5bc0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log vs_target",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log vs_target",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "vs_target={{ vs_target }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "297e651d-a8df-468f-bb46-4d756c572ddb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "Try Shell TOKEN given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_sh_token"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "a76077c3-3517-4b2f-8275-1e7df73dc9e5",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1120
+        },
+        "data": {
+          "label": "Shell TOKEN given None",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.TOKEN"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/sh-token\"\nprintf '[%s]' \"$TOKEN\"\n",
+              "input_vars": {
+                "TOKEN": "nothing"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f01b59c3-322d-4cd7-a403-937a26639511",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 1120
+        },
+        "data": {
+          "label": "Catch Shell TOKEN given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught sh-token: ' + e_sh_token['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d053bf3a-d28f-4af6-b61c-b92fe2d07060",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1210
+        },
+        "data": {
+          "label": "Try Shell row 2 given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_sh_arg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "ecb70421-3cd5-4ec0-9b1f-91547ac182f4",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1280
+        },
+        "data": {
+          "label": "Shell row 2 given None",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/sh-arg\"\nprintf '[%s]' \"$2\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "nothing"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e25e3632-fcb7-4aea-8540-1ae95617c743",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 1280
+        },
+        "data": {
+          "label": "Catch Shell row 2 given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught sh-arg: ' + e_sh_arg['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "567a5950-7791-45b1-8ba0-545411856bd4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1370
+        },
+        "data": {
+          "label": "Try Python TEAM given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_py_team"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "545b840f-d081-49df-86dc-2a648038532e",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1440
+        },
+        "data": {
+          "label": "Python TEAM given None",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "environment.TEAM"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-local-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-team\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "environment": {
+                "TEAM": "nothing"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cbdc3922-7dd3-4f52-b6d5-61141896ac3b",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 1440
+        },
+        "data": {
+          "label": "Catch Python TEAM given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught py-team: ' + e_py_team['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "39e2f25b-031c-4964-9ffb-7a534bb7e59e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1530
+        },
+        "data": {
+          "label": "Try Python row 2 given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_py_arg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "24847f38-ea63-4eb2-ab19-b27bfcadfbaa",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1600
+        },
+        "data": {
+          "label": "Python row 2 given None",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-local-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-arg\"), \"w\").close()\nprint(sys.argv[1:])\n",
+              "environment": {
+                "TEAM": "blue"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "nothing"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2e2c49d7-6b18-45dd-8c82-fc12486bf6f6",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 1600
+        },
+        "data": {
+          "label": "Catch Python row 2 given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught py-arg: ' + e_py_arg['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b80b1d14-78dc-403c-acb2-0759162de84c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1690
+        },
+        "data": {
+          "label": "Try HTTP null URL piece",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try HTTP null URL piece",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_http"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "67735b9b-9428-4d82-a646-6bd1ab59b82d",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1760
+        },
+        "data": {
+          "label": "HTTP null URL piece",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP null URL piece",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "url"
+          ],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "https://127.0.0.1:9449/retry?key=nulltext-__TOKEN__&fail_count=1&fail_status=502&probe={{ nothing }}",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "66e1b682-70f3-4f09-8b7c-684c0df2d7c3",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 1760
+        },
+        "data": {
+          "label": "Catch HTTP null URL piece",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch HTTP null URL piece",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught http-null: ' + e_http['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c5fbf13e-12c9-4cf4-b02c-65af4a7b38cd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1850
+        },
+        "data": {
+          "label": "HTTP retry probe 1",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP retry probe 1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "https://127.0.0.1:9449/retry?key=nulltext-__TOKEN__&fail_count=1&fail_status=502",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "probe1_status",
+              "body": "probe1_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2495bec1-c260-4fb1-b73e-edab999d3a96",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1940
+        },
+        "data": {
+          "label": "HTTP retry probe 2",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP retry probe 2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "https://127.0.0.1:9449/retry?key=nulltext-__TOKEN__&fail_count=1&fail_status=502",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "probe2_status",
+              "body": "probe2_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "359701a7-4c55-43df-a0f7-a82166df4d83",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2030
+        },
+        "data": {
+          "label": "Open sshd",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open sshd",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5121b903-0991-4bfb-a049-5d7effab7167",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2120
+        },
+        "data": {
+          "label": "Remote body that runs",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body that runs",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "47923918-4003-47ff-b80d-1a5499ac7f94",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2190
+        },
+        "data": {
+          "label": "Body shell entries left empty",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body shell entries left empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.TOKEN",
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/body-sh-ok\"\nprintf 'n=%s 1=[%s] 2=[%s] token=%s[%s]' \"$#\" \"$1\" \"$2\" \"${TOKEN+set}\" \"$TOKEN\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "''"
+                }
+              ],
+              "input_vars": {
+                "TOKEN": "''"
+              }
+            },
+            "outputBindings": {
+              "stdout": "sh_body_empty_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e3681295-aaa3-422e-9cb9-c44715c1b6a5",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 3680
+        },
+        "data": {
+          "label": "Body shell entries stored null",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/body-sh-lit\"\nprintf 'n=%s 1=[%s] 2=[%s] token=%s[%s]' \"$#\" \"$1\" \"$2\" \"${TOKEN+set}\" \"$TOKEN\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": null
+                }
+              ],
+              "input_vars": {
+                "TOKEN": null
+              }
+            },
+            "outputBindings": {
+              "stdout": "sh_body_lit_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bebbf81f-80ea-49f0-abb5-bb811be51e79",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2350
+        },
+        "data": {
+          "label": "Remote Python entries left empty",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python entries left empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "environment.TEAM",
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-remote-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-ok\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "interpreter": "python3",
+              "environment": {
+                "TEAM": "''"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "''"
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_body_empty_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "00ca115e-a7ac-43ca-839e-9f1bcc901e5d",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 3840
+        },
+        "data": {
+          "label": "Remote Python entries stored null",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-remote-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-lit\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "interpreter": "python3",
+              "environment": {
+                "TEAM": null
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": null
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_body_lit_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c3401520-9175-4646-ac71-bdfac33fd8c7",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2510
+        },
+        "data": {
+          "label": "Remote Python export abc into integer",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python export abc into integer",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "n_bad = \"abc\"\n",
+              "interpreter": "python3",
+              "script_variables": [
+                "n_bad"
+              ],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "n_bad": "bad_rv",
+              "error": "bad_rerr",
+              "reason": "bad_rreason",
+              "success": "bad_rok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "befe38ab-4717-43fc-ba92-57326b549c05",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2590
+        },
+        "data": {
+          "label": "Remote Python exports that fit",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python exports that fit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "n_fit = 40 + 2\nn_none = None\n",
+              "interpreter": "python3",
+              "script_variables": [
+                "n_fit",
+                "n_none"
+              ]
+            },
+            "outputBindings": {
+              "n_fit": "fit_rv",
+              "n_none": "none_rv"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "afa67a1a-9f92-407f-bc01-92ddfe9f4ed5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2690
+        },
+        "data": {
+          "label": "Try Body shell TOKEN given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Body shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_sh_token"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "1ac38abe-a97e-40e1-aeac-59c85125b6f9",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2760
+        },
+        "data": {
+          "label": "Remote body for Body shell TOKEN given None",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Body shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "1d5fe0a3-c336-4097-881d-45489051d8aa",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 2830
+        },
+        "data": {
+          "label": "Body shell TOKEN given None",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.TOKEN"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/body-sh-token\"\nprintf '[%s]' \"$TOKEN\"\n",
+              "input_vars": {
+                "TOKEN": "nothing"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "312d460c-a3fe-406e-bbca-974cb923c70c",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 2760
+        },
+        "data": {
+          "label": "Catch Body shell TOKEN given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Body shell TOKEN given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-sh-token: ' + e_rx_sh_token['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9ba1726b-e53e-4687-a2e1-29812d32a18c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2920
+        },
+        "data": {
+          "label": "Try Body shell row 2 given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Body shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_sh_arg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "8fd1038f-fb35-4180-a6bc-4effcf80ee9c",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 2990
+        },
+        "data": {
+          "label": "Remote body for Body shell row 2 given None",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Body shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "7c06b6b6-1068-4a41-9e2d-6b1b05cb0628",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 3060
+        },
+        "data": {
+          "label": "Body shell row 2 given None",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; mkdir -p \"$d\" && : > \"$d/body-sh-arg\"\nprintf '[%s]' \"$2\"\n",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "nothing"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2ee3929c-3f8c-4c3e-87ce-65a375642d95",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 2990
+        },
+        "data": {
+          "label": "Catch Body shell row 2 given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Body shell row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-sh-arg: ' + e_rx_sh_arg['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ad6d6692-7bdb-4a0e-bcd8-cba0caf9705c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3150
+        },
+        "data": {
+          "label": "Try Remote Python TEAM given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Remote Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_py_team"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "816fc92c-7236-4fe5-b289-4d06e4d610e2",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3220
+        },
+        "data": {
+          "label": "Remote body for Remote Python TEAM given None",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Remote Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "09fe7321-8c4d-4e4a-a07f-28b09b989146",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 3290
+        },
+        "data": {
+          "label": "Remote Python TEAM given None",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "environment.TEAM"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-remote-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-team\"), \"w\").close()\nprint(sys.argv[1:])\nprint(repr(os.environ[\"TEAM\"]))\n",
+              "interpreter": "python3",
+              "environment": {
+                "TEAM": "nothing"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4d48f7c3-81e7-44d3-bf7f-7f98748ba63e",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 3220
+        },
+        "data": {
+          "label": "Catch Remote Python TEAM given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Remote Python TEAM given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-py-team: ' + e_rx_py_team['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d8005848-fb63-49cb-be67-97b15bc1dfd9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3380
+        },
+        "data": {
+          "label": "Try Remote Python row 2 given None",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Remote Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_py_arg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "1c49b29d-31bc-4259-b5c7-55512e861b5e",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3450
+        },
+        "data": {
+          "label": "Remote body for Remote Python row 2 given None",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Remote Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "8a0bfc9b-3431-4dca-9c7a-92260478c3ea",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 3520
+        },
+        "data": {
+          "label": "Remote Python row 2 given None",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remote Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.1.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import os\nimport sys\n\nd = \"/tmp/wave-e2e-nulltext-remote-__TOKEN__\"\nos.makedirs(d, exist_ok=True)\nopen(os.path.join(d, \"py-arg\"), \"w\").close()\nprint(sys.argv[1:])\n",
+              "interpreter": "python3",
+              "environment": {
+                "TEAM": "blue"
+              },
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "nothing"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0f022062-faca-4ee9-8177-53fa064e792d",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 3450
+        },
+        "data": {
+          "label": "Catch Remote Python row 2 given None",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Remote Python row 2 given None",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-py-arg: ' + e_rx_py_arg['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5475a7be-86e9-4365-af85-d137a260997e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3950
+        },
+        "data": {
+          "label": "Probe WAVE markers",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Probe WAVE markers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "d=/tmp/wave-e2e-nulltext-local-__TOKEN__; for f in sh-ok sh-lit py-ok py-lit body-sh-ok body-sh-lit sh-token sh-arg py-team py-arg body-sh-token body-sh-arg; do if [ -e \"$d/$f\" ]; then printf '%s=present ' \"$f\"; else printf '%s=absent ' \"$f\"; fi; done; rm -rf \"$d\"; if [ -e \"$d\" ]; then printf 'dir=left'; else printf 'dir=gone'; fi\n"
+            },
+            "outputBindings": {
+              "stdout": "local_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b74c0f63-e37d-4762-a7b7-6894bebfc0fb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4040
+        },
+        "data": {
+          "label": "Probe sshd markers",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Probe sshd markers",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "d=/tmp/wave-e2e-nulltext-remote-__TOKEN__; for f in py-ok py-lit py-team py-arg; do if [ -e \"$d/$f\" ]; then printf '%s=present ' \"$f\"; else printf '%s=absent ' \"$f\"; fi; done; rm -rf \"$d\"; if [ -e \"$d\" ]; then printf 'dir=left'; else printf 'dir=gone'; fi",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "remote_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5db0292f-d072-4d30-90b3-daca4ff464da",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4130
+        },
+        "data": {
+          "label": "Close sshd",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close sshd",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7e972b30-12e2-49ec-ba98-5004e612ef27",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4220
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nulltext-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "426d49db-a88f-40ef-b8d6-e5a44efd2619",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 150
+        },
+        "data": {
+          "label": "Try Shell entries stored null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_sh_lit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "a48fe62f-9d27-48f5-91c9-1367cfa62d17",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 150
+        },
+        "data": {
+          "label": "Catch Shell entries stored null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught sh-lit: ' + e_sh_lit['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "65ad9952-f52a-4aa8-a302-3f67a9c77548",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 420
+        },
+        "data": {
+          "label": "Try Python entries stored null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_py_lit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "9b043469-4c71-43ee-b287-1f9f26c609cb",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 420
+        },
+        "data": {
+          "label": "Catch Python entries stored null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught py-lit: ' + e_py_lit['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a5b39b30-c3de-4fcf-ab34-7d93e02235da",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3610
+        },
+        "data": {
+          "label": "Try Body shell entries stored null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Body shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_sh_lit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "f839caab-ab97-4416-94fc-2e0af893f071",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3680
+        },
+        "data": {
+          "label": "Remote body for Body shell entries stored null",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Body shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "df21a470-411a-4015-af58-b9a3be787d97",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 3680
+        },
+        "data": {
+          "label": "Catch Body shell entries stored null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Body shell entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-sh-lit: ' + e_rx_sh_lit['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d5a3ec19-4165-4f51-bdd0-6b4b48f366ea",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3770
+        },
+        "data": {
+          "label": "Try Remote Python entries stored null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Remote Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_rx_py_lit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "d23f15b4-604a-4b23-89d3-eba0709dd02b",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3840
+        },
+        "data": {
+          "label": "Remote body for Remote Python entries stored null",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remote body for Remote Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "e26961be-370d-41cd-aae8-d0248ce12568",
+        "type": "workflowNode",
+        "position": {
+          "x": 1300,
+          "y": 3840
+        },
+        "data": {
+          "label": "Catch Remote Python entries stored null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Remote Python entries stored null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught rx-py-lit: ' + e_rx_py_lit['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "df60025f-7232-4c14-add1-80a496e0c61e",
+        "source": "297e651d-a8df-468f-bb46-4d756c572ddb",
+        "target": "a76077c3-3517-4b2f-8275-1e7df73dc9e5",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "5bed2380-bea0-487a-8cd1-fdd7ce3d06af",
+        "source": "297e651d-a8df-468f-bb46-4d756c572ddb",
+        "target": "f01b59c3-322d-4cd7-a403-937a26639511",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "03c9f862-b311-485a-a124-1eba7e7c1aeb",
+        "source": "d053bf3a-d28f-4af6-b61c-b92fe2d07060",
+        "target": "ecb70421-3cd5-4ec0-9b1f-91547ac182f4",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "25edcd6a-4ed0-451b-a894-345bc7e943dc",
+        "source": "d053bf3a-d28f-4af6-b61c-b92fe2d07060",
+        "target": "e25e3632-fcb7-4aea-8540-1ae95617c743",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "478e45af-0fee-452c-b309-2ba973c24664",
+        "source": "567a5950-7791-45b1-8ba0-545411856bd4",
+        "target": "545b840f-d081-49df-86dc-2a648038532e",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "f6ac144d-bf60-4461-b101-c0351ced12f2",
+        "source": "567a5950-7791-45b1-8ba0-545411856bd4",
+        "target": "cbdc3922-7dd3-4f52-b6d5-61141896ac3b",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "ad1619b5-020f-46ea-9dc9-c9bafa5ad8ac",
+        "source": "39e2f25b-031c-4964-9ffb-7a534bb7e59e",
+        "target": "24847f38-ea63-4eb2-ab19-b27bfcadfbaa",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "1a428afd-3e89-4bf0-95dc-6ebda5e3bbae",
+        "source": "39e2f25b-031c-4964-9ffb-7a534bb7e59e",
+        "target": "2e2c49d7-6b18-45dd-8c82-fc12486bf6f6",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "4d0961b7-ce67-453f-ad0f-33f3ce71e4e5",
+        "source": "b80b1d14-78dc-403c-acb2-0759162de84c",
+        "target": "67735b9b-9428-4d82-a646-6bd1ab59b82d",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "b94f1ea6-f33c-4889-b15a-69bbe87c7f26",
+        "source": "b80b1d14-78dc-403c-acb2-0759162de84c",
+        "target": "66e1b682-70f3-4f09-8b7c-684c0df2d7c3",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "779bc5a4-7657-48ca-889d-d6f0a9ddf148",
+        "source": "5121b903-0991-4bfb-a049-5d7effab7167",
+        "target": "47923918-4003-47ff-b80d-1a5499ac7f94",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "8434460c-b532-441c-b5cf-d9b2f7c0a6d7",
+        "source": "c3401520-9175-4646-ac71-bdfac33fd8c7",
+        "target": "befe38ab-4717-43fc-ba92-57326b549c05",
+        "type": "default"
+      },
+      {
+        "id": "dcd46a7d-f259-4379-ad9a-b8f7c957f444",
+        "source": "afa67a1a-9f92-407f-bc01-92ddfe9f4ed5",
+        "target": "1ac38abe-a97e-40e1-aeac-59c85125b6f9",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "2ef79865-c887-4f28-8e42-9473bf19b3c3",
+        "source": "1ac38abe-a97e-40e1-aeac-59c85125b6f9",
+        "target": "1d5fe0a3-c336-4097-881d-45489051d8aa",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "cf87c578-bdb8-43df-9b2d-71b7dd983709",
+        "source": "afa67a1a-9f92-407f-bc01-92ddfe9f4ed5",
+        "target": "312d460c-a3fe-406e-bbca-974cb923c70c",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "83b103b9-0a10-42cb-92c3-7dc8aa1fee69",
+        "source": "9ba1726b-e53e-4687-a2e1-29812d32a18c",
+        "target": "8fd1038f-fb35-4180-a6bc-4effcf80ee9c",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "194cbeae-824d-47b0-bf1a-9ee55ce26c94",
+        "source": "8fd1038f-fb35-4180-a6bc-4effcf80ee9c",
+        "target": "7c06b6b6-1068-4a41-9e2d-6b1b05cb0628",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "0256ecff-c4e5-44db-92ff-b0b0ce312445",
+        "source": "9ba1726b-e53e-4687-a2e1-29812d32a18c",
+        "target": "2ee3929c-3f8c-4c3e-87ce-65a375642d95",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "8ef38a91-f898-4ef3-b8a5-4aca00ad8027",
+        "source": "ad6d6692-7bdb-4a0e-bcd8-cba0caf9705c",
+        "target": "816fc92c-7236-4fe5-b289-4d06e4d610e2",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "2ff64488-4667-4106-a88a-ac35a8c651b9",
+        "source": "816fc92c-7236-4fe5-b289-4d06e4d610e2",
+        "target": "09fe7321-8c4d-4e4a-a07f-28b09b989146",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "22b8acea-f650-402e-838b-88349af7a8cf",
+        "source": "ad6d6692-7bdb-4a0e-bcd8-cba0caf9705c",
+        "target": "4d48f7c3-81e7-44d3-bf7f-7f98748ba63e",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "9c27f9c6-a647-4d39-85e0-152b9144d92d",
+        "source": "d8005848-fb63-49cb-be67-97b15bc1dfd9",
+        "target": "1c49b29d-31bc-4259-b5c7-55512e861b5e",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "9a3931ad-6fb4-4fde-8f17-295fb5b09a69",
+        "source": "1c49b29d-31bc-4259-b5c7-55512e861b5e",
+        "target": "8a0bfc9b-3431-4dca-9c7a-92260478c3ea",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "7607a441-abe5-407d-989e-da55c596f3d9",
+        "source": "d8005848-fb63-49cb-be67-97b15bc1dfd9",
+        "target": "0f022062-faca-4ee9-8177-53fa064e792d",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "14df5d4e-e00d-45ad-99b5-437ae3258822",
+        "source": "start-node",
+        "target": "c7bec224-f254-4928-8d67-a0bc217c7706",
+        "type": "default"
+      },
+      {
+        "id": "ab3f8982-c606-472b-8b2c-0a28fd1592e7",
+        "source": "09801b69-9227-45df-9861-9101e357cdc9",
+        "target": "fc54f3ef-352c-450e-9563-93cd7e1be208",
+        "type": "default"
+      },
+      {
+        "id": "5a8ba819-13c0-4fe0-8df8-e3440553bba3",
+        "source": "3c4a2936-7d84-47c7-9b32-d376fbc98c2d",
+        "target": "35da45bd-f9fc-450d-8180-9527b67d55ee",
+        "type": "default"
+      },
+      {
+        "id": "c27f43b5-8cf1-4705-9b2a-88188eba53a6",
+        "source": "35da45bd-f9fc-450d-8180-9527b67d55ee",
+        "target": "995bae24-bfd0-4515-8a9e-665d8f38f2f0",
+        "type": "default"
+      },
+      {
+        "id": "06a01999-30a9-47cc-b24f-0eebd0593b03",
+        "source": "995bae24-bfd0-4515-8a9e-665d8f38f2f0",
+        "target": "96b561bd-14e3-4294-9b61-10435d695f1e",
+        "type": "default"
+      },
+      {
+        "id": "ecdbd557-dcf7-48a4-bc63-d0218f9c92f5",
+        "source": "96b561bd-14e3-4294-9b61-10435d695f1e",
+        "target": "5ec66bd5-1372-4381-af24-05c5c2d617b8",
+        "type": "default"
+      },
+      {
+        "id": "73dd3efb-ab8b-4d9f-b575-e19e2c587701",
+        "source": "5ec66bd5-1372-4381-af24-05c5c2d617b8",
+        "target": "17d5c60b-a337-4239-b7ab-054d42df5bc0",
+        "type": "default"
+      },
+      {
+        "id": "8fb14edd-f597-436f-a685-dd7fb844b6dc",
+        "source": "17d5c60b-a337-4239-b7ab-054d42df5bc0",
+        "target": "297e651d-a8df-468f-bb46-4d756c572ddb",
+        "type": "default"
+      },
+      {
+        "id": "d9f394ae-1f0e-4cde-a377-92058f878d99",
+        "source": "297e651d-a8df-468f-bb46-4d756c572ddb",
+        "target": "d053bf3a-d28f-4af6-b61c-b92fe2d07060",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "9da92c07-3afa-4f61-8403-b04e94376fcd",
+        "source": "d053bf3a-d28f-4af6-b61c-b92fe2d07060",
+        "target": "567a5950-7791-45b1-8ba0-545411856bd4",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "312419d6-cb2b-4da1-af3b-fa07301d7b0f",
+        "source": "567a5950-7791-45b1-8ba0-545411856bd4",
+        "target": "39e2f25b-031c-4964-9ffb-7a534bb7e59e",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "6b446631-2c46-468b-8beb-06abd7bf2d7b",
+        "source": "39e2f25b-031c-4964-9ffb-7a534bb7e59e",
+        "target": "b80b1d14-78dc-403c-acb2-0759162de84c",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "cba17a5e-a292-4ae6-af2a-e3912c1cec82",
+        "source": "b80b1d14-78dc-403c-acb2-0759162de84c",
+        "target": "c5fbf13e-12c9-4cf4-b02c-65af4a7b38cd",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "9ce8ab3d-17dc-4165-a866-2890cadb9a1d",
+        "source": "c5fbf13e-12c9-4cf4-b02c-65af4a7b38cd",
+        "target": "2495bec1-c260-4fb1-b73e-edab999d3a96",
+        "type": "default"
+      },
+      {
+        "id": "49375380-8093-4411-aae0-1f81e1856483",
+        "source": "2495bec1-c260-4fb1-b73e-edab999d3a96",
+        "target": "359701a7-4c55-43df-a0f7-a82166df4d83",
+        "type": "default"
+      },
+      {
+        "id": "6a76ad85-b689-4f3f-bd33-e789c47be00b",
+        "source": "359701a7-4c55-43df-a0f7-a82166df4d83",
+        "target": "5121b903-0991-4bfb-a049-5d7effab7167",
+        "type": "default"
+      },
+      {
+        "id": "5588c0cb-2df6-4ac6-b369-eb4b87b0a617",
+        "source": "5121b903-0991-4bfb-a049-5d7effab7167",
+        "target": "afa67a1a-9f92-407f-bc01-92ddfe9f4ed5",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "a660742d-89c9-46b9-8d46-091e230fb2f5",
+        "source": "afa67a1a-9f92-407f-bc01-92ddfe9f4ed5",
+        "target": "9ba1726b-e53e-4687-a2e1-29812d32a18c",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "1ecfe83e-a025-4cea-b993-33ad74979434",
+        "source": "9ba1726b-e53e-4687-a2e1-29812d32a18c",
+        "target": "ad6d6692-7bdb-4a0e-bcd8-cba0caf9705c",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "4ebabf65-b1c5-445e-bb59-4d78f30cc594",
+        "source": "ad6d6692-7bdb-4a0e-bcd8-cba0caf9705c",
+        "target": "d8005848-fb63-49cb-be67-97b15bc1dfd9",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "c957c883-0fae-4215-8684-3f1c3cb067d0",
+        "source": "5475a7be-86e9-4365-af85-d137a260997e",
+        "target": "b74c0f63-e37d-4762-a7b7-6894bebfc0fb",
+        "type": "default"
+      },
+      {
+        "id": "18fcf9f0-c1d6-4f24-abe9-0e2ac588138a",
+        "source": "b74c0f63-e37d-4762-a7b7-6894bebfc0fb",
+        "target": "5db0292f-d072-4d30-90b3-daca4ff464da",
+        "type": "default"
+      },
+      {
+        "id": "6fa98acb-d5b2-4f0c-a29c-d4ac7f80c9c8",
+        "source": "5db0292f-d072-4d30-90b3-daca4ff464da",
+        "target": "7e972b30-12e2-49ec-ba98-5004e612ef27",
+        "type": "default"
+      },
+      {
+        "id": "72642a26-7189-4fc3-be56-74a6160f1178",
+        "source": "c7bec224-f254-4928-8d67-a0bc217c7706",
+        "target": "426d49db-a88f-40ef-b8d6-e5a44efd2619",
+        "type": "default"
+      },
+      {
+        "id": "425d07ba-92f0-42cb-b190-7e39f28fbb87",
+        "source": "426d49db-a88f-40ef-b8d6-e5a44efd2619",
+        "target": "7576281c-8d1c-4d71-9a8f-22a2224a6bf2",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "6e0032f0-4119-4d5f-b05d-937ef21d7b98",
+        "source": "426d49db-a88f-40ef-b8d6-e5a44efd2619",
+        "target": "a48fe62f-9d27-48f5-91c9-1367cfa62d17",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "1d2a03a9-21dd-452e-8e59-0a8243b6234c",
+        "source": "426d49db-a88f-40ef-b8d6-e5a44efd2619",
+        "target": "09801b69-9227-45df-9861-9101e357cdc9",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "0fc4c147-5aae-4573-b930-d6b844358b01",
+        "source": "fc54f3ef-352c-450e-9563-93cd7e1be208",
+        "target": "65ad9952-f52a-4aa8-a302-3f67a9c77548",
+        "type": "default"
+      },
+      {
+        "id": "ecfc548a-78d6-408c-b3c0-e028e6e50a5e",
+        "source": "65ad9952-f52a-4aa8-a302-3f67a9c77548",
+        "target": "fc389704-e244-4617-bbc3-2a20f6449a82",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e9711821-de61-4197-9ff3-f6b8805cb433",
+        "source": "65ad9952-f52a-4aa8-a302-3f67a9c77548",
+        "target": "9b043469-4c71-43ee-b287-1f9f26c609cb",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "a15a2015-b494-4b39-8b7e-6a74a5d23c96",
+        "source": "65ad9952-f52a-4aa8-a302-3f67a9c77548",
+        "target": "3c4a2936-7d84-47c7-9b32-d376fbc98c2d",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "78c14c89-02c0-4d12-90c4-e52863d32d09",
+        "source": "47923918-4003-47ff-b80d-1a5499ac7f94",
+        "target": "bebbf81f-80ea-49f0-abb5-bb811be51e79",
+        "type": "default"
+      },
+      {
+        "id": "dc0462d8-1581-4c39-9024-199f740880eb",
+        "source": "bebbf81f-80ea-49f0-abb5-bb811be51e79",
+        "target": "c3401520-9175-4646-ac71-bdfac33fd8c7",
+        "type": "default"
+      },
+      {
+        "id": "04d2d420-8414-48d5-8dac-40e89c961017",
+        "source": "d8005848-fb63-49cb-be67-97b15bc1dfd9",
+        "target": "a5b39b30-c3de-4fcf-ab34-7d93e02235da",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "7d3739d5-d3c8-4e8f-a254-f88dccafde9a",
+        "source": "a5b39b30-c3de-4fcf-ab34-7d93e02235da",
+        "target": "f839caab-ab97-4416-94fc-2e0af893f071",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "bbad9ac5-db83-47ec-ab4d-da890d440008",
+        "source": "f839caab-ab97-4416-94fc-2e0af893f071",
+        "target": "e3681295-aaa3-422e-9cb9-c44715c1b6a5",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "b41d026d-dbcb-42f5-83d8-d5089c15e1d8",
+        "source": "a5b39b30-c3de-4fcf-ab34-7d93e02235da",
+        "target": "df21a470-411a-4015-af58-b9a3be787d97",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "57ed4bd0-4834-4eb4-8083-c485c0327141",
+        "source": "a5b39b30-c3de-4fcf-ab34-7d93e02235da",
+        "target": "d5a3ec19-4165-4f51-bdd0-6b4b48f366ea",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e9c63d76-85b6-43ac-b2ad-22d3680ef336",
+        "source": "d5a3ec19-4165-4f51-bdd0-6b4b48f366ea",
+        "target": "d23f15b4-604a-4b23-89d3-eba0709dd02b",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "35447a6c-9b0f-4875-b97f-19652a1291a2",
+        "source": "d23f15b4-604a-4b23-89d3-eba0709dd02b",
+        "target": "00ca115e-a7ac-43ca-839e-9f1bcc901e5d",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "05dcb83e-2bbd-439b-8990-c4724eff81bd",
+        "source": "d5a3ec19-4165-4f51-bdd0-6b4b48f366ea",
+        "target": "e26961be-370d-41cd-aae8-d0248ce12568",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "c46bf6d7-3213-4a16-9955-2b0e4d44f7bf",
+        "source": "d5a3ec19-4165-4f51-bdd0-6b4b48f366ea",
+        "target": "5475a7be-86e9-4365-af85-d137a260997e",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "nothing": {
+      "value": null,
+      "type": "string",
+      "scope": "test"
+    },
+    "flag": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "items": {
+      "value": [
+        1,
+        null,
+        2
+      ],
+      "type": "array",
+      "scope": "test"
+    },
+    "sh_empty_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sh_lit_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sh_list_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_empty_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_lit_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_maybe_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "maybe_kind_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "fit_v": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "none_v": {
+      "value": 5,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bad_v": {
+      "value": 7,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bad_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "vs_target": {
+      "value": 9,
+      "type": "integer",
+      "scope": "test"
+    },
+    "e_sh_token": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_sh_arg": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_py_team": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_py_arg": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_http": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "probe1_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "probe1_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe2_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "probe2_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sh_body_empty_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sh_body_lit_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_body_empty_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_body_lit_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_rv": {
+      "value": 7,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bad_rerr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_rreason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_rok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "fit_rv": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "none_rv": {
+      "value": 5,
+      "type": "integer",
+      "scope": "test"
+    },
+    "e_rx_sh_token": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_rx_sh_arg": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_rx_py_team": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_rx_py_arg": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "local_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "remote_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_sh_lit": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_py_lit": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_rx_sh_lit": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_rx_py_lit": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "name": "V-NUMBER-BLOCKS-EDITORS-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "A JSON Parser over a document with a 20-digit id, a list variable holding the number 1e21, and a text variable for the YAML editor.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "72579fcb-f6c6-5df0-a3ac-33dc34a84453",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "data": {
+          "label": "Big Digits",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Big Digits",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "json_content": "{\"id\": 12345678901234567890}",
+              "queries": {
+                "id": "$.id"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "69e032c7-9a14-5a0e-ad82-5edc3f70b690",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 210
+        },
+        "data": {
+          "label": "Editors Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Editors Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "number-editors-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "c8cf08c7-ef15-5b3d-9b5b-69ca54cae49b",
+        "source": "start-node",
+        "target": "72579fcb-f6c6-5df0-a3ac-33dc34a84453",
+        "type": "default"
+      },
+      {
+        "id": "aea4f587-e16d-5c9e-b5e5-c3a89de9d2bd",
+        "source": "72579fcb-f6c6-5df0-a3ac-33dc34a84453",
+        "target": "69e032c7-9a14-5a0e-ad82-5edc3f70b690",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "huge": {
+      "type": "array",
+      "value": [
+        1e+21
+      ],
+      "scope": "test"
+    },
+    "doc": {
+      "type": "string",
+      "value": "x: 1",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [
+      "e2e",
+      "number-rule"
+    ]
+  }
+}

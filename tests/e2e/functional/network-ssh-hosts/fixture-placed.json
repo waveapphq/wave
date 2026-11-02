@@ -1,0 +1,55 @@
+{
+  "name": "Network SSH Hosts Placed Block E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-start",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before the placed block",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'placed-start'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-log-start",
+        "source": "start-node",
+        "target": "log-start"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

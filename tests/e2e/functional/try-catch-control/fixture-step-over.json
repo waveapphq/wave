@@ -1,0 +1,256 @@
+{
+  "name": "Try/Catch Step Over E2E",
+  "version": "1.0.0",
+  "description": "One Try/Catch whose try path holds two blocks, so a Step Over on the first has a next block in the same path to land on.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-tso-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tso-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-step",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Two-block try path",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tso-try-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Try step 1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tso-try-1'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tso-try-2",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Try step 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tso-try-2'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tso-catch",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tso-catch'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tso-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 660,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tso-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-tso-start",
+        "source": "start-node",
+        "target": "log-tso-before",
+        "type": "default"
+      },
+      {
+        "id": "e-tso-before",
+        "source": "log-tso-before",
+        "target": "tc-step",
+        "type": "default"
+      },
+      {
+        "id": "e-tso-try",
+        "source": "tc-step",
+        "target": "log-tso-try-1",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-tso-try-2",
+        "source": "log-tso-try-1",
+        "target": "log-tso-try-2",
+        "type": "default"
+      },
+      {
+        "id": "e-tso-catch",
+        "source": "tc-step",
+        "target": "log-tso-catch",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-tso-then",
+        "source": "tc-step",
+        "target": "log-tso-then",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-03T00:00:00.000000",
+  "updated_at": "2026-08-03T00:00:00.000000"
+}

@@ -1,0 +1,351 @@
+{
+  "name": "PY-REMOTE-REFUSALS",
+  "version": "1.0.0",
+  "description": "Three Python blocks inside a Remote Execution body under Record and continue: a missing interpreter, a sys.exit with text, and a testdata:// Working Directory.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ssh-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-nointerp",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 260
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print(\"never\" + \" \" + \"reached\")\n",
+              "interpreter": "nosuchpython",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "error": "ni_err",
+              "reason": "ni_reason",
+              "success": "ni_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-exit-text",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 340
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\nPARTS = [\"pyrem\", \"exit\", \"text\"]\n\nsys.exit(\"-\".join(PARTS))\n",
+              "interpreter": "python3",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "error": "ex_err",
+              "reason": "ex_reason",
+              "stderr": "ex_stderr",
+              "exit_code": "ex_code",
+              "success": "ex_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-testdata-wd",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 420
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print(\"never\" + \" \" + \"reached\")\n",
+              "interpreter": "python3",
+              "working_dir": "testdata://data",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "error": "wd_err",
+              "reason": "wd_reason",
+              "success": "wd_ok",
+              "stdout": "wd_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'pyrem-refusals-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "ssh-open",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-open-container",
+        "source": "ssh-open",
+        "target": "container",
+        "type": "default"
+      },
+      {
+        "id": "e-container-py-nointerp",
+        "source": "container",
+        "target": "py-nointerp",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-py-nointerp-py-exit-text",
+        "source": "py-nointerp",
+        "target": "py-exit-text",
+        "type": "default"
+      },
+      {
+        "id": "e-py-exit-text-py-testdata-wd",
+        "source": "py-exit-text",
+        "target": "py-testdata-wd",
+        "type": "default"
+      },
+      {
+        "id": "e-container-log-done",
+        "source": "container",
+        "target": "log-done",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ni_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ni_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ni_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ex_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ex_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ex_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ex_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ex_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "wd_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "wd_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "wd_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "wd_out": {
+      "value": "nothing",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

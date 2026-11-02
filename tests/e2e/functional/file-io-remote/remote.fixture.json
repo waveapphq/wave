@@ -1,0 +1,661 @@
+{
+  "name": "File IO Remote Execution E2E Test",
+  "version": "1.0.0",
+  "description": "File I/O inside a Remote Execution body against the real sshd host: create folder, write, read, read a host-seeded marker, stats, list and delete under a per-run unique directory, then a host-side probe proving the directory is gone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the execution host session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "seed-host",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Seed a marker file on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f\"mkdir -p {run_dir}/seed && printf '%s' '{seed_text}' > {run_dir}/seed/marker.txt && hostname\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "seed_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the seeded host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'seeded on host={seed_host.strip()} connected={s_conn} dir={run_dir}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the File I/O body on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-create-folder",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 480
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Create folder on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "create_folder",
+              "path": "run_dir + '/deep'"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-write",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 560
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write notes.txt on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path",
+            "content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "run_dir + '/deep/notes.txt'",
+              "content": "payload",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-read",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 640
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read notes.txt back from the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "run_dir + '/deep/notes.txt'"
+            },
+            "outputBindings": {
+              "content": "read_back"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-read-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 720
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the host-seeded marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "run_dir + '/seed/marker.txt'"
+            },
+            "outputBindings": {
+              "content": "seed_read"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-stats",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 800
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stats of the host file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "stats",
+              "path": "run_dir + '/deep/notes.txt'",
+              "size": true,
+              "checksum": "sha256",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "stats": "notes_stats"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-list",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 880
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List the host run folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "list",
+              "path": "run_dir",
+              "pattern": "",
+              "recursive": true,
+              "size": true
+            },
+            "outputBindings": {
+              "entries": "listing",
+              "count": "listing_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-delete",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 960
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Remove the host run folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "delete",
+              "path": "run_dir",
+              "missing_ok": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "probe-gone",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Probe the host for the removed folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f\"test -e {run_dir} && echo present || echo gone\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "gone_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-results",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log what came back from the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'remote readback={read_back} | seed={seed_read} | listed={listing_count} | rsid_len={len(rsid)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'cleanup probe={gone_probe.strip()} fileio-remote-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "open-session",
+        "type": "default"
+      },
+      {
+        "id": "e-open-seed",
+        "source": "open-session",
+        "target": "seed-host",
+        "type": "default"
+      },
+      {
+        "id": "e-seed-log",
+        "source": "seed-host",
+        "target": "log-seed",
+        "type": "default"
+      },
+      {
+        "id": "e-log-container",
+        "source": "log-seed",
+        "target": "container",
+        "type": "default"
+      },
+      {
+        "id": "e-body",
+        "source": "container",
+        "target": "fio-create-folder",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-create-write",
+        "source": "fio-create-folder",
+        "target": "fio-write",
+        "type": "default"
+      },
+      {
+        "id": "e-write-read",
+        "source": "fio-write",
+        "target": "fio-read",
+        "type": "default"
+      },
+      {
+        "id": "e-read-seedread",
+        "source": "fio-read",
+        "target": "fio-read-seed",
+        "type": "default"
+      },
+      {
+        "id": "e-seedread-stats",
+        "source": "fio-read-seed",
+        "target": "fio-stats",
+        "type": "default"
+      },
+      {
+        "id": "e-stats-list",
+        "source": "fio-stats",
+        "target": "fio-list",
+        "type": "default"
+      },
+      {
+        "id": "e-list-delete",
+        "source": "fio-list",
+        "target": "fio-delete",
+        "type": "default"
+      },
+      {
+        "id": "e-then",
+        "source": "container",
+        "target": "probe-gone",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-probe-results",
+        "source": "probe-gone",
+        "target": "log-results",
+        "type": "default"
+      },
+      {
+        "id": "e-results-done",
+        "source": "log-results",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "run_dir": {
+      "value": "/tmp/wave-e2e-fileio-remote-PLACEHOLDER",
+      "type": "string",
+      "scope": "test"
+    },
+    "payload": {
+      "value": "remote-file-io round trip payload",
+      "type": "string",
+      "scope": "test"
+    },
+    "seed_text": {
+      "value": "seeded-on-host",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "seed_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "read_back": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "seed_read": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "notes_stats": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "listing": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "listing_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "gone_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

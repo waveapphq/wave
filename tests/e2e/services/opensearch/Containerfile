@@ -1,0 +1,32 @@
+# WAVE E2E OpenSearch (test-only): one node, the security, SQL and job-scheduler
+# plugins only, TLS on HTTP and transport with the lab-CA leaf, and the security
+# configuration (users, roles, JWT, API tokens) loaded on first start.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/opensearchproject/opensearch:3.8.0
+
+# Two passes: a plugin another plugin extends is removed once its dependent is gone.
+RUN set -e; /usr/share/opensearch/bin/opensearch-plugin list; \
+    for pass in 1 2; do \
+      for p in $(/usr/share/opensearch/bin/opensearch-plugin list); do \
+        case "$p" in \
+          opensearch-security|opensearch-sql|opensearch-job-scheduler) ;; \
+          *) /usr/share/opensearch/bin/opensearch-plugin remove --purge "$p" || [ "$pass" = 1 ] ;; \
+        esac; \
+      done; \
+    done; \
+    /usr/share/opensearch/bin/opensearch-plugin list
+
+ENV DISABLE_INSTALL_DEMO_CONFIG=true \
+    OPENSEARCH_JAVA_OPTS="-Xms512m -Xmx512m" \
+    discovery.type=single-node
+
+COPY --chown=opensearch:opensearch services/opensearch/opensearch.yml /usr/share/opensearch/config/opensearch.yml
+COPY --chown=opensearch:opensearch services/tls-lab/certs/opensearch.crt services/tls-lab/certs/opensearch.key /usr/share/opensearch/config/certs/
+COPY --chown=opensearch:opensearch simulators/https/certs/ca.pem /usr/share/opensearch/config/certs/ca.pem
+COPY --chown=opensearch:opensearch services/opensearch/security/ /usr/share/opensearch/config/opensearch-security/
+COPY --chown=opensearch:opensearch services/opensearch/healthcheck.sh /wave/healthcheck.sh
+RUN chmod 0700 /usr/share/opensearch/config/certs \
+ && chmod 0600 /usr/share/opensearch/config/certs/* \
+ && chmod 0755 /wave/healthcheck.sh
+
+EXPOSE 9200

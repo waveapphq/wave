@@ -1,0 +1,659 @@
+{
+  "name": "SH-10 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Pattern stops: a pass match and a Record and continue fail match on Shell Scripts that left a background sleep, a Shell Exec pass match, a pass match on a secret stream, a child that ignores the stop, and a fail match under Fail inside Try/Catch; the probes prove every stopped process is gone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 20
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 2000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pass pattern stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/pass.pid\"; X=late; echo READY-__TOKEN__; sleep 300",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "pass_pattern": "^READY-",
+              "script_variables": [
+                "X"
+              ]
+            },
+            "outputBindings": {
+              "X": "p_x",
+              "exit_code": "p_code",
+              "success": "p_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 190
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail pattern stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/fail.pid\"; Y=early; echo starting; echo \"ERROR disk full __TOKEN__\"; sleep 300",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "fail_pattern": "ERROR|FATAL",
+              "on_error": "record",
+              "script_variables": [
+                "Y"
+              ]
+            },
+            "outputBindings": {
+              "Y": "f_y",
+              "reason": "f_reason",
+              "error": "f_err",
+              "success": "f_ok",
+              "exit_code": "f_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-exec-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell Exec pass pattern stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "P=GO; echo \"${P}-__TOKEN__\"; sleep 300",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "pass_pattern": "^GO-"
+            },
+            "outputBindings": {
+              "success": "e_ok",
+              "exit_code": "e_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-pass-secret",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pass match on a secret stream",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "P=shsec; echo \"${P}-go-__TOKEN__\"; sleep 300",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "pass_pattern": "^shsec-go-"
+            },
+            "outputBindings": {
+              "success": "s_ok",
+              "exit_code": "s_code"
+            },
+            "outputSecretFields": [
+              "stdout"
+            ],
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-pass-stuck",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Child ignores the stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__\"; Z=set; sh -c 'trap \"\" TERM; echo $$ > \"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/stuck.pid\"; P=STU; echo \"${P}CK-__TOKEN__\"; exec sleep 300'",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "pass_pattern": "^STUCK-",
+              "script_variables": [
+                "Z"
+              ]
+            },
+            "outputBindings": {
+              "Z": "k_z",
+              "success": "k_ok",
+              "exit_code": "k_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-fail-hard",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 550
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard for the Fail leg",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "h_error"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-fail-hard",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 640
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail pattern stop under Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "Z=early; P=FAT; echo \"${P}AL hard stop __TOKEN__\"; sleep 300",
+              "timeout": 60,
+              "stop_on_pattern": true,
+              "fail_pattern": "ERROR|FATAL",
+              "on_error": "fail",
+              "script_variables": [
+                "Z"
+              ]
+            },
+            "outputBindings": {
+              "Z": "h_z",
+              "exit_code": "h_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-fail-hard-catch",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 640
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch branch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-10-catch-ran-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-fail-hard-msg",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 730
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught message",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"SH-10-caught-__TOKEN__ msg={h_error['message'] if h_error else 'NO-ERROR-CAUGHT'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-pattern-probe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 820
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pattern tree probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "f=\"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/pass.pid\"; if [ -s \"$f\" ]; then pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi; else printf missing; fi; printf ' '; f=\"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/fail.pid\"; if [ -s \"$f\" ]; then pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi; else printf missing; fi"
+            },
+            "outputBindings": {
+              "stdout": "pattern_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-stuck-probe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 910
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stuck child tree probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "f=\"$WAVE_ARTIFACTS_DIR/sh-10-__TOKEN__/stuck.pid\"; [ -s \"$f\" ] || { printf missing; exit 0; }; pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi"
+            },
+            "outputBindings": {
+              "stdout": "stuck_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-10-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "ws-hold"
+      },
+      {
+        "id": "e-ws-hold-sh-pass",
+        "source": "ws-hold",
+        "target": "sh-pass"
+      },
+      {
+        "id": "e-sh-pass-sh-fail",
+        "source": "sh-pass",
+        "target": "sh-fail"
+      },
+      {
+        "id": "e-sh-fail-sh-exec-pass",
+        "source": "sh-fail",
+        "target": "sh-exec-pass"
+      },
+      {
+        "id": "e-sh-exec-pass-sh-pass-secret",
+        "source": "sh-exec-pass",
+        "target": "sh-pass-secret"
+      },
+      {
+        "id": "e-sh-pass-secret-sh-pass-stuck",
+        "source": "sh-pass-secret",
+        "target": "sh-pass-stuck"
+      },
+      {
+        "id": "e-sh-pass-stuck-tc-fail-hard",
+        "source": "sh-pass-stuck",
+        "target": "tc-fail-hard"
+      },
+      {
+        "id": "e-tc-try",
+        "source": "tc-fail-hard",
+        "sourceHandle": "try",
+        "target": "sh-fail-hard",
+        "type": "default"
+      },
+      {
+        "id": "e-tc-catch",
+        "source": "tc-fail-hard",
+        "sourceHandle": "catch",
+        "target": "log-fail-hard-catch",
+        "type": "default"
+      },
+      {
+        "id": "e-tc-then",
+        "source": "tc-fail-hard",
+        "sourceHandle": "then",
+        "target": "log-fail-hard-msg",
+        "type": "default"
+      },
+      {
+        "id": "e-log-fail-hard-msg-sh-pattern-probe",
+        "source": "log-fail-hard-msg",
+        "target": "sh-pattern-probe"
+      },
+      {
+        "id": "e-sh-pattern-probe-sh-stuck-probe",
+        "source": "sh-pattern-probe",
+        "target": "sh-stuck-probe"
+      },
+      {
+        "id": "e-sh-stuck-probe-log-done",
+        "source": "sh-stuck-probe",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "p_x": {
+      "value": "orig",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "p_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "f_y": {
+      "value": "orig",
+      "type": "string",
+      "scope": "test"
+    },
+    "f_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "f_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "f_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "f_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "e_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "e_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "s_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "k_z": {
+      "value": "orig",
+      "type": "string",
+      "scope": "test"
+    },
+    "k_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "k_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "h_z": {
+      "value": "orig",
+      "type": "string",
+      "scope": "test"
+    },
+    "h_code": {
+      "value": -99,
+      "type": "integer",
+      "scope": "test"
+    },
+    "h_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "stuck_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "pattern_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

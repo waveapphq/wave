@@ -1,0 +1,10 @@
+# WAVE E2E real-service SSH server - SFTP subsystem removed (test-only).
+# Proves SSH Session Script's stdin delivery needs no SFTP subsystem.
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AllowTcpForwarding yes
+PermitRootLogin no
+X11Forwarding no
+PrintMotd no

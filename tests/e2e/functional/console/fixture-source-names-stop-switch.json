@@ -1,0 +1,156 @@
+{
+  "name": "Console Source Names Stop Switch",
+  "version": "1.0.0",
+  "description": "A Switch whose case logs one line and then holds a long Delay, so a Stop lands on both.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f9e6095b-ae5b-5ea4-98e1-8f0e50727a54",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Switch/Case",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Holds the run inside its only case",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "left",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "route",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "left",
+                      "reference_is_expression": false,
+                      "id": "81908a52-7dd0-51b4-8a5d-0ce3b4e70df8"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "11942a78-43e3-5940-ae9d-9f5633642299",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 200
+        },
+        "data": {
+          "label": "Before the hold",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proves the run is inside the case",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-stop-case-started'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f0803eb1-208b-5493-a7a5-fa568ed9fc21",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 300
+        },
+        "data": {
+          "label": "Hold the case",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Holds the run long enough to stop it",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 60000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "7c404930-e3ed-59d0-87e6-f64e169d0fea",
+        "source": "start-node",
+        "target": "f9e6095b-ae5b-5ea4-98e1-8f0e50727a54",
+        "type": "default"
+      },
+      {
+        "id": "26fb7128-bd15-5e95-b92b-14dcf186a4d6",
+        "source": "f9e6095b-ae5b-5ea4-98e1-8f0e50727a54",
+        "target": "11942a78-43e3-5940-ae9d-9f5633642299",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "0c03cd15-4803-5ef3-8d95-64612153eacd",
+        "source": "11942a78-43e3-5940-ae9d-9f5633642299",
+        "target": "f0803eb1-208b-5493-a7a5-fa568ed9fc21",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "route": {
+      "value": "left",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

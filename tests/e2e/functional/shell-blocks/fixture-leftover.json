@@ -1,0 +1,142 @@
+{
+  "name": "SH-9 __TOKEN__",
+  "version": "1.0.0",
+  "description": "A Shell Script leaves a background sleep running and exits 0; the probe proves the leftover job was killed when the script ended.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-leftover",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Leftover job at normal exit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-9-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-9-__TOKEN__/left.pid\"; echo done",
+              "timeout": 60
+            },
+            "outputBindings": {
+              "exit_code": "l_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-leftover-probe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 190
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Leftover tree probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "f=\"$WAVE_ARTIFACTS_DIR/sh-9-__TOKEN__/left.pid\"; [ -s \"$f\" ] || { printf missing; exit 0; }; pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi"
+            },
+            "outputBindings": {
+              "stdout": "probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-9-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-leftover"
+      },
+      {
+        "id": "e-sh-leftover-sh-leftover-probe",
+        "source": "sh-leftover",
+        "target": "sh-leftover-probe"
+      },
+      {
+        "id": "e-sh-leftover-probe-log-done",
+        "source": "sh-leftover-probe",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "l_code": {
+      "value": -99,
+      "type": "integer",
+      "scope": "test"
+    },
+    "probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Entity Delete Active Execution Body",
+  "version": "1.0.0",
+  "description": "Workflow with a 3 s delay used to keep a tracked execution running while the entity-delete guard is exercised. Wrapped in a suite (and a regression containing that suite) so the same fixture drives test/suite/regression delete-while-running scenarios.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-only",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Delete Guard Delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 3000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "delay-only",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

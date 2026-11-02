@@ -1,0 +1,77 @@
+{
+  "name": "Variable Edits Port E2E",
+  "version": "1.0.0",
+  "description": "A plain-HTTP request to the http-echo health listener and a Variable Setter. The spec adds the integer variable lport with no value in the Variable Manager, points the request URL and the Setter row at it, and edits it between block runs.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "set-port",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 140 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Write Port",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTemplateKeys": [],
+          "variableTypes": { "spare_port": "integer" },
+          "config": {
+            "values": { "variables": { "spare_port": 1 } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-health",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 300 },
+        "data": {
+          "label": "Health Request",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Health Request",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:9450/health'",
+              "method": "GET",
+              "timeout": 5,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "set-port", "type": "default" },
+      { "id": "e2", "source": "set-port", "target": "http-health", "type": "default" }
+    ]
+  },
+  "variables": {
+    "spare_port": { "type": "integer" }
+  },
+  "metadata": {},
+  "created_at": "2026-10-07T00:00:00.000000",
+  "updated_at": "2026-10-07T00:00:00.000000"
+}

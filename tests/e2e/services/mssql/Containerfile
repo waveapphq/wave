@@ -1,0 +1,22 @@
+# WAVE E2E SQL Server 2022 (test-only): the `wave` login as db_owner of database `wave`,
+# the seed procedure for the Call procedure leg, and TLS offered on the database
+# leaf signed by the WAVE Test CA (encryption not forced: plain still accepted).
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM mcr.microsoft.com/mssql/server:2022-latest
+
+ENV ACCEPT_EULA=Y \
+    MSSQL_PID=Developer \
+    MSSQL_SA_PASSWORD=Wave-Admin-Secret-1
+
+USER root
+COPY services/tls-lab/certs/database.crt services/tls-lab/certs/database.key /etc/mssql-tls/
+COPY services/mssql/mssql.conf /var/opt/mssql/mssql.conf
+# The image's launcher runs these with sqlcmd as sa once the server is up, on first start only.
+COPY services/mssql/setup/ /mssql-server-setup-scripts.d/
+COPY services/mssql/healthcheck.sh /wave/healthcheck.sh
+RUN chown -R mssql:mssql /etc/mssql-tls /var/opt/mssql/mssql.conf && \
+    chmod 0600 /etc/mssql-tls/database.key && \
+    chmod 0755 /wave/healthcheck.sh
+USER mssql
+
+EXPOSE 1433

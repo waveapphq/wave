@@ -1,0 +1,62 @@
+# WAVE E2E Kubernetes API service (test-only): kwok all-in-one cluster - real
+# etcd + kube-apiserver (secure serving, RBAC) + kwok controller simulating
+# node/pod lifecycle via the checked-in Stages, plus metrics-server serving
+# metrics.k8s.io from kwok's simulated kubelet resource metrics. Two compose
+# instances share this image: kwok (published 127.0.0.1:9460) and
+# kwok-internal (network-only).
+#
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/kwok)
+
+# metrics-server binary taken from the pinned upstream image at BUILD time;
+# the cluster never downloads at runtime.
+FROM registry.k8s.io/metrics-server/metrics-server:v0.7.2 AS metrics-server
+
+# kwok controller rebuilt from pinned source with the exec-fidelity patch. Source
+# comes from the immutable, checksummed Go module proxy; KWOK_VERSION must track
+# the kwok half of the cluster image tag below.
+FROM docker.io/library/golang:1.24-alpine AS kwok-build
+ARG KWOK_VERSION=v0.7.0
+RUN apk add --no-cache curl patch unzip
+WORKDIR /build
+COPY kwok-exec-fidelity.patch /build/kwok-exec-fidelity.patch
+# Module-zip entries unpack read-only, so make the tree writable before patching.
+RUN curl -sSLo /tmp/kwok.zip "https://proxy.golang.org/sigs.k8s.io/kwok/@v/${KWOK_VERSION}.zip" \
+ && unzip -q /tmp/kwok.zip -d /tmp/kwok-src \
+ && cp -a "/tmp/kwok-src/sigs.k8s.io/kwok@${KWOK_VERSION}/." /build/ \
+ && chmod -R u+w /build \
+ && patch -p1 < /build/kwok-exec-fidelity.patch \
+ && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/kwok ./cmd/kwok
+
+FROM registry.k8s.io/kwok/cluster:v0.7.0-k8s.v1.33.0
+
+# curl for the authenticated healthcheck, python3 as a second script interpreter
+# (base image ships busybox only).
+RUN apk add --no-cache curl python3
+
+# Checked-in PKI replaces kwokctl's generated material (create reuses existing
+# files). The server keypair triples as apiserver serving cert, kubeconfig
+# admin identity, and service-account signing key - mirroring the stock layout.
+COPY pki/ca.crt pki/ca.key /root/.kwok/clusters/kwok/pki/
+COPY pki/server.crt /root/.kwok/clusters/kwok/pki/admin.crt
+COPY pki/server.key /root/.kwok/clusters/kwok/pki/admin.key
+
+# Replaces the stock controller shipped in the base image.
+COPY --from=kwok-build /out/kwok /usr/local/bin/kwok
+
+# ClusterExec working directories; kwok chdir's into these and a missing one
+# fails the exec.
+RUN mkdir -p /wave/exec/app /wave/exec/sidecar
+
+COPY --from=metrics-server /metrics-server /wave/bin/metrics-server
+COPY metrics/metrics-usage.yaml /wave/metrics-usage.yaml
+COPY kwok.yaml /wave/kwok.yaml
+COPY stages/ /wave/stages/
+COPY tokens.csv /wave/tokens.csv
+COPY logs/ /wave/logs/
+COPY manifests/ /wave/manifests/
+COPY generate-logs.sh /wave/generate-logs.sh
+COPY entrypoint.sh /wave/entrypoint.sh
+COPY healthcheck.sh /wave/healthcheck.sh
+
+EXPOSE 6443
+ENTRYPOINT ["/wave/entrypoint.sh"]

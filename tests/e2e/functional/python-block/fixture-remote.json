@@ -1,0 +1,853 @@
+{
+  "name": "PY-REMOTE",
+  "version": "1.0.0",
+  "description": "A Python block inside a Remote Execution body: a testdata:// Script File read on WAVE and shipped, a helper module imported from the Working Directory on the remote host, typed exports back, the remote host's own python3, a plain path resolved there, and a block's log records arriving when the block ends.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-wave-host",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "hostname"
+            },
+            "outputBindings": {
+              "stdout": "wave_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-host-name",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "hostname",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_host"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-host-python",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c 'import sys; print(\"%d.%d.%d\" % sys.version_info[:3])'",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_py_version"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-load-helper",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 380
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://__TDATA__/pyhelper.py"
+            },
+            "outputBindings": {
+              "content": "helper_src"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-load-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://__TDATA__/remote_only.py"
+            },
+            "outputBindings": {
+              "content": "plain_src"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 540
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-mkdir",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "create_folder",
+              "path": "run_dir"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-put-helper",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 680
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path",
+            "content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "run_dir + '/pyhelper.py'",
+              "content": "helper_src",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-put-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 760
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path",
+            "content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "run_dir + '/remote_only.py'",
+              "content": "plain_src",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-main",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 840
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "working_dir",
+            "input_vars.readings",
+            "input_vars.unit_price"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "file",
+              "script_file": "testdata://__TDATA__/main.py",
+              "interpreter": "python3",
+              "working_dir": "run_dir",
+              "stream_output": true,
+              "input_vars": {
+                "readings": "readings_in",
+                "unit_price": "price_in"
+              },
+              "script_variables": [
+                "py_version",
+                "py_host",
+                "py_rows",
+                "py_price",
+                "py_map",
+                "py_list"
+              ]
+            },
+            "outputBindings": {
+              "py_version": "py_version_v",
+              "py_host": "py_host_v",
+              "py_rows": "py_rows_v",
+              "py_price": "py_price_v",
+              "py_map": "py_map_v",
+              "py_list": "py_list_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 920
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "working_dir"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "file",
+              "script_file": "remote_only.py",
+              "interpreter": "python3",
+              "working_dir": "run_dir",
+              "script_variables": [
+                "plain_host",
+                "plain_mark"
+              ]
+            },
+            "outputBindings": {
+              "plain_host": "plain_host_v",
+              "plain_mark": "plain_mark_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-logs",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1000
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import logging\nimport os\nimport sys\nimport tempfile\nimport time\n\nstart_dir = os.getcwd()\nsystem_temp = tempfile.gettempdir()\n\nTAG = [\"pyrem\", \"log\"]\n\n\ndef mark(kind):\n    return \"-\".join(TAG + [kind])\n\n\nprint(mark(\"stdout\"))\nsys.stderr.write(mark(\"stderr\") + \"\\n\")\nlogging.debug(mark(\"debug\"))\nlogging.info(mark(\"info\"))\nlogging.warning(mark(\"warning\"))\nlogging.error(mark(\"error\"))\nlogging.critical(mark(\"critical\"))\nsys.stdout.flush()\nsys.stderr.flush()\ntime.sleep(6)\nworker_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\n",
+              "interpreter": "python3",
+              "stream_output": true,
+              "script_variables": [
+                "worker_dir",
+                "start_dir",
+                "system_temp"
+              ]
+            },
+            "outputBindings": {
+              "worker_dir": "py_worker_dir",
+              "start_dir": "py_start_dir",
+              "system_temp": "py_system_temp"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-cleanup",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 620
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f\"rm -rf {run_dir}; test -e {run_dir} && echo present || echo gone\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "gone_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-worker-gone",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "command"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "'d=' + py_worker_dir + '; n=0; while [ -e \"$d\" ] && [ $n -lt 100 ]; do sleep 0.1; n=$((n+1)); done; if [ -e \"$d\" ]; then echo left; else echo gone; fi'",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "worker_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'cleanup={gone_probe.strip()} pyrem-remote-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-wave-host",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-wave-host-ssh-open",
+        "source": "sh-wave-host",
+        "target": "ssh-open",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-open-ssh-host-name",
+        "source": "ssh-open",
+        "target": "ssh-host-name",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-host-name-ssh-host-python",
+        "source": "ssh-host-name",
+        "target": "ssh-host-python",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-host-python-fio-load-helper",
+        "source": "ssh-host-python",
+        "target": "fio-load-helper",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-load-helper-fio-load-plain",
+        "source": "fio-load-helper",
+        "target": "fio-load-plain",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-load-plain-container",
+        "source": "fio-load-plain",
+        "target": "container",
+        "type": "default"
+      },
+      {
+        "id": "e-container-fio-mkdir",
+        "source": "container",
+        "target": "fio-mkdir",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-fio-mkdir-fio-put-helper",
+        "source": "fio-mkdir",
+        "target": "fio-put-helper",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-put-helper-fio-put-plain",
+        "source": "fio-put-helper",
+        "target": "fio-put-plain",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-put-plain-py-main",
+        "source": "fio-put-plain",
+        "target": "py-main",
+        "type": "default"
+      },
+      {
+        "id": "e-py-main-py-plain",
+        "source": "py-main",
+        "target": "py-plain",
+        "type": "default"
+      },
+      {
+        "id": "e-py-plain-py-logs",
+        "source": "py-plain",
+        "target": "py-logs",
+        "type": "default"
+      },
+      {
+        "id": "e-container-ssh-cleanup",
+        "source": "container",
+        "target": "ssh-cleanup",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-ssh-cleanup-ssh-worker-gone",
+        "source": "ssh-cleanup",
+        "target": "ssh-worker-gone",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-worker-gone-log-done",
+        "source": "ssh-worker-gone",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "run_dir": {
+      "value": "/tmp/wave-e2e-pyrem-PLACEHOLDER",
+      "type": "string",
+      "scope": "test"
+    },
+    "readings_in": {
+      "value": {
+        "columns": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "temp_c",
+            "type": "float"
+          }
+        ],
+        "rows": [
+          [
+            "alpha",
+            "20.5"
+          ],
+          [
+            "beta",
+            "21.25"
+          ]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "price_in": {
+      "value": "1234.5678901234567891",
+      "type": "float",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "wave_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_host": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_py_version": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "helper_src": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_src": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_version_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_host_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_rows_v": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "py_price_v": {
+      "value": "0",
+      "type": "float",
+      "scope": "test"
+    },
+    "py_map_v": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "py_list_v": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "plain_host_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_mark_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "gone_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_worker_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_start_dir": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_system_temp": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "worker_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

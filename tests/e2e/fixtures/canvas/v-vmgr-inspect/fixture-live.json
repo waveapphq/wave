@@ -1,0 +1,87 @@
+{
+  "name": "V-VMGR-03 Inspect Live Update",
+  "version": "1.0.0",
+  "description": "Runnable workflow for the V-VMGR-03 live-update scenario: a Variable Setter mutates the string variable `greeting` to a new literal, a Delay holds the run open long enough for the watcher to observe the runtime overlay, and a Log reads the variable so it is workflow-referenced. The spec opens the inspect modal on `greeting` before the run and asserts Current updates to the runtime value while Initial keeps the definition.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-greeting",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Mutate Greeting",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "greeting": "hello from runtime" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Hold Run Open",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2500 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-greeting",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Greeting",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "greeting", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-greeting", "type": "default" },
+      { "id": "e2", "source": "varset-greeting", "target": "delay-hold", "type": "default" },
+      { "id": "e3", "source": "delay-hold", "target": "log-greeting", "type": "default" }
+    ]
+  },
+  "variables": {
+    "greeting": { "value": "hello", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-06-12T00:00:00.000000",
+  "updated_at": "2026-06-12T00:00:00.000000"
+}

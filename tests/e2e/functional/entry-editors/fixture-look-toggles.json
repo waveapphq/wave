@@ -1,0 +1,337 @@
+{
+  "name": "zz-11541-s6a-look-toggles",
+  "version": "1.0.0",
+  "description": "Every {x} toggle surface held pressed (FIELD-1): an HTTP Block whose URL, one Headers entry, one Retryable Codes item and one text part are {x} beside a null Headers entry; JSON and XML query rows; a Variable Setter row; an Assert reference; a CSV filter reference.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ae1578e9-3352-4050-b003-463b82a70280",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Toggles HTTP",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url",
+            "headers.X-Expr",
+            "retryable_status_codes.0",
+            "parts.0.value"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "url": "base_url",
+              "headers": {
+                "X-Expr": "suffix",
+                "X-Null": null
+              },
+              "retryable_status_codes": [
+                "'503'",
+                "429"
+              ],
+              "body_mode": "multipart",
+              "parts": [
+                {
+                  "kind": "text",
+                  "name": "note",
+                  "value": "suffix"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b7db8b8b-88bb-4bd3-aacd-4603ef7f6a79",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 170
+        },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Toggles JSON",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "queries.name_q"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"name\": \"Ada\"}",
+              "queries": {
+                "name_q": "'$.name'"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7cd15f08-9f42-4330-93b4-31b9692ca9be",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 290
+        },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Toggles XML",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "queries.a_q"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root><a>1</a></root>",
+              "queries": {
+                "a_q": "'//a/text()'"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6777bcd1-3301-4c57-b38e-285461a6a9b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 410
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Toggles Setter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "out_v"
+          ],
+          "variableTemplateKeys": [],
+          "variableTypes": {
+            "out_v": "string"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "out_v": "suffix"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "63868510-1a2d-4b74-8ca2-050b9be463ec",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 530
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Toggles Assert",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "out_v",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "suffix",
+                  "reference_is_expression": true,
+                  "id": "a-1"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf50cb39-3b29-4ae4-aadb-3bbc84582767",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 650
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Toggles Filter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAda,80\nBob,95\n",
+              "filters": [
+                {
+                  "id": "look-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "look-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "threshold",
+                      "reference_is_expression": true
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "tbl"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "ceb35151-33e0-40ea-a8c7-33fe075577ba",
+        "source": "start-node",
+        "target": "ae1578e9-3352-4050-b003-463b82a70280",
+        "type": "default"
+      },
+      {
+        "id": "a20582e1-ef3e-40d2-b70d-b302f601dcf3",
+        "source": "ae1578e9-3352-4050-b003-463b82a70280",
+        "target": "b7db8b8b-88bb-4bd3-aacd-4603ef7f6a79",
+        "type": "default"
+      },
+      {
+        "id": "b64d4565-901e-43c9-a595-13b73c41ad16",
+        "source": "b7db8b8b-88bb-4bd3-aacd-4603ef7f6a79",
+        "target": "7cd15f08-9f42-4330-93b4-31b9692ca9be",
+        "type": "default"
+      },
+      {
+        "id": "56689eed-a90f-4329-8a99-9b546239c22a",
+        "source": "7cd15f08-9f42-4330-93b4-31b9692ca9be",
+        "target": "6777bcd1-3301-4c57-b38e-285461a6a9b1",
+        "type": "default"
+      },
+      {
+        "id": "063297dc-0d38-4eb5-a932-a9b997757cf5",
+        "source": "6777bcd1-3301-4c57-b38e-285461a6a9b1",
+        "target": "63868510-1a2d-4b74-8ca2-050b9be463ec",
+        "type": "default"
+      },
+      {
+        "id": "c4bb4bf0-249d-4709-99cc-0a6089a26274",
+        "source": "63868510-1a2d-4b74-8ca2-050b9be463ec",
+        "target": "cf50cb39-3b29-4ae4-aadb-3bbc84582767",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "base_url": {
+      "type": "string",
+      "scope": "test",
+      "value": "http://127.0.0.1:9449"
+    },
+    "suffix": {
+      "type": "string",
+      "scope": "test",
+      "value": "xyz"
+    },
+    "out_v": {
+      "type": "string",
+      "scope": "test",
+      "value": ""
+    },
+    "threshold": {
+      "type": "integer",
+      "scope": "test",
+      "value": 75
+    },
+    "tbl": {
+      "type": "table",
+      "scope": "test",
+      "value": []
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

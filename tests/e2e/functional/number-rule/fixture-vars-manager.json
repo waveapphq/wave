@@ -1,0 +1,246 @@
+{
+  "name": "zz-11541-s9-vars-manager",
+  "version": "1.0.0",
+  "description": "Variables past 2^53, in plain digits and below 1e-6, a Block float field, typed list, map and table items",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "80240112-bbc7-4594-9dec-00e1e7743517",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Echo with a tiny retry delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "verify_ssl": false,
+              "retry_count": 0,
+              "retry_delay": "0.0000001"
+            },
+            "outputBindings": {
+              "status_code": "echo_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "68213c14-7963-4b29-9811-4cc555ed7d76",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log big",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'big=' + str(big)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b500d0c5-8ec9-4f76-aaf2-17b0bd52c15b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log huge",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'huge=' + str(huge)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6841b450-a741-4c40-a5d3-7094ff60f857",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'vars-manager-done status=' + str(echo_status)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-0",
+        "source": "start-node",
+        "target": "80240112-bbc7-4594-9dec-00e1e7743517",
+        "type": "default"
+      },
+      {
+        "id": "e-1",
+        "source": "80240112-bbc7-4594-9dec-00e1e7743517",
+        "target": "68213c14-7963-4b29-9811-4cc555ed7d76",
+        "type": "default"
+      },
+      {
+        "id": "e-2",
+        "source": "68213c14-7963-4b29-9811-4cc555ed7d76",
+        "target": "b500d0c5-8ec9-4f76-aaf2-17b0bd52c15b",
+        "type": "default"
+      },
+      {
+        "id": "e-3",
+        "source": "b500d0c5-8ec9-4f76-aaf2-17b0bd52c15b",
+        "target": "6841b450-a741-4c40-a5d3-7094ff60f857",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "n": {
+      "value": 7,
+      "type": "integer",
+      "scope": "test"
+    },
+    "f": {
+      "value": "1.5",
+      "type": "float",
+      "scope": "test"
+    },
+    "big": {
+      "value": "1234567890123456789",
+      "type": "integer",
+      "scope": "test"
+    },
+    "huge": {
+      "value": "1000000000000000000000",
+      "type": "float",
+      "scope": "test"
+    },
+    "tiny": {
+      "value": "0.0000001",
+      "type": "float",
+      "scope": "test"
+    },
+    "ports": {
+      "value": [
+        8080,
+        8443
+      ],
+      "type": "array",
+      "elementTypes": [
+        "integer",
+        "integer"
+      ],
+      "scope": "test"
+    },
+    "limits": {
+      "value": {
+        "count": 3
+      },
+      "type": "map",
+      "elementTypes": {
+        "count": "integer"
+      },
+      "scope": "test"
+    },
+    "grid": {
+      "value": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "integer"
+          }
+        ],
+        "rows": [
+          [
+            1
+          ]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "echo_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

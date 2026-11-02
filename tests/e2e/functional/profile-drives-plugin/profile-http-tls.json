@@ -1,0 +1,14 @@
+{
+  "name": "Profile Drives HTTP mTLS",
+  "type": "http",
+  "description": "HTTP profile carrying the client identity and CA that drive a real mutual-TLS http-client against tls-lab",
+  "config": {
+    "base_url": "",
+    "timeout": 30,
+    "verify_ssl": true,
+    "ca_cert": "",
+    "client_cert": "",
+    "client_key": ""
+  },
+  "tags": ["e2e"]
+}

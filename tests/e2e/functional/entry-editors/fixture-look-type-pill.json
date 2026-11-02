@@ -1,0 +1,296 @@
+{
+  "name": "zz-11541-s6a-look-type-pill",
+  "version": "1.0.0",
+  "description": "Fixed-type editors (FIELD-10): HTTP Headers, Query Params, Form Fields and Retryable Codes; Shell Script and Python Arguments; SQL Out arguments; OpenSearch Fields; and a Local Function whose enum input's Allowed values take one type.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "2a71a879-a5cd-44db-8d6d-31057fc619aa",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Pill HTTP",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "url": "http://127.0.0.1:9449/echo",
+              "headers": {
+                "Accept": "text/plain"
+              },
+              "query_params": {
+                "q": "1"
+              },
+              "body_mode": "form",
+              "form_fields": {
+                "a": "1"
+              },
+              "retryable_status_codes": [
+                "502"
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b84a8000-5fca-48c1-84e6-21e06ad1e631",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 170
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pill Shell",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo \"$1\"",
+              "arguments": [
+                {
+                  "value": "alpha"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "261c5884-26eb-403b-80c4-13f9d239d144",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 290
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pill Python",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\nprint(sys.argv[1])",
+              "arguments": [
+                {
+                  "value": "alpha"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d14b93a5-5ea3-4e12-89c9-98c7092e5f92",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 410
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Pill SQL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "call_procedure",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "procedure": "wave_add",
+              "arguments": {
+                "a": "1",
+                "total": ""
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                }
+              ],
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3824b2a7-ba38-46e4-9d80-02ae641857b7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 530
+        },
+        "data": {
+          "label": "OpenSearch",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Pill Fields",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9477",
+              "index": "zz-11541-s6a-look",
+              "query_language": "dql",
+              "query": "*",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10,
+              "timeout": 60,
+              "verify_ssl": true,
+              "on_error": "record"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6fa81c3a-8f7a-4b57-8e0f-1c579f2849eb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 650
+        },
+        "data": {
+          "label": "Pill_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [],
+              "edges": []
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "name": "Pill_Fn"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "a94d55c8-f6ba-40ff-8ec7-7a68e316214a",
+        "source": "start-node",
+        "target": "2a71a879-a5cd-44db-8d6d-31057fc619aa",
+        "type": "default"
+      },
+      {
+        "id": "13fe1657-c1b9-4ac1-974d-e0e91b56d604",
+        "source": "2a71a879-a5cd-44db-8d6d-31057fc619aa",
+        "target": "b84a8000-5fca-48c1-84e6-21e06ad1e631",
+        "type": "default"
+      },
+      {
+        "id": "ea416c66-75e5-4ec4-8e50-6a96ec4cfd82",
+        "source": "b84a8000-5fca-48c1-84e6-21e06ad1e631",
+        "target": "261c5884-26eb-403b-80c4-13f9d239d144",
+        "type": "default"
+      },
+      {
+        "id": "15596e53-1aee-4f29-9e91-f51a566e154a",
+        "source": "261c5884-26eb-403b-80c4-13f9d239d144",
+        "target": "d14b93a5-5ea3-4e12-89c9-98c7092e5f92",
+        "type": "default"
+      },
+      {
+        "id": "a0ef7206-42a4-46be-a056-70b2d0f7e128",
+        "source": "d14b93a5-5ea3-4e12-89c9-98c7092e5f92",
+        "target": "3824b2a7-ba38-46e4-9d80-02ae641857b7",
+        "type": "default"
+      },
+      {
+        "id": "6c140967-a42e-4819-9f09-23645fac3205",
+        "source": "3824b2a7-ba38-46e4-9d80-02ae641857b7",
+        "target": "6fa81c3a-8f7a-4b57-8e0f-1c579f2849eb",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

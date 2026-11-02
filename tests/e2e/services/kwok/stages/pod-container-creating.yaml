@@ -1,0 +1,63 @@
+# Adapted from kustomize/stage/pod/fast/pod-ready.yaml
+# in kwok v0.7.0 (https://github.com/kubernetes-sigs/kwok), Copyright 2023 The Kubernetes
+# Authors, Apache-2.0. Changed for WAVE's E2E tests. See NOTICE.
+
+# Opt-in never-started pod for pods labeled wave.e2e/container-creating=true: one
+# shot that replaces pod-ready for the labeled pod (weight 1 beats pod-ready's 0
+# while both match; setting podIP ends both matches, which is what holds the pod
+# here forever). Phase stays Pending with every container waiting on
+# ContainerCreating. Unlabeled pods keep the pod-ready path.
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-container-creating
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/container-creating: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.podIP'
+      operator: 'DoesNotExist'
+  weight: 1
+  next:
+    statusTemplate: |
+      {{ $now := Now }}
+
+      conditions:
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "True"
+        type: PodReadyToStartContainers
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "True"
+        type: Initialized
+      - lastTransitionTime: {{ $now | Quote }}
+        message: containers with unready status
+        reason: ContainersNotReady
+        status: "False"
+        type: Ready
+      - lastTransitionTime: {{ $now | Quote }}
+        message: containers with unready status
+        reason: ContainersNotReady
+        status: "False"
+        type: ContainersReady
+
+      containerStatuses:
+      {{ range .spec.containers }}
+      - image: {{ .image | Quote }}
+        name: {{ .name | Quote }}
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: ContainerCreating
+      {{ end }}
+
+      hostIP: {{ NodeIPWith .spec.nodeName | Quote }}
+      podIP: {{ PodIPWith .spec.nodeName ( or .spec.hostNetwork false ) ( or .metadata.uid "" ) ( or .metadata.name "" ) ( or .metadata.namespace "" ) | Quote }}
+      phase: Pending

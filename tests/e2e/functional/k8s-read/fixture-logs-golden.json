@@ -1,0 +1,101 @@
+{
+  "name": "K8s Logs Option Sweep E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-logs",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Admin bearer token, CA verification ON, default namespace = the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NS_A__",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": { "session": "sess_logs" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "l01",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "K8s Logs",
+          "elementType": "k8s-logs",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "L-01 pod and container named on a single-container pod",
+          "hasNewerVersion": false,
+          "expressionFields": ["session"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_logs",
+              "pod": "wave-pod-solo",
+              "container": "main"
+            },
+            "outputBindings": { "logs": "l01_logs" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "mark-l01",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "L-01 marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R3 L-01 chars={len(l01_logs)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-connect-logs", "source": "start-node", "target": "connect-logs" },
+      { "id": "edge-connect-logs-l01", "source": "connect-logs", "target": "l01" },
+      { "id": "edge-l01-mark-l01", "source": "l01", "target": "mark-l01" }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "sess_logs": { "value": "", "type": "string", "scope": "test" },
+    "l01_logs": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

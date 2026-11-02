@@ -1,0 +1,133 @@
+{
+  "name": "Profile Drives SSH E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-from-profile",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Every connection parameter comes from the profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["host", "port", "username", "password", "connect_timeout"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "sshp.host",
+              "port": "sshp.port",
+              "username": "sshp.username",
+              "password": "sshp.password",
+              "connect_timeout": "sshp.connect_timeout",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "connected",
+              "server_banner": "banner",
+              "hop_count": "hop"
+            },
+            "profileBindings": [
+              {
+                "profileId": "__SSH_PROFILE_ID__",
+                "alias": "sshp",
+                "profileName": "__SSH_PROFILE_NAME__",
+                "profileType": "ssh"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-open",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the opened session outputs",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sshprof connected={connected} hop={hop} banner={banner}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-from-profile",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the profile-opened session",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid" },
+            "outputBindings": { "closed_session_ids": "closed_ids" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'profile-ssh-e2e-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-open-from-profile", "source": "start-node", "target": "open-from-profile" },
+      { "id": "edge-open-from-profile-log-open", "source": "open-from-profile", "target": "log-open" },
+      { "id": "edge-log-open-close-from-profile", "source": "log-open", "target": "close-from-profile" },
+      { "id": "edge-close-from-profile-log-done", "source": "close-from-profile", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "sid": { "value": "", "type": "string", "scope": "test" },
+    "connected": { "value": false, "type": "boolean", "scope": "test" },
+    "banner": { "value": "", "type": "string", "scope": "test" },
+    "hop": { "value": 0, "type": "integer", "scope": "test" },
+    "closed_ids": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

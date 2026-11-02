@@ -1,0 +1,157 @@
+# Opt-in kubelet lifecycle events for pods labeled wave.e2e/kubelet-events=true:
+# a four-step chain (Pulling -> Pulled -> Created -> Started), one Event each,
+# that hands over to the stock pod-ready Stage. Unlabeled pods never match, so
+# ordinary Deployments keep producing exactly their control-plane events.
+# weight 1 beats pod-ready (weight 0) while both match; each step advances a
+# real kubelet status marker so it can only fire once, in order.
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-kubelet-pulling
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/kubelet-events: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.podIP'
+      operator: 'DoesNotExist'
+    - key: '.status.containerStatuses'
+      operator: 'DoesNotExist'
+  weight: 1
+  next:
+    event:
+      type: Normal
+      reason: Pulling
+      message: Pulling image
+    statusTemplate: |
+      phase: Pending
+      containerStatuses:
+      {{ range .spec.containers }}
+      - image: {{ .image | Quote }}
+        name: {{ .name | Quote }}
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: ContainerCreating
+      {{ end }}
+---
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-kubelet-pulled
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/kubelet-events: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.podIP'
+      operator: 'DoesNotExist'
+    - key: '.status.containerStatuses.[].state.waiting.reason'
+      operator: 'In'
+      values:
+      - 'ContainerCreating'
+    - key: '.status.conditions.[] | select( .type == "PodReadyToStartContainers" ) | .status'
+      operator: 'DoesNotExist'
+  weight: 1
+  delay:
+    durationMilliseconds: 1000
+  next:
+    event:
+      type: Normal
+      reason: Pulled
+      message: Successfully pulled image
+    statusTemplate: |
+      {{ $now := Now }}
+      conditions:
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "True"
+        type: PodReadyToStartContainers
+---
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-kubelet-created
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/kubelet-events: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.podIP'
+      operator: 'DoesNotExist'
+    - key: '.status.conditions.[] | select( .type == "PodReadyToStartContainers" ) | .status'
+      operator: 'In'
+      values:
+      - 'True'
+    - key: '.status.conditions.[] | select( .type == "Initialized" ) | .status'
+      operator: 'DoesNotExist'
+  weight: 1
+  delay:
+    durationMilliseconds: 1000
+  next:
+    event:
+      type: Normal
+      reason: Created
+      message: Created container
+    statusTemplate: |
+      {{ $now := Now }}
+      conditions:
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "True"
+        type: Initialized
+---
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-kubelet-started
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/kubelet-events: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.podIP'
+      operator: 'DoesNotExist'
+    - key: '.status.conditions.[] | select( .type == "Initialized" ) | .status'
+      operator: 'In'
+      values:
+      - 'True'
+    - key: '.status.conditions.[] | select( .type == "ContainersReady" ) | .status'
+      operator: 'DoesNotExist'
+  weight: 1
+  delay:
+    durationMilliseconds: 1000
+  next:
+    event:
+      type: Normal
+      reason: Started
+      message: Started container
+    statusTemplate: |
+      {{ $now := Now }}
+      conditions:
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "False"
+        type: ContainersReady
+      - lastTransitionTime: {{ $now | Quote }}
+        status: "False"
+        type: Ready

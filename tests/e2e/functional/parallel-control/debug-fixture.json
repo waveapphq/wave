@@ -1,0 +1,352 @@
+{
+  "name": "Parallel Debug E2E",
+  "version": "1.0.0",
+  "description": "Two branches under a wait-for-all join: branch 1 is a Delay then a Log, branch 2 bumps a counter four times. The counter is what proves a parked sibling really is parked.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "par-dbg",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Debug section",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "stepped"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "parked"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 200
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "B1 work",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 600
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "B1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'B1'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-b2-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 200
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "B2 bump 1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "b_count"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "b_count": "b_count + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-b2-2",
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 300
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "B2 bump 2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "b_count"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "b_count": "b_count + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-b2-3",
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 400
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "B2 bump 3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "b_count"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "b_count": "b_count + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-b2-4",
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 500
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "B2 bump 4",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "b_count"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "b_count": "b_count + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-exit",
+        "type": "workflowNode",
+        "position": {
+          "x": 800,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'EXIT'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-dbg-start",
+        "source": "start-node",
+        "target": "par-dbg",
+        "type": "default"
+      },
+      {
+        "id": "e-dbg-b1",
+        "source": "par-dbg",
+        "target": "delay-b1",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-dbg-b1-log",
+        "source": "delay-b1",
+        "target": "log-b1",
+        "type": "default"
+      },
+      {
+        "id": "e-dbg-b2",
+        "source": "par-dbg",
+        "target": "vs-b2-1",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-dbg-b2-2",
+        "source": "vs-b2-1",
+        "target": "vs-b2-2",
+        "type": "default"
+      },
+      {
+        "id": "e-dbg-b2-3",
+        "source": "vs-b2-2",
+        "target": "vs-b2-3",
+        "type": "default"
+      },
+      {
+        "id": "e-dbg-b2-4",
+        "source": "vs-b2-3",
+        "target": "vs-b2-4",
+        "type": "default"
+      },
+      {
+        "id": "e-dbg-then",
+        "source": "par-dbg",
+        "target": "log-exit",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "b_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-08-03T00:00:00.000000",
+  "updated_at": "2026-08-03T00:00:00.000000"
+}

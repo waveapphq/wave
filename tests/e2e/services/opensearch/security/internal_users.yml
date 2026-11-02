@@ -1,0 +1,19 @@
+# WAVE E2E OpenSearch internal users (test-only); hashes from the image's
+# plugins/opensearch-security/tools/hash.sh.
+_meta:
+  type: "internalusers"
+  config_version: 2
+# Seeding and API token minting; password Wave-Admin-Secret-1.
+admin:
+  hash: "$2y$12$luJT2hUMeenBIBA/xrgiLeCp7CkO/jiA.7InBL8YBuUz9gjT21Z8a"
+  reserved: true
+  backend_roles:
+    - "admin"
+# The read user; password os-secret.
+wave:
+  hash: "$2y$12$aKabrvrfvwSW/DcTCwqV8OgdW35wIdWswrSY60i9vdGij5QXbWjn."
+  reserved: false
+# Reads only wave-e2e-other-*, for the 403 negative; password Limited-Secret-7x!.
+wave-limited:
+  hash: "$2y$12$O1kKomxqmYc/YXkl908YQ.2K.qNFY0ikIQw9lFbkxj.cvTjtKeXze"
+  reserved: false

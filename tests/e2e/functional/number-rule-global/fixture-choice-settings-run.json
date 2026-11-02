@@ -1,0 +1,196 @@
+{
+  "name": "zz-11541-s10-choice-settings-run",
+  "version": "1.0.0",
+  "description": "An SSH Session Open run with the host key action a placed Block holds",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c157caa5-83fd-416c-9a7b-3f38a88177b3",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 100
+        },
+        "data": {
+          "label": "Placed open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "The placed Block's host key action",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9447,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "__ACTION__"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "conn",
+              "hop_count": "hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b4c8c47d-70d8-4f92-8086-61c375e15970",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'placed connected={conn} hops={hops}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d747038f-1016-4534-a986-a36b8aa52910",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1f8ad226-8564-4c2b-bb33-a0cc2dd96a38",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'placed-done closed={len(closed)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "ebe71c52-91e2-4a1c-b44c-0d4f02ae7094",
+        "source": "start-node",
+        "target": "c157caa5-83fd-416c-9a7b-3f38a88177b3"
+      },
+      {
+        "id": "25c42e5c-1814-4a8b-b10e-7fd987e00b26",
+        "source": "c157caa5-83fd-416c-9a7b-3f38a88177b3",
+        "target": "b4c8c47d-70d8-4f92-8086-61c375e15970"
+      },
+      {
+        "id": "e0b1c7a2-5d1e-4f6a-9c33-0b7d2e8f4a11",
+        "source": "b4c8c47d-70d8-4f92-8086-61c375e15970",
+        "target": "d747038f-1016-4534-a986-a36b8aa52910"
+      },
+      {
+        "id": "f3a9d4c8-2b6e-4c71-8e05-6a1f9b3d7c22",
+        "source": "d747038f-1016-4534-a986-a36b8aa52910",
+        "target": "1f8ad226-8564-4c2b-bb33-a0cc2dd96a38"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

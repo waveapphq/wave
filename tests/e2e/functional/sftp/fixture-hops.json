@@ -1,0 +1,855 @@
+{
+  "name": "SFTP Hops __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "SFTP on the last session of a three-hop chain whose middle hop has no SFTP subsystem, and a file moved from one hop to another through WAVE.",
+  "variables": {
+    "b_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "b_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "c_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "d_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "d_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "d_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "d_up_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "d_up_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "d_copy_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "d_copy_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "c_list_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "c_list_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c_list_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "c_list_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c_list_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "hop_down_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "hop_down_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_up_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "b_up_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_stats_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_stats_type": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "b_stats_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "gone_delete_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "hops_closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "run_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "run_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "30ec2440-22b9-4085-9de4-ea16af2d18d4",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 20
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Chain legs, then clean up on B",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "run_error",
+              "caught": "run_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "3dc922dd-037d-4b45-85bc-434e82e0ca57",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 120
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open B on sshd",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "b_sid",
+              "connected": "b_conn",
+              "hop_count": "b_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b313a298-b040-41b2-9bdd-d823d910fbb9",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open C through B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parent_session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "sshd-no-sftp",
+              "port": 22,
+              "username": "wave",
+              "password": "wave-secret",
+              "use_parent": true,
+              "parent_session_id": "b_sid",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "c_sid",
+              "connected": "c_conn",
+              "hop_count": "c_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "79f847a5-6956-4c09-bf14-7054980d3e62",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 280
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open D through C",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parent_session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "sshd-no-sftp",
+              "port": 22,
+              "username": "wave",
+              "password": "wave-secret",
+              "use_parent": true,
+              "parent_session_id": "c_sid",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "d_sid",
+              "connected": "d_conn",
+              "hop_count": "d_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "004edc68-0519-4f1d-a01d-fa5eb2cf136a",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the chain",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sftp-hops chain b={b_conn}/{b_hops} c={c_conn}/{c_hops} d={d_conn}/{d_hops}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "960f340c-cbe4-45a8-b4c7-bf4c314b8041",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 440
+        },
+        "data": {
+          "label": "Upload the orders on D",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the orders on D",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "d_sid",
+              "operation": "upload",
+              "source": "testdata://orders.csv",
+              "destination": "__FOLDER__/d/orders.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "d_up_summary",
+              "success": "d_up_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "5ee5a483-e430-4d96-af2e-fb8cb26e28db",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 520
+        },
+        "data": {
+          "label": "Download the copy on D",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download the copy on D",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "d_sid",
+              "operation": "download",
+              "source": "__FOLDER__/d/orders.csv",
+              "destination": "artifact://d-copy.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "d_copy_summary",
+              "success": "d_copy_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b74d3e54-9ee1-44d9-ab4b-1c384f886035",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 600
+        },
+        "data": {
+          "label": "List on the middle hop",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List on the middle hop",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "c_sid",
+              "operation": "list",
+              "path": "__FOLDER__",
+              "recursive": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "entries": "c_list_entries",
+              "count": "c_list_count",
+              "success": "c_list_success",
+              "error": "c_list_error",
+              "reason": "c_list_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "dc6fcba6-0d62-4f0a-8908-46b1e71c35b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 680
+        },
+        "data": {
+          "label": "Download for the hop on D",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download for the hop on D",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "d_sid",
+              "operation": "download",
+              "source": "__FOLDER__/d/orders.csv",
+              "destination": "artifact://hop/orders.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "hop_down_summary",
+              "success": "hop_down_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b9ed1bbc-2dd4-4dbc-b603-ae5accc42510",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 760
+        },
+        "data": {
+          "label": "Upload the hop copy on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the hop copy on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "upload",
+              "source": "artifact://hop/orders.csv",
+              "destination": "__FOLDER__/b/",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "b_up_summary",
+              "success": "b_up_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "d7173ca8-26dc-4f28-831a-f6c78caa5f81",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 840
+        },
+        "data": {
+          "label": "Stats of the hop copy on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the hop copy on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "stats",
+              "path": "__FOLDER__/b/orders.csv"
+            },
+            "outputBindings": {
+              "exists": "b_stats_exists",
+              "type": "b_stats_type",
+              "size": "b_stats_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b77d52be-0ad5-4d46-bf19-68e791f40a44",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 120
+        },
+        "data": {
+          "label": "Delete the spec folder on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": true
+            },
+            "outputBindings": {
+              "success": "gone_delete_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "938f1080-b140-4a41-9432-4f701226b257",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Stats of the spec folder on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the spec folder on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "gone_exists",
+              "type": "gone_type"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "9ccd0f1d-d76b-4806-85cc-61db1bd0983d",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 280
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the chain from B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "hops_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "59379a75-8a41-452f-bf8c-c6fa8fee1021",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sftp-hops cleanup exists={gone_exists} closed={len(hops_closed)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "20b740a2-2a8e-4dbf-a8fe-035f1d5a615c",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-hops-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "9e54c65f-bd82-41b4-831f-0b88157456df",
+        "source": "start-node",
+        "target": "30ec2440-22b9-4085-9de4-ea16af2d18d4"
+      },
+      {
+        "id": "bc7fb325-85eb-4fb3-b6aa-1a64ff823284",
+        "source": "30ec2440-22b9-4085-9de4-ea16af2d18d4",
+        "target": "3dc922dd-037d-4b45-85bc-434e82e0ca57",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "d8d499f6-ff3f-40a5-96d0-d8138c8736c1",
+        "source": "3dc922dd-037d-4b45-85bc-434e82e0ca57",
+        "target": "b313a298-b040-41b2-9bdd-d823d910fbb9"
+      },
+      {
+        "id": "db69bd90-28ca-44f4-9c74-7b4743f16373",
+        "source": "b313a298-b040-41b2-9bdd-d823d910fbb9",
+        "target": "79f847a5-6956-4c09-bf14-7054980d3e62"
+      },
+      {
+        "id": "8009ad1f-b9a9-4bb1-95f8-555b35f1cc9c",
+        "source": "79f847a5-6956-4c09-bf14-7054980d3e62",
+        "target": "004edc68-0519-4f1d-a01d-fa5eb2cf136a"
+      },
+      {
+        "id": "54721995-058e-4a2f-bf7a-e706c6b0829b",
+        "source": "004edc68-0519-4f1d-a01d-fa5eb2cf136a",
+        "target": "960f340c-cbe4-45a8-b4c7-bf4c314b8041"
+      },
+      {
+        "id": "35f9371d-b913-4ff6-8f2c-811998f5303e",
+        "source": "960f340c-cbe4-45a8-b4c7-bf4c314b8041",
+        "target": "5ee5a483-e430-4d96-af2e-fb8cb26e28db"
+      },
+      {
+        "id": "d56d7def-fd4d-4136-b1ea-f9cd2b8f8162",
+        "source": "5ee5a483-e430-4d96-af2e-fb8cb26e28db",
+        "target": "b74d3e54-9ee1-44d9-ab4b-1c384f886035"
+      },
+      {
+        "id": "0ee0dae4-bb49-442e-b36b-22a93aa7ebbd",
+        "source": "b74d3e54-9ee1-44d9-ab4b-1c384f886035",
+        "target": "dc6fcba6-0d62-4f0a-8908-46b1e71c35b1"
+      },
+      {
+        "id": "09c10faa-d789-49dd-a790-2f13a87876cf",
+        "source": "dc6fcba6-0d62-4f0a-8908-46b1e71c35b1",
+        "target": "b9ed1bbc-2dd4-4dbc-b603-ae5accc42510"
+      },
+      {
+        "id": "189afd61-eed2-4894-a76c-6f4cb1b8a528",
+        "source": "b9ed1bbc-2dd4-4dbc-b603-ae5accc42510",
+        "target": "d7173ca8-26dc-4f28-831a-f6c78caa5f81"
+      },
+      {
+        "id": "fd2559b0-3669-4e0c-8d45-28f62b3e3e43",
+        "source": "30ec2440-22b9-4085-9de4-ea16af2d18d4",
+        "target": "b77d52be-0ad5-4d46-bf19-68e791f40a44",
+        "sourceHandle": "finally"
+      },
+      {
+        "id": "d872d500-403a-4382-a23d-7d4b682de9f5",
+        "source": "b77d52be-0ad5-4d46-bf19-68e791f40a44",
+        "target": "938f1080-b140-4a41-9432-4f701226b257"
+      },
+      {
+        "id": "236073ef-bd75-45f3-b4df-ae7ba68294d4",
+        "source": "938f1080-b140-4a41-9432-4f701226b257",
+        "target": "9ccd0f1d-d76b-4806-85cc-61db1bd0983d"
+      },
+      {
+        "id": "8b72c5e0-6894-40ea-adb1-9dc0ba990a0e",
+        "source": "9ccd0f1d-d76b-4806-85cc-61db1bd0983d",
+        "target": "59379a75-8a41-452f-bf8c-c6fa8fee1021"
+      },
+      {
+        "id": "87f2f152-677c-4c86-adf4-2b9f25438a11",
+        "source": "30ec2440-22b9-4085-9de4-ea16af2d18d4",
+        "target": "20b740a2-2a8e-4dbf-a8fe-035f1d5a615c",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

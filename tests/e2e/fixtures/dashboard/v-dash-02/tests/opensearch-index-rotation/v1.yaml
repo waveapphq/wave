@@ -1,0 +1,13 @@
+id: opensearch-index-rotation
+name: OpenSearch Index Rotation
+version: 1.0.0
+description: Validates OpenSearch index rotation and data integrity
+author: wave-system
+tags:
+  - opensearch
+  - data
+  - integrity
+blocks: []
+variables: {}
+created_at: "2025-12-23T09:55:00Z"
+updated_at: "2025-12-23T09:55:00Z"

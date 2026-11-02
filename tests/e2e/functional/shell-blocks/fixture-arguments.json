@@ -1,0 +1,66 @@
+{
+  "name": "SH-1 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Script arguments: two literal rows and one expression row, reordered with the arrows, reach the script as $1..$3 in row order.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-args",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Arguments In Row Order",
+          "hasNewerVersion": false,
+          "expressionFields": ["arguments.2.value"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo \"$1|$2|$3\"; echo \"n=$#\"",
+              "arguments": [{ "value": "one" }, { "value": "two words" }, { "value": "arg3" }]
+            },
+            "outputBindings": { "stdout": "args_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-1-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-1-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-args", "source": "start-node", "target": "sh-args" },
+      { "id": "e-args-done", "source": "sh-args", "target": "sh-1-done" }
+    ]
+  },
+  "variables": {
+    "arg3": { "value": "three", "type": "string", "scope": "test" },
+    "args_out": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

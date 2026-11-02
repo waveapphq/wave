@@ -1,0 +1,177 @@
+{
+  "name": "File IO Artifacts E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests File I/O plugin artifact:// scheme round-trip inside a workbench session: write JSON artifact, read it back, log the content, write into an artifact subdirectory",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-write-json",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Artifact JSON",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://result.json",
+              "content": "{\"status\": \"complete\", \"count\": 42}",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fileio-read-json",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Artifact JSON",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "artifact://result.json"
+            },
+            "outputBindings": {
+              "content": "file_content"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-roundtrip",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Round-Trip Content",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "file_content",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fileio-write-subdir",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 450
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Artifact Subdir",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://logs/service.log",
+              "content": "service started",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "fileio-write-json",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "fileio-write-json",
+        "target": "fileio-read-json",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "fileio-read-json",
+        "target": "log-roundtrip",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-roundtrip",
+        "target": "fileio-write-subdir",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "file_content": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-09T00:00:00.000000",
+  "updated_at": "2026-06-09T00:00:00.000000"
+}

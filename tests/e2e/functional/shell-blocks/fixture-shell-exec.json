@@ -1,0 +1,305 @@
+{
+  "name": "SH-15 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Exec: the shell choice, a pipe with Log Output, shell flags and an Input Variable from an expression.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-exec-bash",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "bash test under /bin/bash",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "[[ 1 -eq 1 ]] && echo bash-ok",
+              "shell": "/bin/bash"
+            },
+            "outputBindings": {
+              "stdout": "c1_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-exec-sh",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "bash test under /bin/sh",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "[[ 1 -eq 1 ]] && echo bash-ok",
+              "shell": "/bin/sh",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "exit_code": "c2_code",
+              "reason": "c2_reason",
+              "stderr": "c2_stderr",
+              "error": "c2_msg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-exec-pipe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "printf 'a\\nb\\nc\\n' | grep -c .",
+              "stream_output": true
+            },
+            "outputBindings": {
+              "stdout": "c3_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-exec-flags",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell with a flag",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "false | true; echo \"rc=$?\"",
+              "shell": "/bin/bash -o pipefail"
+            },
+            "outputBindings": {
+              "stdout": "c4_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-exec-env",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Input Variable from an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "env_vars.NAME"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "echo \"hi $NAME\"",
+              "env_vars": {
+                "NAME": "who"
+              }
+            },
+            "outputBindings": {
+              "stdout": "c5_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-15-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-exec-bash",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-exec-bash-sh-exec-sh",
+        "source": "sh-exec-bash",
+        "target": "sh-exec-sh",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-exec-sh-sh-exec-pipe",
+        "source": "sh-exec-sh",
+        "target": "sh-exec-pipe",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-exec-pipe-sh-exec-flags",
+        "source": "sh-exec-pipe",
+        "target": "sh-exec-flags",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-exec-flags-sh-exec-env",
+        "source": "sh-exec-flags",
+        "target": "sh-exec-env",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-exec-env-log-done",
+        "source": "sh-exec-env",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "c1_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c2_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "c2_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c2_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c2_msg": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c3_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c4_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c5_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "who": {
+      "value": "wave-__TOKEN__",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

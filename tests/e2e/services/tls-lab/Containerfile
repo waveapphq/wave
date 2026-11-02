@@ -1,0 +1,24 @@
+# WAVE E2E TLS matrix service (test-only): one nginx, seven TLS listeners
+# (mTLS, per-version pins, cipher pins) echoing negotiated params as JSON, two
+# chain listeners on the chain PKI (leaf + intermediate, leaf only), plus two
+# static Helm chart-repository listeners (plain http, https + basic auth).
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/library/nginx:stable
+
+COPY services/tls-lab/nginx.conf /etc/nginx/nginx.conf
+COPY services/tls-lab/openssl.cnf /etc/nginx/openssl.cnf
+COPY services/tls-lab/certs/server.crt services/tls-lab/certs/server.key /etc/nginx/certs/
+# Chain PKI (generate-chain-certs.sh): 9480 sends the full chain, 9481 the leaf only.
+COPY services/tls-lab/certs/chain-leaf.crt services/tls-lab/certs/chain-leaf-fullchain.crt services/tls-lab/certs/chain-leaf.key /etc/nginx/certs/
+# The one WAVE Test CA: server chain anchor AND client-cert trust for mTLS.
+COPY simulators/https/certs/ca.pem /etc/nginx/certs/ca.pem
+
+# Fixture charts (packaged .tgz + index.yaml) served as static files, and the
+# basic-auth file for the TLS chart listener.
+COPY services/tls-lab/charts/ /usr/share/nginx/charts/
+COPY services/tls-lab/htpasswd /etc/nginx/chart-htpasswd
+
+# SECLEVEL=0 + MinProtocol=TLSv1 so the TLSv1/1.1 listeners really negotiate.
+ENV OPENSSL_CONF=/etc/nginx/openssl.cnf
+
+EXPOSE 9451 9452 9453 9454 9455 9456 9457 9463 9464 9480 9481

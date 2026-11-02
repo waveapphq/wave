@@ -1,0 +1,759 @@
+{
+  "name": "HTTP Rework E2E Execution Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-src",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Multipart Source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://upload/src.bin",
+              "content": "WAVE-MULTIPART-CONTENT",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-auth",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Bearer Auth Section",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "auth_token"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/echo'",
+              "auth_enabled": true,
+              "auth_mode": "bearer",
+              "auth_token": "api_token"
+            },
+            "outputBindings": { "body": "auth_echo" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-auth",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Auth Echo",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "auth_echo", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-apikey",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Short API Key Header",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/apikey'",
+              "headers": { "X-Api-Key": "open" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-getbody",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET With Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/getecho'",
+              "body_mode": "text",
+              "body": "{\"query\":\"open\"}",
+              "headers": { "Content-Type": "application/json" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-form",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "POST Form",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/form'",
+              "body_mode": "form",
+              "form_fields": { "username": "alice", "scope": "orders read" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-genwins",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Dynamic-map CT: generated wins",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "headers"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/genwins'",
+              "body_mode": "form",
+              "form_fields": { "a": "1" },
+              "headers": "{'Content-Type': 'application/json'}"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-multi",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 590 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "POST Multipart",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/upload'",
+              "body_mode": "multipart",
+              "parts": [
+                { "kind": "text", "name": "meta", "value": "{\"kind\":\"report\"}" },
+                { "kind": "file", "name": "report", "source": "artifact://upload/src.bin" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-multi-textonly",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 660 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "POST Multipart Text-Only",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/uploadtext'",
+              "body_mode": "multipart",
+              "parts": [
+                { "kind": "text", "name": "alpha", "value": "one" },
+                { "kind": "text", "name": "beta", "value": "two" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-coerce",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 730 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET literal vs expression + coercion",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "query_params.n", "query_params.z", "query_params.c"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/coerce'",
+              "headers": { "X-Lit": "{{ literal }}" },
+              "query_params": { "n": "10", "z": "''", "c": "'pre-' + suffix" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-dl",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 800 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET File Download",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/files/report.bin'",
+              "response_mode": "file"
+            },
+            "outputBindings": { "body": "dl_path", "sha256": "dl_sha", "size": "dl_size" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-dl",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 870 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Download Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'dl={dl_path}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-dl-sha",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 940 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Download Digest",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'sha={dl_sha} size={dl_size}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-cap",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1010 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Body Capped",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/big'",
+              "max_size": 1024
+            },
+            "outputBindings": { "body": "big_body", "size": "cap_size" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-cap",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1080 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Cap Size",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'cap_len={cap_size}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-content-length",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1150 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: content-length block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-content-length",
+        "type": "workflowNode",
+        "position": { "x": -250, "y": 1250 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Dynamic-map Content-Length (Fail)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "headers"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "POST",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/content-length'",
+              "body_mode": "form",
+              "form_fields": { "a": "1" },
+              "headers": "{'Content-Length': '10'}"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-content-length",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 1250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log content-length caught",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'content-length-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-missing",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1350 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: missing file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-missing",
+        "type": "workflowNode",
+        "position": { "x": -250, "y": 1450 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Missing File Source (Fail)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "PUT",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/missing-upload'",
+              "body_mode": "file",
+              "file_source": "artifact://missing/nope.bin"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-missing",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 1450 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log missing caught",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'file-missing-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-nullq",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1550 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: null query entry",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "nullq_err" },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-nullq",
+        "type": "workflowNode",
+        "position": { "x": -250, "y": 1650 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Null Query Entry",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "query_params.z"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/nullq'",
+              "query_params": { "z": "None" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nullq",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 1650 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log null query caught (never runs)",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'nullq-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "fileio-src" },
+      { "id": "e-1", "source": "fileio-src", "target": "http-auth" },
+      { "id": "e-2", "source": "http-auth", "target": "log-auth" },
+      { "id": "e-3", "source": "log-auth", "target": "http-apikey" },
+      { "id": "e-4", "source": "http-apikey", "target": "http-getbody" },
+      { "id": "e-5", "source": "http-getbody", "target": "http-form" },
+      { "id": "e-6", "source": "http-form", "target": "http-genwins" },
+      { "id": "e-7", "source": "http-genwins", "target": "http-multi" },
+      { "id": "e-8", "source": "http-multi", "target": "http-multi-textonly" },
+      { "id": "e-9", "source": "http-multi-textonly", "target": "http-coerce" },
+      { "id": "e-10", "source": "http-coerce", "target": "http-dl" },
+      { "id": "e-11", "source": "http-dl", "target": "log-dl" },
+      { "id": "e-12", "source": "log-dl", "target": "log-dl-sha" },
+      { "id": "e-13", "source": "log-dl-sha", "target": "http-cap" },
+      { "id": "e-14", "source": "http-cap", "target": "log-cap" },
+      { "id": "e-15", "source": "log-cap", "target": "tc-content-length" },
+      { "id": "e-try", "source": "tc-content-length", "sourceHandle": "try", "target": "http-content-length", "type": "default" },
+      { "id": "e-catch", "source": "tc-content-length", "sourceHandle": "catch", "target": "log-content-length", "type": "default" },
+      { "id": "e-then1", "source": "tc-content-length", "sourceHandle": "then", "target": "tc-missing", "type": "default" },
+      { "id": "e-try2", "source": "tc-missing", "sourceHandle": "try", "target": "http-missing", "type": "default" },
+      { "id": "e-catch2", "source": "tc-missing", "sourceHandle": "catch", "target": "log-missing", "type": "default" },
+      { "id": "e-then2", "source": "tc-missing", "sourceHandle": "then", "target": "tc-nullq", "type": "default" },
+      { "id": "e-try3", "source": "tc-nullq", "sourceHandle": "try", "target": "http-nullq", "type": "default" },
+      { "id": "e-catch3", "source": "tc-nullq", "sourceHandle": "catch", "target": "log-nullq", "type": "default" }
+    ]
+  },
+  "variables": {
+    "base_url": { "value": "", "type": "string", "scope": "test" },
+    "api_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "suffix": { "value": "xyz", "type": "string", "scope": "test" },
+    "auth_echo": { "value": "", "type": "string", "scope": "test" },
+    "big_body": { "value": "", "type": "string", "scope": "test" },
+    "cap_size": { "value": null, "type": "integer", "scope": "test" },
+    "dl_path": { "value": "", "type": "string", "scope": "test" },
+    "dl_sha": { "value": "", "type": "string", "scope": "test" },
+    "dl_size": { "value": null, "type": "integer", "scope": "test" },
+    "nullq_err": { "value": {}, "type": "map", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

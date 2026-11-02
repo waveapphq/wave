@@ -1,0 +1,170 @@
+{
+  "name": "Profile Drives Kubernetes E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-token",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Token leg: endpoint, token, trust and namespace all from the profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["api_url", "token", "ca_cert", "verify_ssl", "tls_server_name", "namespace"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "k8sp.api_url",
+              "token": "k8sp.token",
+              "ca_cert": "k8sp.ca_cert",
+              "verify_ssl": "k8sp.verify_ssl",
+              "tls_server_name": "k8sp.tls_server_name",
+              "namespace": "k8sp.namespace"
+            },
+            "outputBindings": { "session": "sess_token", "cluster_version": "ver_token" },
+            "profileBindings": [
+              {
+                "profileId": "__K8S_PROFILE_ID__",
+                "alias": "k8sp",
+                "profileName": "__K8S_PROFILE_NAME__",
+                "profileType": "kubernetes"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-token",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the token leg version",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'k8sprof-token ver={ver_token}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-cert",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Client-certificate leg: no token, the profile's key pair instead",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "api_url",
+            "client_cert",
+            "client_key",
+            "ca_cert",
+            "verify_ssl",
+            "tls_server_name",
+            "namespace"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "k8sp.api_url",
+              "client_cert": "k8sp.client_cert",
+              "client_key": "k8sp.client_key",
+              "ca_cert": "k8sp.ca_cert",
+              "verify_ssl": "k8sp.verify_ssl",
+              "tls_server_name": "k8sp.tls_server_name",
+              "namespace": "k8sp.namespace"
+            },
+            "outputBindings": { "session": "sess_cert", "cluster_version": "ver_cert" },
+            "profileBindings": [
+              {
+                "profileId": "__K8S_PROFILE_ID__",
+                "alias": "k8sp",
+                "profileName": "__K8S_PROFILE_NAME__",
+                "profileType": "kubernetes"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-cert",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the client-certificate leg version",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'k8sprof-cert ver={ver_cert}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'profile-k8s-e2e-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-connect-token", "source": "start-node", "target": "connect-token" },
+      { "id": "edge-connect-token-log-token", "source": "connect-token", "target": "log-token" },
+      { "id": "edge-log-token-connect-cert", "source": "log-token", "target": "connect-cert" },
+      { "id": "edge-connect-cert-log-cert", "source": "connect-cert", "target": "log-cert" },
+      { "id": "edge-log-cert-log-done", "source": "log-cert", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "sess_token": { "value": "", "type": "string", "scope": "test" },
+    "ver_token": { "value": "", "type": "string", "scope": "test" },
+    "sess_cert": { "value": "", "type": "string", "scope": "test" },
+    "ver_cert": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

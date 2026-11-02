@@ -1,0 +1,170 @@
+{
+  "name": "Run Ad-Hoc Stop E2E",
+  "version": "1.0.0",
+  "description": "A standalone 30s Delay and a For loop whose body logs then holds a 30s Delay, so an ad-hoc Run Current can be stopped with one Block - or two - genuinely in flight.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-solo",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Solo Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Single ad-hoc target",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 30000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-adhoc",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Adhoc Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 1,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "loop_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-body",
+        "type": "workflowNode",
+        "position": { "x": 260, "y": 340 },
+        "data": {
+          "label": "Body Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Finishes before the Stop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'adhoc-stop-body'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-body",
+        "type": "workflowNode",
+        "position": { "x": 260, "y": 440 },
+        "data": {
+          "label": "Body Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "In flight inside the loop body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 30000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 340 },
+        "data": {
+          "label": "After Loop",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Outside every ad-hoc sub-tree",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'adhoc-stop-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "delay-solo", "type": "default" },
+      { "id": "e-solo-loop", "source": "delay-solo", "target": "for-adhoc", "type": "default" },
+      {
+        "id": "e-loop-body",
+        "source": "for-adhoc",
+        "target": "log-body",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      { "id": "e-body-delay", "source": "log-body", "target": "delay-body", "type": "default" },
+      {
+        "id": "e-loop-then",
+        "source": "for-adhoc",
+        "target": "log-after",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "loop_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

@@ -1,0 +1,17 @@
+# WAVE E2E Kubernetes gateway service (test-only): one nginx on plain HTTP :8080
+# proxying /k8s/clusters/wave/ to the published kwok API over the compose network.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/library/nginx:stable
+
+# Entrypoint exports NGINX_LOCAL_RESOLVERS from /etc/resolv.conf, then renders the template.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+COPY services/k8s-gateway/nginx.conf /etc/nginx/templates/default.conf.template
+
+# A script, not an inline CMD: podman 3.4.x word-splits healthcheck strings with spaces.
+RUN mkdir -p /wave \
+ && printf '%s\n' '#!/bin/sh' \
+      'exec curl -sf -o /dev/null -H "Authorization: Bearer wave-admin-token" http://127.0.0.1:8080/k8s/clusters/wave/readyz' \
+      > /wave/healthcheck.sh \
+ && chmod +x /wave/healthcheck.sh
+
+EXPOSE 8080

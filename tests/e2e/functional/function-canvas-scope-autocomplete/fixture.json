@@ -1,0 +1,134 @@
+{
+  "name": "V-CANVAS-FN-SCOPE-AUTOCOMPLETE-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with one root variable (`test_var`), one root Log plugin, and a local Function declaring one input (`fn_input`) plus one inner Log plugin. The spec opens autocomplete in the root Log's expression field at the Test root (sees `test_var` + `system.env` per the system-vars seeded inline), then drills into the Function and opens autocomplete in the inner Log's expression field (sees ONLY `fn_input`).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "root-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "RootLog",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "''",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "InnerLog",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "''",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-start-inner-log",
+                  "source": "start-node",
+                  "target": "inner-log"
+                }
+              ]
+            },
+            "inputs": [
+              {
+                "name": "fn_input",
+                "type": "string",
+                "default": "hello"
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {
+    "test_var": {
+      "type": "string",
+      "value": "root-only"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

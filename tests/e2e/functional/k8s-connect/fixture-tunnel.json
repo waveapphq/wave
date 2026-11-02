@@ -1,0 +1,222 @@
+{
+  "name": "K8s Connect Tunneled Cluster E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the session the tunnel rides",
+          "hasNewerVersion": false,
+          "expressionFields": ["password"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-open",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Forward an auto-assigned local port to the unpublished cluster",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "kwok-internal",
+              "remote_port": 6443
+            },
+            "outputBindings": {
+              "tunnel_id": "tid",
+              "local_port": "lport"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-tunnel",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Connect through the tunnel with SNI + CA verification",
+          "hasNewerVersion": false,
+          "expressionFields": ["api_url", "token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "f'https://127.0.0.1:{lport}'",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "tls_server_name": "kwok-internal"
+            },
+            "outputBindings": {
+              "cluster_version": "ver_tunnel"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tunnel",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the tunneled cluster version",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8stunnel ver={ver_tunnel}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-close",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": ["tunnel_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the session",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-tunnel-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-open-session", "source": "start-node", "target": "open-session" },
+      { "id": "edge-open-session-tunnel-open", "source": "open-session", "target": "tunnel-open" },
+      { "id": "edge-tunnel-open-connect-tunnel", "source": "tunnel-open", "target": "connect-tunnel" },
+      { "id": "edge-connect-tunnel-log-tunnel", "source": "connect-tunnel", "target": "log-tunnel" },
+      { "id": "edge-log-tunnel-tunnel-close", "source": "log-tunnel", "target": "tunnel-close" },
+      { "id": "edge-tunnel-close-close-session", "source": "tunnel-close", "target": "close-session" },
+      { "id": "edge-close-session-log-done", "source": "close-session", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": { "value": "wave-secret", "type": "string", "scope": "test", "secret": true },
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "sid": { "value": "", "type": "string", "scope": "test" },
+    "tid": { "value": "", "type": "string", "scope": "test" },
+    "lport": { "value": 0, "type": "integer", "scope": "test" },
+    "ver_tunnel": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

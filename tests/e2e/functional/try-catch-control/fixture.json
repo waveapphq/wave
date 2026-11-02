@@ -1,0 +1,673 @@
+{
+  "name": "Try/Catch Control E2E",
+  "version": "1.0.0",
+  "description": "Eight chained Try/Catch blocks covering all 2x2x2 permutations: try OK/FAIL x catch on/off x finally on/off.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 50 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-all'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F1: OK catch=on fin=off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "f1_error", "caught": "f1_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f1",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F1 Try Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f1-try'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-f1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F1 Catch Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f1-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 450 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F2: OK catch=off fin=off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": false, "enable_finally": false },
+            "outputBindings": { "error": "f2_error", "caught": "f2_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f2",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 550 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F2 Try Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f2-try'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 700 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F3: OK catch=on fin=on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": true },
+            "outputBindings": { "error": "f3_error", "caught": "f3_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f3",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F3 Try Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f3-try'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-f3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F3 Catch Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f3-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "finally-log-f3",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F3 Finally Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f3-finally'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f4",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 950 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F4: OK catch=off fin=on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": false, "enable_finally": true },
+            "outputBindings": { "error": "f4_error", "caught": "f4_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f4",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 1050 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F4 Try Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f4-try'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "finally-log-f4",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 1050 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F4 Finally Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f4-finally'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f5",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1200 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F5: FAIL catch=on fin=off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "f5_error", "caught": "f5_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f5",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 1300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F5 Try Path BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "1/0", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-f5",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F5 Catch Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f5-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f6",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1450 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F6: FAIL catch=off fin=off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": false, "enable_finally": false },
+            "outputBindings": { "error": "f6_error", "caught": "f6_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f6",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 1550 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F6 Try Path BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "1/0", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f7",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1700 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F7: FAIL catch=on fin=on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": true },
+            "outputBindings": { "error": "f7_error", "caught": "f7_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f7",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 1800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F7 Try Path BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "1/0", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-f7",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F7 Catch Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f7-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "finally-log-f7",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 1800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F7 Finally Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f7-finally'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-f8",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1950 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "F8: FAIL catch=off fin=on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": false, "enable_finally": true },
+            "outputBindings": { "error": "f8_error", "caught": "f8_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "try-log-f8",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 2050 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F8 Try Path BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "1/0", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "finally-log-f8",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 2050 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F8 Finally Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'f8-finally'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 2200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start",       "source": "start-node",  "target": "log-before",    "type": "default" },
+      { "id": "e-before-f1",   "source": "log-before",  "target": "tc-f1",         "type": "default" },
+
+      { "id": "e-f1-try",      "source": "tc-f1", "sourceHandle": "try",     "target": "try-log-f1",   "type": "default" },
+      { "id": "e-f1-catch",    "source": "tc-f1", "sourceHandle": "catch",   "target": "catch-log-f1", "type": "default" },
+      { "id": "e-f1-then",     "source": "tc-f1", "sourceHandle": "then",    "target": "tc-f2",        "type": "default" },
+
+      { "id": "e-f2-try",      "source": "tc-f2", "sourceHandle": "try",     "target": "try-log-f2",   "type": "default" },
+      { "id": "e-f2-then",     "source": "tc-f2", "sourceHandle": "then",    "target": "tc-f3",        "type": "default" },
+
+      { "id": "e-f3-try",      "source": "tc-f3", "sourceHandle": "try",     "target": "try-log-f3",     "type": "default" },
+      { "id": "e-f3-catch",    "source": "tc-f3", "sourceHandle": "catch",   "target": "catch-log-f3",   "type": "default" },
+      { "id": "e-f3-finally",  "source": "tc-f3", "sourceHandle": "finally", "target": "finally-log-f3", "type": "default" },
+      { "id": "e-f3-then",     "source": "tc-f3", "sourceHandle": "then",    "target": "tc-f4",          "type": "default" },
+
+      { "id": "e-f4-try",      "source": "tc-f4", "sourceHandle": "try",     "target": "try-log-f4",     "type": "default" },
+      { "id": "e-f4-finally",  "source": "tc-f4", "sourceHandle": "finally", "target": "finally-log-f4", "type": "default" },
+      { "id": "e-f4-then",     "source": "tc-f4", "sourceHandle": "then",    "target": "tc-f5",          "type": "default" },
+
+      { "id": "e-f5-try",      "source": "tc-f5", "sourceHandle": "try",     "target": "try-log-f5",   "type": "default" },
+      { "id": "e-f5-catch",    "source": "tc-f5", "sourceHandle": "catch",   "target": "catch-log-f5", "type": "default" },
+      { "id": "e-f5-then",     "source": "tc-f5", "sourceHandle": "then",    "target": "tc-f6",        "type": "default" },
+
+      { "id": "e-f6-try",      "source": "tc-f6", "sourceHandle": "try",     "target": "try-log-f6",   "type": "default" },
+      { "id": "e-f6-then",     "source": "tc-f6", "sourceHandle": "then",    "target": "tc-f7",        "type": "default" },
+
+      { "id": "e-f7-try",      "source": "tc-f7", "sourceHandle": "try",     "target": "try-log-f7",     "type": "default" },
+      { "id": "e-f7-catch",    "source": "tc-f7", "sourceHandle": "catch",   "target": "catch-log-f7",   "type": "default" },
+      { "id": "e-f7-finally",  "source": "tc-f7", "sourceHandle": "finally", "target": "finally-log-f7", "type": "default" },
+      { "id": "e-f7-then",     "source": "tc-f7", "sourceHandle": "then",    "target": "tc-f8",          "type": "default" },
+
+      { "id": "e-f8-try",      "source": "tc-f8", "sourceHandle": "try",     "target": "try-log-f8",     "type": "default" },
+      { "id": "e-f8-finally",  "source": "tc-f8", "sourceHandle": "finally", "target": "finally-log-f8", "type": "default" },
+      { "id": "e-f8-then",     "source": "tc-f8", "sourceHandle": "then",    "target": "log-after",      "type": "default" }
+    ]
+  },
+  "variables": {
+    "f1_error": { "type": "map", "value": null },
+    "f1_caught": { "type": "boolean", "value": false },
+    "f2_error": { "type": "map", "value": null },
+    "f2_caught": { "type": "boolean", "value": false },
+    "f3_error": { "type": "map", "value": null },
+    "f3_caught": { "type": "boolean", "value": false },
+    "f4_error": { "type": "map", "value": null },
+    "f4_caught": { "type": "boolean", "value": false },
+    "f5_error": { "type": "map", "value": null },
+    "f5_caught": { "type": "boolean", "value": false },
+    "f6_error": { "type": "map", "value": null },
+    "f6_caught": { "type": "boolean", "value": false },
+    "f7_error": { "type": "map", "value": null },
+    "f7_caught": { "type": "boolean", "value": false },
+    "f8_error": { "type": "map", "value": null },
+    "f8_caught": { "type": "boolean", "value": false }
+  },
+  "metadata": {},
+  "created_at": "2026-03-29T00:00:00.000000",
+  "updated_at": "2026-03-29T00:00:00.000000"
+}

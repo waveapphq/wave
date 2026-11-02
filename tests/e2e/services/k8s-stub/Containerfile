@@ -1,0 +1,17 @@
+# WAVE E2E Kubernetes API stub (test-only): canned discovery over TLS plus a
+# per-request fault on the resource read, configured through the api_url path
+# prefix. See server.ts for the directive list.
+#
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/k8s-stub)
+FROM node:22-slim
+
+RUN npm install -g tsx@4 >/dev/null 2>&1
+
+WORKDIR /app
+COPY server.ts /app/server.ts
+COPY certs/server.crt certs/server.key /app/certs/
+
+ENV K8S_STUB_PORT=9461
+EXPOSE 9461
+
+CMD ["tsx", "/app/server.ts"]

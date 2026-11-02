@@ -1,0 +1,67 @@
+{
+  "name": "PYRENAME",
+  "version": "1.0.0",
+  "description": "One Python block whose script names a local, an Input Variable key and a Variable Exports row, so F2 can rename each of the three.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "py-rename",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "F2 rename across the script, the Input Variables and the Variable Exports",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "GREETING = 'hello'\nbase = 2\ndoubled = base * 2\npy_export = GREETING + str(doubled)\n",
+              "input_vars": {
+                "GREETING": "hello"
+              },
+              "script_variables": [
+                "py_export"
+              ]
+            },
+            "outputBindings": {
+              "py_export": "export_target"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-rename",
+        "source": "start-node",
+        "target": "py-rename"
+      }
+    ]
+  },
+  "variables": {
+    "export_target": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

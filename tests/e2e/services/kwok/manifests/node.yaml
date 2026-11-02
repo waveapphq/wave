@@ -1,0 +1,26 @@
+# Standing fake node so pods schedule and the pod-lifecycle Stages can run;
+# tests never create cluster-scoped objects beyond their own namespace. The
+# resource-metrics-path annotation points metrics-server at kwok's simulated
+# kubelet endpoint; without it every scrape 404s and metrics.k8s.io stays empty.
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    node.alpha.kubernetes.io/ttl: "0"
+    kwok.x-k8s.io/node: fake
+    metrics.k8s.io/resource-metrics-path: /metrics/nodes/kwok-node-0/metrics/resource
+  labels:
+    kubernetes.io/hostname: kwok-node-0
+    kubernetes.io/role: agent
+    type: kwok
+  name: kwok-node-0
+spec: {}
+status:
+  allocatable:
+    cpu: "32"
+    memory: 256Gi
+    pods: "110"
+  capacity:
+    cpu: "32"
+    memory: 256Gi
+    pods: "110"

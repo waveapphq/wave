@@ -1,0 +1,1500 @@
+{
+  "name": "CSV Parse Typing E2E",
+  "version": "1.0.0",
+  "description": "PARSE column-typing matrix P1-P17",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-p1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name,score\n1,Alice,95.5\n2,Bob,80.0\n"
+            },
+            "outputBindings": {
+              "table": "p1",
+              "row_count": "p1rc",
+              "success": "p1ok",
+              "errors": "p1errs",
+              "schema": "p1sc"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p1-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P1.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P1=' + str(p1.col_types()) + '|c0id=' + str(p1.cell(0,'id')) + '|c0name=' + str(p1.cell(0,'name')) + '|c0score=' + str(p1.cell(0,'score')) + '|rc=' + str(p1rc) + '|ok=' + str(p1ok) + '|errs=' + str(p1errs)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p1-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P1.1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P1sc=' + str(p1sc)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "1,Alice\n2,Bob\n",
+              "has_header": false
+            },
+            "outputBindings": {
+              "table": "p2",
+              "row_count": "p2rc"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p2-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P2.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P2=' + str(p2.col_names()) + '|' + str(p2.col_types()) + '|c00=' + str(p2.cell(0,'Column 0')) + '|c01=' + str(p2.cell(0,'Column 1')) + '|rc=' + str(p2rc)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "a\tb\n1\t2\n",
+              "delimiter": "\t"
+            },
+            "outputBindings": {
+              "table": "p3"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p3-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P3.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P3=' + str(p3.col_types()) + '|a=' + str(p3.cell(0,'a')) + '|b=' + str(p3.cell(0,'b'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P4",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,note\n\"Smith, Jr.\",hello\n"
+            },
+            "outputBindings": {
+              "table": "p4"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p4-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P4.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P4=' + str(p4.cell(0,'name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P5",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "v\n1\n2.5\n"
+            },
+            "outputBindings": {
+              "table": "p5"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P5.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P5=' + str(p5.col_types()) + '|c0=' + str(p5.cell(0,'v')) + '|c1=' + str(p5.cell(1,'v'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P6",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "v\n1\nabc\n"
+            },
+            "outputBindings": {
+              "table": "p6"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p6-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P6.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P6=' + str(p6.col_types()) + '|c0=' + str(p6.cell(0,'v')) + '|c1=' + str(p6.cell(1,'v'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P7",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "flag\ntrue\nfalse\n"
+            },
+            "outputBindings": {
+              "table": "p7"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p7-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P7.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P7=' + str(p7.col_types()) + '|c0=' + str(p7.cell(0,'flag')) + '|c1=' + str(p7.cell(1,'flag'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P8",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "flag\nTrue\nFALSE\n"
+            },
+            "outputBindings": {
+              "table": "p8"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p8-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P8.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P8=' + str(p8.col_types()) + '|c0=' + str(p8.cell(0,'flag')) + '|c1=' + str(p8.cell(1,'flag'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P9",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "x\n1\n0\n"
+            },
+            "outputBindings": {
+              "table": "p9"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p9-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P9.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P9=' + str(p9.col_types()) + '|c0=' + str(p9.cell(0,'x')) + '|c1=' + str(p9.cell(1,'x'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p10",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1950
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P10",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "code\n007\n042\n"
+            },
+            "outputBindings": {
+              "table": "p10"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p10-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2040
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P10.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P10=' + str(p10.col_types()) + '|c0=' + str(p10.cell(0,'code'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p11",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2130
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P11",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "v\n+1\n+2\n"
+            },
+            "outputBindings": {
+              "table": "p11"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p11-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2220
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P11.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P11=' + str(p11.col_types()) + '|c0=' + str(p11.cell(0,'v'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p12",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2310
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P12",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "v\n-1\n-2\n"
+            },
+            "outputBindings": {
+              "table": "p12"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p12-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2400
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P12.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P12=' + str(p12.col_types()) + '|c0=' + str(p12.cell(0,'v'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p13",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2490
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P13",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "v\nnan\n1.5\n"
+            },
+            "outputBindings": {
+              "table": "p13"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p13-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P13.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P13=' + str(p13.col_types()) + '|c0=' + str(p13.cell(0,'v')) + '|c1=' + str(p13.cell(1,'v'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p14",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2670
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P14",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,score\n1,2.5\n",
+              "column_types": "string"
+            },
+            "outputBindings": {
+              "table": "p14"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p14-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P14.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P14=' + str(p14.col_types()) + '|id=' + str(p14.cell(0,'id')) + '|score=' + str(p14.cell(0,'score'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p15",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2850
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P15",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "a,b\n1,\n,2\n"
+            },
+            "outputBindings": {
+              "table": "p15"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p15-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P15.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P15=' + str(p15.col_types()) + '|c0b=' + str(p15.cell(0,'b')) + '|c1a=' + str(p15.cell(1,'a')) + '|c0a=' + str(p15.cell(0,'a')) + '|c1b=' + str(p15.cell(1,'b'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p16",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3030
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P16",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "a,b\n1,\n2,\n"
+            },
+            "outputBindings": {
+              "table": "p16"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p16-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P16.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P16=' + str(p16.col_types()) + '|c0b=' + str(p16.cell(0,'b')) + '|c1b=' + str(p16.cell(1,'b'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-p17",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3210
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse P17",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "n,label\n5,a\n,b\n",
+              "empty_cells": "default"
+            },
+            "outputBindings": {
+              "table": "p17"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p17-0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log P17.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'P17=' + str(p17.col_types()) + '|c0n=' + str(p17.cell(0,'n')) + '|c1n=' + str(p17.cell(1,'n'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "parse-p1",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "parse-p1",
+        "target": "log-p1-0",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-p1-0",
+        "target": "log-p1-1",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-p1-1",
+        "target": "parse-p2",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "parse-p2",
+        "target": "log-p2-0",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-p2-0",
+        "target": "parse-p3",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "parse-p3",
+        "target": "log-p3-0",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "log-p3-0",
+        "target": "parse-p4",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "parse-p4",
+        "target": "log-p4-0",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-p4-0",
+        "target": "parse-p5",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "parse-p5",
+        "target": "log-p5-0",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-p5-0",
+        "target": "parse-p6",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "parse-p6",
+        "target": "log-p6-0",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "log-p6-0",
+        "target": "parse-p7",
+        "type": "default"
+      },
+      {
+        "id": "e15",
+        "source": "parse-p7",
+        "target": "log-p7-0",
+        "type": "default"
+      },
+      {
+        "id": "e16",
+        "source": "log-p7-0",
+        "target": "parse-p8",
+        "type": "default"
+      },
+      {
+        "id": "e17",
+        "source": "parse-p8",
+        "target": "log-p8-0",
+        "type": "default"
+      },
+      {
+        "id": "e18",
+        "source": "log-p8-0",
+        "target": "parse-p9",
+        "type": "default"
+      },
+      {
+        "id": "e19",
+        "source": "parse-p9",
+        "target": "log-p9-0",
+        "type": "default"
+      },
+      {
+        "id": "e20",
+        "source": "log-p9-0",
+        "target": "parse-p10",
+        "type": "default"
+      },
+      {
+        "id": "e21",
+        "source": "parse-p10",
+        "target": "log-p10-0",
+        "type": "default"
+      },
+      {
+        "id": "e22",
+        "source": "log-p10-0",
+        "target": "parse-p11",
+        "type": "default"
+      },
+      {
+        "id": "e23",
+        "source": "parse-p11",
+        "target": "log-p11-0",
+        "type": "default"
+      },
+      {
+        "id": "e24",
+        "source": "log-p11-0",
+        "target": "parse-p12",
+        "type": "default"
+      },
+      {
+        "id": "e25",
+        "source": "parse-p12",
+        "target": "log-p12-0",
+        "type": "default"
+      },
+      {
+        "id": "e26",
+        "source": "log-p12-0",
+        "target": "parse-p13",
+        "type": "default"
+      },
+      {
+        "id": "e27",
+        "source": "parse-p13",
+        "target": "log-p13-0",
+        "type": "default"
+      },
+      {
+        "id": "e28",
+        "source": "log-p13-0",
+        "target": "parse-p14",
+        "type": "default"
+      },
+      {
+        "id": "e29",
+        "source": "parse-p14",
+        "target": "log-p14-0",
+        "type": "default"
+      },
+      {
+        "id": "e30",
+        "source": "log-p14-0",
+        "target": "parse-p15",
+        "type": "default"
+      },
+      {
+        "id": "e31",
+        "source": "parse-p15",
+        "target": "log-p15-0",
+        "type": "default"
+      },
+      {
+        "id": "e32",
+        "source": "log-p15-0",
+        "target": "parse-p16",
+        "type": "default"
+      },
+      {
+        "id": "e33",
+        "source": "parse-p16",
+        "target": "log-p16-0",
+        "type": "default"
+      },
+      {
+        "id": "e34",
+        "source": "log-p16-0",
+        "target": "parse-p17",
+        "type": "default"
+      },
+      {
+        "id": "e35",
+        "source": "parse-p17",
+        "target": "log-p17-0",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "p1": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p1rc": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "p1ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p1errs": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "p1sc": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "p2": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p2rc": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "p3": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p4": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p5": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p6": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p7": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p8": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p9": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p10": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p11": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p12": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p13": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p14": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p15": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p16": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p17": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

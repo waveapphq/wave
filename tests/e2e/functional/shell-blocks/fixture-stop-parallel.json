@@ -1,0 +1,221 @@
+{
+  "name": "SH-8 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Two Parallel lanes each run a Shell Script with Log Output that leaves a background sleep, prints its ready line and sleeps until the user stops the run; Run Current on the probe proves both background jobs are gone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "par-stop",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 100
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Two lanes stopped together",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "a"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "b"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-stop-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 250,
+          "y": 220
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stop ends lane a",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__/a.pid\"; P=rea; echo \"${P}dy-a-__TOKEN__\"; sleep 300",
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-stop-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 550,
+          "y": 220
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stop ends lane b",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__\"; sleep 300 & echo $! > \"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__/b.pid\"; P=rea; echo \"${P}dy-b-__TOKEN__\"; sleep 300",
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-stop-par-probe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Parallel tree probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "f=\"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__/a.pid\"; if [ -s \"$f\" ]; then pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi; else printf missing; fi; printf ' '; f=\"$WAVE_ARTIFACTS_DIR/sh-8-__TOKEN__/b.pid\"; if [ -s \"$f\" ]; then pid=$(cat \"$f\"); if kill -0 \"$pid\" 2>/dev/null && [ \"$(awk '{print $3}' /proc/$pid/stat)\" != Z ]; then printf alive; else printf gone; fi; else printf missing; fi"
+            },
+            "outputBindings": {
+              "stdout": "par_probe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 470
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-8-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "par-stop"
+      },
+      {
+        "id": "e-par-a",
+        "source": "par-stop",
+        "target": "sh-stop-a",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-par-b",
+        "source": "par-stop",
+        "target": "sh-stop-b",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-par-then",
+        "source": "par-stop",
+        "target": "sh-stop-par-probe",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-sh-stop-par-probe-log-done",
+        "source": "sh-stop-par-probe",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "par_probe": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

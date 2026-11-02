@@ -1,0 +1,1816 @@
+{
+  "name": "SFTP Folders __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "Folder trees over SFTP: upload and merge, Fail the block, a download that skips a link, Stats, Move, Create folder, the refused Moves and Delete, all inside a Try/Catch whose Finally removes the spec folder.",
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  },
+  "variables": {
+    "fold_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "outer_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "outer_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "up1_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "up1_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "list1_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "list1_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "x1_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "x1_stderr": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "grown_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "up2_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "up2_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "list2_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "list2_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "up3_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "up3_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "up3_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "up3_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "list3_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "list3_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "x2_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "x2_stderr": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "down_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "down_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_a_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_a_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_a_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "st_a_modified": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_sub_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_sub_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_sub_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "st_nope_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_nope_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_nope_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "st_nope_modified": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_nope_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "move_a_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_moved_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_moved_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "st_moved_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "st_old_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mkdir_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mkdir_again_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mkfile_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mkfile_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "mkfile_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "movesub_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "movesub_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "movesub_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "list_sub_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "list_sub_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "before_home_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "before_home_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "home_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "home_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "after_home_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "after_home_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "st_homemove_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "delete_tree_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_tree_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "delete_f_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "st_f_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "fold_closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f914b919-d25b-4aa2-a082-f9b543b9729e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "fold_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "921b2a2e-6f66-4a60-8e6b-18b1de463893",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Folder legs, then remove the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "outer_error",
+              "caught": "outer_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "b1d45a5e-4d82-4661-abc1-4a65e9a8cc4b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Upload the tree",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "upload",
+              "source": "testdata://sftp-tree-placeholder",
+              "destination": "__FOLDER__/tree",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "up1_summary",
+              "success": "up1_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e238bb1a-d9c5-404f-aea6-f33f54bf67b3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "List the uploaded tree",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the uploaded tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__/tree",
+              "recursive": true
+            },
+            "outputBindings": {
+              "entries": "list1_entries",
+              "count": "list1_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e7153af2-c9bb-4046-9466-b24d356d26b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 430
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make extra.txt and grow a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "command": "echo extra-__RUN_UUID__ > __FOLDER__/tree/extra.txt && echo stale-tail >> __FOLDER__/tree/a.txt",
+              "timeout": 60
+            },
+            "outputBindings": {
+              "exit_code": "x1_exit",
+              "stderr": "x1_stderr"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "acc5cb1b-06e9-48d1-b3a5-3218c727ae30",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the grown a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/a.txt"
+            },
+            "outputBindings": {
+              "size": "grown_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "49c0b5b5-cda1-435e-96ff-d40d93eb0abc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 610
+        },
+        "data": {
+          "label": "Upload with Replace it",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the matches with Replace it",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "upload",
+              "source": "testdata://sftp-tree/*",
+              "destination": "__FOLDER__/tree/",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "up2_summary",
+              "success": "up2_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "45106a36-3b0d-4d78-bc37-3762df1d2a1f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the merged tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__/tree",
+              "recursive": true
+            },
+            "outputBindings": {
+              "entries": "list2_entries",
+              "count": "list2_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "5c5cdac0-77f2-4236-9bba-cae10c3e95fb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 790
+        },
+        "data": {
+          "label": "Upload with Fail the block",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the matches with Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "upload",
+              "source": "testdata://sftp-tree/*",
+              "destination": "__FOLDER__/tree/",
+              "if_exists": "fail",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "summary": "up3_summary",
+              "success": "up3_success",
+              "error": "up3_error",
+              "reason": "up3_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8b6720fc-da66-4045-82ed-70e5229186b3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 880
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the tree after the refusal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__/tree",
+              "recursive": true
+            },
+            "outputBindings": {
+              "entries": "list3_entries",
+              "count": "list3_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "f2f0d51c-7d74-4864-a8d5-c68324206ce8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 970
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make the link to a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "command": "ln -s a.txt __FOLDER__/tree/link.txt",
+              "timeout": 60
+            },
+            "outputBindings": {
+              "exit_code": "x2_exit",
+              "stderr": "x2_stderr"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "aa0b3934-4d9f-491b-a756-607ecb23e9c2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "Download the tree",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download the tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "download",
+              "source": "__FOLDER__/tree",
+              "destination": "artifact://tree-copy/",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "down_summary",
+              "success": "down_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "46895340-491e-4470-beaa-7872a5c070fb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1150
+        },
+        "data": {
+          "label": "Stats of a.txt",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/a.txt"
+            },
+            "outputBindings": {
+              "exists": "st_a_exists",
+              "type": "st_a_type",
+              "size": "st_a_size",
+              "modified": "st_a_modified"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "17607f92-7de6-4f0d-9beb-a7202f79fd94",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1240
+        },
+        "data": {
+          "label": "Stats of sub",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of sub",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/sub"
+            },
+            "outputBindings": {
+              "exists": "st_sub_exists",
+              "type": "st_sub_type",
+              "size": "st_sub_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "2569ecc7-fe16-4be6-a6a1-04f2d0f06760",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1330
+        },
+        "data": {
+          "label": "Stats of a missing path",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of a missing path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/nope"
+            },
+            "outputBindings": {
+              "exists": "st_nope_exists",
+              "type": "st_nope_type",
+              "size": "st_nope_size",
+              "modified": "st_nope_modified",
+              "success": "st_nope_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "6eeb7ce4-4fca-4159-826c-07051f1629ae",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1420
+        },
+        "data": {
+          "label": "Move a.txt into a missing folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Move a.txt into a missing folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "move",
+              "source": "__FOLDER__/tree/a.txt",
+              "destination": "__FOLDER__/tree/moved/",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "success": "move_a_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "f72c5f19-e7c6-428a-b9d1-2124ff360f99",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1510
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the moved a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/moved/a.txt"
+            },
+            "outputBindings": {
+              "exists": "st_moved_exists",
+              "type": "st_moved_type",
+              "size": "st_moved_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "bcefd470-6459-47f8-ac84-29b03d5a4b1f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1600
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the old a.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree/a.txt"
+            },
+            "outputBindings": {
+              "exists": "st_old_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "d9ae4f9e-b3e8-4cfe-86db-4d22fff97ab8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1690
+        },
+        "data": {
+          "label": "Create a nested folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create a nested folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "create_folder",
+              "path": "__FOLDER__/tree/new/deep"
+            },
+            "outputBindings": {
+              "success": "mkdir_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "f60af86a-1456-474a-9935-0f3a06c191df",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1780
+        },
+        "data": {
+          "label": "Create the nested folder again",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create the nested folder again",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "create_folder",
+              "path": "__FOLDER__/tree/new/deep"
+            },
+            "outputBindings": {
+              "success": "mkdir_again_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "30d87c49-2532-4a1c-baae-58b6b279e949",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1870
+        },
+        "data": {
+          "label": "Create a folder over extra.txt",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create a folder over extra.txt",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "create_folder",
+              "path": "__FOLDER__/tree/extra.txt",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "mkfile_success",
+              "error": "mkfile_error",
+              "reason": "mkfile_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "4f34b1fc-8c2f-4646-b871-564fb0500f71",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "Move sub onto its own folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Move sub onto its own folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "move",
+              "source": "__FOLDER__/tree/sub",
+              "destination": "__FOLDER__/tree/",
+              "if_exists": "overwrite",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "movesub_success",
+              "error": "movesub_error",
+              "reason": "movesub_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "abbc5809-0f03-4a93-843c-9af279706c59",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2050
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List sub after the refused move",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__/tree/sub",
+              "recursive": false
+            },
+            "outputBindings": {
+              "entries": "list_sub_entries",
+              "count": "list_sub_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fcc8a8ba-4c11-4a59-a53c-1154fabd18f7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2140
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the spec folder before the home move",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__",
+              "recursive": true
+            },
+            "outputBindings": {
+              "entries": "before_home_entries",
+              "count": "before_home_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "aa87f955-251d-4faa-b238-7bf9c49ea88e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2230
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Move of the home caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "home_error",
+              "caught": "home_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fca8a6ea-85c4-4890-8061-1d99403e1f67",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2330
+        },
+        "data": {
+          "label": "Move the home folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Move the home folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "move",
+              "source": ".",
+              "destination": "__FOLDER__/moved-home",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ff06bb47-b5cc-4b8d-8ede-ef66077105be",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Home move caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-folders home move caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "2b3a7ab5-2003-46da-b4c8-1b2ba760131f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2480
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the spec folder after the home move",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "list",
+              "path": "__FOLDER__",
+              "recursive": true
+            },
+            "outputBindings": {
+              "entries": "after_home_entries",
+              "count": "after_home_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "f3a917e1-a9fc-4154-ac89-2ee1dae87af6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2570
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the home move target",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/moved-home"
+            },
+            "outputBindings": {
+              "exists": "st_homemove_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e7361f73-89a0-411a-a878-45477877ce2a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2660
+        },
+        "data": {
+          "label": "Delete the tree",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "delete",
+              "path": "__FOLDER__/tree",
+              "missing_ok": false
+            },
+            "outputBindings": {
+              "success": "delete_tree_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e9c07c6f-a0a9-4621-b327-52433e9a7959",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2750
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the deleted tree",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__/tree"
+            },
+            "outputBindings": {
+              "exists": "st_tree_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "90c28517-5b69-401b-90f1-10e74befd390",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 250
+        },
+        "data": {
+          "label": "Delete the spec folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": true
+            },
+            "outputBindings": {
+              "success": "delete_f_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "f2bb56de-526a-4375-9e69-1f44568536a1",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 340
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "st_f_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "9df77edf-c076-46f5-ba4b-9ecd669c98b2",
+        "type": "workflowNode",
+        "position": {
+          "x": 1100,
+          "y": 150
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "fold_session"
+            },
+            "outputBindings": {
+              "closed_session_ids": "fold_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "87423eee-22de-4b7c-902d-f1f96a01a880",
+        "type": "workflowNode",
+        "position": {
+          "x": 1100,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-folders-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "8ed207cd-db31-4b6e-99d8-3bde809262e0",
+        "source": "start-node",
+        "target": "f914b919-d25b-4aa2-a082-f9b543b9729e"
+      },
+      {
+        "id": "bf92dfd9-0a9c-46e3-bf5e-6aecb7b7422b",
+        "source": "f914b919-d25b-4aa2-a082-f9b543b9729e",
+        "target": "921b2a2e-6f66-4a60-8e6b-18b1de463893"
+      },
+      {
+        "id": "fbf58651-bac4-442a-9f2d-1b810bd865ec",
+        "source": "921b2a2e-6f66-4a60-8e6b-18b1de463893",
+        "target": "b1d45a5e-4d82-4661-abc1-4a65e9a8cc4b",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e8bd1fd5-dce1-49bb-b872-6bf629fac7ea",
+        "source": "b1d45a5e-4d82-4661-abc1-4a65e9a8cc4b",
+        "target": "e238bb1a-d9c5-404f-aea6-f33f54bf67b3"
+      },
+      {
+        "id": "75e1c6fb-9d26-4050-bf3b-a8c714cca3ab",
+        "source": "e238bb1a-d9c5-404f-aea6-f33f54bf67b3",
+        "target": "e7153af2-c9bb-4046-9466-b24d356d26b1"
+      },
+      {
+        "id": "e2aa5ec1-0654-4586-a6ed-285117cf05cf",
+        "source": "e7153af2-c9bb-4046-9466-b24d356d26b1",
+        "target": "acc5cb1b-06e9-48d1-b3a5-3218c727ae30"
+      },
+      {
+        "id": "a788a210-dbe6-4a2a-9d54-e43971e33277",
+        "source": "acc5cb1b-06e9-48d1-b3a5-3218c727ae30",
+        "target": "49c0b5b5-cda1-435e-96ff-d40d93eb0abc"
+      },
+      {
+        "id": "6903dfb4-9c57-4d6c-a010-6e0a223085ab",
+        "source": "49c0b5b5-cda1-435e-96ff-d40d93eb0abc",
+        "target": "45106a36-3b0d-4d78-bc37-3762df1d2a1f"
+      },
+      {
+        "id": "f2dc1886-eda3-49cc-9406-0ff9b172da5b",
+        "source": "45106a36-3b0d-4d78-bc37-3762df1d2a1f",
+        "target": "5c5cdac0-77f2-4236-9bba-cae10c3e95fb"
+      },
+      {
+        "id": "b71cc9e9-85c3-498c-ab42-626b2db7da39",
+        "source": "5c5cdac0-77f2-4236-9bba-cae10c3e95fb",
+        "target": "8b6720fc-da66-4045-82ed-70e5229186b3"
+      },
+      {
+        "id": "7466044e-2a5c-4763-8ddf-740a8e8ac18e",
+        "source": "8b6720fc-da66-4045-82ed-70e5229186b3",
+        "target": "f2f0d51c-7d74-4864-a8d5-c68324206ce8"
+      },
+      {
+        "id": "c163fb35-adaa-4171-8340-87189177d754",
+        "source": "f2f0d51c-7d74-4864-a8d5-c68324206ce8",
+        "target": "aa0b3934-4d9f-491b-a756-607ecb23e9c2"
+      },
+      {
+        "id": "80c68556-ea35-4981-89cb-07b8aef14f4c",
+        "source": "aa0b3934-4d9f-491b-a756-607ecb23e9c2",
+        "target": "46895340-491e-4470-beaa-7872a5c070fb"
+      },
+      {
+        "id": "83cb785e-79bc-42f2-9a32-7ef16904bbb6",
+        "source": "46895340-491e-4470-beaa-7872a5c070fb",
+        "target": "17607f92-7de6-4f0d-9beb-a7202f79fd94"
+      },
+      {
+        "id": "96a64c27-17f3-4c11-8932-7ceb49d2122b",
+        "source": "17607f92-7de6-4f0d-9beb-a7202f79fd94",
+        "target": "2569ecc7-fe16-4be6-a6a1-04f2d0f06760"
+      },
+      {
+        "id": "b78bb8f3-47f2-40ce-b29e-be561684335c",
+        "source": "2569ecc7-fe16-4be6-a6a1-04f2d0f06760",
+        "target": "6eeb7ce4-4fca-4159-826c-07051f1629ae"
+      },
+      {
+        "id": "ae8b82ee-8171-4139-a6a6-aaf399728543",
+        "source": "6eeb7ce4-4fca-4159-826c-07051f1629ae",
+        "target": "f72c5f19-e7c6-428a-b9d1-2124ff360f99"
+      },
+      {
+        "id": "b46d791c-cd51-483d-b2c7-e2f6953bc989",
+        "source": "f72c5f19-e7c6-428a-b9d1-2124ff360f99",
+        "target": "bcefd470-6459-47f8-ac84-29b03d5a4b1f"
+      },
+      {
+        "id": "1c646c45-80e9-43d8-a5a4-7939f3dbb025",
+        "source": "bcefd470-6459-47f8-ac84-29b03d5a4b1f",
+        "target": "d9ae4f9e-b3e8-4cfe-86db-4d22fff97ab8"
+      },
+      {
+        "id": "7a1baee6-3a0e-4125-a111-fb62afb6ba7d",
+        "source": "d9ae4f9e-b3e8-4cfe-86db-4d22fff97ab8",
+        "target": "f60af86a-1456-474a-9935-0f3a06c191df"
+      },
+      {
+        "id": "3a7f2e0f-4470-4066-b4b4-94815c0cf7ac",
+        "source": "f60af86a-1456-474a-9935-0f3a06c191df",
+        "target": "30d87c49-2532-4a1c-baae-58b6b279e949"
+      },
+      {
+        "id": "e8957f82-4f71-4459-ade7-7f0ecf6ae20a",
+        "source": "30d87c49-2532-4a1c-baae-58b6b279e949",
+        "target": "4f34b1fc-8c2f-4646-b871-564fb0500f71"
+      },
+      {
+        "id": "9924f900-84c9-4659-b355-cf44b1b49633",
+        "source": "4f34b1fc-8c2f-4646-b871-564fb0500f71",
+        "target": "abbc5809-0f03-4a93-843c-9af279706c59"
+      },
+      {
+        "id": "83660475-fe4e-4787-9aca-e96d100504f4",
+        "source": "abbc5809-0f03-4a93-843c-9af279706c59",
+        "target": "fcc8a8ba-4c11-4a59-a53c-1154fabd18f7"
+      },
+      {
+        "id": "073b055a-5faf-44d8-ad6e-c6efcc9551ee",
+        "source": "fcc8a8ba-4c11-4a59-a53c-1154fabd18f7",
+        "target": "aa87f955-251d-4faa-b238-7bf9c49ea88e"
+      },
+      {
+        "id": "653e74fd-dc01-4eea-a4f8-7d32c9c0bd3a",
+        "source": "aa87f955-251d-4faa-b238-7bf9c49ea88e",
+        "target": "fca8a6ea-85c4-4890-8061-1d99403e1f67",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "5b93b602-9e10-4c52-8943-cfb192e1ad63",
+        "source": "aa87f955-251d-4faa-b238-7bf9c49ea88e",
+        "target": "ff06bb47-b5cc-4b8d-8ede-ef66077105be",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "cf9c8232-247b-48aa-932b-5ffad1719ee2",
+        "source": "aa87f955-251d-4faa-b238-7bf9c49ea88e",
+        "target": "2b3a7ab5-2003-46da-b4c8-1b2ba760131f",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "c8ff7807-3c3a-4bd5-b903-a5ca3cf7f955",
+        "source": "2b3a7ab5-2003-46da-b4c8-1b2ba760131f",
+        "target": "f3a917e1-a9fc-4154-ac89-2ee1dae87af6"
+      },
+      {
+        "id": "563fafa4-0521-4890-a5f6-70726984b7af",
+        "source": "f3a917e1-a9fc-4154-ac89-2ee1dae87af6",
+        "target": "e7361f73-89a0-411a-a878-45477877ce2a"
+      },
+      {
+        "id": "36d864d0-c41f-46ab-a726-60fda425bcb4",
+        "source": "e7361f73-89a0-411a-a878-45477877ce2a",
+        "target": "e9c07c6f-a0a9-4621-b327-52433e9a7959"
+      },
+      {
+        "id": "96d083dd-fb30-48f5-b1fd-26bc52a988da",
+        "source": "921b2a2e-6f66-4a60-8e6b-18b1de463893",
+        "target": "90c28517-5b69-401b-90f1-10e74befd390",
+        "sourceHandle": "finally"
+      },
+      {
+        "id": "9dfbe260-5b1e-42ab-adc9-ef4899bea92c",
+        "source": "90c28517-5b69-401b-90f1-10e74befd390",
+        "target": "f2bb56de-526a-4375-9e69-1f44568536a1"
+      },
+      {
+        "id": "dc86c895-af8e-4cea-9f24-825688a1c3ff",
+        "source": "921b2a2e-6f66-4a60-8e6b-18b1de463893",
+        "target": "9df77edf-c076-46f5-ba4b-9ecd669c98b2",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "b5f4ad47-eef1-4e1b-bb95-57c4a8a4159e",
+        "source": "9df77edf-c076-46f5-ba4b-9ecd669c98b2",
+        "target": "87423eee-22de-4b7c-902d-f1f96a01a880"
+      }
+    ]
+  }
+}

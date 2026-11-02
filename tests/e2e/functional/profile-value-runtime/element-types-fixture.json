@@ -1,0 +1,60 @@
+{
+  "name": "V-PROF-VALUE-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "A Log bound to a custom profile reads its typed map field",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "929c896f-11e8-480d-9604-c68e427f45c4",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Profile map probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__MAP_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": [
+              {
+                "profileId": "__PROFILE_ID__",
+                "alias": "prof",
+                "profileName": "__PROFILE_NAME__",
+                "profileType": "custom"
+              }
+            ]
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "929c896f-11e8-480d-9604-c68e427f45c4",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

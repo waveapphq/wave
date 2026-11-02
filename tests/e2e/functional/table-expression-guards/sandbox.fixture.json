@@ -1,0 +1,116 @@
+{
+  "name": "Table Expression Guards - Comprehensions, lambdas and sandbox builtins",
+  "version": "1.0.0",
+  "description": "Element field expressions carrying a comprehension, a lambda and the sandbox builtins the element expression surface provides must save and validate clean - their local names are not undeclared variables - and must evaluate at run time.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-rows",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "operation": "parse", "csv_content": "sku,qty\nA-1,3\nB-2,7\n" },
+            "outputBindings": { "table": "rows" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-comprehension",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Comprehension",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-comp=' + ','.join([r['sku'] for r in rows])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-lambda",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Lambda",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-lambda=' + str((lambda v: v * 2)(21))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-builtins",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Builtins",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-builtins=' + ','.join(map(str, [1, 2, 3])) + '|' + str(any([False, True])) + '|' + format(7, 'd')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-rows", "type": "default" },
+      { "id": "e2", "source": "parse-rows", "target": "log-comprehension", "type": "default" },
+      { "id": "e3", "source": "log-comprehension", "target": "log-lambda", "type": "default" },
+      { "id": "e4", "source": "log-lambda", "target": "log-builtins", "type": "default" }
+    ]
+  },
+  "variables": {
+    "rows": { "value": [], "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

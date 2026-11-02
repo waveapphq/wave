@@ -1,0 +1,94 @@
+{
+  "name": "V-VMGR Functional Panel Behavior",
+  "version": "1.0.0",
+  "description": "Workflow that exercises the Variable Manager panel end-to-end: a Var Setter writes literals + a 2-record array (records, so the live push cannot mistake a declared array for a table) + a 3-key map; one expression variable (referenced_expr) is read by a Log so it realizes lazily; another (unused_expr) is never read so it stays as expression text; a SECRET stays masked. Used by V-VMGR-03 to assert post-run runtime values, the eye toggle, Run All clearing stale values, and edit / delete unlocking on a passing terminal state.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-state",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 100 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Demo State",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["items_arr", "map_data"],
+          "variableTypes": { "counter": "integer", "items_arr": "array", "map_data": "map" },
+          "config": {
+            "values": {
+              "variables": {
+                "counter": 5,
+                "items_arr": "[{'name': 'alpha', 'ok': True}, {'name': 'beta', 'ok': False}]",
+                "map_data": "{'x': 1, 'y': 2, 'z': 3}"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-referenced",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 180 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Referenced Expr",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'referenced_expr=' + str(referenced_expr)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-state", "type": "default" },
+      { "id": "e2", "source": "varset-state", "target": "log-referenced", "type": "default" }
+    ]
+  },
+  "variables": {
+    "counter": { "value": 0, "type": "integer", "scope": "test" },
+    "items_arr": { "value": [], "type": "array", "scope": "test" },
+    "map_data": { "value": {}, "type": "map", "scope": "test" },
+    "referenced_expr": {
+      "value": "counter + 10",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    },
+    "unused_expr": {
+      "value": "9999",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    },
+    "api_token": {
+      "value": "secret-token-123",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-05-09T00:00:00.000000",
+  "updated_at": "2026-05-09T00:00:00.000000"
+}

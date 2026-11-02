@@ -1,0 +1,2 @@
+[mariadbd]
+performance_schema = ON

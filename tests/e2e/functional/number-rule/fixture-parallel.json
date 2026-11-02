@@ -1,0 +1,221 @@
+{
+  "name": "zz-11541-s9-parallel",
+  "version": "1.0.0",
+  "description": "A Parallel whose capped branch gets a time limit typed in the sheet",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e42145a8-df5d-4a10-9e5a-136425a7f5a8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log before",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'parallel-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e5a9cca8-32da-457f-a456-9b5437543b08",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Race the limit",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Race the limit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "capped"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "sibling"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "008a8d3b-9638-420c-b000-75b62abd92dd",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 260
+        },
+        "data": {
+          "label": "Capped wait",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Capped wait",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0ef92ac9-1234-4ee5-8667-62939fbcbf8d",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Sibling wait",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Sibling wait",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6ecb3af6-2c7a-4392-ab6b-259d5873fffd",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 260
+        },
+        "data": {
+          "label": "Log then",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log then",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'parallel-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-par-start",
+        "source": "start-node",
+        "target": "e42145a8-df5d-4a10-9e5a-136425a7f5a8",
+        "type": "default"
+      },
+      {
+        "id": "e-par-before",
+        "source": "e42145a8-df5d-4a10-9e5a-136425a7f5a8",
+        "target": "e5a9cca8-32da-457f-a456-9b5437543b08",
+        "type": "default"
+      },
+      {
+        "id": "e-par-b1",
+        "source": "e5a9cca8-32da-457f-a456-9b5437543b08",
+        "target": "008a8d3b-9638-420c-b000-75b62abd92dd",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-par-b2",
+        "source": "e5a9cca8-32da-457f-a456-9b5437543b08",
+        "target": "0ef92ac9-1234-4ee5-8667-62939fbcbf8d",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-par-then",
+        "source": "e5a9cca8-32da-457f-a456-9b5437543b08",
+        "target": "6ecb3af6-2c7a-4392-ab6b-259d5873fffd",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

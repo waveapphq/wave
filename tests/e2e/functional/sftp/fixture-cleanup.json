@@ -1,0 +1,249 @@
+{
+  "name": "SFTP Cleanup as wave __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "Safety net after an SFTP spec: reports on one path, then removes the spec's folders from wave's home.",
+  "variables": {
+    "cleanup_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_exists": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "probe_type": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_size": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "remove_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "remove_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c8e9f56d-b750-4b5d-a068-8a178ea4f519",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the cleanup session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "cleanup_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "7d56a9ee-4724-4ebe-91d2-004d104d48b8",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats before removal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "cleanup_session",
+              "operation": "stats",
+              "path": "__PROBE_PATH__"
+            },
+            "outputBindings": {
+              "exists": "probe_exists",
+              "type": "probe_type",
+              "size": "probe_size"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "afd94da6-a306-4ff8-82b8-a2c48686cdee",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 260
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remove the spec folders",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "cleanup_session",
+              "command": "rm -rf -- __REMOVE_PATHS__",
+              "timeout": 120
+            },
+            "outputBindings": {
+              "exit_code": "remove_exit",
+              "stderr": "remove_stderr"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b040ac9a-b662-41c6-8476-773b0cc1901e",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 340
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the cleanup session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "cleanup_session"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cecc9e6e-a027-41f1-97e5-5aa993544665",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-cleanup-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "ab83e6be-ee8b-4b53-8a80-82c71cfee1e7",
+        "source": "start-node",
+        "target": "c8e9f56d-b750-4b5d-a068-8a178ea4f519"
+      },
+      {
+        "id": "73542770-7ba0-46b5-abf3-8dd4817fcb05",
+        "source": "c8e9f56d-b750-4b5d-a068-8a178ea4f519",
+        "target": "7d56a9ee-4724-4ebe-91d2-004d104d48b8"
+      },
+      {
+        "id": "64f883b5-a1c3-42ed-a5ae-aecf43454605",
+        "source": "7d56a9ee-4724-4ebe-91d2-004d104d48b8",
+        "target": "afd94da6-a306-4ff8-82b8-a2c48686cdee"
+      },
+      {
+        "id": "acc59d6a-4f81-49e0-a17c-5f4bff1b55ca",
+        "source": "afd94da6-a306-4ff8-82b8-a2c48686cdee",
+        "target": "b040ac9a-b662-41c6-8476-773b0cc1901e"
+      },
+      {
+        "id": "3f5cf39c-23bb-44fc-a06f-1a5e88a1edb9",
+        "source": "b040ac9a-b662-41c6-8476-773b0cc1901e",
+        "target": "cecc9e6e-a027-41f1-97e5-5aa993544665"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

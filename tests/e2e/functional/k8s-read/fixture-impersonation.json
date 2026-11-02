@@ -1,0 +1,482 @@
+{
+  "name": "K8s Read Impersonation Baseline E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-admin",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Admin session pinned to the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert",
+            "namespace"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "k8s_ns",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_admin"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "get-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "S-13 leg A - Secret list, no impersonation",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "resource_type": "default",
+              "kind": "Secret",
+              "search_by": "list",
+              "output_format": "map",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "names": "a_names",
+              "success": "a_ok",
+              "error": "a_error",
+              "reason": "a_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-get-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S-13 leg A get marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R5 legA S-13 get ok={a_ok} reason={a_reason} error={a_error} evidence={a_names}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "events-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "K8s Events",
+          "elementType": "k8s-events",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "S-13 leg A - namespace events, no impersonation",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "scope_to_object": false,
+              "event_type": "any",
+              "output_format": "map",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "count": "ae_count",
+              "success": "ae_ok",
+              "error": "ae_error",
+              "reason": "ae_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-events-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S-13 leg A events marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R5 legA S-13 events ok={ae_ok} reason={ae_reason} error={ae_error} evidence={ae_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "logs-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "K8s Logs",
+          "elementType": "k8s-logs",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "S-13 leg A - pod log, no impersonation",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "pod": "wave-pod-kubelet",
+              "container": "app",
+              "previous": false,
+              "tail_lines": 1,
+              "timestamps": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "logs": "al_logs",
+              "success": "al_ok",
+              "error": "al_error",
+              "reason": "al_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-logs-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S-13 leg A logs marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R5 legA S-13 logs ok={al_ok} reason={al_reason} error={al_error} evidence={al_logs}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "top-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 590 },
+        "data": {
+          "label": "K8s Top",
+          "elementType": "k8s-top",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "S-13 leg A - pod usage, no impersonation",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "scope": "pod",
+              "select_by": "all",
+              "include_containers": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "count": "at_count",
+              "success": "at_ok",
+              "error": "at_error",
+              "reason": "at_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-top-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S-13 leg A top marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R5 legA S-13 top ok={at_ok} reason={at_reason} error={at_error} evidence={at_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'r5-baseline-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-connect-admin",
+        "source": "start-node",
+        "target": "connect-admin"
+      },
+      {
+        "id": "edge-connect-admin-get-a",
+        "source": "connect-admin",
+        "target": "get-a"
+      },
+      {
+        "id": "edge-get-a-log-get-a",
+        "source": "get-a",
+        "target": "log-get-a"
+      },
+      {
+        "id": "edge-log-get-a-events-a",
+        "source": "log-get-a",
+        "target": "events-a"
+      },
+      {
+        "id": "edge-events-a-log-events-a",
+        "source": "events-a",
+        "target": "log-events-a"
+      },
+      {
+        "id": "edge-log-events-a-logs-a",
+        "source": "log-events-a",
+        "target": "logs-a"
+      },
+      {
+        "id": "edge-logs-a-log-logs-a",
+        "source": "logs-a",
+        "target": "log-logs-a"
+      },
+      {
+        "id": "edge-log-logs-a-top-a",
+        "source": "log-logs-a",
+        "target": "top-a"
+      },
+      {
+        "id": "edge-top-a-log-top-a",
+        "source": "top-a",
+        "target": "log-top-a"
+      },
+      {
+        "id": "edge-log-top-a-log-done",
+        "source": "log-top-a",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_ns": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_admin": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "a_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ae_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ae_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ae_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "al_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "al_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "al_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "at_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "at_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "at_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "ae_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "al_logs": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "at_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

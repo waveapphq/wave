@@ -1,0 +1,26 @@
+test:
+  name: Recipe Example - HTTP Smoke
+  description: Fetch a page with a templated URL, capture outputs, assert and log the result
+  tags: [example, http]
+variables:
+  base_url: {type: string, value: "http://localhost:8000"}
+  attempts: {type: integer, value: 3}
+  api_url: {type: string, expr: "base_url + '/api'"}
+flow:
+  - block: http-client
+    label: Fetch health
+    settings:
+      url: "{{ base_url }}/health"
+      method: GET
+      timeout: {expr: "attempts * 10"}
+    capture:
+      status_code: health_status
+      body: health_body
+  - assert:
+      that:
+        - "health_status == 200"
+      fail_current_scope: true
+  - block: log
+    settings:
+      message: "Fetched {{ base_url }}/health with status {{ health_status }}"
+      level: INFO

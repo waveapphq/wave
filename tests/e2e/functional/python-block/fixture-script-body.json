@@ -1,0 +1,184 @@
+{
+  "name": "PYBODY",
+  "version": "1.0.0",
+  "description": "The four script bodies whose Edit value sheet the Plain lock and the Kind dropdown rules govern: Shell Script, Python, K8s Script and SSH Session Script. Never run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sb-shell",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Plain-locked Script body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo body",
+              "shell": "/bin/bash"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sb-python",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python-mode Script body plus a plain Interpreter row",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "value = 1\n",
+              "interpreter": ""
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sb-k8s",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "K8s Script",
+          "elementType": "k8s-script",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Plain-locked Script body",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_sid",
+              "pod": "wave-probe-pod",
+              "container": "app",
+              "interpreter": "/bin/sh",
+              "script": "echo body",
+              "timeout": 60
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sb-ssh",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Plain-locked Script body",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "ssh_sid",
+              "script": "echo body",
+              "interpreter": "/bin/sh",
+              "timeout": 30
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-shell",
+        "source": "start-node",
+        "target": "sb-shell"
+      },
+      {
+        "id": "e-shell-python",
+        "source": "sb-shell",
+        "target": "sb-python"
+      },
+      {
+        "id": "e-python-k8s",
+        "source": "sb-python",
+        "target": "sb-k8s"
+      },
+      {
+        "id": "e-k8s-ssh",
+        "source": "sb-k8s",
+        "target": "sb-ssh"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

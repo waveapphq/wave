@@ -1,0 +1,52 @@
+{
+  "name": "V-PLUGIN-SQL-EDITOR admin __TOKEN__",
+  "version": "1.0.0",
+  "description": "One SQL block the spec fills with a setup, probe or teardown statement and runs as a tracked execution.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f01f5917-b1bf-432a-94ba-a5d1a98c799d",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Admin",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "script_type": "source",
+              "sql": "__ADMIN_SQL__",
+              "parameters": {},
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "row_count": "admin_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "2b06975f-f9a2-4a8c-ad06-41b7dd87f1b2",
+        "source": "start-node",
+        "target": "f01f5917-b1bf-432a-94ba-a5d1a98c799d"
+      }
+    ]
+  },
+  "variables": {
+    "admin_count": { "value": -1, "type": "integer", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

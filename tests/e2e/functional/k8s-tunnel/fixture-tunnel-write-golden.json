@@ -1,0 +1,1078 @@
+{
+  "name": "K8s Tunneled Write E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "SSH session the tunnel rides",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tunnel-open",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Tunnel to the unpublished cluster",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "kwok-internal",
+              "remote_port": 6443
+            },
+            "outputBindings": {
+              "tunnel_id": "tid",
+              "local_port": "lport"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "connect-a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: the tunneled cluster",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "api_url",
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "f'https://127.0.0.1:{lport}'",
+              "namespace": "wave-e2e-golden00",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "tls_server_name": "kwok-internal"
+            },
+            "outputBindings": {
+              "session": "sess_a",
+              "cluster_version": "ver_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "connect-b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: the published cluster",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "wave-e2e-golden00",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_b",
+              "cluster_version": "ver_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ns-a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: create the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "define_with": "manifest",
+              "manifest": "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: wave-e2e-golden00\n",
+              "if_exists": "update",
+              "output_format": "map",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "names": "ns_a_names",
+              "count": "ns_a_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-a-solo",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: write the tunnel-only ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-tun-golden00",
+              "data": {
+                "origin": "tunneled",
+                "run": "golden00"
+              },
+              "if_exists": "update",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "a_solo_applied",
+              "names": "a_solo_names",
+              "count": "a_solo_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-b-solo",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: write the published-only ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_b",
+              "timeout": 30,
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-pub-golden00",
+              "data": {
+                "origin": "published",
+                "run": "golden00"
+              },
+              "if_exists": "update",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "names": "b_solo_names",
+              "count": "b_solo_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-a-both",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: write the shared-name ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-both-golden00",
+              "data": {
+                "origin": "tunneled",
+                "run": "golden00"
+              },
+              "if_exists": "update",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "count": "a_both_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-b-both",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: write the shared-name ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_b",
+              "timeout": 30,
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-both-golden00",
+              "data": {
+                "origin": "published",
+                "run": "golden00"
+              },
+              "if_exists": "update",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "count": "b_both_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-a-solo",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: read the tunnel-only ConfigMap back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-tun-golden00",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "a_solo_result",
+              "count": "a_solo_read"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-b-both",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: read the shared-name ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_b",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-both-golden00",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "b_both_result"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-a-both",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: read the shared-name ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-both-golden00",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "a_both_result"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-b-miss",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: the tunnel-only ConfigMap is absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_b",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-tun-golden00",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "names": "b_miss_names",
+              "count": "b_miss_count",
+              "success": "b_miss_ok",
+              "error": "b_miss_err",
+              "reason": "b_miss_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-a-miss",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: the published-only ConfigMap is absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-pub-golden00",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden00",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "names": "a_miss_names",
+              "count": "a_miss_count",
+              "success": "a_miss_ok",
+              "error": "a_miss_err",
+              "reason": "a_miss_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-roundtrip",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Roundtrip and split marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[KT] verA={ver_a} verB={ver_b} nsA={ns_a_count} applyA={a_solo_count} applyB={b_solo_count} readA={a_solo_read} missB={b_miss_reason} missA={a_miss_reason}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delete-a-ns",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "K8s Delete",
+          "elementType": "k8s-delete",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: remove the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "Namespace",
+              "delete_by": "name",
+              "name": "wave-e2e-golden00",
+              "ignore_not_found": true,
+              "cascade": "background",
+              "wait_until_gone": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "names": "a_del_names",
+              "count": "a_del_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tunnel-close",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "tunnel_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid"
+            },
+            "outputBindings": {
+              "closed": "tunnel_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "close-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1290
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SSH session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-tunnel-write-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-open-session",
+        "source": "start-node",
+        "target": "open-session"
+      },
+      {
+        "id": "edge-open-session-tunnel-open",
+        "source": "open-session",
+        "target": "tunnel-open"
+      },
+      {
+        "id": "edge-tunnel-open-connect-a",
+        "source": "tunnel-open",
+        "target": "connect-a"
+      },
+      {
+        "id": "edge-connect-a-connect-b",
+        "source": "connect-a",
+        "target": "connect-b"
+      },
+      {
+        "id": "edge-connect-b-ns-a",
+        "source": "connect-b",
+        "target": "ns-a"
+      },
+      {
+        "id": "edge-ns-a-apply-a-solo",
+        "source": "ns-a",
+        "target": "apply-a-solo"
+      },
+      {
+        "id": "edge-apply-a-solo-apply-b-solo",
+        "source": "apply-a-solo",
+        "target": "apply-b-solo"
+      },
+      {
+        "id": "edge-apply-b-solo-apply-a-both",
+        "source": "apply-b-solo",
+        "target": "apply-a-both"
+      },
+      {
+        "id": "edge-apply-a-both-apply-b-both",
+        "source": "apply-a-both",
+        "target": "apply-b-both"
+      },
+      {
+        "id": "edge-apply-b-both-get-a-solo",
+        "source": "apply-b-both",
+        "target": "get-a-solo"
+      },
+      {
+        "id": "edge-get-a-solo-get-b-both",
+        "source": "get-a-solo",
+        "target": "get-b-both"
+      },
+      {
+        "id": "edge-get-b-both-get-a-both",
+        "source": "get-b-both",
+        "target": "get-a-both"
+      },
+      {
+        "id": "edge-get-a-both-get-b-miss",
+        "source": "get-a-both",
+        "target": "get-b-miss"
+      },
+      {
+        "id": "edge-get-b-miss-get-a-miss",
+        "source": "get-b-miss",
+        "target": "get-a-miss"
+      },
+      {
+        "id": "edge-get-a-miss-log-roundtrip",
+        "source": "get-a-miss",
+        "target": "log-roundtrip"
+      },
+      {
+        "id": "edge-log-roundtrip-delete-a-ns",
+        "source": "log-roundtrip",
+        "target": "delete-a-ns"
+      },
+      {
+        "id": "edge-delete-a-ns-tunnel-close",
+        "source": "delete-a-ns",
+        "target": "tunnel-close"
+      },
+      {
+        "id": "edge-tunnel-close-close-session",
+        "source": "tunnel-close",
+        "target": "close-session"
+      },
+      {
+        "id": "edge-close-session-log-done",
+        "source": "close-session",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "tid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lport": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sess_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ver_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ver_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ns_a_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "ns_a_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "a_solo_applied": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "a_solo_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "a_solo_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "b_solo_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "b_solo_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "a_both_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "b_both_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "a_solo_read": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "a_solo_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "a_both_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "b_both_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "b_miss_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "b_miss_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "b_miss_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_miss_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "b_miss_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_miss_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "a_miss_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "a_miss_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "a_miss_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_miss_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_del_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "a_del_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tunnel_closed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

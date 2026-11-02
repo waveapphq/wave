@@ -1,0 +1,489 @@
+{
+ "name": "Secret New Carriers E2E",
+ "version": "1.0.0",
+ "description": "Two secret carriers: a Variable Setter secret literal (sealed at rest, unsealed at run) and a plugin output bound to a secret variable (masked at runtime). Both mask on every output surface and compute on the real bytes.",
+ "workflow": {
+  "nodes": [
+   {
+    "id": "delay-hold",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 60
+    },
+    "data": {
+     "label": "Delay",
+     "elementType": "delay",
+     "nodeType": "control",
+     "category": "timing",
+     "version": "1.0.0",
+     "description": "WS Subscribe Window",
+     "hasNewerVersion": false,
+     "expressionFields": [],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "duration": 3000
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "setter-secret",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 140
+    },
+    "data": {
+     "label": "Var Setter",
+     "elementType": "variable-setter",
+     "nodeType": "control",
+     "category": "flow",
+     "version": "1.0.0",
+     "description": "Set Secret Literal",
+     "hasNewerVersion": false,
+     "expressionFields": [],
+     "templateFields": [],
+     "variableExpressionKeys": [],
+     "variableTypes": {
+      "setter_secret": "string"
+     },
+     "config": {
+      "values": {
+       "variables": {
+        "setter_secret": "STseal-7a2-sierra-real-bytes"
+       }
+      },
+      "variableSecretKeys": [
+       "setter_secret"
+      ],
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "json-parse",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 220
+    },
+    "data": {
+     "label": "JSON Parser",
+     "elementType": "json-parser",
+     "nodeType": "plugin",
+     "category": "data",
+     "version": "1.0.0",
+     "description": "Parse Secret Output",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "json_content"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "json_content": "secret_doc",
+       "queries": {
+        "secret_q": "$.secret_field",
+        "public_q": "$.public_field"
+       },
+       "output_mode": "individual",
+       "query_output_types": {
+        "secret_q": "string",
+        "public_q": "string"
+       }
+      },
+      "outputBindings": {
+       "secret_q": "bound_secret",
+       "public_q": "bound_public"
+      },
+      "outputSecretFields": [
+       "secret_q"
+      ],
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-setter-direct",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 300
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Setter Secret Direct",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "setter_secret",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-setter-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 370
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Setter Secret Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'s-proof=' + setter_secret[11:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-output-direct",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 440
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Bound Secret Direct",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "bound_secret",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-output-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 510
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Bound Secret Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'o-proof=' + bound_secret[11:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-public",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 580
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Public Output",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'pub=' + bound_public",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "setter-vmplain",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 800
+    },
+    "data": {
+     "label": "Set Vars",
+     "elementType": "variable-setter",
+     "nodeType": "control",
+     "version": "1.0.0",
+     "description": "Set VM-Plain Secret",
+     "hasNewerVersion": false,
+     "expressionFields": [],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "variables": {
+        "vm_plain_setter_secret": "VMonly-9f3-victor-real-bytes"
+       }
+      },
+      "variableSecretKeys": [
+       "vm_plain_setter_secret"
+      ],
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-vmplain-direct",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 870
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "version": "1.0.0",
+     "description": "Log VM-Plain Secret Direct",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "vm_plain_setter_secret",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-vmplain-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 940
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "version": "1.0.0",
+     "description": "Log VM-Plain Secret Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'vp-proof=' + vm_plain_setter_secret[11:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "e0",
+    "source": "start-node",
+    "target": "delay-hold",
+    "type": "default"
+   },
+   {
+    "id": "e1",
+    "source": "delay-hold",
+    "target": "setter-secret",
+    "type": "default"
+   },
+   {
+    "id": "e2",
+    "source": "setter-secret",
+    "target": "json-parse",
+    "type": "default"
+   },
+   {
+    "id": "e3",
+    "source": "json-parse",
+    "target": "log-setter-direct",
+    "type": "default"
+   },
+   {
+    "id": "e4",
+    "source": "log-setter-direct",
+    "target": "log-setter-proof",
+    "type": "default"
+   },
+   {
+    "id": "e5",
+    "source": "log-setter-proof",
+    "target": "log-output-direct",
+    "type": "default"
+   },
+   {
+    "id": "e6",
+    "source": "log-output-direct",
+    "target": "log-output-proof",
+    "type": "default"
+   },
+   {
+    "id": "e7",
+    "source": "log-output-proof",
+    "target": "log-public",
+    "type": "default"
+   },
+   {
+    "id": "e-vm1",
+    "source": "log-public",
+    "target": "setter-vmplain",
+    "type": "default"
+   },
+   {
+    "id": "e-vm2",
+    "source": "setter-vmplain",
+    "target": "log-vmplain-direct",
+    "type": "default"
+   },
+   {
+    "id": "e-vm3",
+    "source": "log-vmplain-direct",
+    "target": "log-vmplain-proof",
+    "type": "default"
+   }
+  ]
+ },
+ "variables": {
+  "secret_doc": {
+   "value": "{\"secret_field\":\"OBbind-4c8-oscar-real-bytes\",\"public_field\":\"pub-visible-marker\"}",
+   "type": "string",
+   "scope": "test",
+   "secret": true
+  },
+  "setter_secret": {
+   "value": "unset-overwritten-by-setter",
+   "type": "string",
+   "scope": "test",
+   "secret": true
+  },
+  "bound_secret": {
+   "value": "unset-overwritten-by-output",
+   "type": "string",
+   "scope": "test",
+   "secret": true
+  },
+  "bound_public": {
+   "value": "",
+   "type": "string",
+   "scope": "test"
+  },
+  "vm_plain_setter_secret": {
+   "value": "unset-overwritten-by-setter",
+   "type": "string",
+   "scope": "test"
+  }
+ },
+ "metadata": {},
+ "created_at": "2026-01-01T00:00:00.000000",
+ "updated_at": "2026-01-01T00:00:00.000000"
+}

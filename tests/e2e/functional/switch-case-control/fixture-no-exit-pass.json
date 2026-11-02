@@ -1,0 +1,449 @@
+{
+  "name": "Switch No-Exit Passing Case E2E",
+  "version": "1.0.0",
+  "description": "Two passing Switches in a chain: the first has its then lane wired and must carry the flow on exactly as before, the second is the last Block on the canvas with nothing wired to its then handle and must still report the run passed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-snp-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-snp-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "sw=hit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "sw": "hit"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sw-snp-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Exit wired, matched case passes",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "snp1 hit",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "hit",
+                      "reference_is_expression": false,
+                      "id": "snp1-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "snp1 miss",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "nope",
+                      "reference_is_expression": false,
+                      "id": "snp1-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-snp-1-hit",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-1-hit'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-snp-1-miss",
+        "type": "workflowNode",
+        "position": {
+          "x": 340,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-1-miss'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-snp-1-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 exit lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-1-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sw-snp-2",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 460
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "No exit wired, matched case passes",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "snp2 hit",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "hit",
+                      "reference_is_expression": false,
+                      "id": "snp2-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "snp2 miss",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "nope",
+                      "reference_is_expression": false,
+                      "id": "snp2-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-snp-2-hit",
+        "type": "workflowNode",
+        "position": {
+          "x": 480,
+          "y": 580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S2 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-2-hit'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-snp-2-miss",
+        "type": "workflowNode",
+        "position": {
+          "x": 740,
+          "y": 580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S2 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'snp-2-miss'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-snp-start",
+        "source": "start-node",
+        "target": "log-snp-before",
+        "type": "default"
+      },
+      {
+        "id": "e-snp-before",
+        "source": "log-snp-before",
+        "target": "vs-snp-1",
+        "type": "default"
+      },
+      {
+        "id": "e-snp-vs1",
+        "source": "vs-snp-1",
+        "target": "sw-snp-1",
+        "type": "default"
+      },
+      {
+        "id": "e-snp-1-b0",
+        "source": "sw-snp-1",
+        "target": "log-snp-1-hit",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-snp-1-b1",
+        "source": "sw-snp-1",
+        "target": "log-snp-1-miss",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-snp-1-then",
+        "source": "sw-snp-1",
+        "target": "log-snp-1-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-snp-1-chain",
+        "source": "log-snp-1-then",
+        "target": "sw-snp-2",
+        "type": "default"
+      },
+      {
+        "id": "e-snp-2-b0",
+        "source": "sw-snp-2",
+        "target": "log-snp-2-hit",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-snp-2-b1",
+        "source": "sw-snp-2",
+        "target": "log-snp-2-miss",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      }
+    ]
+  },
+  "variables": {
+    "sw": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

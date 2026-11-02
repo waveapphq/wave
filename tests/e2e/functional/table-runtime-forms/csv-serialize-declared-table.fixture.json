@@ -1,0 +1,72 @@
+{
+  "name": "Table Runtime Forms - Serialize a declared table variable",
+  "version": "1.0.0",
+  "description": "A table variable declared in the Variable Manager (never written by a plugin) is serialized by the CSV converter and the resulting text is logged.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "serialize-declared",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Declared Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "operation": "serialize", "table": "declared_orders" },
+            "outputBindings": { "csv_content": "declared_text" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-declared",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Declared Text",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'declared-csv=' + declared_text.replace('\\n', '~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "serialize-declared", "type": "default" },
+      { "id": "e2", "source": "serialize-declared", "target": "log-declared", "type": "default" }
+    ]
+  },
+  "variables": {
+    "declared_orders": {
+      "value": [
+        { "sku": "A-1", "qty": 3 },
+        { "sku": "B-2", "qty": 7 }
+      ],
+      "type": "table",
+      "scope": "test"
+    },
+    "declared_text": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {}
+}

@@ -1,0 +1,15 @@
+# WAVE E2E Oracle Database Free (test-only): the `wave` user (schema WAVE) in the
+# default pluggable database, service name FREEPDB1, and the seed procedure for
+# the Call procedure leg. No TLS: the E2E stack runs Oracle over plain TCP.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/oracle)
+FROM docker.io/gvenzl/oracle-free:slim-faststart
+
+# SYS / SYSTEM take ORACLE_PASSWORD; APP_USER is created in FREEPDB1 at first start.
+ENV ORACLE_PASSWORD=Wave-Admin-Secret-1 \
+    APP_USER=wave \
+    APP_USER_PASSWORD=sql-secret
+
+COPY initdb/ /container-entrypoint-initdb.d/
+COPY healthcheck.sh /wave/healthcheck.sh
+
+EXPOSE 1521

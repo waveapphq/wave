@@ -1,0 +1,2036 @@
+{
+  "name": "V-PLUGIN-SQL-RUN",
+  "version": "1.0.0",
+  "description": "Run SQL, direct, on PostgreSQL, MariaDB, Oracle, SQL Server and SQLite: a script split the database's own way with :name parameters and typed rows back, no WAVE transaction, a Template body, an expression SQL row, TLS with a verified certificate and a driver option per database; a Finally path drops every table the run made.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "48310e62-0e9c-5391-bd03-327423db8d63",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Run SQL and drop what it made",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "sqlrun_error",
+              "caught": "sqlrun_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "323cef42-624d-5307-8985-f6195eb922e9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "PG script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.qty",
+            "parameters.memo"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "CREATE TABLE sqlrun_pg___TOKEN__ (id INTEGER PRIMARY KEY, name VARCHAR(40) NOT NULL, qty INTEGER, price NUMERIC(10,2), active BOOLEAN, note VARCHAR(40), created TIMESTAMP, memo VARCHAR(40));\nINSERT INTO sqlrun_pg___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (1, :label, :qty, :price, TRUE, :label, TIMESTAMP '2026-09-23 10:11:12', 'given');\nINSERT INTO sqlrun_pg___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (2, 'plain; with semicolon', 5, 7.25, FALSE, :note, TIMESTAMP '2026-01-02 03:04:05', :memo);\nUPDATE sqlrun_pg___TOKEN__ SET qty = qty + 1;\nSELECT id, name, qty, price, active, note, created, memo FROM sqlrun_pg___TOKEN__ ORDER BY id;\nUPDATE sqlrun_pg___TOKEN__ SET qty = qty + 10 WHERE id = 2;\n",
+              "parameters": {
+                "label": "O'Brien; widget",
+                "qty": "3",
+                "price": "12.50",
+                "note": "",
+                "memo": "None"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pg_ok",
+              "rows": "pg_rows",
+              "row_count": "pg_count",
+              "rows_changed": "pg_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "19f1629f-70f8-5009-a6e2-513f2f999612",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "PG no transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG no transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO sqlrun_pg___TOKEN__ (id, name, qty) VALUES (3, 'kept without a transaction', 1);\nINSERT INTO sqlrun_pg_missing___TOKEN__ (id) VALUES (4);\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "pg_notx_ok",
+              "error": "pg_notx_error",
+              "reason": "pg_notx_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "dccf9fcf-7fed-5f2c-ae5b-dd74ad313ccf",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "PG read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "sql"
+          ],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty FROM {{ pg_table }} WHERE id >= 2 ORDER BY id",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pg_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a2737a8b-09b6-4bb1-bfea-d0c903d60be7",
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 385
+        },
+        "data": {
+          "label": "PG expression",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "sql",
+            "parameters.min_qty"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "f\"SELECT id, qty FROM {pg_table} WHERE qty >= :min_qty ORDER BY id\"",
+              "parameters": {
+                "min_qty": "4"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pg_expr_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b77d7d41-4b91-5bc0-b33a-8816a143b0ba",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 430
+        },
+        "data": {
+          "label": "PG session",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "script_type": "source",
+              "sql": "SELECT s.ssl, s.version, s.client_dn, current_setting('application_name') AS app, '{{ pg_table }}' AS plain_text FROM pg_stat_ssl AS s WHERE s.pid = pg_backend_pid()",
+              "driver_options": {
+                "application_name": "sqlrun-__TOKEN__"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pg_session_ok",
+              "rows": "pg_session_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3cf9bd60-444a-5fc6-96c6-a92c08b8fe86",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "PG proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-pg ok={pg_ok} count={pg_count} changed={pg_changed} name={pg_rows[0]['name']} price={pg_rows[0]['price']} active={pg_rows[0]['active']} note2={pg_rows[1]['note']} memo2={pg_rows[1]['memo']} notx={pg_notx_ok}/{pg_notx_reason} back={pg_back_rows[0]['qty']}/{pg_back_rows[1]['name']} session={pg_session_ok} app={pg_session_rows[0]['app']} version={pg_session_rows[0]['version']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b5adf9a3-33d5-5972-b176-314aa69fefc3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 610
+        },
+        "data": {
+          "label": "MariaDB script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.qty",
+            "parameters.memo"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "CREATE TABLE sqlrun_my___TOKEN__ (id INT PRIMARY KEY, name VARCHAR(40) NOT NULL, qty INT, price DECIMAL(10,2), active BOOLEAN, note VARCHAR(40), created DATETIME, memo VARCHAR(40));\nINSERT INTO sqlrun_my___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (1, :label, :qty, :price, TRUE, :label, TIMESTAMP '2026-09-23 10:11:12', 'given');\nINSERT INTO sqlrun_my___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (2, 'plain; with semicolon', 5, 7.25, FALSE, :note, TIMESTAMP '2026-01-02 03:04:05', :memo);\nUPDATE sqlrun_my___TOKEN__ SET qty = qty + 1;\nSELECT id, name, qty, price, active, note, created, memo FROM sqlrun_my___TOKEN__ ORDER BY id;\nUPDATE sqlrun_my___TOKEN__ SET qty = qty + 10 WHERE id = 2;\n",
+              "parameters": {
+                "label": "O'Brien; widget",
+                "qty": "3",
+                "price": "12.50",
+                "note": "",
+                "memo": "None"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "my_ok",
+              "rows": "my_rows",
+              "row_count": "my_count",
+              "rows_changed": "my_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "81b0128d-0220-5042-98e5-c37b5e9ecaa8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "MariaDB no transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB no transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO sqlrun_my___TOKEN__ (id, name, qty) VALUES (3, 'kept without a transaction', 1);\nINSERT INTO sqlrun_my_missing___TOKEN__ (id) VALUES (4);\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "my_notx_ok",
+              "error": "my_notx_error",
+              "reason": "my_notx_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4cae6315-9062-5b96-aaa9-81703bb0e3af",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 790
+        },
+        "data": {
+          "label": "MariaDB read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "sql"
+          ],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty FROM {{ my_table }} WHERE id >= 2 ORDER BY id",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "my_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "44c26427-6a7b-5d57-b8ae-dd93ce2969ed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 880
+        },
+        "data": {
+          "label": "MariaDB session",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "verify_ssl": true,
+              "ca_cert": "",
+              "script_type": "source",
+              "sql": "SELECT @sqlrun_probe AS probe, VARIABLE_VALUE AS tls_version FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME = 'Ssl_version'",
+              "driver_options": {
+                "init_command": "SET @sqlrun_probe = 'sqlrun-__TOKEN__'"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "my_session_ok",
+              "rows": "my_session_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "322596a6-a98f-57e4-bf10-c8020656a0f4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 970
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "MariaDB proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-my ok={my_ok} count={my_count} changed={my_changed} name={my_rows[0]['name']} price={my_rows[0]['price']} active={my_rows[0]['active']} note2={my_rows[1]['note']} memo2={my_rows[1]['memo']} notx={my_notx_ok}/{my_notx_reason} back={my_back_rows[0]['qty']}/{my_back_rows[1]['name']} session={my_session_ok} probe={my_session_rows[0]['probe']} tls_version={my_session_rows[0]['tls_version']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "012eb84b-e2c0-53a8-a16e-92d8fde24399",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "Oracle script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.qty",
+            "parameters.memo"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "BEGIN\n  EXECUTE IMMEDIATE 'CREATE TABLE sqlrun_ora___TOKEN__ (id NUMBER(10) PRIMARY KEY, name VARCHAR2(40) NOT NULL, qty NUMBER(10), price NUMBER(10,2), active BOOLEAN, note VARCHAR2(40), created TIMESTAMP, memo VARCHAR2(40))';\nEND;\n/\nINSERT INTO sqlrun_ora___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (1, :label, :qty, :price, TRUE, :label, TIMESTAMP '2026-09-23 10:11:12', 'given');\nINSERT INTO sqlrun_ora___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (2, 'plain; with semicolon', 5, 7.25, FALSE, :note, TIMESTAMP '2026-01-02 03:04:05', :memo);\nUPDATE sqlrun_ora___TOKEN__ SET qty = qty + 1;\nSELECT id, name, qty, price, active, note, created, memo FROM sqlrun_ora___TOKEN__ ORDER BY id;\nUPDATE sqlrun_ora___TOKEN__ SET qty = qty + 10 WHERE id = 2;\n",
+              "parameters": {
+                "label": "O'Brien; widget",
+                "qty": "3",
+                "price": "12.50",
+                "note": "",
+                "memo": "None"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ora_ok",
+              "rows": "ora_rows",
+              "row_count": "ora_count",
+              "rows_changed": "ora_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c42c105e-1edb-5eb8-90b5-c048d0adeed5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1150
+        },
+        "data": {
+          "label": "Oracle no transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle no transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO sqlrun_ora___TOKEN__ (id, name, qty) VALUES (3, 'kept without a transaction', 1);\nINSERT INTO sqlrun_ora_missing___TOKEN__ (id) VALUES (4);\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ora_notx_ok",
+              "error": "ora_notx_error",
+              "reason": "ora_notx_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "61584d0e-9085-5325-81d5-71dc152260e8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1240
+        },
+        "data": {
+          "label": "Oracle read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "sql"
+          ],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty FROM {{ ora_table }} WHERE id >= 2 ORDER BY id",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ora_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "68a75bc9-b0f8-5702-b6e2-80cf3bf312cb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1330
+        },
+        "data": {
+          "label": "Oracle session",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT SYS_CONTEXT('USERENV', 'CLIENT_PROGRAM_NAME') AS program FROM dual",
+              "driver_options": {
+                "program": "sqlrun-__TOKEN__"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ora_session_ok",
+              "rows": "ora_session_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "819d2cb0-7524-5e4f-a7ac-74d53a7b77a7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Oracle proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-ora ok={ora_ok} count={ora_count} changed={ora_changed} name={ora_rows[0]['NAME']} price={ora_rows[0]['PRICE']} active={ora_rows[0]['ACTIVE']} note2={ora_rows[1]['NOTE']} memo2={ora_rows[1]['MEMO']} notx={ora_notx_ok}/{ora_notx_reason} back={ora_back_rows[0]['QTY']}/{ora_back_rows[1]['NAME']} session={ora_session_ok} PROGRAM={ora_session_rows[0]['PROGRAM']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b9b725cb-3e2e-5436-a7dc-c13fdb370b11",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1510
+        },
+        "data": {
+          "label": "SQL Server script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.qty",
+            "parameters.memo"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "CREATE TABLE sqlrun_ms___TOKEN__ (id INT PRIMARY KEY, name NVARCHAR(40) NOT NULL, qty INT, price DECIMAL(10,2), active BIT, note NVARCHAR(40), created DATETIME2(0), memo NVARCHAR(40))\nGO\nINSERT INTO sqlrun_ms___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (1, :label, :qty, :price, 1, :label, '2026-09-23T10:11:12', 'given');\nINSERT INTO sqlrun_ms___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (2, 'plain; with semicolon', 5, 7.25, 0, :note, '2026-01-02T03:04:05', :memo);\nGO\nUPDATE sqlrun_ms___TOKEN__ SET qty = qty + 1\nGO\nSELECT id, name, qty, price, active, note, created, memo FROM sqlrun_ms___TOKEN__ ORDER BY id\nGO\nUPDATE sqlrun_ms___TOKEN__ SET qty = qty + 10 WHERE id = 2\n",
+              "parameters": {
+                "label": "O'Brien; widget",
+                "qty": "3",
+                "price": "12.50",
+                "note": "",
+                "memo": "None"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ms_ok",
+              "rows": "ms_rows",
+              "row_count": "ms_count",
+              "rows_changed": "ms_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "845b09cb-cb3c-5f81-b34e-e21bab65ad67",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1600
+        },
+        "data": {
+          "label": "SQL Server no transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server no transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "INSERT INTO sqlrun_ms___TOKEN__ (id, name, qty) VALUES (3, 'kept without a transaction', 1)\nGO\nINSERT INTO sqlrun_ms_missing___TOKEN__ (id) VALUES (4)\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ms_notx_ok",
+              "error": "ms_notx_error",
+              "reason": "ms_notx_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "97de1fe6-0a78-5f22-9397-bf4bfc4b630e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1690
+        },
+        "data": {
+          "label": "SQL Server read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "sql"
+          ],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT id, name, qty FROM {{ ms_table }} WHERE id >= 2 ORDER BY id",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ms_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6b065a9c-e48b-5ef1-977d-b571815fc90c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1780
+        },
+        "data": {
+          "label": "SQL Server session",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "verify_ssl": true,
+              "ca_cert": "",
+              "script_type": "source",
+              "sql": "SELECT c.encrypt_option, APP_NAME() AS app FROM sys.dm_exec_connections AS c WHERE c.session_id = @@SPID",
+              "driver_options": {
+                "appname": "sqlrun-__TOKEN__"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ms_session_ok",
+              "rows": "ms_session_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "43b8a969-9244-529b-a91f-b0a3a3091b0a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "SQL Server proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-ms ok={ms_ok} count={ms_count} changed={ms_changed} name={ms_rows[0]['name']} price={ms_rows[0]['price']} active={ms_rows[0]['active']} note2={ms_rows[1]['note']} memo2={ms_rows[1]['memo']} notx={ms_notx_ok}/{ms_notx_reason} back={ms_back_rows[0]['qty']}/{ms_back_rows[1]['name']} session={ms_session_ok} app={ms_session_rows[0]['app']} encrypt_option={ms_session_rows[0]['encrypt_option']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9d365d5a-5830-53ed-ae12-05743909279c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "SQLite script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.qty",
+            "parameters.memo"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrun-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "CREATE TABLE sqlrun_lite___TOKEN__ (id INTEGER PRIMARY KEY, name TEXT NOT NULL, qty INTEGER, price DECIMAL(10,2), active BOOLEAN, note TEXT, created TIMESTAMP, memo TEXT);\nINSERT INTO sqlrun_lite___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (1, :label, :qty, :price, TRUE, :label, '2026-09-23 10:11:12', 'given');\nINSERT INTO sqlrun_lite___TOKEN__ (id, name, qty, price, active, note, created, memo) VALUES (2, 'plain; with semicolon', 5, 7.25, FALSE, :note, '2026-01-02 03:04:05', :memo);\nUPDATE sqlrun_lite___TOKEN__ SET qty = qty + 1;\nSELECT id, name, qty, price, active, note, created, memo FROM sqlrun_lite___TOKEN__ ORDER BY id;\nUPDATE sqlrun_lite___TOKEN__ SET qty = qty + 10 WHERE id = 2;\n",
+              "parameters": {
+                "label": "O'Brien; widget",
+                "qty": "3",
+                "price": "12.50",
+                "note": "",
+                "memo": "None"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "lite_ok",
+              "rows": "lite_rows",
+              "row_count": "lite_count",
+              "rows_changed": "lite_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e943b0c1-fe76-5f39-aeae-815e544ee770",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2050
+        },
+        "data": {
+          "label": "SQLite no transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite no transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrun-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "INSERT INTO sqlrun_lite___TOKEN__ (id, name, qty) VALUES (3, 'kept without a transaction', 1);\nINSERT INTO sqlrun_lite_missing___TOKEN__ (id) VALUES (4);\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "lite_notx_ok",
+              "error": "lite_notx_error",
+              "reason": "lite_notx_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a1aae4cb-e309-514c-955b-a3bd03bd2df8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2140
+        },
+        "data": {
+          "label": "SQLite read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "sql"
+          ],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrun-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty FROM {{ lite_table }} WHERE id >= 2 ORDER BY id",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "lite_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b2d4051e-cb79-52ca-872c-1135849d1b46",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2230
+        },
+        "data": {
+          "label": "SQLite session",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "driver_options.timeout"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrun-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "PRAGMA busy_timeout",
+              "driver_options": {
+                "timeout": "7"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "lite_session_ok",
+              "rows": "lite_session_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ff91f3d4-df80-5317-b4f1-09fef2b0ac97",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "SQLite proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-lite ok={lite_ok} count={lite_count} changed={lite_changed} name={lite_rows[0]['name']} price={lite_rows[0]['price']} active={lite_rows[0]['active']} note2={lite_rows[1]['note']} memo2={lite_rows[1]['memo']} notx={lite_notx_ok}/{lite_notx_reason} back={lite_back_rows[0]['qty']}/{lite_back_rows[1]['name']} session={lite_session_ok} timeout={lite_session_rows[0]['timeout']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a012a211-93c6-53d9-8c3a-42dbefa89f5a",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 160
+        },
+        "data": {
+          "label": "PG drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS sqlrun_pg___TOKEN__;\nSELECT COUNT(*) AS n FROM information_schema.tables WHERE table_name = 'sqlrun_pg___TOKEN__';\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "pg_drop_ok",
+              "rows": "pg_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f2a65982-2323-5060-a2f6-45f6023bd47a",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 250
+        },
+        "data": {
+          "label": "MariaDB drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS sqlrun_my___TOKEN__;\nSELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'sqlrun_my___TOKEN__';\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "my_drop_ok",
+              "rows": "my_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "724fefff-a79b-5c85-9f92-252237436da3",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 340
+        },
+        "data": {
+          "label": "Oracle drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS sqlrun_ora___TOKEN__ PURGE;\nSELECT COUNT(*) AS n FROM user_tables WHERE table_name = UPPER('sqlrun_ora___TOKEN__');\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ora_drop_ok",
+              "rows": "ora_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a92381a1-2432-59aa-bc3a-4b172bf2fd95",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 430
+        },
+        "data": {
+          "label": "SQL Server drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS sqlrun_ms___TOKEN__\nGO\nSELECT COUNT(*) AS n FROM sys.tables WHERE name = 'sqlrun_ms___TOKEN__'\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ms_drop_ok",
+              "rows": "ms_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ab852ed7-6e1d-542a-b85e-58a0bc4ea694",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 520
+        },
+        "data": {
+          "label": "SQLite drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlrun-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS sqlrun_lite___TOKEN__;\nSELECT COUNT(*) AS n FROM sqlite_master WHERE name = 'sqlrun_lite___TOKEN__';\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "lite_drop_ok",
+              "rows": "lite_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "66ae369e-5818-5c36-b3b5-2a275538cd1c",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 610
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Cleanup proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-run-cleanup pg={pg_drop_ok}/{pg_gone[0]['n']} my={my_drop_ok}/{my_gone[0]['n']} ora={ora_drop_ok}/{ora_gone[0]['N']} ms={ms_drop_ok}/{ms_gone[0]['n']} lite={lite_drop_ok}/{lite_gone[0]['n']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5b241aec-f583-5087-8fdd-353df08b976e",
+        "type": "workflowNode",
+        "position": {
+          "x": 1100,
+          "y": 60
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sql-run-done caught={sqlrun_caught}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "2c32763b-7877-59b1-a041-c44848c32f3d",
+        "source": "start-node",
+        "target": "48310e62-0e9c-5391-bd03-327423db8d63",
+        "type": "default"
+      },
+      {
+        "id": "f956cb1f-0aea-572d-a265-fb4e764580b9",
+        "source": "48310e62-0e9c-5391-bd03-327423db8d63",
+        "target": "323cef42-624d-5307-8985-f6195eb922e9",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "13343aa0-9318-57c1-b7c8-3deda6a81e49",
+        "source": "323cef42-624d-5307-8985-f6195eb922e9",
+        "target": "19f1629f-70f8-5009-a6e2-513f2f999612",
+        "type": "default"
+      },
+      {
+        "id": "e0b9a9d4-a94a-5553-a3f8-9ceb4fc5c7d3",
+        "source": "19f1629f-70f8-5009-a6e2-513f2f999612",
+        "target": "dccf9fcf-7fed-5f2c-ae5b-dd74ad313ccf",
+        "type": "default"
+      },
+      {
+        "id": "5261360c-f317-5284-a1a1-702fcd3a1a53",
+        "source": "dccf9fcf-7fed-5f2c-ae5b-dd74ad313ccf",
+        "target": "a2737a8b-09b6-4bb1-bfea-d0c903d60be7",
+        "type": "default"
+      },
+      {
+        "id": "fcc8c40f-40a6-4718-89f7-4d384cbdcff3",
+        "source": "a2737a8b-09b6-4bb1-bfea-d0c903d60be7",
+        "target": "b77d7d41-4b91-5bc0-b33a-8816a143b0ba",
+        "type": "default"
+      },
+      {
+        "id": "92b0c73f-9501-5ab0-8ebb-b8442efaf300",
+        "source": "b77d7d41-4b91-5bc0-b33a-8816a143b0ba",
+        "target": "3cf9bd60-444a-5fc6-96c6-a92c08b8fe86",
+        "type": "default"
+      },
+      {
+        "id": "db5f9633-cfe9-5f18-b489-564189f59421",
+        "source": "3cf9bd60-444a-5fc6-96c6-a92c08b8fe86",
+        "target": "b5adf9a3-33d5-5972-b176-314aa69fefc3",
+        "type": "default"
+      },
+      {
+        "id": "f094a27c-c9a8-590a-b3ec-bef1f3150de5",
+        "source": "b5adf9a3-33d5-5972-b176-314aa69fefc3",
+        "target": "81b0128d-0220-5042-98e5-c37b5e9ecaa8",
+        "type": "default"
+      },
+      {
+        "id": "26acf8fd-260b-53b9-af6a-2d36f89656f7",
+        "source": "81b0128d-0220-5042-98e5-c37b5e9ecaa8",
+        "target": "4cae6315-9062-5b96-aaa9-81703bb0e3af",
+        "type": "default"
+      },
+      {
+        "id": "d6a98ed5-f5ad-55b6-9fe9-22ac2ee1cd81",
+        "source": "4cae6315-9062-5b96-aaa9-81703bb0e3af",
+        "target": "44c26427-6a7b-5d57-b8ae-dd93ce2969ed",
+        "type": "default"
+      },
+      {
+        "id": "ab94fc8b-c6ac-51a8-8c22-d9384632ca3f",
+        "source": "44c26427-6a7b-5d57-b8ae-dd93ce2969ed",
+        "target": "322596a6-a98f-57e4-bf10-c8020656a0f4",
+        "type": "default"
+      },
+      {
+        "id": "8154bd93-2806-5744-9500-38ea9b1c289b",
+        "source": "322596a6-a98f-57e4-bf10-c8020656a0f4",
+        "target": "012eb84b-e2c0-53a8-a16e-92d8fde24399",
+        "type": "default"
+      },
+      {
+        "id": "ccafe135-0a5e-5aa4-8f08-f68b6985effb",
+        "source": "012eb84b-e2c0-53a8-a16e-92d8fde24399",
+        "target": "c42c105e-1edb-5eb8-90b5-c048d0adeed5",
+        "type": "default"
+      },
+      {
+        "id": "0bc4cd63-51b4-5988-bcb4-435af15af8a2",
+        "source": "c42c105e-1edb-5eb8-90b5-c048d0adeed5",
+        "target": "61584d0e-9085-5325-81d5-71dc152260e8",
+        "type": "default"
+      },
+      {
+        "id": "0d1fc166-9590-5ba5-82b6-05cf2756688d",
+        "source": "61584d0e-9085-5325-81d5-71dc152260e8",
+        "target": "68a75bc9-b0f8-5702-b6e2-80cf3bf312cb",
+        "type": "default"
+      },
+      {
+        "id": "fe3243c2-a1d8-5c89-8ee5-fcd2d7679612",
+        "source": "68a75bc9-b0f8-5702-b6e2-80cf3bf312cb",
+        "target": "819d2cb0-7524-5e4f-a7ac-74d53a7b77a7",
+        "type": "default"
+      },
+      {
+        "id": "189be711-0095-5175-b437-cc6ff60d3ae7",
+        "source": "819d2cb0-7524-5e4f-a7ac-74d53a7b77a7",
+        "target": "b9b725cb-3e2e-5436-a7dc-c13fdb370b11",
+        "type": "default"
+      },
+      {
+        "id": "07588ef8-c6a0-5a27-9943-fd2144f72c87",
+        "source": "b9b725cb-3e2e-5436-a7dc-c13fdb370b11",
+        "target": "845b09cb-cb3c-5f81-b34e-e21bab65ad67",
+        "type": "default"
+      },
+      {
+        "id": "ead9388d-4875-57d4-baac-8ab2dc1c98af",
+        "source": "845b09cb-cb3c-5f81-b34e-e21bab65ad67",
+        "target": "97de1fe6-0a78-5f22-9397-bf4bfc4b630e",
+        "type": "default"
+      },
+      {
+        "id": "c73b5a52-7f8d-5439-bb6c-7f387017a0e0",
+        "source": "97de1fe6-0a78-5f22-9397-bf4bfc4b630e",
+        "target": "6b065a9c-e48b-5ef1-977d-b571815fc90c",
+        "type": "default"
+      },
+      {
+        "id": "f45a1832-01f0-55ee-a6cd-c90a72d1e295",
+        "source": "6b065a9c-e48b-5ef1-977d-b571815fc90c",
+        "target": "43b8a969-9244-529b-a91f-b0a3a3091b0a",
+        "type": "default"
+      },
+      {
+        "id": "95bc130c-678c-53d7-86bb-4cda21b7aa5e",
+        "source": "43b8a969-9244-529b-a91f-b0a3a3091b0a",
+        "target": "9d365d5a-5830-53ed-ae12-05743909279c",
+        "type": "default"
+      },
+      {
+        "id": "d3d4ebd4-ebb1-58bc-9a5f-8c7420a7303b",
+        "source": "9d365d5a-5830-53ed-ae12-05743909279c",
+        "target": "e943b0c1-fe76-5f39-aeae-815e544ee770",
+        "type": "default"
+      },
+      {
+        "id": "b346b499-9c03-5d41-a70c-554bb0f00ebd",
+        "source": "e943b0c1-fe76-5f39-aeae-815e544ee770",
+        "target": "a1aae4cb-e309-514c-955b-a3bd03bd2df8",
+        "type": "default"
+      },
+      {
+        "id": "be0d3a69-a9b4-5a36-973b-5755542be1ab",
+        "source": "a1aae4cb-e309-514c-955b-a3bd03bd2df8",
+        "target": "b2d4051e-cb79-52ca-872c-1135849d1b46",
+        "type": "default"
+      },
+      {
+        "id": "3f4c0e84-6826-59fe-a2e3-65b3e5acb05b",
+        "source": "b2d4051e-cb79-52ca-872c-1135849d1b46",
+        "target": "ff91f3d4-df80-5317-b4f1-09fef2b0ac97",
+        "type": "default"
+      },
+      {
+        "id": "3b2d69d7-5701-5874-b5ec-6dd8a6029fba",
+        "source": "48310e62-0e9c-5391-bd03-327423db8d63",
+        "target": "a012a211-93c6-53d9-8c3a-42dbefa89f5a",
+        "type": "default",
+        "sourceHandle": "finally"
+      },
+      {
+        "id": "0e2134f8-c770-51f7-a200-a5f7718646cd",
+        "source": "a012a211-93c6-53d9-8c3a-42dbefa89f5a",
+        "target": "f2a65982-2323-5060-a2f6-45f6023bd47a",
+        "type": "default"
+      },
+      {
+        "id": "20424f3a-bf7c-56ae-801b-66b40c4f184a",
+        "source": "f2a65982-2323-5060-a2f6-45f6023bd47a",
+        "target": "724fefff-a79b-5c85-9f92-252237436da3",
+        "type": "default"
+      },
+      {
+        "id": "74d699c1-8011-5438-87a7-a743d5005baf",
+        "source": "724fefff-a79b-5c85-9f92-252237436da3",
+        "target": "a92381a1-2432-59aa-bc3a-4b172bf2fd95",
+        "type": "default"
+      },
+      {
+        "id": "36a46a4a-c833-5a5c-a414-14d44ddd00f5",
+        "source": "a92381a1-2432-59aa-bc3a-4b172bf2fd95",
+        "target": "ab852ed7-6e1d-542a-b85e-58a0bc4ea694",
+        "type": "default"
+      },
+      {
+        "id": "51592fc2-308f-5005-9230-a1123251ff60",
+        "source": "ab852ed7-6e1d-542a-b85e-58a0bc4ea694",
+        "target": "66ae369e-5818-5c36-b3b5-2a275538cd1c",
+        "type": "default"
+      },
+      {
+        "id": "ad8db2c9-2166-5cef-abc7-3091edd2aad7",
+        "source": "48310e62-0e9c-5391-bd03-327423db8d63",
+        "target": "5b241aec-f583-5087-8fdd-353df08b976e",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sqlrun_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "sqlrun_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_table": {
+      "value": "sqlrun_pg___TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pg_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pg_notx_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_notx_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_notx_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_expr_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_session_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_session_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_table": {
+      "value": "sqlrun_my___TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "my_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "my_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "my_notx_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_notx_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "my_notx_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "my_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_session_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_session_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_table": {
+      "value": "sqlrun_ora___TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "ora_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ora_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ora_notx_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_notx_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ora_notx_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ora_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_session_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_session_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_table": {
+      "value": "sqlrun_ms___TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "ms_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ms_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ms_notx_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_notx_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ms_notx_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ms_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_session_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_session_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lite_table": {
+      "value": "sqlrun_lite___TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "lite_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lite_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lite_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "lite_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "lite_notx_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lite_notx_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "lite_notx_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "lite_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lite_session_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lite_session_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "lite_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "lite_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Secret Leak Canary Profile",
+  "type": "http",
+  "description": "HTTP profile carrying the credential canary for the leak-proof truth-gate",
+  "config": {
+    "base_url": "https://leak-canary.example.local/v1",
+    "auth_key": "cnr6-cred-a1b2c3-bravo-real-bytes",
+    "timeout": 30
+  },
+  "tags": ["e2e"]
+}

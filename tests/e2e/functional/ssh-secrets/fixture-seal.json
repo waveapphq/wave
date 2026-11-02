@@ -1,0 +1,42 @@
+{
+  "name": "SSH Declared Credential Seal-At-Rest E2E",
+  "version": "1.0.0",
+  "description": "Declared-credential sealing: an SSH Session Open with password, private_key and passphrase LITERALS. Imported (not run) to prove all three declared credential fields seal to wave:enc:v1: envelopes at rest.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-seal",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "All three declared credential fields as sealing literals",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "pw-seal-canary-1a2b3c",
+              "private_key": "pk-seal-canary-4d5e6f",
+              "passphrase": "ph-seal-canary-7g8h9i",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [{ "id": "e-start", "source": "start-node", "target": "open-seal" }]
+  },
+  "variables": {},
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

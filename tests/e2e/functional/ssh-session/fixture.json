@@ -1,0 +1,818 @@
+{
+  "name": "SSH Session E2E Execution Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open A (direct)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid_a",
+              "connected": "a_connected",
+              "server_banner": "a_banner",
+              "hop_count": "a_hop"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-a-open",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log A opened",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'A opened connected={a_connected} hop={a_hop} banner={a_banner}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "exec-a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Exec echo on A",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_a",
+              "command": "echo hello-from-a",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_a",
+              "exit_code": "code_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-a-exec",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log A exec",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'A exec stdout={out_a.strip()} code={code_a}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "exec-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Exec non-zero exit on A",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_a",
+              "command": "echo failing with 3 >&2; exit 3",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "exit_code": "code_fail",
+              "stderr": "err_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log A fail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'A fail code={code_fail} stderr={err_text.strip()}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "exec-127",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Exec unknown command on A (real 127)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_a",
+              "command": "wave-no-such-cmd-e2e",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "exit_code": "code_127",
+              "stderr": "err_127"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-127",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log unknown-command 127",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'A 127 code={code_127} stderr={err_127.strip()}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "open-b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open B on the nested host (chained through A)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parent_session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "nested-sshd",
+              "port": 22,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "use_parent": true,
+              "parent_session_id": "sid_a"
+            },
+            "outputBindings": {
+              "session_id": "sid_b",
+              "connected": "b_connected",
+              "hop_count": "b_hop"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-b-open",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log B opened",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'B opened connected={b_connected} hop={b_hop}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "exec-b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Exec echo through B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_b",
+              "command": "echo hello-from-b-from-$(hostname)",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-b-exec",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log B exec",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'B exec stdout={out_b.strip()}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "close-a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close A (cascades to B)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_a"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-close",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log close + connected flip",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'closed={closed_ids} a_conn={a_connected} b_conn={b_connected}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-closed",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard exec on a closed session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "close_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "exec-after-close",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Exec on closed A (must raise)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid_a",
+              "command": "echo should-not-run",
+              "timeout": 30
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log caught close error",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'exec-after-close-caught err={close_err}'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ssh-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-open-a",
+        "source": "start-node",
+        "target": "open-a"
+      },
+      {
+        "id": "edge-open-a-log-a-open",
+        "source": "open-a",
+        "target": "log-a-open"
+      },
+      {
+        "id": "edge-log-a-open-exec-a",
+        "source": "log-a-open",
+        "target": "exec-a"
+      },
+      {
+        "id": "edge-exec-a-log-a-exec",
+        "source": "exec-a",
+        "target": "log-a-exec"
+      },
+      {
+        "id": "edge-log-a-exec-exec-fail",
+        "source": "log-a-exec",
+        "target": "exec-fail"
+      },
+      {
+        "id": "edge-exec-fail-log-fail",
+        "source": "exec-fail",
+        "target": "log-fail"
+      },
+      {
+        "id": "edge-log-fail-exec-127",
+        "source": "log-fail",
+        "target": "exec-127"
+      },
+      {
+        "id": "edge-exec-127-log-127",
+        "source": "exec-127",
+        "target": "log-127"
+      },
+      {
+        "id": "edge-log-127-open-b",
+        "source": "log-127",
+        "target": "open-b"
+      },
+      {
+        "id": "edge-open-b-log-b-open",
+        "source": "open-b",
+        "target": "log-b-open"
+      },
+      {
+        "id": "edge-log-b-open-exec-b",
+        "source": "log-b-open",
+        "target": "exec-b"
+      },
+      {
+        "id": "edge-exec-b-log-b-exec",
+        "source": "exec-b",
+        "target": "log-b-exec"
+      },
+      {
+        "id": "edge-log-b-exec-close-a",
+        "source": "log-b-exec",
+        "target": "close-a"
+      },
+      {
+        "id": "edge-close-a-log-close",
+        "source": "close-a",
+        "target": "log-close"
+      },
+      {
+        "id": "edge-log-close-tc",
+        "source": "log-close",
+        "target": "tc-closed"
+      },
+      {
+        "id": "edge-tc-try",
+        "source": "tc-closed",
+        "target": "exec-after-close",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-catch",
+        "source": "tc-closed",
+        "target": "log-caught",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-then",
+        "source": "tc-closed",
+        "target": "log-done",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sid_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_connected": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "a_banner": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "a_hop": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_a": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "code_fail": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "err_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_127": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "err_127": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "b_connected": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_hop": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_ids": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "close_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,934 @@
+{
+  "name": "SFTP Tunnel __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "SFTP on a session opened through an SSH tunnel with Strict host keys checked under the far host, and the refusal for a far host not in WAVE's trusted hosts list.",
+  "variables": {
+    "b_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "b_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "t1_id": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t1_port": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "t2_id": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t2_port": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "s2_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s2_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s2_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "up_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "up_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "down_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "down_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s3_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s3_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s3_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "s3_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_delete_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_type": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "s2_closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "t1_closed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "t2_closed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "b_closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "run_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "run_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "d2af5da5-8f95-48f0-8dfe-bd88a182ae04",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 20
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Tunnel legs, then close everything",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "run_error",
+              "caught": "run_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "a45f5bfe-1de8-4ee8-99a4-caff322bbd9a",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 120
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open B on sshd",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "b_sid",
+              "connected": "b_conn",
+              "hop_count": "b_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "4464210c-f7ff-4125-90bb-ac7df681cf1d",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Tunnel T1 to sshd port 22",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "local_port": 0,
+              "remote_host": "sshd",
+              "remote_port": 22
+            },
+            "outputBindings": {
+              "tunnel_id": "t1_id",
+              "local_port": "t1_port"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "674d9ebf-9324-421a-936d-5b8cfcca03b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 280
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Tunnel T2 to sshd-no-fwd port 22",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "local_port": 0,
+              "remote_host": "sshd-no-fwd",
+              "remote_port": 22
+            },
+            "outputBindings": {
+              "tunnel_id": "t2_id",
+              "local_port": "t2_port"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c093d058-b634-4115-98bf-1910fdd9d76f",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 360
+        },
+        "data": {
+          "label": "Open S2 through T1",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open S2 through T1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "port": "t1_port",
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "s2_sid",
+              "connected": "s2_conn",
+              "hop_count": "s2_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c8c77959-1a01-4a94-8bf6-ac3217b54ea3",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report S2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sftp-tunnel s2 connected={s2_conn} hops={s2_hops}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "343bfa66-af3b-4c03-b79e-75f58a1b8e33",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 520
+        },
+        "data": {
+          "label": "Upload the orders on S2",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the orders on S2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "s2_sid",
+              "operation": "upload",
+              "source": "testdata://orders.csv",
+              "destination": "__FOLDER__/orders.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "up_summary",
+              "success": "up_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "93e81320-548d-4d89-ad7e-7b3d3294f701",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 600
+        },
+        "data": {
+          "label": "Download the copy on S2",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download the copy on S2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "s2_sid",
+              "operation": "download",
+              "source": "__FOLDER__/orders.csv",
+              "destination": "artifact://tunnel-copy.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "down_summary",
+              "success": "down_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "daef9300-ecf0-4bc2-944f-45a2c2cc2ae9",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 680
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard S3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "s3_error",
+              "caught": "s3_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "363928dd-c6f6-4842-a17d-a3a95ba6852e",
+        "type": "workflowNode",
+        "position": {
+          "x": -150,
+          "y": 780
+        },
+        "data": {
+          "label": "Open S3 through T2",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open S3 through T2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "port": "t2_port",
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "s3_sid",
+              "connected": "s3_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "df9520f9-4292-4956-9819-379d6e653a77",
+        "type": "workflowNode",
+        "position": {
+          "x": 150,
+          "y": 780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the refused S3",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sftp-tunnel s3 caught={s3_caught} connected={s3_conn}'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fee1c3df-2f94-4820-805c-0d7fb2d2e9c1",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 120
+        },
+        "data": {
+          "label": "Delete the spec folder on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": true
+            },
+            "outputBindings": {
+              "success": "gone_delete_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c1d11219-47f7-40e6-a6bf-7a954c9ee0bc",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 200
+        },
+        "data": {
+          "label": "Stats of the spec folder on B",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the spec folder on B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "gone_exists",
+              "type": "gone_type"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "08fead1c-ea80-434d-bbd5-05a4132ae73d",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 280
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close S2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "s2_sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "s2_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "5f52d5f7-9772-4907-805b-98001a392616",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 360
+        },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close T1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "tunnel_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "t1_id"
+            },
+            "outputBindings": {
+              "closed": "t1_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "18222c84-4923-4352-ba00-bf77abc17b18",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 440
+        },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close T2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "tunnel_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "t2_id"
+            },
+            "outputBindings": {
+              "closed": "t2_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "84a8b3cc-e0f3-4c92-b2ab-c239f64b91c0",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 520
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close B",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "b_sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "b_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "a4564a09-141e-4acc-b988-c557f774b891",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the closes",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'sftp-tunnel closes t1={t1_closed} t2={t2_closed} s2={len(s2_closed)} b={len(b_closed)} exists={gone_exists}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "25d14302-ecfe-4e5d-8db4-1fd68036a035",
+        "type": "workflowNode",
+        "position": {
+          "x": 650,
+          "y": 120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-tunnel-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "0eed9300-5df5-49b5-a9e5-35a9703f6ea4",
+        "source": "start-node",
+        "target": "d2af5da5-8f95-48f0-8dfe-bd88a182ae04"
+      },
+      {
+        "id": "a85db78d-aaea-4f34-8696-6a746617889d",
+        "source": "d2af5da5-8f95-48f0-8dfe-bd88a182ae04",
+        "target": "a45f5bfe-1de8-4ee8-99a4-caff322bbd9a",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "216f79fc-d34a-4868-b373-78eaf46e78fd",
+        "source": "a45f5bfe-1de8-4ee8-99a4-caff322bbd9a",
+        "target": "4464210c-f7ff-4125-90bb-ac7df681cf1d"
+      },
+      {
+        "id": "abcbbdaa-e897-4dc6-91d0-ef4c81487e6a",
+        "source": "4464210c-f7ff-4125-90bb-ac7df681cf1d",
+        "target": "674d9ebf-9324-421a-936d-5b8cfcca03b1"
+      },
+      {
+        "id": "1bf6c6af-39e5-48b4-a868-9c04c7bc6883",
+        "source": "674d9ebf-9324-421a-936d-5b8cfcca03b1",
+        "target": "c093d058-b634-4115-98bf-1910fdd9d76f"
+      },
+      {
+        "id": "e080d8c6-70a0-4ba6-bfeb-c0e09147ed1f",
+        "source": "c093d058-b634-4115-98bf-1910fdd9d76f",
+        "target": "c8c77959-1a01-4a94-8bf6-ac3217b54ea3"
+      },
+      {
+        "id": "0c7d64dc-b703-417b-a54a-d8b8efff450e",
+        "source": "c8c77959-1a01-4a94-8bf6-ac3217b54ea3",
+        "target": "343bfa66-af3b-4c03-b79e-75f58a1b8e33"
+      },
+      {
+        "id": "e69561d0-ff3d-4670-aeaa-4c5265eb915b",
+        "source": "343bfa66-af3b-4c03-b79e-75f58a1b8e33",
+        "target": "93e81320-548d-4d89-ad7e-7b3d3294f701"
+      },
+      {
+        "id": "178cdcb9-46fc-46a2-92e5-0a4fe9375d01",
+        "source": "93e81320-548d-4d89-ad7e-7b3d3294f701",
+        "target": "daef9300-ecf0-4bc2-944f-45a2c2cc2ae9"
+      },
+      {
+        "id": "e9e811a5-f65d-4ad8-80dc-9c6e2b9a0dc3",
+        "source": "daef9300-ecf0-4bc2-944f-45a2c2cc2ae9",
+        "target": "363928dd-c6f6-4842-a17d-a3a95ba6852e",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "a60e5c24-ec5e-4bb7-b11b-34bf681682bd",
+        "source": "daef9300-ecf0-4bc2-944f-45a2c2cc2ae9",
+        "target": "df9520f9-4292-4956-9819-379d6e653a77",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "ce779c40-deee-4ee4-ae6d-f6078b301782",
+        "source": "d2af5da5-8f95-48f0-8dfe-bd88a182ae04",
+        "target": "fee1c3df-2f94-4820-805c-0d7fb2d2e9c1",
+        "sourceHandle": "finally"
+      },
+      {
+        "id": "a9ea4df2-e481-4eab-b785-b54d58ffb549",
+        "source": "fee1c3df-2f94-4820-805c-0d7fb2d2e9c1",
+        "target": "c1d11219-47f7-40e6-a6bf-7a954c9ee0bc"
+      },
+      {
+        "id": "4a564ca3-cedd-4a11-a2bc-f8fa1abd572a",
+        "source": "c1d11219-47f7-40e6-a6bf-7a954c9ee0bc",
+        "target": "08fead1c-ea80-434d-bbd5-05a4132ae73d"
+      },
+      {
+        "id": "cf306005-7354-4fad-9873-a8d3015c1b2b",
+        "source": "08fead1c-ea80-434d-bbd5-05a4132ae73d",
+        "target": "5f52d5f7-9772-4907-805b-98001a392616"
+      },
+      {
+        "id": "329cab19-599b-4912-b716-c9b535c1197d",
+        "source": "5f52d5f7-9772-4907-805b-98001a392616",
+        "target": "18222c84-4923-4352-ba00-bf77abc17b18"
+      },
+      {
+        "id": "8e3c954b-a67b-4f7d-9932-f675d747b6f2",
+        "source": "18222c84-4923-4352-ba00-bf77abc17b18",
+        "target": "84a8b3cc-e0f3-4c92-b2ab-c239f64b91c0"
+      },
+      {
+        "id": "ba7455bd-d9ce-4c66-a78a-d9b7c4952783",
+        "source": "84a8b3cc-e0f3-4c92-b2ab-c239f64b91c0",
+        "target": "a4564a09-141e-4acc-b988-c557f774b891"
+      },
+      {
+        "id": "2d28958f-2d24-4426-b9bb-2385670e1381",
+        "source": "d2af5da5-8f95-48f0-8dfe-bd88a182ae04",
+        "target": "25d14302-ecfe-4e5d-8db4-1fd68036a035",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

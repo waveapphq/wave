@@ -1,0 +1,160 @@
+{
+  "name": "V-NULL-EDITORS",
+  "version": "1.0.0",
+  "description": "Null in the editable views (VMGR-93): a table with a null cell in an integer, a string and a boolean column (grid), a string list with a null item (tags) and a typed map with a null integer and a null boolean value (limits). A Delay reads its duration from pause_ms, so removing that variable leaves a reference that Fix All declares again as an integer.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ae9bd015-0c8e-4cbb-9330-cfdf0b36b4c9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Editors Anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-editors anchor'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "dc702760-0326-49cf-ba65-91c006d57c9e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Fix All Source",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "duration"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": "pause_ms"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "0a1483bd-28e2-4e63-b96e-1b00bf952618",
+        "source": "start-node",
+        "target": "ae9bd015-0c8e-4cbb-9330-cfdf0b36b4c9",
+        "type": "default"
+      },
+      {
+        "id": "4ca2a625-3412-44a4-8ea5-75d520ee87da",
+        "source": "ae9bd015-0c8e-4cbb-9330-cfdf0b36b4c9",
+        "target": "dc702760-0326-49cf-ba65-91c006d57c9e",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "grid": {
+      "type": "table",
+      "scope": "test",
+      "value": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "integer"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "type": "boolean"
+          }
+        ],
+        "rows": [
+          [
+            1,
+            null,
+            true
+          ],
+          [
+            null,
+            "beta",
+            null
+          ]
+        ]
+      }
+    },
+    "tags": {
+      "type": "array",
+      "scope": "test",
+      "value": [
+        "alpha",
+        null,
+        "gamma"
+      ],
+      "elementTypes": [
+        "string",
+        "string",
+        "string"
+      ]
+    },
+    "limits": {
+      "type": "map",
+      "scope": "test",
+      "value": {
+        "cpu": "two",
+        "mem": null,
+        "debug": null
+      },
+      "elementTypes": {
+        "cpu": "string",
+        "mem": "integer",
+        "debug": "boolean"
+      }
+    },
+    "pause_ms": {
+      "type": "integer",
+      "scope": "test",
+      "value": 5
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-15T00:00:00.000000",
+  "updated_at": "2026-10-15T00:00:00.000000"
+}

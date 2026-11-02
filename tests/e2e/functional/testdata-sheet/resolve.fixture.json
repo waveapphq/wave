@@ -1,0 +1,138 @@
+{
+  "name": "Test Data Resolve E2E Test",
+  "version": "1.0.0",
+  "description": "File I/O reads testdata://fixtures/payload.txt inside a workbench session and logs what came back, so a run proves the reference resolves to the test's own uploaded file.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-read-testdata",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Test Data Payload",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://fixtures/payload.txt"
+            },
+            "outputBindings": {
+              "content": "payload"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-payload",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Payload Content",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "payload",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-resolve-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Resolve Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'testdata-resolve-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "fileio-read-testdata",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "fileio-read-testdata",
+        "target": "log-payload",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-payload",
+        "target": "log-resolve-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "payload": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

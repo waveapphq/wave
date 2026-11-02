@@ -1,0 +1,3438 @@
+{
+  "name": "V-PLUGIN-SQL-LOAD",
+  "version": "1.0.0",
+  "description": "SQL Load table: Add, Add or replace by primary key and by Key columns, and Overwrite on PostgreSQL from SQL-produced table variables, a CSV Parser table and a Test Data CSV file; Commit each batch on with Stop on error on and off, and off as one transaction; a batch whose COMMIT the database refuses; a missing column and a missing key refused; Add or replace on MariaDB, Oracle, SQL Server and SQLite; on SQLite a clash rolls an Add and an Overwrite back whole, and a load waits for another writer on the same file; every table dropped in the Finally path.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "acbf11e1-0e6e-5367-8ca1-ef908bfa08db",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 160
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_main___TOKEN__ (id integer PRIMARY KEY, name varchar(40) NOT NULL, qty integer, active boolean);\nCOMMENT ON TABLE wave_ld_main___TOKEN__ IS 'wave-keep';\nCREATE INDEX wave_ld_main___TOKEN___name ON wave_ld_main___TOKEN__ (name);\nCREATE TABLE wave_ld_stop___TOKEN__ (id integer PRIMARY KEY, name varchar(40) NOT NULL);\nCREATE TABLE wave_ld_skip___TOKEN__ (id integer PRIMARY KEY, name varchar(40) NOT NULL);\nCREATE TABLE wave_ld_key___TOKEN__ (code varchar(16) NOT NULL UNIQUE, name varchar(40));\nINSERT INTO wave_ld_key___TOKEN__ (code, name) VALUES ('k1', 'old-k1');\nCREATE TABLE wave_ld_defer___TOKEN__ (id integer PRIMARY KEY, name varchar(40) UNIQUE DEFERRABLE INITIALLY DEFERRED);\nINSERT INTO wave_ld_defer___TOKEN__ (id, name) VALUES (100, 'row-3');",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "48e92181-48a5-56a0-9a02-b4a65aa932a3",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 250
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Seed rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT * FROM (VALUES (1, 'alpha', 10, true), (2, 'beta', 20, false), (3, 'gamma', 30, true)) AS v(id, name, qty, active) ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_seed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "33293821-8a0f-57ee-a027-262f2cae4db2",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 340
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Update rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT * FROM (VALUES (2, 'beta-2', 22, true), (4, 'delta', 40, false)) AS v(id, name, qty, active) ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_update"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3b6868ca-4276-5e29-8a81-a682cd6daf7e",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 430
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Clashing rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM (VALUES (1, 5, 'epsilon'), (2, 6, 'zeta'), (3, 1, 'alpha-again')) AS v(ord, id, name) ORDER BY ord",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_clash"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9a2448f6-df02-5ac0-9b63-eeafbe0c62b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 520
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Extra column rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT 7 AS id, 'eta' AS name, 'red' AS color",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_extra"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "dd9b4d70-7a5e-52d4-ac2d-78c4c3fb0252",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 610
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Generated rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT g AS id, CASE WHEN g = 6 THEN NULL ELSE 'row-' || g END AS name FROM generate_series(1, 7) AS g ORDER BY g",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_gen"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "52e21850-b72d-53f9-8f33-76611d57c02f",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 700
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Keyed rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "code,name\nk1,new-k1\nk2,new-k2\n"
+            },
+            "outputBindings": {
+              "table": "ld_keyed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "af7d9478-e50f-5feb-a870-f188bf79cd31",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 790
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Upsert rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT * FROM (VALUES (2, 'c2', 'new-2', true), (3, 'c3', 'new-3', false), (9, 'c1', 'via-code', true)) AS v(id, code, name, active) ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_upsert"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6120e138-6995-5bc6-abb8-e19a9cd5a8c7",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 880
+        },
+        "data": {
+          "label": "Load add",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load add",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_seed",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "add",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_add_ok",
+              "rows_changed": "ld_add_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1bb69f3c-a871-5284-be40-88660502a3b8",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 970
+        },
+        "data": {
+          "label": "Add or replace by primary key",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load add or replace by primary key",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_update",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_upk_ok",
+              "rows_changed": "ld_upk_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0b81a36d-8be8-543b-9202-120fd5a0be07",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1060
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read after add or replace",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty, active FROM wave_ld_main___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_main_upserted"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "762fc006-30ee-595e-95cf-01d30cf22185",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1150
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Add clash",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "ld_clash_error",
+              "caught": "ld_clash_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "7383cab4-80d7-5cb7-9c61-94b6a5fe5a20",
+        "type": "workflowNode",
+        "position": {
+          "x": -200,
+          "y": 1240
+        },
+        "data": {
+          "label": "Load add clash fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load add clash fail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_clash",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "add",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "136c3bbd-f0c7-53ad-bdde-22b9b4287f55",
+        "type": "workflowNode",
+        "position": {
+          "x": -50,
+          "y": 1330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Clash caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ld-clash-caught {ld_clash_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3af83552-71d7-57a2-b861-cf36f3c6fe7c",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1330
+        },
+        "data": {
+          "label": "Load missing column recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load missing column recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_extra",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "add",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_miss_ok",
+              "rows_changed": "ld_miss_changed",
+              "error": "ld_miss_error",
+              "reason": "ld_miss_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2537c351-a0f1-5e28-be4d-b15b6ad254b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1420
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read after refusals",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_main___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_main_after_refusals"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3fb91817-49df-5a2d-8137-61bae95e6cb2",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1510
+        },
+        "data": {
+          "label": "Load overwrite from Test Data",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load overwrite from Test Data",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "testdata://sql-load-overwrite.csv",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "overwrite",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_csv_ok",
+              "rows_changed": "ld_csv_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "28ef8c32-121d-5f27-b9a2-7a8046880bf1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1600
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read after overwrite",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name, qty, active FROM wave_ld_main___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_main_overwritten"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e3679d7d-c6ab-5f96-b638-a5f2d19cb562",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1690
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read what overwrite kept",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT obj_description('wave_ld_main___TOKEN__'::regclass, 'pg_class') AS note, (SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() AND tablename = 'wave_ld_main___TOKEN__') AS indexes",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_main_kept"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d42ae619-3d62-5a16-acb4-45795f7821be",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Modes proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ld-modes add={ld_add_changed} upsert={ld_upk_changed} rows={len(ld_main_upserted)} id2={ld_main_upserted[1]['name']} clash-caught={ld_clash_caught} after-refusals={len(ld_main_after_refusals)} missing={ld_miss_reason} csv={ld_csv_changed} csv-first={ld_main_overwritten[0]['name']} note={ld_main_kept[0]['note']} indexes={ld_main_kept[0]['indexes']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8e52366d-0f0f-56e6-a235-b36a42d893b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1870
+        },
+        "data": {
+          "label": "Overwrite one transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load overwrite one transaction recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_gen",
+              "target_table": "wave_ld_main___TOKEN__",
+              "mode": "overwrite",
+              "batch_size": 2,
+              "commit_each_batch": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_one_ok",
+              "rows_changed": "ld_one_changed",
+              "error": "ld_one_error",
+              "reason": "ld_one_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "44962284-1793-5c81-a71a-c697ae4b7a91",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1960
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read after refused overwrite",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_main___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_main_after_one_tx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e8197435-3cc0-515e-a84b-15bd3ed043c6",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2050
+        },
+        "data": {
+          "label": "Batches stop on error",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load batches stop on error recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_gen",
+              "target_table": "wave_ld_stop___TOKEN__",
+              "mode": "add",
+              "batch_size": 2,
+              "commit_each_batch": true,
+              "stop_on_error": true,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_stop_ok",
+              "rows_changed": "ld_stop_changed",
+              "error": "ld_stop_error",
+              "reason": "ld_stop_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e68f9d80-21b2-5e10-8369-31d2fa1ddafb",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2140
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read stopped batches",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_stop___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_stop_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d869aaeb-261c-5421-9f57-3fbd08921415",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2230
+        },
+        "data": {
+          "label": "Load batches skip failed batch",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load batches skip failed batch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_gen",
+              "target_table": "wave_ld_skip___TOKEN__",
+              "mode": "add",
+              "batch_size": 2,
+              "commit_each_batch": true,
+              "stop_on_error": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_skip_ok",
+              "rows_changed": "ld_skip_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a132067e-5682-5875-aa4c-3712f2e90de9",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2320
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read skipped batches",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_skip___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_skip_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b71e428e-a974-5dc7-a252-eb73f8be8140",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2410
+        },
+        "data": {
+          "label": "Batches refused commit",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load batches refused commit recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_gen",
+              "target_table": "wave_ld_defer___TOKEN__",
+              "mode": "add",
+              "batch_size": 2,
+              "commit_each_batch": true,
+              "stop_on_error": true,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_defer_ok",
+              "rows_changed": "ld_defer_changed",
+              "error": "ld_defer_error",
+              "reason": "ld_defer_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "601a6979-dcdf-5bdb-ae13-3a4f6a2c9e1f",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2500
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read refused commit batches",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_defer___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_defer_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1f38e981-4435-5ce0-985d-3da62c2e4c04",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2590
+        },
+        "data": {
+          "label": "Add or replace without a key",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load add or replace without a key recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_keyed",
+              "target_table": "wave_ld_key___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_nokey_ok",
+              "rows_changed": "ld_nokey_changed",
+              "error": "ld_nokey_error",
+              "reason": "ld_nokey_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0b8b44cb-fbb1-567f-9626-42c398a46868",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2680
+        },
+        "data": {
+          "label": "Add or replace by key columns",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Load add or replace by key columns",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_keyed",
+              "target_table": "wave_ld_key___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "code",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_bykey_ok",
+              "rows_changed": "ld_bykey_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0140e945-3dc4-50f0-a721-9839e8f97268",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2770
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read by key columns",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT code, name FROM wave_ld_key___TOKEN__ ORDER BY code",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_key_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a8c10289-95ab-5a21-b91a-b04da6d8a3a3",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Batches proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ld-batches one-tx={ld_one_ok}/{ld_one_changed}/{ld_one_reason} after-one-tx={len(ld_main_after_one_tx)} stop={ld_stop_ok}/{ld_stop_changed}/{ld_stop_reason} stop-rows={len(ld_stop_rows)} skip={ld_skip_ok}/{ld_skip_changed} skip-rows={len(ld_skip_rows)} defer={ld_defer_ok}/{ld_defer_changed}/{ld_defer_reason} defer-rows={len(ld_defer_rows)} nokey={ld_nokey_reason} bykey={ld_bykey_changed} k1={ld_key_rows[0]['name']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e3dd2c6b-3b47-52ae-913f-d479792a3fc1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2950
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_up___TOKEN__ (id INT PRIMARY KEY, code VARCHAR(16) NOT NULL UNIQUE, name VARCHAR(40), active BOOLEAN);\nINSERT INTO wave_ld_up___TOKEN__ (id, code, name, active) VALUES (1, 'c1', 'old-1', FALSE), (2, 'c2', 'old-2', FALSE);",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9cea1d7e-d3a6-5abc-bdcb-358a10c204b4",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3040
+        },
+        "data": {
+          "label": "MariaDB add or replace",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB add or replace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_upsert",
+              "target_table": "wave_ld_up___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_my_ok",
+              "rows_changed": "ld_my_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2b80f4ea-c531-5bc1-b628-06337bd1c4c7",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3130
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, code, name, active FROM wave_ld_up___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_my_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "79cd5107-7ccc-5b90-b7f7-a97db00bfa70",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3220
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_up___TOKEN__ (id NUMBER(10) PRIMARY KEY, code VARCHAR2(16) NOT NULL, name VARCHAR2(40), active NUMBER(1));\nINSERT INTO wave_ld_up___TOKEN__ (id, code, name, active) VALUES (1, 'c1', 'old-1', 0);\nINSERT INTO wave_ld_up___TOKEN__ (id, code, name, active) VALUES (2, 'c2', 'old-2', 0);",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ae463dde-31ce-5dd8-99e3-70ebe4dd60cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3310
+        },
+        "data": {
+          "label": "Oracle add or replace",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle add or replace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "load_table",
+              "table": "ld_upsert",
+              "target_table": "wave_ld_up___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_or_ok",
+              "rows_changed": "ld_or_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7f4a1ffb-9f0a-54e0-90a2-2ecfe3233c8f",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3400
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id AS \"id\", code AS \"code\", name AS \"name\", active AS \"active\" FROM wave_ld_up___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_or_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d1d1a4bd-f8df-5693-aa0c-c8971605e12c",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3490
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_up___TOKEN__ (id INT PRIMARY KEY, code NVARCHAR(16) NOT NULL, name NVARCHAR(40), active TINYINT);\nINSERT INTO wave_ld_up___TOKEN__ (id, code, name, active) VALUES (1, 'c1', 'old-1', 0), (2, 'c2', 'old-2', 0);",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8ed2a7f8-6f8b-58b7-9f57-3e3b09b7f8d1",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3580
+        },
+        "data": {
+          "label": "SQL Server add or replace",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server add or replace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "load_table",
+              "table": "ld_upsert",
+              "target_table": "wave_ld_up___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_ms_ok",
+              "rows_changed": "ld_ms_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cb6dc3a2-95f4-5af6-a455-1ec2ccbe5df6",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3670
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, code, name, active FROM wave_ld_up___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_ms_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "edaaa331-e3af-5899-b7d4-f0dbb6862581",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3760
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_up___TOKEN__ (id INTEGER PRIMARY KEY, code TEXT NOT NULL, name TEXT, active INTEGER);\nINSERT INTO wave_ld_up___TOKEN__ (id, code, name, active) VALUES (1, 'c1', 'old-1', 0), (2, 'c2', 'old-2', 0);",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e10fc38e-3510-57a7-8bbd-88f125d41f0d",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3850
+        },
+        "data": {
+          "label": "SQLite add or replace",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite add or replace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "load_table",
+              "table": "ld_upsert",
+              "target_table": "wave_ld_up___TOKEN__",
+              "mode": "add_or_replace",
+              "key_columns": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_lite_ok",
+              "rows_changed": "ld_lite_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b30048ce-9eb0-5972-bde4-5ccf35a036d6",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 3940
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite read back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, code, name, active FROM wave_ld_up___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8e488046-e94f-5a10-ad98-6155b2a1f14d",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4030
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite transaction setup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE wave_ld_tx___TOKEN__ (id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nINSERT INTO wave_ld_tx___TOKEN__ (id, name) VALUES (1, 'kept-1'), (2, 'kept-2');\nCREATE TABLE wave_ld_par___TOKEN__ (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "40fe37d1-f21b-5d7f-85ea-0a6a99da7f48",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4120
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite duplicate rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM (SELECT 1 AS ord, 5 AS id, 'epsilon' AS name UNION ALL SELECT 2, 6, 'zeta' UNION ALL SELECT 3, 5, 'epsilon-again') ORDER BY ord",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_dupe"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f060c950-ade0-5143-ba36-8c6e944b5631",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4210
+        },
+        "data": {
+          "label": "SQLite add clash",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite add clash recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "load_table",
+              "table": "ld_clash",
+              "target_table": "wave_ld_tx___TOKEN__",
+              "mode": "add",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_lite_clash_ok",
+              "rows_changed": "ld_lite_clash_changed",
+              "error": "ld_lite_clash_error",
+              "reason": "ld_lite_clash_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "46b2e67f-5db9-5952-a975-a5a432cfa567",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4300
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite read after add clash",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_tx___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_clash_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d804cb20-98aa-5413-b97b-6d37f9c40340",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4390
+        },
+        "data": {
+          "label": "SQLite overwrite clash",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite overwrite clash recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "load_table",
+              "table": "ld_lite_dupe",
+              "target_table": "wave_ld_tx___TOKEN__",
+              "mode": "overwrite",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ld_lite_over_ok",
+              "rows_changed": "ld_lite_over_changed",
+              "error": "ld_lite_over_error",
+              "reason": "ld_lite_over_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0c2bb63b-778b-5527-b5fb-52bdb1364b3c",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4480
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite read after overwrite clash",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_tx___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_over_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0aab924d-def7-5b59-b6d7-0f4d10dc292b",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4570
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Two writers on one SQLite file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "holder"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "loader"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "5eadb496-4663-5084-9f76-0ec7f240b73f",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 4660
+        },
+        "data": {
+          "label": "SQLite hold a write",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite hold a write",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "BEGIN IMMEDIATE;\nINSERT INTO wave_ld_par___TOKEN__ (id, name) VALUES (50, 'held');\nWITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 22000000) SELECT count(*) AS n FROM c;\nCOMMIT;",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eaebd038-d5d2-57ea-af7d-538697641e6e",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 4660
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Let the holder start",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 500
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bbacb05f-f31f-5ef6-b877-ba49edc70e88",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 4750
+        },
+        "data": {
+          "label": "SQLite load while held",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite load while held",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "load_table",
+              "table": "ld_clash",
+              "target_table": "wave_ld_par___TOKEN__",
+              "mode": "add",
+              "connect_timeout": 30,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ld_lite_wait_ok",
+              "rows_changed": "ld_lite_wait_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1dd0c3b5-4a7b-5b25-a5ce-f117d9787138",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4840
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite read both writers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM wave_ld_par___TOKEN__ ORDER BY id",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_wait_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4e5943fe-37a0-560e-8217-16b616681ae7",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 4930
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "SQLite transactions proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ld-lite add={ld_lite_clash_ok}/{ld_lite_clash_changed}/{ld_lite_clash_reason} add-rows={len(ld_lite_clash_rows)} over={ld_lite_over_ok}/{ld_lite_over_changed}/{ld_lite_over_reason} over-rows={len(ld_lite_over_rows)} wait={ld_lite_wait_ok}/{ld_lite_wait_changed} wait-rows={len(ld_lite_wait_rows)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3af9198c-ba6b-5862-bdc0-a8c448f2373c",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 5020
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Every database proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ld-dbs mysql={ld_my_changed}/{len(ld_my_rows)} oracle={ld_or_changed}/{len(ld_or_rows)} mssql={ld_ms_changed}/{len(ld_ms_rows)} sqlite={ld_lite_changed}/{len(ld_lite_rows)} my-c1={ld_my_rows[0]['name']} or-active={ld_or_rows[1]['active']} ms-active={ld_ms_rows[1]['active']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cffd5657-9fa2-50c6-9603-d75756e265d6",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 160
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS wave_ld_main___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_stop___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_skip___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_key___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_defer___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "53163277-4e69-5935-8d1f-90963df6ecaf",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 250
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM pg_tables WHERE tablename IN ('wave_ld_main___TOKEN__', 'wave_ld_stop___TOKEN__', 'wave_ld_skip___TOKEN__', 'wave_ld_key___TOKEN__', 'wave_ld_defer___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_pg_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9faa64d5-5374-5523-8dba-5816626eac9d",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 340
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS wave_ld_up___TOKEN__",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d2108374-3fc3-57af-a73e-43d94b6c7c4f",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 430
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'wave_ld_up___TOKEN__'",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_my_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eae3987c-d89d-5f82-9066-32f9a75dd679",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 520
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS wave_ld_up___TOKEN__ PURGE",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1b151d04-bc4e-575b-993c-6166b6db8a7b",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 610
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS \"n\" FROM user_tables WHERE table_name = UPPER('wave_ld_up___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_or_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2cbe6b99-f5a3-52df-8cfb-97e426a0c434",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 700
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS wave_ld_up___TOKEN__",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f80a5100-5aee-5b7c-8b4a-8eceeb01ca28",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 790
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM sys.tables WHERE name = 'wave_ld_up___TOKEN__'",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_ms_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e292cd58-4b77-5fc4-b9bf-55275b92e1dc",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 880
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS wave_ld_up___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_tx___TOKEN__;\nDROP TABLE IF EXISTS wave_ld_par___TOKEN__;",
+              "on_error": "fail",
+              "stop_on_error": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "54762b1a-d32f-58bc-a840-df36d438f258",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 970
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite leftovers",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-ld-__TOKEN__.db",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM sqlite_master WHERE name IN ('wave_ld_up___TOKEN__', 'wave_ld_tx___TOKEN__', 'wave_ld_par___TOKEN__')",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ld_lite_left"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7eeef149-84e9-5241-af1e-dc7275094585",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Load and clean up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "22fdcedf-60f0-56e8-b376-0474b8454dbd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 5200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sql-load-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "5f05a483-4222-513f-b5ff-cd75a05f263f",
+        "source": "start-node",
+        "target": "7eeef149-84e9-5241-af1e-dc7275094585",
+        "type": "default"
+      },
+      {
+        "id": "8aa66c63-9bb4-567d-b490-538e885c89fd",
+        "source": "762fc006-30ee-595e-95cf-01d30cf22185",
+        "sourceHandle": "try",
+        "target": "7383cab4-80d7-5cb7-9c61-94b6a5fe5a20",
+        "type": "default"
+      },
+      {
+        "id": "315c705c-e012-5509-997f-4c45f6514c51",
+        "source": "762fc006-30ee-595e-95cf-01d30cf22185",
+        "sourceHandle": "catch",
+        "target": "136c3bbd-f0c7-53ad-bdde-22b9b4287f55",
+        "type": "default"
+      },
+      {
+        "id": "bcc26fd7-2c78-5a0d-8472-af85463a38b7",
+        "source": "7eeef149-84e9-5241-af1e-dc7275094585",
+        "sourceHandle": "try",
+        "target": "acbf11e1-0e6e-5367-8ca1-ef908bfa08db",
+        "type": "default"
+      },
+      {
+        "id": "95fff728-3f15-5591-a2a2-08f1863f82e0",
+        "source": "acbf11e1-0e6e-5367-8ca1-ef908bfa08db",
+        "target": "48e92181-48a5-56a0-9a02-b4a65aa932a3",
+        "type": "default"
+      },
+      {
+        "id": "8d965cd4-28fc-59d3-8f4c-f7bed4b7dc2f",
+        "source": "48e92181-48a5-56a0-9a02-b4a65aa932a3",
+        "target": "33293821-8a0f-57ee-a027-262f2cae4db2",
+        "type": "default"
+      },
+      {
+        "id": "4a6dd021-9868-532b-b47f-0c8c88bbf698",
+        "source": "33293821-8a0f-57ee-a027-262f2cae4db2",
+        "target": "3b6868ca-4276-5e29-8a81-a682cd6daf7e",
+        "type": "default"
+      },
+      {
+        "id": "4733210b-a628-5830-bf90-9191d30b4308",
+        "source": "3b6868ca-4276-5e29-8a81-a682cd6daf7e",
+        "target": "9a2448f6-df02-5ac0-9b63-eeafbe0c62b1",
+        "type": "default"
+      },
+      {
+        "id": "056bbbc3-7888-5716-a5ac-a806c7f6b58e",
+        "source": "9a2448f6-df02-5ac0-9b63-eeafbe0c62b1",
+        "target": "dd9b4d70-7a5e-52d4-ac2d-78c4c3fb0252",
+        "type": "default"
+      },
+      {
+        "id": "05f2fe73-b648-5094-8f02-8dc60f6e8f1a",
+        "source": "dd9b4d70-7a5e-52d4-ac2d-78c4c3fb0252",
+        "target": "52e21850-b72d-53f9-8f33-76611d57c02f",
+        "type": "default"
+      },
+      {
+        "id": "960f40ef-b2cd-5688-8833-1ed4c4182154",
+        "source": "52e21850-b72d-53f9-8f33-76611d57c02f",
+        "target": "af7d9478-e50f-5feb-a870-f188bf79cd31",
+        "type": "default"
+      },
+      {
+        "id": "d5226a02-834c-522d-83f0-1908da783773",
+        "source": "af7d9478-e50f-5feb-a870-f188bf79cd31",
+        "target": "6120e138-6995-5bc6-abb8-e19a9cd5a8c7",
+        "type": "default"
+      },
+      {
+        "id": "5f7b9974-2c88-5ded-82ae-e1d1a4f92def",
+        "source": "6120e138-6995-5bc6-abb8-e19a9cd5a8c7",
+        "target": "1bb69f3c-a871-5284-be40-88660502a3b8",
+        "type": "default"
+      },
+      {
+        "id": "919f196b-0380-52fa-ac55-10156675d4d8",
+        "source": "1bb69f3c-a871-5284-be40-88660502a3b8",
+        "target": "0b81a36d-8be8-543b-9202-120fd5a0be07",
+        "type": "default"
+      },
+      {
+        "id": "81e2da6e-46dc-5abe-bdf0-7b948b0dd0e5",
+        "source": "0b81a36d-8be8-543b-9202-120fd5a0be07",
+        "target": "762fc006-30ee-595e-95cf-01d30cf22185",
+        "type": "default"
+      },
+      {
+        "id": "130b6629-d5c3-57ef-b863-0c3882480332",
+        "source": "762fc006-30ee-595e-95cf-01d30cf22185",
+        "sourceHandle": "then",
+        "target": "3af83552-71d7-57a2-b861-cf36f3c6fe7c",
+        "type": "default"
+      },
+      {
+        "id": "2bc5e3c2-abf9-5edf-96e3-ffd91b564bec",
+        "source": "3af83552-71d7-57a2-b861-cf36f3c6fe7c",
+        "target": "2537c351-a0f1-5e28-be4d-b15b6ad254b1",
+        "type": "default"
+      },
+      {
+        "id": "181346f5-97ac-56b4-bbc0-aa4869b9fb47",
+        "source": "2537c351-a0f1-5e28-be4d-b15b6ad254b1",
+        "target": "3fb91817-49df-5a2d-8137-61bae95e6cb2",
+        "type": "default"
+      },
+      {
+        "id": "0f269670-c115-58c6-b2a0-607b0af617bc",
+        "source": "3fb91817-49df-5a2d-8137-61bae95e6cb2",
+        "target": "28ef8c32-121d-5f27-b9a2-7a8046880bf1",
+        "type": "default"
+      },
+      {
+        "id": "ea9eb3ed-cc68-535a-8a83-f380f9d1dc2f",
+        "source": "28ef8c32-121d-5f27-b9a2-7a8046880bf1",
+        "target": "e3679d7d-c6ab-5f96-b638-a5f2d19cb562",
+        "type": "default"
+      },
+      {
+        "id": "d428bed8-41f5-5ab9-9560-86d229f0eefe",
+        "source": "e3679d7d-c6ab-5f96-b638-a5f2d19cb562",
+        "target": "d42ae619-3d62-5a16-acb4-45795f7821be",
+        "type": "default"
+      },
+      {
+        "id": "1bf7ddfb-0e2d-52bf-a5ae-53d17751acb1",
+        "source": "d42ae619-3d62-5a16-acb4-45795f7821be",
+        "target": "8e52366d-0f0f-56e6-a235-b36a42d893b1",
+        "type": "default"
+      },
+      {
+        "id": "30449fea-504d-50d1-bfa4-7fbbc5315fd7",
+        "source": "8e52366d-0f0f-56e6-a235-b36a42d893b1",
+        "target": "44962284-1793-5c81-a71a-c697ae4b7a91",
+        "type": "default"
+      },
+      {
+        "id": "a5f539f0-0251-5e31-abce-df7b11d12b17",
+        "source": "44962284-1793-5c81-a71a-c697ae4b7a91",
+        "target": "e8197435-3cc0-515e-a84b-15bd3ed043c6",
+        "type": "default"
+      },
+      {
+        "id": "201d5946-9042-5033-b55b-5288e950fa41",
+        "source": "e8197435-3cc0-515e-a84b-15bd3ed043c6",
+        "target": "e68f9d80-21b2-5e10-8369-31d2fa1ddafb",
+        "type": "default"
+      },
+      {
+        "id": "fd634440-2e8c-555c-a2d2-2e13a67080cc",
+        "source": "e68f9d80-21b2-5e10-8369-31d2fa1ddafb",
+        "target": "d869aaeb-261c-5421-9f57-3fbd08921415",
+        "type": "default"
+      },
+      {
+        "id": "78dc1776-3fc4-5f79-9b24-7c2ab297c5ac",
+        "source": "d869aaeb-261c-5421-9f57-3fbd08921415",
+        "target": "a132067e-5682-5875-aa4c-3712f2e90de9",
+        "type": "default"
+      },
+      {
+        "id": "790bf315-2f12-53d3-a873-0f65fbbede5a",
+        "source": "a132067e-5682-5875-aa4c-3712f2e90de9",
+        "target": "b71e428e-a974-5dc7-a252-eb73f8be8140",
+        "type": "default"
+      },
+      {
+        "id": "5a7fc7be-2908-5777-9fe5-4cce36c4957d",
+        "source": "1f38e981-4435-5ce0-985d-3da62c2e4c04",
+        "target": "0b8b44cb-fbb1-567f-9626-42c398a46868",
+        "type": "default"
+      },
+      {
+        "id": "174ef23a-5756-5df4-b6e1-553c9eed86e2",
+        "source": "0b8b44cb-fbb1-567f-9626-42c398a46868",
+        "target": "0140e945-3dc4-50f0-a721-9839e8f97268",
+        "type": "default"
+      },
+      {
+        "id": "1f7c3705-0530-58f7-8c1d-067ea5386e04",
+        "source": "0140e945-3dc4-50f0-a721-9839e8f97268",
+        "target": "a8c10289-95ab-5a21-b91a-b04da6d8a3a3",
+        "type": "default"
+      },
+      {
+        "id": "7c71d62d-97d3-54dd-b3f1-189588021a4f",
+        "source": "a8c10289-95ab-5a21-b91a-b04da6d8a3a3",
+        "target": "e3dd2c6b-3b47-52ae-913f-d479792a3fc1",
+        "type": "default"
+      },
+      {
+        "id": "4f4d6789-d906-50ea-91f0-cec83546ce2c",
+        "source": "e3dd2c6b-3b47-52ae-913f-d479792a3fc1",
+        "target": "9cea1d7e-d3a6-5abc-bdcb-358a10c204b4",
+        "type": "default"
+      },
+      {
+        "id": "1dc83334-4000-59aa-9e16-76a5f80d8c21",
+        "source": "9cea1d7e-d3a6-5abc-bdcb-358a10c204b4",
+        "target": "2b80f4ea-c531-5bc1-b628-06337bd1c4c7",
+        "type": "default"
+      },
+      {
+        "id": "cd0be079-9ec9-5043-bd40-581b6b068e5a",
+        "source": "2b80f4ea-c531-5bc1-b628-06337bd1c4c7",
+        "target": "79cd5107-7ccc-5b90-b7f7-a97db00bfa70",
+        "type": "default"
+      },
+      {
+        "id": "e9edb3dd-7452-590c-8d55-635f2daf7e56",
+        "source": "79cd5107-7ccc-5b90-b7f7-a97db00bfa70",
+        "target": "ae463dde-31ce-5dd8-99e3-70ebe4dd60cc",
+        "type": "default"
+      },
+      {
+        "id": "1c6b78ee-2377-5683-97ca-8351db32d57b",
+        "source": "ae463dde-31ce-5dd8-99e3-70ebe4dd60cc",
+        "target": "7f4a1ffb-9f0a-54e0-90a2-2ecfe3233c8f",
+        "type": "default"
+      },
+      {
+        "id": "8666947c-79e7-5d09-8cfa-49a979cd8fba",
+        "source": "7f4a1ffb-9f0a-54e0-90a2-2ecfe3233c8f",
+        "target": "d1d1a4bd-f8df-5693-aa0c-c8971605e12c",
+        "type": "default"
+      },
+      {
+        "id": "de47fe97-fa8e-5a15-ac0e-07c1415a165b",
+        "source": "d1d1a4bd-f8df-5693-aa0c-c8971605e12c",
+        "target": "8ed2a7f8-6f8b-58b7-9f57-3e3b09b7f8d1",
+        "type": "default"
+      },
+      {
+        "id": "663159ee-9ac9-5439-8d04-f5f0c4e367f0",
+        "source": "8ed2a7f8-6f8b-58b7-9f57-3e3b09b7f8d1",
+        "target": "cb6dc3a2-95f4-5af6-a455-1ec2ccbe5df6",
+        "type": "default"
+      },
+      {
+        "id": "49fcb85d-2117-5326-a91f-ea6b27433649",
+        "source": "cb6dc3a2-95f4-5af6-a455-1ec2ccbe5df6",
+        "target": "edaaa331-e3af-5899-b7d4-f0dbb6862581",
+        "type": "default"
+      },
+      {
+        "id": "4fbc7f62-96e7-599e-8d36-9c027e78ccc0",
+        "source": "edaaa331-e3af-5899-b7d4-f0dbb6862581",
+        "target": "e10fc38e-3510-57a7-8bbd-88f125d41f0d",
+        "type": "default"
+      },
+      {
+        "id": "386db7ad-6e93-5dfc-b459-0e309a8c8525",
+        "source": "e10fc38e-3510-57a7-8bbd-88f125d41f0d",
+        "target": "b30048ce-9eb0-5972-bde4-5ccf35a036d6",
+        "type": "default"
+      },
+      {
+        "id": "f7a2a2c1-f4af-5596-851c-a99db552a704",
+        "source": "7eeef149-84e9-5241-af1e-dc7275094585",
+        "sourceHandle": "finally",
+        "target": "cffd5657-9fa2-50c6-9603-d75756e265d6",
+        "type": "default"
+      },
+      {
+        "id": "15bcb04e-1c4d-560d-84ce-6ef71926e0a4",
+        "source": "cffd5657-9fa2-50c6-9603-d75756e265d6",
+        "target": "53163277-4e69-5935-8d1f-90963df6ecaf",
+        "type": "default"
+      },
+      {
+        "id": "99ea725e-d584-53ae-be38-76ead5dfbf1b",
+        "source": "53163277-4e69-5935-8d1f-90963df6ecaf",
+        "target": "9faa64d5-5374-5523-8dba-5816626eac9d",
+        "type": "default"
+      },
+      {
+        "id": "a841f4ba-ee45-5de9-b370-6f349ac949f6",
+        "source": "9faa64d5-5374-5523-8dba-5816626eac9d",
+        "target": "d2108374-3fc3-57af-a73e-43d94b6c7c4f",
+        "type": "default"
+      },
+      {
+        "id": "e3ee0de1-8954-50ce-8174-f8c63d331b83",
+        "source": "d2108374-3fc3-57af-a73e-43d94b6c7c4f",
+        "target": "eae3987c-d89d-5f82-9066-32f9a75dd679",
+        "type": "default"
+      },
+      {
+        "id": "13012914-15fa-54d9-b875-072109c7bfc3",
+        "source": "eae3987c-d89d-5f82-9066-32f9a75dd679",
+        "target": "1b151d04-bc4e-575b-993c-6166b6db8a7b",
+        "type": "default"
+      },
+      {
+        "id": "ec8625e8-d969-5b6a-b62e-862bd33996c9",
+        "source": "1b151d04-bc4e-575b-993c-6166b6db8a7b",
+        "target": "2cbe6b99-f5a3-52df-8cfb-97e426a0c434",
+        "type": "default"
+      },
+      {
+        "id": "cd6a162b-f474-5090-a52b-2fc1661e75e9",
+        "source": "2cbe6b99-f5a3-52df-8cfb-97e426a0c434",
+        "target": "f80a5100-5aee-5b7c-8b4a-8eceeb01ca28",
+        "type": "default"
+      },
+      {
+        "id": "6864abec-ad3a-5a1f-9d0e-405230c57a46",
+        "source": "f80a5100-5aee-5b7c-8b4a-8eceeb01ca28",
+        "target": "e292cd58-4b77-5fc4-b9bf-55275b92e1dc",
+        "type": "default"
+      },
+      {
+        "id": "27f4a86a-d8c7-58aa-bc7a-a36b4bd0f7b4",
+        "source": "e292cd58-4b77-5fc4-b9bf-55275b92e1dc",
+        "target": "54762b1a-d32f-58bc-a840-df36d438f258",
+        "type": "default"
+      },
+      {
+        "id": "bfce8f66-d5e5-5702-9dfa-5bfdc382058d",
+        "source": "7eeef149-84e9-5241-af1e-dc7275094585",
+        "sourceHandle": "then",
+        "target": "22fdcedf-60f0-56e8-b376-0474b8454dbd",
+        "type": "default"
+      },
+      {
+        "id": "23a85c65-b328-58b4-90f4-9f194c69f713",
+        "source": "b71e428e-a974-5dc7-a252-eb73f8be8140",
+        "target": "601a6979-dcdf-5bdb-ae13-3a4f6a2c9e1f",
+        "type": "default"
+      },
+      {
+        "id": "c8e16e8c-ad13-558e-8dbf-0cbfd4a653e8",
+        "source": "601a6979-dcdf-5bdb-ae13-3a4f6a2c9e1f",
+        "target": "1f38e981-4435-5ce0-985d-3da62c2e4c04",
+        "type": "default"
+      },
+      {
+        "id": "06461ae2-0183-525f-ae36-29faa2813dec",
+        "source": "b30048ce-9eb0-5972-bde4-5ccf35a036d6",
+        "target": "8e488046-e94f-5a10-ad98-6155b2a1f14d",
+        "type": "default"
+      },
+      {
+        "id": "a5499fe7-8e98-5962-b6b4-bbc12ed360d3",
+        "source": "8e488046-e94f-5a10-ad98-6155b2a1f14d",
+        "target": "40fe37d1-f21b-5d7f-85ea-0a6a99da7f48",
+        "type": "default"
+      },
+      {
+        "id": "82c76d40-cf4d-5f68-8ce3-97a7657ea52f",
+        "source": "40fe37d1-f21b-5d7f-85ea-0a6a99da7f48",
+        "target": "f060c950-ade0-5143-ba36-8c6e944b5631",
+        "type": "default"
+      },
+      {
+        "id": "548c0790-0c61-53d1-bc49-76b7c7926606",
+        "source": "f060c950-ade0-5143-ba36-8c6e944b5631",
+        "target": "46b2e67f-5db9-5952-a975-a5a432cfa567",
+        "type": "default"
+      },
+      {
+        "id": "96b808d6-d97b-5ef1-a50b-724be8c0938e",
+        "source": "46b2e67f-5db9-5952-a975-a5a432cfa567",
+        "target": "d804cb20-98aa-5413-b97b-6d37f9c40340",
+        "type": "default"
+      },
+      {
+        "id": "9a9f503c-00f5-578e-9ad6-2abf38321f17",
+        "source": "d804cb20-98aa-5413-b97b-6d37f9c40340",
+        "target": "0c2bb63b-778b-5527-b5fb-52bdb1364b3c",
+        "type": "default"
+      },
+      {
+        "id": "1d108503-032b-5099-b3c7-b586852dfab6",
+        "source": "0c2bb63b-778b-5527-b5fb-52bdb1364b3c",
+        "target": "0aab924d-def7-5b59-b6d7-0f4d10dc292b",
+        "type": "default"
+      },
+      {
+        "id": "3cd347c1-2676-5018-9e5b-6311ec9019e9",
+        "source": "0aab924d-def7-5b59-b6d7-0f4d10dc292b",
+        "target": "5eadb496-4663-5084-9f76-0ec7f240b73f",
+        "sourceHandle": "branch_1",
+        "type": "default"
+      },
+      {
+        "id": "069de064-9b1e-54b6-b6eb-b0f5de73b08a",
+        "source": "0aab924d-def7-5b59-b6d7-0f4d10dc292b",
+        "target": "eaebd038-d5d2-57ea-af7d-538697641e6e",
+        "sourceHandle": "branch_2",
+        "type": "default"
+      },
+      {
+        "id": "abd905d8-e4e8-5730-96c0-216127283cde",
+        "source": "eaebd038-d5d2-57ea-af7d-538697641e6e",
+        "target": "bbacb05f-f31f-5ef6-b877-ba49edc70e88",
+        "type": "default"
+      },
+      {
+        "id": "25b1bf03-3d3a-5925-a636-aec99f3a5e21",
+        "source": "0aab924d-def7-5b59-b6d7-0f4d10dc292b",
+        "target": "1dd0c3b5-4a7b-5b25-a5ce-f117d9787138",
+        "sourceHandle": "then",
+        "type": "default"
+      },
+      {
+        "id": "cee9b6d0-ce38-5bb1-9316-5b240b1412df",
+        "source": "1dd0c3b5-4a7b-5b25-a5ce-f117d9787138",
+        "target": "4e5943fe-37a0-560e-8217-16b616681ae7",
+        "type": "default"
+      },
+      {
+        "id": "319de388-6e45-51c0-9e08-2707718342ea",
+        "source": "4e5943fe-37a0-560e-8217-16b616681ae7",
+        "target": "3af9198c-ba6b-5862-bdc0-a8c448f2373c",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "ld_seed": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_update": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_clash": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_extra": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_gen": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_keyed": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_upsert": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_add_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_add_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_upk_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_upk_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_main_upserted": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_clash_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "ld_clash_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_miss_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_miss_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_miss_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_miss_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_main_after_refusals": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_csv_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_csv_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_main_overwritten": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_main_kept": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_one_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_one_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_one_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_one_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_main_after_one_tx": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_stop_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_stop_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_stop_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_stop_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_stop_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_skip_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_skip_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_skip_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_defer_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_defer_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_defer_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_defer_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_defer_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_nokey_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_nokey_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_nokey_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_nokey_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_bykey_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_bykey_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_key_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_my_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_my_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_my_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_or_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_or_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_or_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_ms_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_ms_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_lite_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_lite_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_pg_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_my_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_or_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_ms_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_left": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_dupe": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_clash_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_lite_clash_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_lite_clash_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_lite_clash_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_lite_clash_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_over_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_lite_over_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_lite_over_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_lite_over_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ld_lite_over_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ld_lite_wait_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ld_lite_wait_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ld_lite_wait_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,317 @@
+{
+  "name": "File Picker Browse Gating E2E Test",
+  "version": "1.0.0",
+  "description": "Where Browse is offered and where it is withheld: expression rows, pod-side rows and a Remote Execution body.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fio-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Path from an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "read_path"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "k8s-push",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "K8s Copy",
+          "elementType": "k8s-copy",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Push the picked WAVE-side file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "pod": "wave-pod-exec",
+              "container": "app",
+              "timeout": 60,
+              "direction": "to_pod",
+              "source_path": "artifact://seed-not-picked.bin",
+              "target_path": "/tmp/wave-e2e-picker/pushed.bin"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "k8s-pull",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "K8s Copy",
+          "elementType": "k8s-copy",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Pull into the composed artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "pod": "wave-pod-exec",
+              "container": "app",
+              "timeout": 60,
+              "direction": "from_pod",
+              "source_path": "/tmp/wave-e2e-picker/pushed.bin",
+              "target_path": "artifact://seed-not-picked.bin"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ssh-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the host session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "remote-body",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-inside",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Host path inside the body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/tmp/wave-e2e-picker/inside.txt"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'file-picker-gating-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "fio-expr",
+        "type": "default"
+      },
+      {
+        "id": "e-fio-expr-k8s-push",
+        "source": "fio-expr",
+        "target": "k8s-push",
+        "type": "default"
+      },
+      {
+        "id": "e-k8s-push-k8s-pull",
+        "source": "k8s-push",
+        "target": "k8s-pull",
+        "type": "default"
+      },
+      {
+        "id": "e-k8s-pull-ssh-open",
+        "source": "k8s-pull",
+        "target": "ssh-open",
+        "type": "default"
+      },
+      {
+        "id": "e-ssh-open-remote-body",
+        "source": "ssh-open",
+        "target": "remote-body",
+        "type": "default"
+      },
+      {
+        "id": "e-body",
+        "source": "remote-body",
+        "sourceHandle": "body",
+        "target": "fio-inside",
+        "type": "default"
+      },
+      {
+        "id": "e-then",
+        "source": "remote-body",
+        "sourceHandle": "then",
+        "target": "log-then",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "read_path": {
+      "value": "artifact://from-a-variable.txt",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

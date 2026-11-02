@@ -1,0 +1,60 @@
+{
+  "name": "V-CANVAS-FN-PARAM-EDIT-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with one local Function carrying a declared input (`user_id`, string, default 'admin') and a declared output (`result`, integer, default 0). The spec drills in, clicks edit on each row, changes the default value, saves the dialog, saves the Test, reloads, drills back in, and asserts the new values persisted via PUT /tests/{id} (NOT silently dropped by an update path that doesn't recognize the synthetic `param:input:` / `param:output:` ids).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [],
+              "edges": []
+            },
+            "inputs": [
+              {
+                "name": "user_id",
+                "type": "string",
+                "default": "admin"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "result",
+                "type": "integer",
+                "default": 0
+              }
+            ],
+            "variables": [],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-20T00:00:00.000000",
+  "updated_at": "2026-05-20T00:00:00.000000"
+}

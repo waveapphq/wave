@@ -1,0 +1,216 @@
+{
+  "name": "K8s Get Golden",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-admin",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session for sess_admin",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "sess_admin"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "golden: Pod by name, Map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "golden_names",
+              "count": "golden_count",
+              "result": "golden_result"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marker for golden",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[G-01|G-07|G-34|G-37] golden count={golden_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-get-golden-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-connect-admin",
+        "source": "start-node",
+        "target": "connect-admin"
+      },
+      {
+        "id": "edge-connect-admin-get-golden",
+        "source": "connect-admin",
+        "target": "get-golden"
+      },
+      {
+        "id": "edge-get-golden-log-golden",
+        "source": "get-golden",
+        "target": "log-golden"
+      },
+      {
+        "id": "edge-log-golden-log-done",
+        "source": "log-golden",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_admin": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "golden_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "golden_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "golden_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

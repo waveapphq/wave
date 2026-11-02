@@ -1,0 +1,650 @@
+{
+  "name": "Remote Real Harness Integration E2E Test",
+  "version": "1.0.0",
+  "description": "Full-chain integration over the real stack: A -> B via parent (hop 2) -> five real interpreters on B -> tunnel over B to the internal http-target -> Remote Execution on B -> post-close refusal -> cascade close.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open A (first real host)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": { "session_id": "sid_a", "connected": "a_conn", "hop_count": "a_hop" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "open-b",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open B via parent A to the nested host (real jump)",
+          "hasNewerVersion": false,
+          "expressionFields": ["parent_session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "nested-sshd",
+              "port": 22,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "use_parent": true,
+              "parent_session_id": "sid_a"
+            },
+            "outputBindings": { "session_id": "sid_b", "connected": "b_conn", "hop_count": "b_hop" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "exec-b",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "hostname through the 2-hop chain",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "command": "hostname", "timeout": 30 },
+            "outputBindings": { "stdout": "out_host" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-chain",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the real jump-chain proof",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'chain a_hop={a_hop} b_hop={b_hop} host={out_host.strip()}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "script-sh",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "sh on B: real arithmetic",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "script": "echo $((6*7))", "interpreter": "/bin/sh", "timeout": 30 },
+            "outputBindings": { "stdout": "out_sh" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "script-bash",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "bash on B: arithmetic guarded by $BASH_VERSION",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "script": "[ -n \"$BASH_VERSION\" ] && echo \"$((6*7))-bash\"", "interpreter": "bash", "timeout": 30 },
+            "outputBindings": { "stdout": "out_bash" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "script-py",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "python3 on B: real print",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "script": "print(6*7)", "interpreter": "python3", "timeout": 30 },
+            "outputBindings": { "stdout": "out_py" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "script-perl",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 590 },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "perl on B: real print",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "script": "print 6*7", "interpreter": "perl", "timeout": 30 },
+            "outputBindings": { "stdout": "out_perl" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "script-node",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 660 },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "node on B: real console.log",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "script": "console.log(6*7)", "interpreter": "node", "timeout": 30 },
+            "outputBindings": { "stdout": "out_node" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-scripts",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the five real interpreter results",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'scripts sh={out_sh.strip()} bash={out_bash.strip()} py={out_py.strip()} perl={out_perl.strip()} node={out_node.strip()}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-b",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 800 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Tunnel over B to the internal http-target",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b", "local_port": 0, "remote_host": "http-target", "remote_port": 9444 },
+            "outputBindings": { "tunnel_id": "tid_b", "local_port": "lport_b" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-tunnel",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 870 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET health through the tunnel over the 2-hop chain",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_b}/health'",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "t_status", "body": "t_body" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tunnel",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 940 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the tunnel round-trip",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'tunnel status={t_status} body={t_body}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1010 },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run body on B (worker over the 2-hop chain)",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_b" },
+            "outputBindings": { "remote_session_id": "rsid" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "http-rex",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 1090 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remotable HTTP on B (DNS resolves only in-stack)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://http-target:9444/api",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "rx_status", "body": "rx_body" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-rex",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 1160 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the real remote response",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'in-body rx={rx_status} body={rx_body}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-then",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log then + remote session id",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'then rsid_len={len(rsid)} remote-exec-real'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-tunnel",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1310 },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the tunnel over B",
+          "hasNewerVersion": false,
+          "expressionFields": ["tunnel_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "tunnel_id": "tid_b" },
+            "outputBindings": { "closed": "closed_t" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-post-close",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1380 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the request through the closed tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "post_close_err" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-post-close",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 1450 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the CLOSED tunnel (must be refused)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_b}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-post-close-caught",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 1520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused post-close request",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'post-close-caught request-refused'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-post-close-err",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1590 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the bound post-close error",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'post-close-err closed={closed_t} err={post_close_err}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-a",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1660 },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close A (cascades to B across the real jump)",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid_a" },
+            "outputBindings": { "closed_session_ids": "closed_ids" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-close",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the cascade close + Connected flips",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'cascade ids={closed_ids} a_conn={a_conn} b_conn={b_conn}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'remote-harness-e2e-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "open-a" },
+      { "id": "e-a-b", "source": "open-a", "target": "open-b" },
+      { "id": "e-b-exec", "source": "open-b", "target": "exec-b" },
+      { "id": "e-exec-log-chain", "source": "exec-b", "target": "log-chain" },
+      { "id": "e-log-chain-sh", "source": "log-chain", "target": "script-sh" },
+      { "id": "e-sh-bash", "source": "script-sh", "target": "script-bash" },
+      { "id": "e-bash-py", "source": "script-bash", "target": "script-py" },
+      { "id": "e-py-perl", "source": "script-py", "target": "script-perl" },
+      { "id": "e-perl-node", "source": "script-perl", "target": "script-node" },
+      { "id": "e-node-log-scripts", "source": "script-node", "target": "log-scripts" },
+      { "id": "e-log-scripts-tunnel", "source": "log-scripts", "target": "tunnel-b" },
+      { "id": "e-tunnel-http", "source": "tunnel-b", "target": "http-tunnel" },
+      { "id": "e-http-log-tunnel", "source": "http-tunnel", "target": "log-tunnel" },
+      { "id": "e-log-tunnel-container", "source": "log-tunnel", "target": "container" },
+      { "id": "e-body", "source": "container", "sourceHandle": "body", "target": "http-rex", "type": "default" },
+      { "id": "e-rex-log", "source": "http-rex", "target": "log-rex" },
+      { "id": "e-then", "source": "container", "sourceHandle": "then", "target": "log-then", "type": "default" },
+      { "id": "e-then-close-tunnel", "source": "log-then", "target": "close-tunnel" },
+      { "id": "e-close-tunnel-tc", "source": "close-tunnel", "target": "tc-post-close" },
+      { "id": "e-tc-try", "source": "tc-post-close", "sourceHandle": "try", "target": "http-post-close", "type": "default" },
+      { "id": "e-tc-catch", "source": "tc-post-close", "sourceHandle": "catch", "target": "log-post-close-caught", "type": "default" },
+      { "id": "e-tc-then", "source": "tc-post-close", "sourceHandle": "then", "target": "log-post-close-err", "type": "default" },
+      { "id": "e-err-close-a", "source": "log-post-close-err", "target": "close-a" },
+      { "id": "e-close-a-log", "source": "close-a", "target": "log-close" },
+      { "id": "e-log-close-done", "source": "log-close", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "sid_a": { "value": "", "type": "string", "scope": "test" },
+    "a_conn": { "value": false, "type": "boolean", "scope": "test" },
+    "a_hop": { "value": 0, "type": "integer", "scope": "test" },
+    "sid_b": { "value": "", "type": "string", "scope": "test" },
+    "b_conn": { "value": false, "type": "boolean", "scope": "test" },
+    "b_hop": { "value": 0, "type": "integer", "scope": "test" },
+    "out_host": { "value": "", "type": "string", "scope": "test" },
+    "out_sh": { "value": "", "type": "string", "scope": "test" },
+    "out_bash": { "value": "", "type": "string", "scope": "test" },
+    "out_py": { "value": "", "type": "string", "scope": "test" },
+    "out_perl": { "value": "", "type": "string", "scope": "test" },
+    "out_node": { "value": "", "type": "string", "scope": "test" },
+    "tid_b": { "value": "", "type": "string", "scope": "test" },
+    "lport_b": { "value": 0, "type": "integer", "scope": "test" },
+    "t_status": { "value": 0, "type": "integer", "scope": "test" },
+    "t_body": { "value": "", "type": "string", "scope": "test" },
+    "rsid": { "value": "", "type": "string", "scope": "test" },
+    "rx_status": { "value": 0, "type": "integer", "scope": "test" },
+    "rx_body": { "value": "", "type": "string", "scope": "test" },
+    "closed_t": { "value": false, "type": "boolean", "scope": "test" },
+    "post_close_err": { "value": {}, "type": "map", "scope": "test" },
+    "closed_ids": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

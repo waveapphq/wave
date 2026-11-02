@@ -1,0 +1,145 @@
+{
+  "name": "V-PLUGIN-SQL-EDITOR SQLite __TOKEN__",
+  "version": "1.0.0",
+  "description": "Get Tables from the SQL editor of three SQLite blocks: a File in the Test's Test Data that holds two tables, the same File with a Driver option SQLite does not take, and a File that is not there.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "009b6107-3197-453c-86ef-55c8da36ec7c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Two tables",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The File holds two tables",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqled-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM customers ORDER BY id",
+              "driver_options": {},
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1c1081ce-52ad-44e8-950e-d11d0c33cbe9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Unsupported option",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A Driver option SQLite does not take",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqled-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM customers ORDER BY id",
+              "driver_options": {
+                "isolation_level": "DEFERRED"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "921ca481-e28b-481d-928a-4e2eca6139a7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Missing file",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The File is not there",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqled-__TOKEN__-missing.db",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM customers ORDER BY id",
+              "driver_options": {},
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "2e962a51-eb28-4050-8f80-6835f55474a3",
+        "source": "start-node",
+        "target": "009b6107-3197-453c-86ef-55c8da36ec7c"
+      },
+      {
+        "id": "b38a8839-7394-420a-ac15-f8c1e7c9acaa",
+        "source": "009b6107-3197-453c-86ef-55c8da36ec7c",
+        "target": "1c1081ce-52ad-44e8-950e-d11d0c33cbe9"
+      },
+      {
+        "id": "49675462-c699-459a-bb5c-4228c778bb8b",
+        "source": "1c1081ce-52ad-44e8-950e-d11d0c33cbe9",
+        "target": "921ca481-e28b-481d-928a-4e2eca6139a7"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

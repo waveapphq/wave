@@ -1,0 +1,231 @@
+{
+  "name": "SFTP Cleanup as dropzone __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "Safety net after the dropzone spec: deletes each of its folders, a missing one included.",
+  "variables": {
+    "cleanup_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "cleanup_paths": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "cleanup_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "d21165ec-f65d-4b52-86a6-f832b4c6836e",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the cleanup session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "dropzone",
+              "password": "dropzone-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "cleanup_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "3f1dba84-04d7-4277-a515-f7d38ab56282",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Each spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "collection": "cleanup_paths"
+            },
+            "outputBindings": {
+              "index": "cleanup_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8db32371-ab72-4ab7-b1bf-71687b8a7875",
+        "type": "workflowNode",
+        "position": {
+          "x": 125,
+          "y": 260
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "path"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "cleanup_session",
+              "operation": "delete",
+              "path": "cleanup_paths[cleanup_index]",
+              "missing_ok": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "dea7b353-fbc7-47ce-80d2-8b7ad97bd38a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 340
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the cleanup session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "cleanup_session"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e5953549-086e-4d8a-8057-c0b130ec91f8",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-cleanup-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "52ec6f56-8fe6-4ee7-a541-8c217e39f685",
+        "source": "start-node",
+        "target": "d21165ec-f65d-4b52-86a6-f832b4c6836e"
+      },
+      {
+        "id": "d669155e-c824-489d-96d2-7ecac8823c04",
+        "source": "d21165ec-f65d-4b52-86a6-f832b4c6836e",
+        "target": "3f1dba84-04d7-4277-a515-f7d38ab56282"
+      },
+      {
+        "id": "41fae3b7-527c-4537-952a-9d95299e9e2f",
+        "source": "3f1dba84-04d7-4277-a515-f7d38ab56282",
+        "target": "8db32371-ab72-4ab7-b1bf-71687b8a7875",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e38013ef-e40f-4714-a489-ce940b0eeb77",
+        "source": "3f1dba84-04d7-4277-a515-f7d38ab56282",
+        "target": "dea7b353-fbc7-47ce-80d2-8b7ad97bd38a",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "9605b3b3-f098-401d-962f-fb58ab904b56",
+        "source": "dea7b353-fbc7-47ce-80d2-8b7ad97bd38a",
+        "target": "e5953549-086e-4d8a-8057-c0b130ec91f8"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

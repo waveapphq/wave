@@ -1,0 +1,1035 @@
+{
+  "name": "ForEach Control E2E",
+  "version": "1.0.0",
+  "description": "Eight ForEach loops chained: array iteration, empty collection, map keys, table rows from a declared table variable, literal array, empty map, empty table, and a timeout with a delay body wrapped in try-catch.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": {
+          "x": -60,
+          "y": 80
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'before-foreach'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-array",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 200
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Array",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "hosts"
+            },
+            "outputBindings": {
+              "item": "fe_item",
+              "index": "fe_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-log-array",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Array",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'foreach-array-{fe_item[\"value\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-empty",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 450
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "empty_list"
+            },
+            "outputBindings": {
+              "item": "fe2_item",
+              "index": "fe2_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "halt-trap",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 520
+        },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TRAP - should never run",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "scope": "test",
+              "status": "failed",
+              "message": "empty body executed - BUG"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-map",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 620
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "network",
+              "collection_type": "map"
+            },
+            "outputBindings": {
+              "item": "fe3_item",
+              "index": "fe3_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-log-map",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 750
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'foreach-map-{fe3_item[\"value\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-table",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 750
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "hosts_table",
+              "collection_type": "table"
+            },
+            "outputBindings": {
+              "item": "fe5_item",
+              "index": "fe5_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-log-table",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Table",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'foreach-table-{fe5_item[\"value\"][\"name\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-literal",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 950
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Literal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": [
+                "x",
+                "y",
+                "z"
+              ]
+            },
+            "outputBindings": {
+              "item": "fe6_item",
+              "index": "fe6_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-log-literal",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Literal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'foreach-literal-{fe6_item[\"value\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": {
+          "x": -60,
+          "y": 1200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'after-all-foreach'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 1320
+        },
+        "data": {
+          "label": "Try Catch Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TryCatch Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "tc_error",
+              "caught": "tc_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "catch-log-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Log Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'foreach-timeout-caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 1450
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "big_list",
+              "timeout": 1.0
+            },
+            "outputBindings": {
+              "item": "fe4_item",
+              "index": "fe4_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-delay",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 1580
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Body Delay 2s",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 200
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "body-log-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 1710
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'foreach-timeout-{fe4_idx}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-empty-map",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 1330
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Empty Map",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "empty_map"
+            },
+            "outputBindings": {
+              "item": "fe7_item",
+              "index": "fe7_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "halt-trap-map",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 1440
+        },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Halt Trap Map",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "scope": "test",
+              "status": "failed",
+              "message": "empty map body executed - BUG"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "foreach-empty-table",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 1550
+        },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Empty Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "empty_table"
+            },
+            "outputBindings": {
+              "item": "fe8_item",
+              "index": "fe8_idx"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "halt-trap-table",
+        "type": "workflowNode",
+        "position": {
+          "x": -220,
+          "y": 1660
+        },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Halt Trap Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "scope": "test",
+              "status": "failed",
+              "message": "empty table body executed - BUG"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-before",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "log-before",
+        "target": "foreach-array",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "foreach-array",
+        "sourceHandle": "body",
+        "target": "body-log-array",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "foreach-array",
+        "sourceHandle": "then",
+        "target": "foreach-empty",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "foreach-empty",
+        "sourceHandle": "body",
+        "target": "halt-trap",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "foreach-empty",
+        "sourceHandle": "then",
+        "target": "foreach-map",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "foreach-map",
+        "sourceHandle": "body",
+        "target": "body-log-map",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "foreach-map",
+        "sourceHandle": "then",
+        "target": "foreach-table",
+        "type": "default"
+      },
+      {
+        "id": "e8a",
+        "source": "foreach-table",
+        "sourceHandle": "body",
+        "target": "body-log-table",
+        "type": "default"
+      },
+      {
+        "id": "e8b",
+        "source": "foreach-table",
+        "sourceHandle": "then",
+        "target": "foreach-literal",
+        "type": "default"
+      },
+      {
+        "id": "e8c",
+        "source": "foreach-literal",
+        "sourceHandle": "body",
+        "target": "body-log-literal",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "log-after",
+        "target": "tc-timeout",
+        "type": "default"
+      },
+      {
+        "id": "e9a",
+        "source": "tc-timeout",
+        "sourceHandle": "try",
+        "target": "foreach-timeout",
+        "type": "default"
+      },
+      {
+        "id": "e9b",
+        "source": "tc-timeout",
+        "sourceHandle": "catch",
+        "target": "catch-log-timeout",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "foreach-timeout",
+        "sourceHandle": "body",
+        "target": "body-delay",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "body-delay",
+        "target": "body-log-timeout",
+        "type": "default"
+      },
+      {
+        "id": "e8e",
+        "source": "foreach-literal",
+        "sourceHandle": "then",
+        "target": "foreach-empty-map",
+        "type": "default"
+      },
+      {
+        "id": "e8f",
+        "source": "foreach-empty-map",
+        "sourceHandle": "body",
+        "target": "halt-trap-map",
+        "type": "default"
+      },
+      {
+        "id": "e8g",
+        "source": "foreach-empty-map",
+        "sourceHandle": "then",
+        "target": "foreach-empty-table",
+        "type": "default"
+      },
+      {
+        "id": "e8h",
+        "source": "foreach-empty-table",
+        "sourceHandle": "body",
+        "target": "halt-trap-table",
+        "type": "default"
+      },
+      {
+        "id": "e8i",
+        "source": "foreach-empty-table",
+        "sourceHandle": "then",
+        "target": "log-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "hosts": {
+      "type": "array",
+      "value": [
+        "alpha",
+        "bravo",
+        "charlie"
+      ],
+      "scope": "test"
+    },
+    "fe_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "empty_list": {
+      "type": "array",
+      "value": [],
+      "scope": "test"
+    },
+    "fe2_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe2_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "network": {
+      "type": "map",
+      "value": {
+        "host": "10.0.0.1",
+        "port": "8080"
+      },
+      "scope": "test"
+    },
+    "fe3_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe3_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "hosts_table": {
+      "type": "table",
+      "value": [
+        {
+          "name": "srv-a",
+          "ip": "1.1.1.1"
+        },
+        {
+          "name": "srv-b",
+          "ip": "2.2.2.2"
+        }
+      ],
+      "scope": "test"
+    },
+    "fe5_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe5_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "fe6_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe6_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "big_list": {
+      "type": "array",
+      "value": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j"
+      ],
+      "scope": "test"
+    },
+    "fe4_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe4_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "tc_error": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "tc_caught": {
+      "type": "boolean",
+      "value": false,
+      "scope": "test"
+    },
+    "empty_map": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "empty_table": {
+      "type": "table",
+      "value": [],
+      "scope": "test"
+    },
+    "fe7_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe7_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "fe8_item": {
+      "type": "map",
+      "value": {},
+      "scope": "test"
+    },
+    "fe8_idx": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-03-29T00:00:00.000000",
+  "updated_at": "2026-03-29T00:00:00.000000"
+}

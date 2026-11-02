@@ -1,0 +1,253 @@
+{
+  "name": "Param Template + Trim E2E (single-line string kinds)",
+  "version": "1.0.0",
+  "description": "An HTTP node's single-line `url` string param resolves through all three kinds plus the strict-param trim. (1) a Template-kind url `{{base_url}}/health` renders at execution (a single-line string param has a template control); (2) an Expression-kind url evaluates; (3) a literal url carrying a trailing newline is trimmed before the request (strict single-line trim). A POST with a multiline Template body proves the re-homed multiline body template still renders after the StringInput unification. Each request's final_url / echoed body is bound to a variable and read back by a downstream Log so the run output asserts the resolved value.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-tmpl",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 120 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Template URL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["url"],
+          "config": {
+            "values": {
+              "url": "{{base_url}}/health",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "final_url": "tmpl_url" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tmpl",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template URL",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'tmpl=' + tmpl_url", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-expr",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 280 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Expression URL",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "base_url + '/health'",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "final_url": "expr_url" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expression URL",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'expr=' + expr_url", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-trim",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 440 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Trimmed URL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "RUNTIME_TRIM_URL",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "final_url": "trim_url" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-trim",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Trimmed URL",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'trim=[' + trim_url + ']'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-body",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 600 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "POST Template Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": ["body"],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/echo'",
+              "method": "POST",
+              "body": "Greeting: {{ greeting }}\nDone",
+              "headers": {},
+              "query_params": {},
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "body": "echo_body" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 680 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Echo Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "echo_body", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "http-tmpl", "type": "default" },
+      { "id": "e2", "source": "http-tmpl", "target": "log-tmpl", "type": "default" },
+      { "id": "e3", "source": "log-tmpl", "target": "http-expr", "type": "default" },
+      { "id": "e4", "source": "http-expr", "target": "log-expr", "type": "default" },
+      { "id": "e5", "source": "log-expr", "target": "http-trim", "type": "default" },
+      { "id": "e6", "source": "http-trim", "target": "log-trim", "type": "default" },
+      { "id": "e7", "source": "log-trim", "target": "http-body", "type": "default" },
+      { "id": "e8", "source": "http-body", "target": "log-body", "type": "default" }
+    ]
+  },
+  "variables": {
+    "base_url": { "value": "", "type": "string", "scope": "test" },
+    "greeting": { "value": "Ada", "type": "string", "scope": "test" },
+    "tmpl_url": { "value": "", "type": "string", "scope": "test" },
+    "expr_url": { "value": "", "type": "string", "scope": "test" },
+    "trim_url": { "value": "", "type": "string", "scope": "test" },
+    "echo_body": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-06-28T00:00:00.000000",
+  "updated_at": "2026-06-28T00:00:00.000000"
+}

@@ -1,0 +1,239 @@
+{
+  "name": "Profile Drives Database E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "6aea51e3-9ddd-47cd-9d81-0a59173b6217",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Every connection and trust row comes from the profile",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "host",
+            "port",
+            "database",
+            "username",
+            "password",
+            "verify_ssl",
+            "ca_cert",
+            "client_cert",
+            "client_key",
+            "driver_options"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "dbp.host",
+              "port": "dbp.port",
+              "database": "dbp.database",
+              "username": "dbp.username",
+              "password": "dbp.password",
+              "script_type": "source",
+              "sql": "SELECT current_user AS who, current_database() AS db, s.ssl AS tls, s.client_dn AS client_dn, current_setting('application_name') AS app FROM pg_stat_ssl s WHERE s.pid = pg_backend_pid()",
+              "parameters": {},
+              "stop_on_error": true,
+              "timeout": 300,
+              "tls": true,
+              "verify_ssl": "dbp.verify_ssl",
+              "ca_cert": "dbp.ca_cert",
+              "client_cert": "dbp.client_cert",
+              "client_key": "dbp.client_key",
+              "connect_timeout": 30,
+              "max_rows": 10000,
+              "driver_options": "dbp.driver_options",
+              "on_error": "fail"
+            },
+            "outputBindings": { "success": "id_ok", "rows": "id_rows", "row_count": "id_count" },
+            "profileBindings": [
+              {
+                "profileId": "__DB_PROFILE_ID__",
+                "alias": "dbp",
+                "profileName": "__DB_PROFILE_NAME__",
+                "profileType": "database"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "eca1cbc6-b55d-4825-8cd7-4db56e447b57",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log what the database saw of the profile-driven session",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"dbprof ok={id_ok} count={id_count} who={id_rows[0]['who']} db={id_rows[0]['db']} tls={id_rows[0]['tls']} dn=[{id_rows[0]['client_dn']}] app={id_rows[0]['app']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "dd5fe5e4-97de-4645-bc5b-ceb3128e6701",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The same profile without its CA: the profile's certificate check refuses the server",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "host",
+            "port",
+            "database",
+            "username",
+            "password",
+            "verify_ssl",
+            "client_cert",
+            "client_key",
+            "driver_options"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "dbp.host",
+              "port": "dbp.port",
+              "database": "dbp.database",
+              "username": "dbp.username",
+              "password": "dbp.password",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one",
+              "parameters": {},
+              "stop_on_error": true,
+              "timeout": 300,
+              "tls": true,
+              "verify_ssl": "dbp.verify_ssl",
+              "client_cert": "dbp.client_cert",
+              "client_key": "dbp.client_key",
+              "connect_timeout": 30,
+              "max_rows": 10000,
+              "driver_options": "dbp.driver_options",
+              "on_error": "record"
+            },
+            "outputBindings": { "success": "noca_ok", "error": "noca_error", "reason": "noca_reason" },
+            "profileBindings": [
+              {
+                "profileId": "__DB_PROFILE_ID__",
+                "alias": "dbp",
+                "profileName": "__DB_PROFILE_NAME__",
+                "profileType": "database"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "405d5262-489c-4bb4-bac1-303513179807",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the recorded certificate refusal",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'dbprof-noca ok={noca_ok} reason={noca_reason} error=[{noca_error}]'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "263c1b2c-9307-4d20-9ba7-2c27ba951fa2",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'profile-db-e2e-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "51b1062d-0848-4146-b78f-461751b1e246",
+        "source": "start-node",
+        "target": "6aea51e3-9ddd-47cd-9d81-0a59173b6217"
+      },
+      {
+        "id": "90d423df-d37b-4b2c-ae61-6b58b5a775dd",
+        "source": "6aea51e3-9ddd-47cd-9d81-0a59173b6217",
+        "target": "eca1cbc6-b55d-4825-8cd7-4db56e447b57"
+      },
+      {
+        "id": "29d5faf7-fa73-45d5-8983-ef98fe981857",
+        "source": "eca1cbc6-b55d-4825-8cd7-4db56e447b57",
+        "target": "dd5fe5e4-97de-4645-bc5b-ceb3128e6701"
+      },
+      {
+        "id": "87635345-8de3-42bb-8f0b-d22330c20d37",
+        "source": "dd5fe5e4-97de-4645-bc5b-ceb3128e6701",
+        "target": "405d5262-489c-4bb4-bac1-303513179807"
+      },
+      {
+        "id": "5693643a-3e15-4c2a-a6fb-46350b910cf9",
+        "source": "405d5262-489c-4bb4-bac1-303513179807",
+        "target": "263c1b2c-9307-4d20-9ba7-2c27ba951fa2"
+      }
+    ]
+  },
+  "variables": {
+    "id_ok": { "value": false, "type": "boolean", "scope": "test" },
+    "id_rows": { "value": [], "type": "table", "scope": "test" },
+    "id_count": { "value": 0, "type": "integer", "scope": "test" },
+    "noca_ok": { "value": true, "type": "boolean", "scope": "test" },
+    "noca_error": { "value": "", "type": "string", "scope": "test" },
+    "noca_reason": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

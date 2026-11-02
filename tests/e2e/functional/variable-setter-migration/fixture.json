@@ -1,0 +1,288 @@
+{
+  "name": "Variable Setter Migration E2E (all types + expression + template)",
+  "version": "1.0.0",
+  "description": "A single Variable Setter assigns one value of EACH type through the migrated value affordances - string literal, exact-text integer, exact-text float, boolean, array, map, table - plus one per-key expression row and one per-key template row. Proves the migrated setter persists + resolves every type, that exact-text numbers survive, the per-key expression evaluates eagerly, and the per-key template path renders eagerly to the target. Downstream Log nodes read each target back so the run output asserts the resolved value.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-all",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 120 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set All Types",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["expr_v"],
+          "variableTemplateKeys": ["tmpl_v"],
+          "variableTypes": {
+            "str_v": "string",
+            "int_v": "integer",
+            "float_v": "float",
+            "bool_v": "boolean",
+            "arr_v": "array",
+            "map_v": "map",
+            "tbl_v": "table",
+            "expr_v": "integer",
+            "tmpl_v": "string"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "str_v": "hello world",
+                "int_v": "42",
+                "float_v": "2.718281828459045",
+                "bool_v": true,
+                "arr_v": ["a", "b", "c"],
+                "map_v": { "k1": "v1", "k2": "v2" },
+                "tbl_v": [
+                  { "id": 1, "name": "alpha" },
+                  { "id": 2, "name": "beta" }
+                ],
+                "expr_v": "base_num + 1",
+                "tmpl_v": "Hi {{ first_name }}"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-str",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log String",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'str=' + str_v", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-int",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Integer",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'int=' + str(int_v)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-float",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Float",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'float=' + f'{float_v}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-bool",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 430 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Boolean",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'bool=' + str(bool_v)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-arr",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Array",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'arr=' + ','.join(arr_v)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-map",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 570 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Map",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'map=' + map_v['k1'] + ',' + map_v['k2']", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tbl",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 640 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Table",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'tbl=' + str(tbl_v[0]['id']) + ',' + tbl_v[0]['name'] + ',' + tbl_v[1]['name']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 710 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'expr=' + str(expr_v)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tmpl",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 780 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'tmpl=' + tmpl_v", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-all", "type": "default" },
+      { "id": "e2", "source": "varset-all", "target": "log-str", "type": "default" },
+      { "id": "e3", "source": "log-str", "target": "log-int", "type": "default" },
+      { "id": "e4", "source": "log-int", "target": "log-float", "type": "default" },
+      { "id": "e5", "source": "log-float", "target": "log-bool", "type": "default" },
+      { "id": "e6", "source": "log-bool", "target": "log-arr", "type": "default" },
+      { "id": "e7", "source": "log-arr", "target": "log-map", "type": "default" },
+      { "id": "e8", "source": "log-map", "target": "log-tbl", "type": "default" },
+      { "id": "e9", "source": "log-tbl", "target": "log-expr", "type": "default" },
+      { "id": "e10", "source": "log-expr", "target": "log-tmpl", "type": "default" }
+    ]
+  },
+  "variables": {
+    "str_v": { "value": "", "type": "string", "scope": "test" },
+    "int_v": { "value": 0, "type": "integer", "scope": "test" },
+    "float_v": { "value": 0.0, "type": "float", "scope": "test" },
+    "bool_v": { "value": false, "type": "boolean", "scope": "test" },
+    "arr_v": { "value": [], "type": "array", "scope": "test" },
+    "map_v": { "value": {}, "type": "map", "scope": "test" },
+    "tbl_v": { "value": [], "type": "table", "scope": "test" },
+    "expr_v": { "value": 0, "type": "integer", "scope": "test" },
+    "tmpl_v": { "value": "", "type": "string", "scope": "test" },
+    "base_num": { "value": 41, "type": "integer", "scope": "test" },
+    "first_name": { "value": "Ada", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-06-25T00:00:00.000000",
+  "updated_at": "2026-06-25T00:00:00.000000"
+}

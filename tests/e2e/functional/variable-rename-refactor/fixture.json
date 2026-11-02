@@ -1,0 +1,201 @@
+{
+  "name": "Variable Rename Refactor Guard",
+  "version": "1.0.0",
+  "description": "Renaming a variable referenced across the Test must refactor every reference - Log template and expression fields, a Variable Setter TARGET key, and a Variable Setter's per-key expression and template VALUES - and the old name must survive nowhere. `widget_id` is set by one setter (target), referenced by another setter's expression (`doubled = widget_id * 2`) and template (`caption = id is {{ widget_id }}`) values, by a Log template field, and by a Log expression field.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-target",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Target",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTemplateKeys": [],
+          "variableTypes": {
+            "widget_id": "integer"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "widget_id": "7"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "varset-refs",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Reference In Values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "doubled"
+          ],
+          "variableTemplateKeys": [
+            "caption"
+          ],
+          "variableTypes": {
+            "doubled": "integer",
+            "caption": "string"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "doubled": "widget_id * 2",
+                "caption": "id is {{ widget_id }}"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tmpl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template Field",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "Total {{ widget_id }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expression Field",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(widget_id)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "varset-target",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "varset-target",
+        "target": "varset-refs",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "varset-refs",
+        "target": "log-tmpl",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-tmpl",
+        "target": "log-expr",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "widget_id": {
+      "value": 7,
+      "type": "integer",
+      "scope": "test"
+    },
+    "doubled": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "caption": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-25T00:00:00.000000",
+  "updated_at": "2026-06-25T00:00:00.000000"
+}

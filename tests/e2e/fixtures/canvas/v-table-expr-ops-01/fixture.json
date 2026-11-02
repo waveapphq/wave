@@ -1,0 +1,43 @@
+{
+  "name": "V-TABLE-EXPR-OPS-01 Table Query Completions",
+  "version": "1.0.0",
+  "description": "One Log element and a declared table variable, so the expression editor can be opened on a field whose scope carries a table. Drives the completion catalog for the table type and for the column step a filter returns.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "seed", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [{ "id": "e1", "source": "start-node", "target": "log-1", "type": "default" }]
+  },
+  "variables": {
+    "orders": {
+      "value": [
+        { "sku": "A-1", "qty": 3 },
+        { "sku": "B-2", "qty": 7 }
+      ],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

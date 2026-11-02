@@ -1,0 +1,89 @@
+{
+  "name": "V-VMGR-CREATE fixture",
+  "version": "1.0.0",
+  "description": "Test with a root Log and a Local Function, used to exercise the create modal: root variable creation, in-Function input/output parameter declaration, and a save-then-run numeric-precision round trip.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log1",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 120 },
+        "data": {
+          "label": "Root Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "root log", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fn1",
+        "type": "workflowNode",
+        "position": { "x": 420, "y": 120 },
+        "data": {
+          "label": "MyFunction",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 120 },
+                  "data": {
+                    "label": "Inner Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "inner log", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                { "id": "e-start-inner", "source": "start-node", "target": "inner-log" }
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "name": "MyFunction"
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-log1", "source": "start-node", "target": "log1" },
+      { "id": "e-log1-fn1", "source": "log1", "target": "fn1" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-06-24T00:00:00.000000",
+  "updated_at": "2026-06-24T00:00:00.000000"
+}

@@ -1,0 +1,184 @@
+{
+  "name": "Report Generation Warning Tile Test",
+  "version": "1.0.0",
+  "description": "One informational assert failure so the report carries exactly one warning Block, plus a WARN-level Log line that must NOT be counted as one",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Open_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log INFO",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Warning tile run started",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-warnline",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Warn_Line_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WARN",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Warning tile warn line",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-threshold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 290
+        },
+        "data": {
+          "label": "Assert_Threshold",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Informational assert that fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-warn-1"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-close",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Close_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log INFO",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Warning tile run finished",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "w1",
+        "source": "start-node",
+        "target": "log-open",
+        "type": "default"
+      },
+      {
+        "id": "w2",
+        "source": "log-open",
+        "target": "log-warnline",
+        "type": "default"
+      },
+      {
+        "id": "w3",
+        "source": "log-warnline",
+        "target": "assert-threshold",
+        "type": "default"
+      },
+      {
+        "id": "w4",
+        "source": "assert-threshold",
+        "target": "log-close",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "int_var": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

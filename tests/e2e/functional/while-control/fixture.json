@@ -1,0 +1,1139 @@
+{
+  "name": "While Loop Control E2E",
+  "version": "1.0.0",
+  "description": "Eight While Loops chained: While-Do counter<3 (F1), While-Do false-initially (F6), Do-While counter<3 (F7), Do-While false-initially (F9), While-Do AND (F3), While-Do OR (F4), While-Do expression (F2), While-Do index verification (F17/F18), plus try-catch wrapped max_iterations (F11) and timeout (F13).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "while-wd-count",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 80 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Counter<3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c1",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3",
+                  "reference_is_expression": false,
+                  "id": "cond-f1"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w1" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-1",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 180 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c1"],
+          "variableTypes": { "c1": "integer" },
+          "config": {
+            "values": { "variables": { "c1": "c1 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-1",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WD Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'wd-count-{w1}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-wd-zero",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 380 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD False Init",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c2",
+                  "value_type": "integer",
+                  "operator": "greater_than",
+                  "reference_value": "100",
+                  "reference_is_expression": false,
+                  "id": "cond-f6"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w2" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "halt-trap",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 450 },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TRAP - should never run",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "scope": "test", "status": "failed", "message": "while-wd-zero body executed - BUG" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-dw-count",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 550 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "DW Counter<3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "do-while",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c3",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3",
+                  "reference_is_expression": false,
+                  "id": "cond-f7"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w3" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-3",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 650 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c3"],
+          "variableTypes": { "c3": "integer" },
+          "config": {
+            "values": { "variables": { "c3": "c3 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-3",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 750 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log DW Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'dw-count-{w3}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-dw-once",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 850 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "DW False Init",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "do-while",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c4",
+                  "value_type": "integer",
+                  "operator": "greater_than",
+                  "reference_value": "100",
+                  "reference_is_expression": false,
+                  "id": "cond-f9"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w4" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-4",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 950 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c4",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c4"],
+          "variableTypes": { "c4": "integer" },
+          "config": {
+            "values": { "variables": { "c4": "c4 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-4",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1050 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log DW Once",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'dw-once-{w4}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-wd-and",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 1150 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD AND Cond",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c5",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "5",
+                  "reference_is_expression": false,
+                  "id": "cond-f3-a"
+                },
+                { "type": "operator", "value": "and" },
+                {
+                  "type": "literal",
+                  "variable": "c5",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3",
+                  "reference_is_expression": false,
+                  "id": "cond-f3-b"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w5" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-5",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1250 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c5",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c5"],
+          "variableTypes": { "c5": "integer" },
+          "config": {
+            "values": { "variables": { "c5": "c5 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-5",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WD AND",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'wd-and-{w5}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-wd-or",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 1450 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD OR Cond",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c6",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "2",
+                  "reference_is_expression": false,
+                  "id": "cond-f4-a"
+                },
+                { "type": "operator", "value": "or" },
+                {
+                  "type": "literal",
+                  "variable": "c6",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "4",
+                  "reference_is_expression": false,
+                  "id": "cond-f4-b"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w6" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-6",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1550 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c6",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c6"],
+          "variableTypes": { "c6": "integer" },
+          "config": {
+            "values": { "variables": { "c6": "c6 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-6",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1650 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WD OR",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'wd-or-{w6}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-wd-expr",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 1750 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "expression",
+                  "expression": "c8 < 3",
+                  "id": "cond-f2"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w8" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-8",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1850 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Inc c8",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c8"],
+          "variableTypes": { "c8": "integer" },
+          "config": {
+            "values": { "variables": { "c8": "c8 + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-8",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 1950 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WD Expr",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'wd-expr-{w8}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "while-idx",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 2050 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Index Verify",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c9",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3",
+                  "reference_is_expression": false,
+                  "id": "cond-f17"
+                }
+              ]
+            },
+            "outputBindings": { "index": "w9" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body-9",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 2150 },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Capture idx",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["c9", "last_idx"],
+          "variableTypes": { "c9": "integer", "last_idx": "integer" },
+          "config": {
+            "values": { "variables": { "c9": "c9 + 1", "last_idx": "w9" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-body-9",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 2250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Idx Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'idx-body-{w9}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-idx-then",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 2350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Idx Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'idx-then-{w9}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after-all",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 2450 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After All",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all-loops'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-maxiter",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 2570 },
+        "data": {
+          "label": "Try Catch Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TryCatch MaxIter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_mi_err", "caught": "tc_mi_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "while-mi",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 2700 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Always True MI=5",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "expression",
+                  "expression": "True",
+                  "id": "cond-mi-true"
+                }
+              ],
+              "max_iterations": 5
+            },
+            "outputBindings": { "index": "mi_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-mi-body",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 2800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log MI Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'mi-iter-{mi_idx}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-mi-caught",
+        "type": "workflowNode",
+        "position": { "x": 140, "y": 2700 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch MaxIter",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'maxiter-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-timeout",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 2900 },
+        "data": {
+          "label": "Try Catch Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TryCatch Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_to_err", "caught": "tc_to_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "while-to",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 3030 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Always True TO=1s",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "expression",
+                  "expression": "True",
+                  "id": "cond-to-true"
+                }
+              ],
+              "timeout": 1.0
+            },
+            "outputBindings": { "index": "to_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "delay-to",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 3130 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Delay 200ms",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "duration": 200 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-to-body",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 3230 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log TO Body",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'to-iter-{to_idx}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-to-caught",
+        "type": "workflowNode",
+        "position": { "x": 140, "y": 3030 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'timeout-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-body-err",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 3350 },
+        "data": {
+          "label": "Try Catch Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TryCatch BodyErr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_be_err", "caught": "tc_be_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "while-body-err",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 3480 },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "WD Body Error",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "c_err",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "5",
+                  "reference_is_expression": false,
+                  "id": "cond-body-err"
+                }
+              ]
+            },
+            "outputBindings": { "index": "err_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-body-err",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 3580 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Body Err",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'body-err-ran'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "halt-body-err",
+        "type": "workflowNode",
+        "position": { "x": -300, "y": 3680 },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Halt Body Fail",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "scope": "test", "status": "failed", "message": "1 / 0" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-err-caught",
+        "type": "workflowNode",
+        "position": { "x": 140, "y": 3480 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch BodyErr",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'body-err-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "while-wd-count", "type": "default" },
+      { "id": "e2", "source": "while-wd-count", "sourceHandle": "body", "target": "vs-body-1", "type": "default" },
+      { "id": "e3", "source": "vs-body-1", "target": "log-body-1", "type": "default" },
+      { "id": "e4", "source": "while-wd-count", "sourceHandle": "then", "target": "while-wd-zero", "type": "default" },
+      { "id": "e5", "source": "while-wd-zero", "sourceHandle": "body", "target": "halt-trap", "type": "default" },
+      { "id": "e6", "source": "while-wd-zero", "sourceHandle": "then", "target": "while-dw-count", "type": "default" },
+      { "id": "e7", "source": "while-dw-count", "sourceHandle": "body", "target": "vs-body-3", "type": "default" },
+      { "id": "e8", "source": "vs-body-3", "target": "log-body-3", "type": "default" },
+      { "id": "e9", "source": "while-dw-count", "sourceHandle": "then", "target": "while-dw-once", "type": "default" },
+      { "id": "e10", "source": "while-dw-once", "sourceHandle": "body", "target": "vs-body-4", "type": "default" },
+      { "id": "e11", "source": "vs-body-4", "target": "log-body-4", "type": "default" },
+      { "id": "e12", "source": "while-dw-once", "sourceHandle": "then", "target": "while-wd-and", "type": "default" },
+      { "id": "e13", "source": "while-wd-and", "sourceHandle": "body", "target": "vs-body-5", "type": "default" },
+      { "id": "e14", "source": "vs-body-5", "target": "log-body-5", "type": "default" },
+      { "id": "e15", "source": "while-wd-and", "sourceHandle": "then", "target": "while-wd-or", "type": "default" },
+      { "id": "e16", "source": "while-wd-or", "sourceHandle": "body", "target": "vs-body-6", "type": "default" },
+      { "id": "e17", "source": "vs-body-6", "target": "log-body-6", "type": "default" },
+      { "id": "e18", "source": "while-wd-or", "sourceHandle": "then", "target": "while-wd-expr", "type": "default" },
+      { "id": "e19", "source": "while-wd-expr", "sourceHandle": "body", "target": "vs-body-8", "type": "default" },
+      { "id": "e20", "source": "vs-body-8", "target": "log-body-8", "type": "default" },
+      { "id": "e21", "source": "while-wd-expr", "sourceHandle": "then", "target": "while-idx", "type": "default" },
+      { "id": "e22", "source": "while-idx", "sourceHandle": "body", "target": "vs-body-9", "type": "default" },
+      { "id": "e23", "source": "vs-body-9", "target": "log-body-9", "type": "default" },
+      { "id": "e24", "source": "while-idx", "sourceHandle": "then", "target": "log-idx-then", "type": "default" },
+      { "id": "e25", "source": "log-idx-then", "target": "log-after-all", "type": "default" },
+      { "id": "e26", "source": "log-after-all", "target": "tc-maxiter", "type": "default" },
+      { "id": "e27", "source": "tc-maxiter", "sourceHandle": "try", "target": "while-mi", "type": "default" },
+      { "id": "e28", "source": "tc-maxiter", "sourceHandle": "catch", "target": "log-mi-caught", "type": "default" },
+      { "id": "e29", "source": "while-mi", "sourceHandle": "body", "target": "log-mi-body", "type": "default" },
+      { "id": "e30", "source": "tc-maxiter", "sourceHandle": "then", "target": "tc-timeout", "type": "default" },
+      { "id": "e31", "source": "tc-timeout", "sourceHandle": "try", "target": "while-to", "type": "default" },
+      { "id": "e32", "source": "tc-timeout", "sourceHandle": "catch", "target": "log-to-caught", "type": "default" },
+      { "id": "e33", "source": "while-to", "sourceHandle": "body", "target": "delay-to", "type": "default" },
+      { "id": "e34", "source": "delay-to", "target": "log-to-body", "type": "default" },
+      { "id": "e35", "source": "tc-timeout", "sourceHandle": "then", "target": "tc-body-err", "type": "default" },
+      { "id": "e36", "source": "tc-body-err", "sourceHandle": "try", "target": "while-body-err", "type": "default" },
+      { "id": "e37", "source": "tc-body-err", "sourceHandle": "catch", "target": "log-err-caught", "type": "default" },
+      { "id": "e38", "source": "while-body-err", "sourceHandle": "body", "target": "log-body-err", "type": "default" },
+      { "id": "e39", "source": "log-body-err", "target": "halt-body-err", "type": "default" }
+    ]
+  },
+  "variables": {
+    "c1": { "type": "integer", "value": 0, "scope": "test" },
+    "w1": { "type": "integer", "value": 0, "scope": "test" },
+    "c2": { "type": "integer", "value": 0, "scope": "test" },
+    "w2": { "type": "integer", "value": 0, "scope": "test" },
+    "c3": { "type": "integer", "value": 0, "scope": "test" },
+    "w3": { "type": "integer", "value": 0, "scope": "test" },
+    "c4": { "type": "integer", "value": 0, "scope": "test" },
+    "w4": { "type": "integer", "value": 0, "scope": "test" },
+    "c5": { "type": "integer", "value": 0, "scope": "test" },
+    "w5": { "type": "integer", "value": 0, "scope": "test" },
+    "c6": { "type": "integer", "value": 0, "scope": "test" },
+    "w6": { "type": "integer", "value": 0, "scope": "test" },
+    "c8": { "type": "integer", "value": 0, "scope": "test" },
+    "w8": { "type": "integer", "value": 0, "scope": "test" },
+    "c9": { "type": "integer", "value": 0, "scope": "test" },
+    "w9": { "type": "integer", "value": 0, "scope": "test" },
+    "last_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "mi_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "tc_mi_err": { "type": "map", "value": {}, "scope": "test" },
+    "tc_mi_caught": { "type": "boolean", "value": false, "scope": "test" },
+    "to_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "tc_to_err": { "type": "map", "value": {}, "scope": "test" },
+    "tc_to_caught": { "type": "boolean", "value": false, "scope": "test" },
+    "c_err": { "type": "integer", "value": 0, "scope": "test" },
+    "err_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "tc_be_err": { "type": "map", "value": {}, "scope": "test" },
+    "tc_be_caught": { "type": "boolean", "value": false, "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-03-31T00:00:00.000000",
+  "updated_at": "2026-03-31T00:00:00.000000"
+}

@@ -1,0 +1,226 @@
+{
+  "name": "SH-12 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Working Directory: unset starts in the temp folder Python reports, and an artifacts folder picked with Browse.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-pwd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Working Directory left unset",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "pwd"
+            },
+            "outputBindings": {
+              "stdout": "wd_default"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-temp",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The temp folder Python reports on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import tempfile\n\nprint(tempfile.gettempdir())\n"
+            },
+            "outputBindings": {
+              "stdout": "wave_temp"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-mkdir",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write a folder into the artifacts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-12-__TOKEN__\"; echo keep > \"$WAVE_ARTIFACTS_DIR/sh-12-__TOKEN__/keep.txt\""
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-pwd-art",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Working Directory picked with Browse",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "pwd"
+            },
+            "outputBindings": {
+              "stdout": "wd_art"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-12-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-pwd",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-pwd-py-temp",
+        "source": "sh-pwd",
+        "target": "py-temp",
+        "type": "default"
+      },
+      {
+        "id": "e-py-temp-sh-mkdir",
+        "source": "py-temp",
+        "target": "sh-mkdir",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-mkdir-sh-pwd-art",
+        "source": "sh-mkdir",
+        "target": "sh-pwd-art",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-pwd-art-log-done",
+        "source": "sh-pwd-art",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "wd_default": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "wave_temp": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "wd_art": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

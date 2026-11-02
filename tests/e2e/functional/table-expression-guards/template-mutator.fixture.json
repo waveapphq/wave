@@ -1,0 +1,41 @@
+{
+  "name": "Table Expression Guards - A template marker may not change data",
+  "version": "1.0.0",
+  "description": "A template field carries a {{ }} marker whose call would change a variable; the read-only rule must refuse the test when it is saved, naming the Block and the field.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-template-mutator",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Template Mutator",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template Marker",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["message"],
+          "config": {
+            "values": {
+              "message": "guard {{ my_list.append(1) }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-template-mutator", "type": "default" }
+    ]
+  },
+  "variables": {
+    "my_list": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": {}
+}

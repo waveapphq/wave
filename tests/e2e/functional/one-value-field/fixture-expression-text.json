@@ -1,0 +1,248 @@
+{
+  "name": "zz-11541-s2-expression-text",
+  "version": "1.0.0",
+  "description": "Two Log Blocks whose message is a stored multi-line expression, and two Local Function Blocks with a whole-number float input: one keeps 2.0 while another input is edited, one is typed 4.0.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "85beae10-d3d9-49cb-a0ee-5855816022d9",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Inline Edit",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Multi-line expression edited in the inline field",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "(\n    \"alpha\"\n    + \"-beta\"\n)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "07a07c15-ac3d-4a26-8236-011a29f38e48",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 220 },
+        "data": {
+          "label": "Editor Edit",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Multi-line expression edited in the larger editor",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "(\n    \"red\"\n    + \"-green\"\n)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "c66b695a-ba71-4930-98c5-7661cadd5a83",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 340 },
+        "data": {
+          "label": "ratio_kept",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "ratio": "2.0", "note": "first" },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "ratio_kept",
+            "description": "Logs its float input and its note",
+            "inputs": [
+              { "name": "ratio", "type": "float", "required": true },
+              { "name": "note", "type": "string", "required": false, "default": "base" }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "01f7e41c-0f18-47ae-bd4e-b80aba792e05",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "Report Kept",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "\"ratio=\" + str(ratio) + \" note=\" + note", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "edbc8faa-ee55-4d30-bcff-18636d0b62f0",
+                  "source": "start-node",
+                  "target": "01f7e41c-0f18-47ae-bd4e-b80aba792e05",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "c3c285f7-32d4-4c35-a4e3-7da561fdebd8",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 460 },
+        "data": {
+          "label": "ratio_typed",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "ratio": "1.5" },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "ratio_typed",
+            "description": "Logs its float input and its note",
+            "inputs": [
+              { "name": "ratio", "type": "float", "required": true },
+              { "name": "note", "type": "string", "required": false, "default": "base" }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "fbbdd24a-530d-496c-8ab7-da6d9235a539",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "Report Typed",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "\"ratio=\" + str(ratio) + \" note=\" + note", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "37cb5d91-c87d-42ba-810e-fa40882ca303",
+                  "source": "start-node",
+                  "target": "fbbdd24a-530d-496c-8ab7-da6d9235a539",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ffbd03d5-7e4e-43ca-acb1-e4c47dda2a80",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 580 },
+        "data": {
+          "label": "Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Closing marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'expression-text-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d39e390c-2ee5-403a-a91a-115d037e473d",
+        "source": "start-node",
+        "target": "85beae10-d3d9-49cb-a0ee-5855816022d9",
+        "type": "default"
+      },
+      {
+        "id": "4bb01f40-4620-42da-b188-c4df3da2b29e",
+        "source": "85beae10-d3d9-49cb-a0ee-5855816022d9",
+        "target": "07a07c15-ac3d-4a26-8236-011a29f38e48",
+        "type": "default"
+      },
+      {
+        "id": "25d03d04-ce68-440f-8545-8890edd96540",
+        "source": "07a07c15-ac3d-4a26-8236-011a29f38e48",
+        "target": "c66b695a-ba71-4930-98c5-7661cadd5a83",
+        "type": "default"
+      },
+      {
+        "id": "ba4dbe69-56fa-4a8f-986e-bccedaaba788",
+        "source": "c66b695a-ba71-4930-98c5-7661cadd5a83",
+        "target": "c3c285f7-32d4-4c35-a4e3-7da561fdebd8",
+        "type": "default"
+      },
+      {
+        "id": "87a067e3-5fac-4ed4-bc48-17eb80cdda98",
+        "source": "c3c285f7-32d4-4c35-a4e3-7da561fdebd8",
+        "target": "ffbd03d5-7e4e-43ca-acb1-e4c47dda2a80",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

@@ -1,0 +1,89 @@
+{
+  "name": "Debug Step - For Loop",
+  "version": "1.0.0",
+  "description": "For-Loop with three iterations writing iter-N markers, followed by an after-loop Log. Used by Step Over and Step Into functional tests.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "for-loop",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For 3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 240 },
+        "data": {
+          "label": "Body Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'iter-{i}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "after-log",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 380 },
+        "data": {
+          "label": "After Loop",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After Loop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-loop'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "for-loop", "type": "default" },
+      { "id": "e-body", "source": "for-loop", "sourceHandle": "body", "target": "body-log", "type": "default" },
+      { "id": "e-then", "source": "for-loop", "sourceHandle": "then", "target": "after-log", "type": "default" }
+    ]
+  },
+  "variables": {
+    "i": { "type": "integer", "value": 0, "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-04-25T00:00:00.000000",
+  "updated_at": "2026-04-25T00:00:00.000000"
+}

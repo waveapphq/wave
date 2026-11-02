@@ -1,0 +1,156 @@
+{
+  "name": "MCP Readback Integrity",
+  "version": "1.0.0",
+  "description": "Hand-built if-else with custom branch ids plus a fail-scope assert",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "assert-gate",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 200 },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "node_host != 'node-3'",
+                  "id": "ag-1"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "if-detect",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 400 },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if",
+                  "id": "branch_hit",
+                  "label": "Blocked node",
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "node_host",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "node-3",
+                      "reference_is_expression": false,
+                      "id": "c-hit"
+                    }
+                  ]
+                },
+                { "type": "else", "id": "branch_pass", "label": "Healthy" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-hit",
+        "type": "workflowNode",
+        "position": { "x": 500, "y": 600 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "logging",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "blocked-child-line", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-close",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "logging",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "closing-line", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "assert-gate", "type": "default" },
+      { "id": "e-gate", "source": "assert-gate", "target": "if-detect", "type": "default" },
+      {
+        "id": "e-hit",
+        "source": "if-detect",
+        "sourceHandle": "branch_hit",
+        "target": "log-hit",
+        "type": "default"
+      },
+      {
+        "id": "e-rejoin",
+        "source": "log-hit",
+        "target": "log-close",
+        "targetHandle": "ingress_1",
+        "type": "default"
+      },
+      {
+        "id": "e-pass",
+        "source": "if-detect",
+        "sourceHandle": "branch_pass",
+        "target": "log-close",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "node_host": { "type": "string", "value": "node-3", "scope": "test" }
+  },
+  "metadata": { "tags": ["e2e", "mcp-readback"] }
+}

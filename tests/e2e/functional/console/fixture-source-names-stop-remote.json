@@ -1,0 +1,152 @@
+{
+  "name": "Console Source Names Stop Remote",
+  "version": "1.0.0",
+  "description": "A Remote Execution whose body prints one line and then sleeps, so a Stop lands on both.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9e1b03ab-491e-52e5-9a6d-e33a42f50952",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Opens the session the container rides",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bec37c24-4525-53fa-aa53-b9c91d4cf430",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "On the far host",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Holds the run inside its body on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "remote_sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "46c3bae7-8bc3-5bbf-95da-7c638b82c7f3",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 300
+        },
+        "data": {
+          "label": "Hold on the host",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints one line and then sleeps on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import time\nprint('src-stop-remote-started', flush=True)\ntime.sleep(60)\n",
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d87ec8a8-a3d0-5d8b-afb4-408464d76570",
+        "source": "start-node",
+        "target": "9e1b03ab-491e-52e5-9a6d-e33a42f50952",
+        "type": "default"
+      },
+      {
+        "id": "c7e1e8b5-fa5d-5159-ae8d-59980ee3fdb6",
+        "source": "9e1b03ab-491e-52e5-9a6d-e33a42f50952",
+        "target": "bec37c24-4525-53fa-aa53-b9c91d4cf430",
+        "type": "default"
+      },
+      {
+        "id": "8bc685bb-e24e-5ef2-8934-e0e6c64a201f",
+        "source": "bec37c24-4525-53fa-aa53-b9c91d4cf430",
+        "target": "46c3bae7-8bc3-5bbf-95da-7c638b82c7f3",
+        "type": "default",
+        "sourceHandle": "body"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "remote_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

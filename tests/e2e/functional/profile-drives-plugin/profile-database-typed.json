@@ -1,0 +1,20 @@
+{
+  "name": "Profile Typed Driver Options",
+  "type": "database",
+  "description": "Database profile whose Driver options rows carry declared types",
+  "config": {
+    "host": "",
+    "port": 0,
+    "database": "",
+    "username": "",
+    "password": "",
+    "verify_ssl": true,
+    "ca_cert": "",
+    "client_cert": "",
+    "client_key": "",
+    "driver_options": {}
+  },
+  "tags": [
+    "e2e"
+  ]
+}

@@ -1,0 +1,310 @@
+{
+  "name": "SH-17 __TOKEN__",
+  "version": "1.0.0",
+  "description": "A Remote Execution body reads a host file, records the pids of this connection's own workers, logs its armed marker and holds an HTTP request open for 60 s so the user can stop the run mid-request.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the host session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": 380,
+          "y": 200
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-read",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 300
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Host read that brings the worker up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/os-release"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "probe-during",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 400
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Pids of this connection's own workers",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "s=$$; while [ \"$s\" -gt 1 ] && [ \"$(cat /proc/$s/comm)\" != sshd ]; do s=$(cut -d' ' -f4 /proc/$s/stat); done; o=; for d in /proc/[0-9]*; do tr '\\0' ' ' < \"$d/cmdline\" 2>/dev/null | grep -q \"wave[-]worker\" || continue; [ \"$(cut -d' ' -f4 \"$d/stat\" 2>/dev/null)\" = \"$s\" ] && o=\"$o${o:+ }${d#/proc/}\"; done; printf '%s' \"$o\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "probe_during"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-armed",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Armed marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-17-armed-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 600
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Request held open for 60 s on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/delay/60",
+              "method": "GET",
+              "timeout": 120,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-17-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-open",
+        "source": "start-node",
+        "target": "open-session"
+      },
+      {
+        "id": "e-open-container",
+        "source": "open-session",
+        "target": "container"
+      },
+      {
+        "id": "e-body",
+        "source": "container",
+        "target": "fio-read",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-read-probe",
+        "source": "fio-read",
+        "target": "probe-during"
+      },
+      {
+        "id": "e-probe-armed",
+        "source": "probe-during",
+        "target": "log-armed"
+      },
+      {
+        "id": "e-armed-http",
+        "source": "log-armed",
+        "target": "http-hold"
+      },
+      {
+        "id": "e-then",
+        "source": "container",
+        "target": "log-done",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_during": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

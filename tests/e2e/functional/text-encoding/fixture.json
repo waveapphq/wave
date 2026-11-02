@@ -1,0 +1,358 @@
+{
+  "name": "Grüße 測試",
+  "version": "1.0.0",
+  "description": "A Log block named and writing the text, a Python block printing it, and an SSH Session Exec printing a byte that is not UTF-8.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c3f4a8a3-76e7-544f-82ef-7829e959a380",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Grüße 測試",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write the text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Grüße 測試",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e4e656e0-3384-52ae-a250-579f857eeab7",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Print the text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print(\"Grüße 測試\")\n"
+            },
+            "outputBindings": {
+              "stdout": "py_stdout",
+              "exit_code": "py_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "41751d71-210c-562a-b643-0d27708a6f7c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Show the Python Stdout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'python stdout={py_stdout.strip()} code={py_code}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "80d4867d-e4c4-52de-96d7-7289d24c0720",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "__SSH_PORT__",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eec88a08-0790-5c4d-97b6-af7fab104116",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Print a byte that is not UTF-8",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "printf 'ok\\377'",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_stdout",
+              "stderr": "ssh_stderr",
+              "exit_code": "ssh_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e2ff14a4-2ed3-5c16-be8a-fa8be0420588",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e0568524-8221-521e-8495-4fdcbcc9ce0a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Show the SSH Stdout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'ssh stdout={ssh_stdout} code={ssh_code}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "226161d7-4661-519c-b9df-14d3db4e29a2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'text-encoding-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "89259664-23d5-5fbe-84bc-73eb8610d9f1",
+        "source": "start-node",
+        "target": "c3f4a8a3-76e7-544f-82ef-7829e959a380"
+      },
+      {
+        "id": "cddee1bf-af5c-5aa8-ba14-2a24315e93e2",
+        "source": "c3f4a8a3-76e7-544f-82ef-7829e959a380",
+        "target": "e4e656e0-3384-52ae-a250-579f857eeab7"
+      },
+      {
+        "id": "71067533-6c3a-5269-ac07-c236e4506b6d",
+        "source": "e4e656e0-3384-52ae-a250-579f857eeab7",
+        "target": "41751d71-210c-562a-b643-0d27708a6f7c"
+      },
+      {
+        "id": "cc98103f-d03b-5602-8905-9978bf7dc327",
+        "source": "41751d71-210c-562a-b643-0d27708a6f7c",
+        "target": "80d4867d-e4c4-52de-96d7-7289d24c0720"
+      },
+      {
+        "id": "33877fa5-eaee-5686-86a7-c73285fd0355",
+        "source": "80d4867d-e4c4-52de-96d7-7289d24c0720",
+        "target": "eec88a08-0790-5c4d-97b6-af7fab104116"
+      },
+      {
+        "id": "9d4b66d5-63f5-5942-a812-6822034e4eeb",
+        "source": "eec88a08-0790-5c4d-97b6-af7fab104116",
+        "target": "e2ff14a4-2ed3-5c16-be8a-fa8be0420588"
+      },
+      {
+        "id": "716dff0a-3bd3-56fc-8df8-66047c5de0c7",
+        "source": "e2ff14a4-2ed3-5c16-be8a-fa8be0420588",
+        "target": "e0568524-8221-521e-8495-4fdcbcc9ce0a"
+      },
+      {
+        "id": "13153800-886f-597a-bf95-03ee8c9077e9",
+        "source": "e0568524-8221-521e-8495-4fdcbcc9ce0a",
+        "target": "226161d7-4661-519c-b9df-14d3db4e29a2"
+      }
+    ]
+  },
+  "variables": {
+    "py_stdout": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_stdout": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_stderr": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

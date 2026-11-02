@@ -1,0 +1,39 @@
+{
+  "name": "V-ROOT-VAR-DELETE-CONFIRM fixture",
+  "version": "1.0.0",
+  "description": "Test with a root Log node whose message references root variable `mytest`. Deleting `mytest` must open the Delete-variable confirmation dialog.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "RefLog",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "mytest", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {
+    "mytest": { "type": "string", "value": "hello" }
+  },
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

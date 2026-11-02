@@ -1,0 +1,186 @@
+{
+  "name": "V-CANVAS-FN-PARAM-DELETE-REFS-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with one local Function that carries one input (`fn_input`), one output (`fn_output`), one Function-local variable (`local_var`), and three inner Log plugins whose message expressions reference each of those names. Used to verify the delete confirmation dialog opens for input/output/variable rows when an inner workflow element references them.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log-uses-input",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 100
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "UsesInput",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "fn_input",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "inner-log-uses-output",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "UsesOutput",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "fn_output",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "inner-log-uses-variable",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 300
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "UsesVar",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "local_var",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-start-inner-log-uses-input",
+                  "source": "start-node",
+                  "target": "inner-log-uses-input"
+                },
+                {
+                  "id": "e-start-inner-log-uses-output",
+                  "source": "start-node",
+                  "target": "inner-log-uses-output"
+                },
+                {
+                  "id": "e-start-inner-log-uses-variable",
+                  "source": "start-node",
+                  "target": "inner-log-uses-variable"
+                }
+              ]
+            },
+            "inputs": [
+              {
+                "name": "fn_input",
+                "type": "string",
+                "default": "hello"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "fn_output",
+                "type": "string",
+                "default": ""
+              }
+            ],
+            "variables": [
+              {
+                "id": "var-local-seed",
+                "name": "local_var",
+                "type": "string",
+                "value": "x"
+              }
+            ],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

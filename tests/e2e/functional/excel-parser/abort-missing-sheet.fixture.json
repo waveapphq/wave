@@ -1,0 +1,99 @@
+{
+  "name": "Excel Parser - A named sheet that is not in the workbook",
+  "version": "1.0.0",
+  "description": "A workbook is written with one sheet, then read asking for a sheet it does not carry; the run aborts naming the sheets that are available.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-src",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "operation": "parse", "csv_content": "sku,qty\nA-1,3\n" },
+            "outputBindings": { "table": "src" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://one-sheet.xlsx",
+              "sheet": "Orders",
+              "table": "src",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-missing",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Missing Sheet",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://one-sheet.xlsx",
+              "sheet": "Nope",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-src", "type": "default" },
+      { "id": "e2", "source": "parse-src", "target": "write-orders", "type": "default" },
+      { "id": "e3", "source": "write-orders", "target": "read-missing", "type": "default" }
+    ]
+  },
+  "variables": {
+    "src": { "value": [], "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

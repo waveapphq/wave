@@ -1,0 +1,246 @@
+{
+  "name": "Profile Drives HTTP E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-plain",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "URL composed from base_url; timeout, verify_ssl and ca_cert bound",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "timeout", "verify_ssl", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'{httpp.base_url}/echo?leg=plain'",
+              "method": "GET",
+              "timeout": "httpp.timeout",
+              "verify_ssl": "httpp.verify_ssl",
+              "ca_cert": "httpp.ca_cert",
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "plain_status", "body": "plain_body" },
+            "profileBindings": [
+              {
+                "profileId": "__HTTP_PROFILE_ID__",
+                "alias": "httpp",
+                "profileName": "__HTTP_PROFILE_NAME__",
+                "profileType": "http"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-plain",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the plain leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'httpprof-plain status={plain_status} body={plain_body}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-auth",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "API key and its custom header name both bound from the profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "timeout", "verify_ssl", "ca_cert", "auth_key", "auth_header_name"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'{httpp.base_url}/echo?leg=auth'",
+              "method": "GET",
+              "timeout": "httpp.timeout",
+              "verify_ssl": "httpp.verify_ssl",
+              "ca_cert": "httpp.ca_cert",
+              "auth_enabled": true,
+              "auth_mode": "api_key",
+              "auth_key": "httpp.auth_key",
+              "auth_header_name": "httpp.auth_header_name",
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "auth_status", "body": "auth_body" },
+            "profileBindings": [
+              {
+                "profileId": "__HTTP_PROFILE_ID__",
+                "alias": "httpp",
+                "profileName": "__HTTP_PROFILE_NAME__",
+                "profileType": "http"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-auth",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the auth leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'httpprof-auth status={auth_status} body={auth_body}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-mtls",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Client identity and trust anchor bound from the mTLS profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "timeout", "verify_ssl", "ca_cert", "client_cert", "client_key"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'{tlsp.base_url}/'",
+              "method": "GET",
+              "timeout": "tlsp.timeout",
+              "verify_ssl": "tlsp.verify_ssl",
+              "ca_cert": "tlsp.ca_cert",
+              "client_cert": "tlsp.client_cert",
+              "client_key": "tlsp.client_key",
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "tls_status", "body": "tls_body" },
+            "profileBindings": [
+              {
+                "profileId": "__TLS_PROFILE_ID__",
+                "alias": "tlsp",
+                "profileName": "__TLS_PROFILE_NAME__",
+                "profileType": "http"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-mtls",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the mTLS leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'httpprof-tls status={tls_status} body={tls_body}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'profile-http-e2e-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-http-plain", "source": "start-node", "target": "http-plain" },
+      { "id": "edge-http-plain-log-plain", "source": "http-plain", "target": "log-plain" },
+      { "id": "edge-log-plain-http-auth", "source": "log-plain", "target": "http-auth" },
+      { "id": "edge-http-auth-log-auth", "source": "http-auth", "target": "log-auth" },
+      { "id": "edge-log-auth-http-mtls", "source": "log-auth", "target": "http-mtls" },
+      { "id": "edge-http-mtls-log-mtls", "source": "http-mtls", "target": "log-mtls" },
+      { "id": "edge-log-mtls-log-done", "source": "log-mtls", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "plain_status": { "value": 0, "type": "integer", "scope": "test" },
+    "plain_body": { "value": "", "type": "string", "scope": "test" },
+    "auth_status": { "value": 0, "type": "integer", "scope": "test" },
+    "auth_body": { "value": "", "type": "string", "scope": "test" },
+    "tls_status": { "value": 0, "type": "integer", "scope": "test" },
+    "tls_body": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

@@ -1,0 +1,335 @@
+{
+  "name": "Switch Exit-Wired Failing Case E2E",
+  "version": "1.0.0",
+  "description": "The same failing case chain with the then lane wired: the exit lane must be skipped and the run must end failed, exactly as it did before.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-sew-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sew-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-sew",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "sw=boom",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "sw": "boom"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sw-sew",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Exit wired, matched case fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "sew boom",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "boom",
+                      "reference_is_expression": false,
+                      "id": "sew-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "sew other",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "nope",
+                      "reference_is_expression": false,
+                      "id": "sew-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sew-boom",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Case 1 BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "1/0",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sew-other",
+        "type": "workflowNode",
+        "position": {
+          "x": 340,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Case 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sew-other'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sew-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sew-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sew-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the Switch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sew-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-sew-start",
+        "source": "start-node",
+        "target": "log-sew-before",
+        "type": "default"
+      },
+      {
+        "id": "e-sew-before",
+        "source": "log-sew-before",
+        "target": "vs-sew",
+        "type": "default"
+      },
+      {
+        "id": "e-sew-vs",
+        "source": "vs-sew",
+        "target": "sw-sew",
+        "type": "default"
+      },
+      {
+        "id": "e-sew-b0",
+        "source": "sw-sew",
+        "target": "log-sew-boom",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-sew-b1",
+        "source": "sw-sew",
+        "target": "log-sew-other",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-sew-then",
+        "source": "sw-sew",
+        "target": "log-sew-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-sew-after",
+        "source": "log-sew-then",
+        "target": "log-sew-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sw": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

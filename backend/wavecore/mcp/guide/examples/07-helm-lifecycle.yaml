@@ -1,0 +1,115 @@
+test:
+  name: Recipe Example - Helm Lifecycle
+  description: Install a chart, test it, upgrade it, read its status, roll it back and uninstall it
+  tags: [example, helm]
+variables:
+  api_url: {type: string, value: "https://kubernetes.default.svc"}
+  cluster_token: {type: string, secret: true, value: example-cluster-token}
+  chart_password: {type: string, secret: true, value: example-chart-secret}
+  k8s_session: {type: string, secret: true}   # declared empty; the Connect capture fills it
+flow:
+  - block: k8s-connect
+    label: Connect to the cluster
+    settings:
+      api_url: "{{ api_url }}"
+      namespace: wave-demo
+      token: {expr: "cluster_token"}
+      verify_ssl: false
+    capture:
+      session: k8s_session          # every Helm block wires this into its 'session'
+  - block: helm-install
+    label: Install the chart
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      chart: wave-demo
+      version: 0.1.0
+      repo: http://charts.local
+      values: |
+        replicaCount: 2
+      set: {image.tag: "0.1.0"}
+      repo_username: wave
+      repo_password: {expr: "chart_password"}
+      namespace: wave-demo
+      create_namespace: true
+      atomic: true
+      timeout: 300
+      cleanup_timeout: 120
+      output_format: map
+    capture:
+      status: install_status
+  - block: helm-test
+    label: Run the chart's test hooks
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      logs: true
+      namespace: wave-demo
+      timeout: 300
+      output_format: table
+    capture:
+      logs: test_logs
+  - block: helm-upgrade
+    label: Upgrade to the next chart version
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      chart: wave-demo
+      version: 0.2.0
+      repo: http://charts.local
+      set: {image.tag: "0.2.0"}
+      install: true
+      reuse_values: true
+      repo_username: wave
+      repo_password: {expr: "chart_password"}
+      namespace: wave-demo
+      atomic: true
+      cleanup_on_fail: true
+      timeout: 600
+      cleanup_timeout: 300
+      output_format: map
+    capture:
+      status: upgrade_status
+  - block: helm-status
+    label: Read the release back
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      namespace: wave-demo
+      timeout: 30
+      output_format: map
+    capture:
+      result: release_document
+      status: current_status
+  - block: helm-rollback
+    label: Roll back to the first revision
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      revision: 1
+      namespace: wave-demo
+      cleanup_on_fail: true
+      timeout: 300
+      output_format: map
+    capture:
+      status: rollback_status
+  - block: helm-uninstall
+    label: Remove the release
+    settings:
+      session: {expr: "k8s_session"}
+      release: wave-demo
+      keep_history: false
+      ignore_not_found: true
+      cascade: background
+      namespace: wave-demo
+      timeout: 300
+  - assert:
+      that:
+        - "install_status == 'deployed'"
+        - "upgrade_status == 'deployed'"
+        - "current_status == 'deployed'"
+      fail_current_scope: true
+  - block: log
+    settings:
+      message: "Release wave-demo went {{ install_status }} -> {{ upgrade_status }} -> {{ rollback_status }} and was removed"
+      level: INFO

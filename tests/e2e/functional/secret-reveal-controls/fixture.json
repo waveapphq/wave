@@ -1,0 +1,160 @@
+{
+  "name": "Secret Reveal Controls E2E",
+  "version": "1.0.0",
+  "description": "Per-block tri-state run-output reveal (reveal / system / mask) + a secret variable pushed to watchers and the session panel, for the system-wide reveal-toggle runtime-effect proofs.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 3000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-copy",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 115 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Copy Secret to Watched Var",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["token_copy"],
+          "variableTemplateKeys": [],
+          "variableTypes": { "token_copy": "string" },
+          "config": {
+            "values": {
+              "variables": { "token_copy": "api_token" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-reveal",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Always Reveal Block",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'REVEAL:' + api_token",
+              "level": "INFO"
+            },
+            "secret_masking": "reveal",
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-system",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Use System Setting Block",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SYSTEM:' + api_token",
+              "level": "INFO"
+            },
+            "secret_masking": "system",
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-mask",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Always Mask Block",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'MASK:' + api_token",
+              "level": "INFO"
+            },
+            "secret_masking": "mask",
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start-node", "target": "delay-hold", "type": "default" },
+      { "id": "e1", "source": "delay-hold", "target": "varset-copy", "type": "default" },
+      { "id": "e2", "source": "varset-copy", "target": "log-reveal", "type": "default" },
+      { "id": "e3", "source": "log-reveal", "target": "log-system", "type": "default" },
+      { "id": "e4", "source": "log-system", "target": "log-mask", "type": "default" }
+    ]
+  },
+  "variables": {
+    "api_token": {
+      "value": "s3cr3t-Bearer-Tok3n-9917",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "token_copy": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

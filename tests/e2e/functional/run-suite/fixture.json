@@ -1,0 +1,52 @@
+{
+  "name": "Run Suite E2E Test Body",
+  "version": "1.0.0",
+  "description": "Delay workflow used as the test body inside a suite for the run-from-suite functional spec. The Delay is deliberately LONG: the spec stops the suite run and asserts the record ends up stopped, which is only possible while the run is still going. A short body finishes before the stop request lands and the API correctly answers 409. The stop ends the run at once, so the length costs the spec nothing.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-only",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Run Suite Delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 30000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "delay-only",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

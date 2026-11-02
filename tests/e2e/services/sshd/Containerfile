@@ -1,0 +1,86 @@
+# WAVE E2E real-service SSH server (test-only).
+# One image, six services: sshd (main), sshd-no-sftp, sshd-no-fwd, nested-sshd,
+# sshd-banner, sshd-badpy.
+# The compose service selects a config variant via its command; hostname is set
+# per service in compose.yaml.
+#
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/sshd)
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# openssh-server + the five interpreters the SSH Session Script suite exercises
+# (sh + bash are in the base image; add python3, perl, node). Node 22 via
+# nodesource to match scripts/Containerfile's node convention.
+RUN apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends \
+        openssh-server \
+        openssh-sftp-server \
+        ca-certificates \
+        curl \
+        python3 \
+        perl && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - > /dev/null && \
+    apt-get install -y -qq --no-install-recommends nodejs > /dev/null && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /run/sshd
+
+# Helm for the remote-execution leg: a DIFFERENT major from the E2E runner's, so
+# the bundle proves both. Pinned version + checksum, like the tools baked into
+# services/kwok/Containerfile.
+ARG HELM_VERSION=3.21.4
+ARG HELM_SHA256_AMD64=61f88ab166748cb19604d7884cb100ae9ccb13804ddeb98e08af167eacbb6a14
+ARG HELM_SHA256_ARM64=b54c04b4e0b2540bbdc08c17a121dab70e9a2ed0de5705528fec68a5fd3b85a7
+RUN arch="$(dpkg --print-architecture)" && \
+    case "${arch}" in \
+        amd64) sha="${HELM_SHA256_AMD64}" ;; \
+        arm64) sha="${HELM_SHA256_ARM64}" ;; \
+        *) echo "unsupported architecture for helm: ${arch}" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSLo /tmp/helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
+    echo "${sha}  /tmp/helm.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/helm.tar.gz -C /tmp "linux-${arch}/helm" && \
+    install -m 0755 "/tmp/linux-${arch}/helm" /usr/local/bin/helm && \
+    rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}" && \
+    helm version --short
+
+# The test user: password auth (wave / wave-secret) AND key auth (authorized_keys
+# from the committed client public key and the passphrase-protected one). Both
+# WAVE SSH auth paths hit this user.
+COPY keys/client_ed25519.pub keys/wave_ed25519_passphrase.pub /tmp/
+RUN useradd -m -s /bin/bash wave && \
+    echo 'wave:wave-secret' | chpasswd && \
+    mkdir -p /home/wave/.ssh && \
+    cat /tmp/client_ed25519.pub /tmp/wave_ed25519_passphrase.pub > /home/wave/.ssh/authorized_keys && \
+    chown -R wave:wave /home/wave/.ssh && \
+    chmod 700 /home/wave/.ssh && \
+    chmod 600 /home/wave/.ssh/authorized_keys && \
+    rm /tmp/client_ed25519.pub /tmp/wave_ed25519_passphrase.pub
+
+# SFTP-only account (dropzone / dropzone-secret), chrooted by sshd_config. Every
+# chroot path component must be root-owned and not group/world writable.
+RUN useradd -M -d / -s /usr/sbin/nologin dropzone && \
+    echo 'dropzone:dropzone-secret' | chpasswd && \
+    mkdir -p /srv/sftp/dropzone/inbound /srv/sftp/dropzone/outbound && \
+    chown root:root /srv /srv/sftp /srv/sftp/dropzone && \
+    chmod 755 /srv /srv/sftp /srv/sftp/dropzone && \
+    chown dropzone:dropzone /srv/sftp/dropzone/inbound /srv/sftp/dropzone/outbound && \
+    chmod 755 /srv/sftp/dropzone/inbound /srv/sftp/dropzone/outbound
+
+# Fixed, committed host key so strict host-key-verification tests pin a known key.
+COPY keys/ssh_host_ed25519_key /etc/ssh/ssh_host_ed25519_key
+RUN chmod 600 /etc/ssh/ssh_host_ed25519_key
+
+# The two ForceCommand shims the banner / broken-interpreter configs point at.
+COPY wave-banner-shim wave-badpy-shim /usr/local/bin/
+RUN chmod 0755 /usr/local/bin/wave-banner-shim /usr/local/bin/wave-badpy-shim
+
+# All config variants; the service command picks one with -f.
+COPY sshd_config /etc/ssh/sshd_config
+COPY sshd_config.no-sftp /etc/ssh/sshd_config.no-sftp
+COPY sshd_config.no-fwd /etc/ssh/sshd_config.no-fwd
+COPY sshd_config.banner /etc/ssh/sshd_config.banner
+COPY sshd_config.badpy /etc/ssh/sshd_config.badpy
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config"]

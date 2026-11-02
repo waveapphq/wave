@@ -1,0 +1,341 @@
+{
+  "name": "Profile SSH Passphrase __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "An ssh profile holding a passphrase-protected OpenSSH key opens the session the SFTP blocks run on; a profile with the wrong passphrase is caught.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "d1306ef0-9e12-46b6-9978-e311ef252de3",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "Open with the passphrase key",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open with the passphrase key profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["host", "port", "username", "private_key", "passphrase"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "sshpass.host",
+              "port": "sshpass.port",
+              "username": "sshpass.username",
+              "private_key": "sshpass.private_key",
+              "passphrase": "sshpass.passphrase",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "pass_session",
+              "connected": "pass_connected",
+              "hop_count": "pass_hops"
+            },
+            "profileBindings": [
+              {
+                "profileId": "__GOOD_PROFILE_ID__",
+                "alias": "sshpass",
+                "profileName": "__GOOD_PROFILE_NAME__",
+                "profileType": "ssh"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "eac37e10-63b1-412a-a196-742b4d287688",
+        "type": "workflowNode",
+        "position": { "x": 225, "y": 100 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the session",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'pass-session connected={pass_connected} hops={pass_hops}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "23ef2814-f5c5-48d3-a214-422f13d2c69f",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 180 },
+        "data": {
+          "label": "Create the spec folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "pass_session",
+              "operation": "create_folder",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": { "success": "mkdir_success" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "7ed0c849-d33f-4ac4-8250-f72930176226",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 260 },
+        "data": {
+          "label": "Stats of the spec folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "pass_session",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "stats_exists",
+              "type": "stats_type",
+              "success": "stats_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "35c13cc6-1fbd-40f9-9a0e-a29c67a51312",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 340 },
+        "data": {
+          "label": "Delete the spec folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the spec folder",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "pass_session",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": false
+            },
+            "outputBindings": { "success": "delete_success" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "760505d8-37f0-47b6-ba0d-f2e34a36de13",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 420 },
+        "data": {
+          "label": "Stats after the delete",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats after the delete",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "pass_session",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "gone_exists",
+              "type": "gone_type"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "b2dee854-ce4d-469d-a037-1e23be9da4b3",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 500 },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the passphrase key session",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "pass_session" },
+            "outputBindings": { "closed_session_ids": "pass_closed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "590161a1-a941-4c08-be72-18baeee73888",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 580 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the wrong passphrase open",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "wrong_error", "caught": "wrong_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "1e6be0a1-9e3d-4157-94c1-594d8c2e2da4",
+        "type": "workflowNode",
+        "position": { "x": -330, "y": 660 },
+        "data": {
+          "label": "Open with the wrong passphrase",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open with the wrong passphrase profile",
+          "hasNewerVersion": false,
+          "expressionFields": ["host", "port", "username", "private_key", "passphrase"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "sshwrong.host",
+              "port": "sshwrong.port",
+              "username": "sshwrong.username",
+              "private_key": "sshwrong.private_key",
+              "passphrase": "sshwrong.passphrase",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": { "connected": "wrong_connected" },
+            "profileBindings": [
+              {
+                "profileId": "__WRONG_PROFILE_ID__",
+                "alias": "sshwrong",
+                "profileName": "__WRONG_PROFILE_NAME__",
+                "profileType": "ssh"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "fbae0eae-31b8-46b3-a53b-d4577248ff59",
+        "type": "workflowNode",
+        "position": { "x": 180, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught the wrong passphrase",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'pass caught wrong passphrase'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "0dca971e-0d1c-4764-ae17-343e0f58f073",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 760 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'profile-ssh-passphrase-done-__RUN_UUID__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "6be8e38b-2236-4fd6-b656-e0f9d6c2a205", "source": "start-node", "target": "d1306ef0-9e12-46b6-9978-e311ef252de3" },
+      { "id": "572c56a8-e9ae-40eb-bef3-389480e4e755", "source": "d1306ef0-9e12-46b6-9978-e311ef252de3", "target": "eac37e10-63b1-412a-a196-742b4d287688" },
+      { "id": "974ba78b-7800-4520-9943-a693d7e97b75", "source": "eac37e10-63b1-412a-a196-742b4d287688", "target": "23ef2814-f5c5-48d3-a214-422f13d2c69f" },
+      { "id": "3c96ff69-38f0-4cfc-8770-35e185ad657e", "source": "23ef2814-f5c5-48d3-a214-422f13d2c69f", "target": "7ed0c849-d33f-4ac4-8250-f72930176226" },
+      { "id": "f3afce2a-218d-409e-9332-2708111e5c48", "source": "7ed0c849-d33f-4ac4-8250-f72930176226", "target": "35c13cc6-1fbd-40f9-9a0e-a29c67a51312" },
+      { "id": "41fe84b3-322f-4dfe-b3a4-b1f643c33f55", "source": "35c13cc6-1fbd-40f9-9a0e-a29c67a51312", "target": "760505d8-37f0-47b6-ba0d-f2e34a36de13" },
+      { "id": "503a3e6f-9188-4059-a5f5-f5820cc592bd", "source": "760505d8-37f0-47b6-ba0d-f2e34a36de13", "target": "b2dee854-ce4d-469d-a037-1e23be9da4b3" },
+      { "id": "31162449-2304-436e-a2c7-a6b506f145de", "source": "b2dee854-ce4d-469d-a037-1e23be9da4b3", "target": "590161a1-a941-4c08-be72-18baeee73888" },
+      { "id": "ba9080d2-bc65-4771-8464-57e716af63cc", "source": "590161a1-a941-4c08-be72-18baeee73888", "target": "1e6be0a1-9e3d-4157-94c1-594d8c2e2da4", "sourceHandle": "try" },
+      { "id": "f63875e9-112f-4005-a395-91e42cd20d0e", "source": "590161a1-a941-4c08-be72-18baeee73888", "target": "fbae0eae-31b8-46b3-a53b-d4577248ff59", "sourceHandle": "catch" },
+      { "id": "cb216b4d-150e-4cb3-b61f-8d8163c65cc5", "source": "590161a1-a941-4c08-be72-18baeee73888", "target": "0dca971e-0d1c-4764-ae17-343e0f58f073", "sourceHandle": "then" }
+    ]
+  },
+  "variables": {
+    "pass_session": { "value": "", "type": "string", "scope": "test" },
+    "pass_connected": { "value": false, "type": "boolean", "scope": "test" },
+    "pass_hops": { "value": 0, "type": "integer", "scope": "test" },
+    "mkdir_success": { "value": false, "type": "boolean", "scope": "test" },
+    "stats_exists": { "value": false, "type": "boolean", "scope": "test" },
+    "stats_type": { "value": "", "type": "string", "scope": "test" },
+    "stats_success": { "value": false, "type": "boolean", "scope": "test" },
+    "delete_success": { "value": false, "type": "boolean", "scope": "test" },
+    "gone_exists": { "value": true, "type": "boolean", "scope": "test" },
+    "gone_type": { "value": "unset", "type": "string", "scope": "test" },
+    "pass_closed": { "value": [], "type": "array", "scope": "test" },
+    "wrong_error": { "value": null, "type": "map", "scope": "test" },
+    "wrong_caught": { "value": false, "type": "boolean", "scope": "test" },
+    "wrong_connected": { "value": false, "type": "boolean", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

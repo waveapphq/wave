@@ -1,0 +1,240 @@
+{
+  "name": "zz-11541-s9-setter",
+  "version": "1.0.0",
+  "description": "Variable Setter rows under the one number rule: digit text, an exact 20-digit expression, NaN refused",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "c6daead1-e71e-404d-a20c-ccd481b87150",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Set values",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set a literal and a 20-digit expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "big"
+          ],
+          "variableTypes": {
+            "n": "integer",
+            "big": "integer"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "n": "30",
+                "big": "12345678901234567890"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1b7bd7ca-7edc-4631-b67a-6090bba25629",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Log values",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the set values",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'n=' + str(n) + ' big=' + str(big) + ' next=' + str(big + 1)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f99f2f8f-e63c-431b-8841-98b294f9e35b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Log done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'setter-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "227b05fb-8b17-4b3c-ac44-f6a1334dae41",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Set NaN",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set NaN into a float",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "ratio"
+          ],
+          "variableTypes": {
+            "ratio": "float"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "ratio": "float('nan')"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "40011554-2faa-4dff-95bb-e41f42f286d9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 440
+        },
+        "data": {
+          "label": "Log after NaN",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log after NaN",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'after-nan'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-0",
+        "source": "start-node",
+        "target": "c6daead1-e71e-404d-a20c-ccd481b87150",
+        "type": "default"
+      },
+      {
+        "id": "e-1",
+        "source": "c6daead1-e71e-404d-a20c-ccd481b87150",
+        "target": "1b7bd7ca-7edc-4631-b67a-6090bba25629",
+        "type": "default"
+      },
+      {
+        "id": "e-2",
+        "source": "1b7bd7ca-7edc-4631-b67a-6090bba25629",
+        "target": "f99f2f8f-e63c-431b-8841-98b294f9e35b",
+        "type": "default"
+      },
+      {
+        "id": "e-3",
+        "source": "f99f2f8f-e63c-431b-8841-98b294f9e35b",
+        "target": "227b05fb-8b17-4b3c-ac44-f6a1334dae41",
+        "type": "default"
+      },
+      {
+        "id": "e-4",
+        "source": "227b05fb-8b17-4b3c-ac44-f6a1334dae41",
+        "target": "40011554-2faa-4dff-95bb-e41f42f286d9",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "n": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "big": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ratio": {
+      "value": "0.5",
+      "type": "float",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

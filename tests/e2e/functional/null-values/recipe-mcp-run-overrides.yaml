@@ -1,0 +1,23 @@
+test:
+  name: Null MCP Run Overrides
+  description: Per-run overrides set null and take a bare map as the map's value
+variables:
+  target: {type: string, value: declared-target}
+  typed_null: {type: integer, value: 7}
+  config: {type: map, value: {region: us, tier: 1}}
+  shaped: {type: map, value: {a: 1}}
+  typed_config: {type: map, value: {k: declared}}
+flow:
+  - block: log
+    label: Print overrides
+    settings:
+      message: "overrides target={{ target }} typed_null={{ typed_null }} config={{ config }} shaped={{ shaped }} typed_config={{ typed_config }}"
+  - assert:
+      label: Overrides applied
+      that:
+        - "target is None"
+        - "typed_null is None"
+        - "config == {'region': 'eu', 'tier': 2}"
+        - "shaped == {'type': 'integer', 'value': 5}"
+        - "typed_config == {'k': 'v'}"
+      fail_current_scope: true

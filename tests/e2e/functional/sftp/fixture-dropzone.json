@@ -1,0 +1,662 @@
+{
+  "name": "SFTP Dropzone __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "The SFTP-only chrooted dropzone account: the jail root, a round trip through /inbound and /outbound, and a refused write at the jail root.",
+  "variables": {
+    "dz_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "dz_connected": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dz_hops": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "root_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "root_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "root_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mkdir_in_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "up_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "up_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "move_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "down_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "down_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "root_mkdir_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "root_mkdir_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "root_mkdir_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "delete_in_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "delete_out_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "inbound_entries": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "inbound_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dz_closed": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "be6bf618-bf52-4eec-9d76-246eaa82cdda",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "dz_session",
+              "connected": "dz_connected",
+              "hop_count": "dz_hops"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "84ac8b8f-4acc-4226-8bbe-033b96336856",
+        "type": "workflowNode",
+        "position": {
+          "x": 225,
+          "y": 100
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'dz-session connected={dz_connected} hops={dz_hops}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "5e686c15-7a5f-42d0-9aa4-2c3dad7be8f7",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "List the jail root",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List the jail root",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "list",
+              "path": "/",
+              "recursive": false
+            },
+            "outputBindings": {
+              "entries": "root_entries",
+              "count": "root_count",
+              "success": "root_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "5744bfdf-9adf-4a4c-8039-4c439c6dbe10",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 260
+        },
+        "data": {
+          "label": "Create the inbound folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create the inbound folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "create_folder",
+              "path": "/inbound/__FOLDER__"
+            },
+            "outputBindings": {
+              "success": "mkdir_in_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "88061fda-8d6c-4b7d-88b3-d832151d0eaa",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 340
+        },
+        "data": {
+          "label": "Upload the orders",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Upload the orders",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "upload",
+              "source": "testdata://orders.csv",
+              "destination": "/inbound/__FOLDER__/",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "up_summary",
+              "success": "up_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "1ea540f0-7737-461c-bd08-e094232c067c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "Move the orders to outbound",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Move the orders to outbound",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "move",
+              "source": "/inbound/__FOLDER__/orders.csv",
+              "destination": "/outbound/__FOLDER__/orders.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "success": "move_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "bb5e1f8f-0345-48f5-b451-aa8b428b0398",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 500
+        },
+        "data": {
+          "label": "Download the orders",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download the orders",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "download",
+              "source": "/outbound/__FOLDER__/orders.csv",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {
+              "summary": "down_summary",
+              "success": "down_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "bc4c11af-8791-4f17-a52d-2d4979b525b5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 580
+        },
+        "data": {
+          "label": "Create a folder at the jail root",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Create a folder at the jail root",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "create_folder",
+              "path": "/__FOLDER__",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "root_mkdir_success",
+              "error": "root_mkdir_error",
+              "reason": "root_mkdir_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "709beb0d-4b27-43b6-bf49-e0a8371df787",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Delete the inbound folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the inbound folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "delete",
+              "path": "/inbound/__FOLDER__",
+              "missing_ok": false
+            },
+            "outputBindings": {
+              "success": "delete_in_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c7a924f1-26da-4201-bb5f-e8943806c0a0",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 740
+        },
+        "data": {
+          "label": "Delete the outbound folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the outbound folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "delete",
+              "path": "/outbound/__FOLDER__",
+              "missing_ok": false
+            },
+            "outputBindings": {
+              "success": "delete_out_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "29306299-3e50-494f-b177-14dca76ac5a6",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 820
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "List inbound after the delete",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session",
+              "operation": "list",
+              "path": "/inbound",
+              "recursive": false
+            },
+            "outputBindings": {
+              "entries": "inbound_entries",
+              "count": "inbound_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "3397abab-093d-4756-91d8-38db7c13f7f1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 900
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SFTP session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "dz_session"
+            },
+            "outputBindings": {
+              "closed_session_ids": "dz_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ca29d565-056c-4e92-b347-39ab5cc5619a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 980
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-dropzone-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "29ec3d8b-fbb0-426e-8df8-c6551f4123d3",
+        "source": "start-node",
+        "target": "be6bf618-bf52-4eec-9d76-246eaa82cdda"
+      },
+      {
+        "id": "83969d8f-60bf-411f-842d-57447f827bd2",
+        "source": "be6bf618-bf52-4eec-9d76-246eaa82cdda",
+        "target": "84ac8b8f-4acc-4226-8bbe-033b96336856"
+      },
+      {
+        "id": "6ed41be5-483d-4f93-9d3a-023901972fbb",
+        "source": "84ac8b8f-4acc-4226-8bbe-033b96336856",
+        "target": "5e686c15-7a5f-42d0-9aa4-2c3dad7be8f7"
+      },
+      {
+        "id": "2d59d457-7895-44f1-a5b7-8abaf0faadc6",
+        "source": "5e686c15-7a5f-42d0-9aa4-2c3dad7be8f7",
+        "target": "5744bfdf-9adf-4a4c-8039-4c439c6dbe10"
+      },
+      {
+        "id": "4af49cd5-0f50-44c0-8547-a71a9d2b3b66",
+        "source": "5744bfdf-9adf-4a4c-8039-4c439c6dbe10",
+        "target": "88061fda-8d6c-4b7d-88b3-d832151d0eaa"
+      },
+      {
+        "id": "3a9f0707-4297-4abc-b672-8371f0699d5b",
+        "source": "88061fda-8d6c-4b7d-88b3-d832151d0eaa",
+        "target": "1ea540f0-7737-461c-bd08-e094232c067c"
+      },
+      {
+        "id": "5872f1eb-ec10-43d3-998a-a1ebd0fa2cf3",
+        "source": "1ea540f0-7737-461c-bd08-e094232c067c",
+        "target": "bb5e1f8f-0345-48f5-b451-aa8b428b0398"
+      },
+      {
+        "id": "4137baf8-61af-409f-affa-668d71938949",
+        "source": "bb5e1f8f-0345-48f5-b451-aa8b428b0398",
+        "target": "bc4c11af-8791-4f17-a52d-2d4979b525b5"
+      },
+      {
+        "id": "21d00f72-d6a9-4222-bedf-231336a8444e",
+        "source": "bc4c11af-8791-4f17-a52d-2d4979b525b5",
+        "target": "709beb0d-4b27-43b6-bf49-e0a8371df787"
+      },
+      {
+        "id": "e7bd4bfc-7ac8-4fda-aaad-4381dbc6d12b",
+        "source": "709beb0d-4b27-43b6-bf49-e0a8371df787",
+        "target": "c7a924f1-26da-4201-bb5f-e8943806c0a0"
+      },
+      {
+        "id": "f162ff79-c0c0-46c0-a527-22bc690cc94f",
+        "source": "c7a924f1-26da-4201-bb5f-e8943806c0a0",
+        "target": "29306299-3e50-494f-b177-14dca76ac5a6"
+      },
+      {
+        "id": "a65c5271-580a-4228-b3f7-4bb451c97eef",
+        "source": "29306299-3e50-494f-b177-14dca76ac5a6",
+        "target": "3397abab-093d-4756-91d8-38db7c13f7f1"
+      },
+      {
+        "id": "fb3b80f3-6f40-4d59-a45e-3332984feb8b",
+        "source": "3397abab-093d-4756-91d8-38db7c13f7f1",
+        "target": "ca29d565-056c-4e92-b347-39ab5cc5619a"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

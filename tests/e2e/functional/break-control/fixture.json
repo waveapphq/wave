@@ -1,0 +1,1480 @@
+{
+  "name": "Break Control E2E",
+  "version": "1.0.0",
+  "description": "Thirteen break scenarios: single-loop (For, ForEach, While, break-first), nested targeting (inner, outer, 3-level middle, 3-level outermost), break inside controls (try-catch, if-else true, if-else false), and combined break+continue interactions.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 0 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-break-tests'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s1",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 130 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S1 For count=3",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i1" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s1-body",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 230 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S1 Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'brk-s1-{i1}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s1",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 330 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S1",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s1" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s1-after",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S1 After Break NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s1-after-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s1-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 130 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S1 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'brk-s1-then-{i1}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "fe-s2",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 530 },
+        "data": {
+          "label": "ForEach", "elementType": "for-each", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S2 ForEach",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "items_s2" },
+            "outputBindings": { "item": "item_s2", "index": "idx_s2" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s2-body",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 630 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S2 Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'brk-s2-{idx_s2}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s2",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 730 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S2",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "fe-s2" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s2-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 530 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S2 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s2-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "while-s3",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 830 },
+        "data": {
+          "label": "While", "elementType": "while", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S3 While True",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s3" }], "max_iterations": 10 },
+            "outputBindings": { "index": "w3" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s3-body",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 930 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S3 Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s3-body'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s3",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1030 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S3",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "while-s3" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s3-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 830 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S3 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s3-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s4",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 1130 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S4 For break-first",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i4" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "brk-s4",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1230 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S4 First",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s4" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s4-never",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1330 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S4 NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s4-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s4-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1130 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S4 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s4-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s5",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 1430 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S5 Outer For",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i5" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "fe-s5",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1530 },
+        "data": {
+          "label": "ForEach", "elementType": "for-each", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S5 Inner ForEach",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "items_s5" },
+            "outputBindings": { "item": "item_s5", "index": "idx_s5" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s5-inner",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 1630 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S5 Inner Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'brk-s5-inner-{idx_s5}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s5",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 1730 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S5 Inner",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "fe-s5" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s5-inner-then",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 1630 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S5 Inner Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s5-inner-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s5-outer",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S5 Outer Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s5-outer-done'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s6",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 1830 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S6 Outer For",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i6" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "fe-s6",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1930 },
+        "data": {
+          "label": "ForEach", "elementType": "for-each", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S6 Inner ForEach",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "items_s6" },
+            "outputBindings": { "item": "item_s6", "index": "idx_s6" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s6-inner",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 2030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S6 Inner Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'brk-s6-inner-{idx_s6}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s6",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 2130 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S6 Outer",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s6" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s6-inner-never",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 2030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S6 Inner Then NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s6-inner-then-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s6-outer",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1830 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S6 Outer Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s6-outer-done'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s7",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 2230 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S7 Outer For",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i7" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "fe-s7",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 2330 },
+        "data": {
+          "label": "ForEach", "elementType": "for-each", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S7 Mid ForEach",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "items_s7" },
+            "outputBindings": { "item": "item_s7", "index": "idx_s7" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "while-s7",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 2430 },
+        "data": {
+          "label": "While", "elementType": "while", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S7 Inner While",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s7" }], "max_iterations": 5 },
+            "outputBindings": { "index": "w7" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s7-deep",
+        "type": "workflowNode",
+        "position": { "x": -600, "y": 2530 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S7 Deep Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s7-deep'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s7",
+        "type": "workflowNode",
+        "position": { "x": -600, "y": 2630 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S7 Mid",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "fe-s7" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-while-never",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 2530 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S7 While Then NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s7-while-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-fe-then",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 2430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S7 FE Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s7-fe-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-outer",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 2230 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S7 Outer Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s7-outer-done'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s8",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 2730 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S8 Outer For",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i8" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "fe-s8",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 2830 },
+        "data": {
+          "label": "ForEach", "elementType": "for-each", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S8 Mid ForEach",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "items_s8" },
+            "outputBindings": { "item": "item_s8", "index": "idx_s8" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "while-s8",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 2930 },
+        "data": {
+          "label": "While", "elementType": "while", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S8 Inner While",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s8" }], "max_iterations": 5 },
+            "outputBindings": { "index": "w8" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s8-deep",
+        "type": "workflowNode",
+        "position": { "x": -600, "y": 3030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S8 Deep Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s8-deep'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s8",
+        "type": "workflowNode",
+        "position": { "x": -600, "y": 3130 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S8 Outermost",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s8" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s8-while-never",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 3030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S8 While Then NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s8-while-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s8-fe-never",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 2930 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S8 FE Then NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s8-fe-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s8-outer",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 2730 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S8 Outer Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s8-outer-done'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s9",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 3230 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S9 For TryCatch",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i9" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "tc-s9",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 3330 },
+        "data": {
+          "label": "Try Catch Finally", "elementType": "try-catch-finally", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "S9 TryCatch",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s9-try",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 3430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S9 Try Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s9-try'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s9",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 3530 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S9",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s9" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s9-catch-never",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 3430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S9 Catch NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s9-catch-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s9-for-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 3230 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S9 For Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s9-for-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s10",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 3630 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S10 For IfTrue",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i10" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "if-s10",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 3730 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "S10 IfElse True",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_if", "label": "True Path",
+                  "conditions": [{
+                    "type": "expression", "expression": "cond_t == True", "id": "c-s10"
+                  }]
+                },
+                { "type": "else", "id": "branch_else", "label": "Else" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s10-true",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 3830 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S10 True Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s10-true'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s10",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 3930 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S10",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s10" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s10-else-never",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 3830 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S10 Else NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s10-else-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s10-for-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 3630 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S10 For Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s10-for-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s11",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 4030 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S11 For IfFalse",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i11" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "if-s11",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 4130 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "S11 IfElse False",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_if", "label": "If Path",
+                  "conditions": [{
+                    "type": "expression", "expression": "cond_f == True", "id": "c-s11"
+                  }]
+                },
+                { "type": "else", "id": "branch_else", "label": "Else" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s11-if-never",
+        "type": "workflowNode",
+        "position": { "x": -400, "y": 4230 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S11 If NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s11-if-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s11-else",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 4230 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S11 Else Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s11-else'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s11",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 4330 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S11",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s11" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s11-for-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 4030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S11 For Then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'brk-s11-for-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s12",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 4430 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S12 Continue then Break",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i12" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s12-body",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 4530 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S12 Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'comb-s12-{i12}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "cont-s12",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 4630 },
+        "data": {
+          "label": "Continue", "elementType": "continue", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Continue S12",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s12" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s12",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 4730 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S12 NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s12" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s12-never",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 4830 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S12 NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'comb-s12-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s12-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 4430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S12 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'comb-s12-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "for-s13",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 4930 },
+        "data": {
+          "label": "For Loop", "elementType": "for", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "S13 Break then Continue",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i13" }, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-s13-body",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 5030 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S13 Body Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'comb-s13-{i13}'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "brk-s13",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 5130 },
+        "data": {
+          "label": "Break", "elementType": "break", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Break S13",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s13" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "cont-s13",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 5230 },
+        "data": {
+          "label": "Continue", "elementType": "continue", "nodeType": "control",
+          "category": "loop", "version": "1.0.0",
+          "description": "Continue S13 NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "target_loop": "for-s13" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s13-never",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 5330 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S13 NEVER",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'comb-s13-never'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s13-then",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 4930 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "S13 Then Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'comb-s13-then'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 5430 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all-break-tests'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before", "source": "log-before", "target": "for-s1", "type": "default" },
+
+      { "id": "e-s1-b", "source": "for-s1", "sourceHandle": "body", "target": "log-s1-body", "type": "default" },
+      { "id": "e-s1-c1", "source": "log-s1-body", "target": "brk-s1", "type": "default" },
+      { "id": "e-s1-c2", "source": "brk-s1", "target": "log-s1-after", "type": "default" },
+      { "id": "e-s1-t", "source": "for-s1", "sourceHandle": "then", "target": "log-s1-then", "type": "default" },
+      { "id": "e-s1-n", "source": "log-s1-then", "target": "fe-s2", "type": "default" },
+
+      { "id": "e-s2-b", "source": "fe-s2", "sourceHandle": "body", "target": "log-s2-body", "type": "default" },
+      { "id": "e-s2-c1", "source": "log-s2-body", "target": "brk-s2", "type": "default" },
+      { "id": "e-s2-t", "source": "fe-s2", "sourceHandle": "then", "target": "log-s2-then", "type": "default" },
+      { "id": "e-s2-n", "source": "log-s2-then", "target": "while-s3", "type": "default" },
+
+      { "id": "e-s3-b", "source": "while-s3", "sourceHandle": "body", "target": "log-s3-body", "type": "default" },
+      { "id": "e-s3-c1", "source": "log-s3-body", "target": "brk-s3", "type": "default" },
+      { "id": "e-s3-t", "source": "while-s3", "sourceHandle": "then", "target": "log-s3-then", "type": "default" },
+      { "id": "e-s3-n", "source": "log-s3-then", "target": "for-s4", "type": "default" },
+
+      { "id": "e-s4-b", "source": "for-s4", "sourceHandle": "body", "target": "brk-s4", "type": "default" },
+      { "id": "e-s4-c1", "source": "brk-s4", "target": "log-s4-never", "type": "default" },
+      { "id": "e-s4-t", "source": "for-s4", "sourceHandle": "then", "target": "log-s4-then", "type": "default" },
+      { "id": "e-s4-n", "source": "log-s4-then", "target": "for-s5", "type": "default" },
+
+      { "id": "e-s5-ob", "source": "for-s5", "sourceHandle": "body", "target": "fe-s5", "type": "default" },
+      { "id": "e-s5-ib", "source": "fe-s5", "sourceHandle": "body", "target": "log-s5-inner", "type": "default" },
+      { "id": "e-s5-ic1", "source": "log-s5-inner", "target": "brk-s5", "type": "default" },
+      { "id": "e-s5-it", "source": "fe-s5", "sourceHandle": "then", "target": "log-s5-inner-then", "type": "default" },
+      { "id": "e-s5-outer", "source": "for-s5", "sourceHandle": "then", "target": "log-s5-outer", "type": "default" },
+      { "id": "e-s5-n", "source": "log-s5-outer", "target": "for-s6", "type": "default" },
+
+      { "id": "e-s6-ob", "source": "for-s6", "sourceHandle": "body", "target": "fe-s6", "type": "default" },
+      { "id": "e-s6-ib", "source": "fe-s6", "sourceHandle": "body", "target": "log-s6-inner", "type": "default" },
+      { "id": "e-s6-ic1", "source": "log-s6-inner", "target": "brk-s6", "type": "default" },
+      { "id": "e-s6-it", "source": "fe-s6", "sourceHandle": "then", "target": "log-s6-inner-never", "type": "default" },
+      { "id": "e-s6-outer", "source": "for-s6", "sourceHandle": "then", "target": "log-s6-outer", "type": "default" },
+      { "id": "e-s6-n", "source": "log-s6-outer", "target": "for-s7", "type": "default" },
+
+      { "id": "e-s7-ob", "source": "for-s7", "sourceHandle": "body", "target": "fe-s7", "type": "default" },
+      { "id": "e-s7-fb", "source": "fe-s7", "sourceHandle": "body", "target": "while-s7", "type": "default" },
+      { "id": "e-s7-wb", "source": "while-s7", "sourceHandle": "body", "target": "log-s7-deep", "type": "default" },
+      { "id": "e-s7-wc1", "source": "log-s7-deep", "target": "brk-s7", "type": "default" },
+      { "id": "e-s7-wt", "source": "while-s7", "sourceHandle": "then", "target": "log-s7-while-never", "type": "default" },
+      { "id": "e-s7-ft", "source": "fe-s7", "sourceHandle": "then", "target": "log-s7-fe-then", "type": "default" },
+      { "id": "e-s7-outer", "source": "for-s7", "sourceHandle": "then", "target": "log-s7-outer", "type": "default" },
+      { "id": "e-s7-n", "source": "log-s7-outer", "target": "for-s8", "type": "default" },
+
+      { "id": "e-s8-ob", "source": "for-s8", "sourceHandle": "body", "target": "fe-s8", "type": "default" },
+      { "id": "e-s8-fb", "source": "fe-s8", "sourceHandle": "body", "target": "while-s8", "type": "default" },
+      { "id": "e-s8-wb", "source": "while-s8", "sourceHandle": "body", "target": "log-s8-deep", "type": "default" },
+      { "id": "e-s8-wc1", "source": "log-s8-deep", "target": "brk-s8", "type": "default" },
+      { "id": "e-s8-wt", "source": "while-s8", "sourceHandle": "then", "target": "log-s8-while-never", "type": "default" },
+      { "id": "e-s8-ft", "source": "fe-s8", "sourceHandle": "then", "target": "log-s8-fe-never", "type": "default" },
+      { "id": "e-s8-outer", "source": "for-s8", "sourceHandle": "then", "target": "log-s8-outer", "type": "default" },
+      { "id": "e-s8-n", "source": "log-s8-outer", "target": "for-s9", "type": "default" },
+
+      { "id": "e-s9-b", "source": "for-s9", "sourceHandle": "body", "target": "tc-s9", "type": "default" },
+      { "id": "e-s9-try", "source": "tc-s9", "sourceHandle": "try", "target": "log-s9-try", "type": "default" },
+      { "id": "e-s9-tc1", "source": "log-s9-try", "target": "brk-s9", "type": "default" },
+      { "id": "e-s9-catch", "source": "tc-s9", "sourceHandle": "catch", "target": "log-s9-catch-never", "type": "default" },
+      { "id": "e-s9-t", "source": "for-s9", "sourceHandle": "then", "target": "log-s9-for-then", "type": "default" },
+      { "id": "e-s9-n", "source": "log-s9-for-then", "target": "for-s10", "type": "default" },
+
+      { "id": "e-s10-b", "source": "for-s10", "sourceHandle": "body", "target": "if-s10", "type": "default" },
+      { "id": "e-s10-if", "source": "if-s10", "sourceHandle": "branch_if", "target": "log-s10-true", "type": "default" },
+      { "id": "e-s10-ic1", "source": "log-s10-true", "target": "brk-s10", "type": "default" },
+      { "id": "e-s10-else", "source": "if-s10", "sourceHandle": "branch_else", "target": "log-s10-else-never", "type": "default" },
+      { "id": "e-s10-t", "source": "for-s10", "sourceHandle": "then", "target": "log-s10-for-then", "type": "default" },
+      { "id": "e-s10-n", "source": "log-s10-for-then", "target": "for-s11", "type": "default" },
+
+      { "id": "e-s11-b", "source": "for-s11", "sourceHandle": "body", "target": "if-s11", "type": "default" },
+      { "id": "e-s11-if", "source": "if-s11", "sourceHandle": "branch_if", "target": "log-s11-if-never", "type": "default" },
+      { "id": "e-s11-else", "source": "if-s11", "sourceHandle": "branch_else", "target": "log-s11-else", "type": "default" },
+      { "id": "e-s11-ec1", "source": "log-s11-else", "target": "brk-s11", "type": "default" },
+      { "id": "e-s11-t", "source": "for-s11", "sourceHandle": "then", "target": "log-s11-for-then", "type": "default" },
+      { "id": "e-s11-n", "source": "log-s11-for-then", "target": "for-s12", "type": "default" },
+
+      { "id": "e-s12-b", "source": "for-s12", "sourceHandle": "body", "target": "log-s12-body", "type": "default" },
+      { "id": "e-s12-c1", "source": "log-s12-body", "target": "cont-s12", "type": "default" },
+      { "id": "e-s12-c2", "source": "cont-s12", "target": "brk-s12", "type": "default" },
+      { "id": "e-s12-c3", "source": "brk-s12", "target": "log-s12-never", "type": "default" },
+      { "id": "e-s12-t", "source": "for-s12", "sourceHandle": "then", "target": "log-s12-then", "type": "default" },
+      { "id": "e-s12-n", "source": "log-s12-then", "target": "for-s13", "type": "default" },
+
+      { "id": "e-s13-b", "source": "for-s13", "sourceHandle": "body", "target": "log-s13-body", "type": "default" },
+      { "id": "e-s13-c1", "source": "log-s13-body", "target": "brk-s13", "type": "default" },
+      { "id": "e-s13-c2", "source": "brk-s13", "target": "cont-s13", "type": "default" },
+      { "id": "e-s13-c3", "source": "cont-s13", "target": "log-s13-never", "type": "default" },
+      { "id": "e-s13-t", "source": "for-s13", "sourceHandle": "then", "target": "log-s13-then", "type": "default" },
+      { "id": "e-s13-n", "source": "log-s13-then", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "i1": { "type": "integer", "value": 0, "scope": "test" },
+    "items_s2": { "type": "array", "value": ["a", "b", "c"], "scope": "test" },
+    "item_s2": { "type": "map", "value": {}, "scope": "test" },
+    "idx_s2": { "type": "integer", "value": 0, "scope": "test" },
+    "w3": { "type": "integer", "value": 0, "scope": "test" },
+    "i4": { "type": "integer", "value": 0, "scope": "test" },
+    "i5": { "type": "integer", "value": 0, "scope": "test" },
+    "items_s5": { "type": "array", "value": ["x", "y"], "scope": "test" },
+    "item_s5": { "type": "map", "value": {}, "scope": "test" },
+    "idx_s5": { "type": "integer", "value": 0, "scope": "test" },
+    "i6": { "type": "integer", "value": 0, "scope": "test" },
+    "items_s6": { "type": "array", "value": ["p", "q"], "scope": "test" },
+    "item_s6": { "type": "map", "value": {}, "scope": "test" },
+    "idx_s6": { "type": "integer", "value": 0, "scope": "test" },
+    "i7": { "type": "integer", "value": 0, "scope": "test" },
+    "items_s7": { "type": "array", "value": ["m"], "scope": "test" },
+    "item_s7": { "type": "map", "value": {}, "scope": "test" },
+    "idx_s7": { "type": "integer", "value": 0, "scope": "test" },
+    "w7": { "type": "integer", "value": 0, "scope": "test" },
+    "i8": { "type": "integer", "value": 0, "scope": "test" },
+    "items_s8": { "type": "array", "value": ["u"], "scope": "test" },
+    "item_s8": { "type": "map", "value": {}, "scope": "test" },
+    "idx_s8": { "type": "integer", "value": 0, "scope": "test" },
+    "w8": { "type": "integer", "value": 0, "scope": "test" },
+    "i9": { "type": "integer", "value": 0, "scope": "test" },
+    "i10": { "type": "integer", "value": 0, "scope": "test" },
+    "cond_t": { "type": "boolean", "value": true, "scope": "test" },
+    "i11": { "type": "integer", "value": 0, "scope": "test" },
+    "cond_f": { "type": "boolean", "value": false, "scope": "test" },
+    "i12": { "type": "integer", "value": 0, "scope": "test" },
+    "i13": { "type": "integer", "value": 0, "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-03-31T00:00:00.000000",
+  "updated_at": "2026-03-31T00:00:00.000000"
+}

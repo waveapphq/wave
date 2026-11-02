@@ -1,0 +1,26 @@
+# An identity that may destroy a collection but may never look at it: delete and
+# deletecollection on core configmaps, and no get, list or watch anywhere. No token in
+# tokens.csv maps to it, so the only way to act as it is an impersonation header. It
+# makes a delete succeed and the wait poll that follows come back 403, which is how a
+# wait that reads a refusal as absence is told apart from one that keeps polling.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wave-deleter
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["delete", "deletecollection"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wave-deleter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: wave-deleter
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: wave-deleter

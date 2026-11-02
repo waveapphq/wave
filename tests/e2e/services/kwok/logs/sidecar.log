@@ -1,0 +1,4 @@
+2026-01-01T00:00:00.000000002Z stdout F sidecar: envoy proxy ready, upstream app:8080
+2026-01-01T00:00:02.000000002Z stdout F sidecar: access 10.244.0.9 "GET /healthz" 200
+2026-01-01T00:00:03.000000002Z stdout F sidecar: access 10.244.0.17 "GET /orders/42" 200
+2026-01-01T00:00:05.000000002Z stdout F sidecar: access 10.244.0.9 "GET /healthz" 200

@@ -1,0 +1,330 @@
+{
+  "name": "V-NET-PROXY Helm Install",
+  "version": "1.0.0",
+  "description": "K8s Connect to the internal kwok cluster, a Helm Install from the chart repository's compose name that records its failure, then the release and its namespace are removed on that cluster.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "helm-connect",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Cluster for Helm",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Cluster for Helm",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://kwok-internal:6443",
+              "namespace": "__NAMESPACE__",
+              "timeout": 15,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "helm-install",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Chart by its compose name",
+          "elementType": "helm-install",
+          "nodeType": "plugin",
+          "category": "helm",
+          "version": "1.0.0",
+          "description": "Chart by its compose name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "release": "__RELEASE__",
+              "chart": "wave-demo",
+              "version": "0.1.0",
+              "repo": "http://tls-lab:9463",
+              "namespace": "__NAMESPACE__",
+              "create_namespace": true,
+              "timeout": 120,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "result": "helm_result",
+              "status": "helm_status",
+              "success": "helm_ok",
+              "error": "helm_err",
+              "reason": "helm_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-helm",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Helm outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'proxy-helm ok={helm_ok} reason={helm_reason} status={helm_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "helm-uninstall",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Remove the release",
+          "elementType": "helm-uninstall",
+          "nodeType": "plugin",
+          "category": "helm",
+          "version": "1.0.0",
+          "description": "Remove the release",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "release": "__RELEASE__",
+              "namespace": "__NAMESPACE__",
+              "ignore_not_found": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delete-ns",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Remove the namespace",
+          "elementType": "k8s-delete",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Remove the namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "Namespace",
+              "delete_by": "name",
+              "name": "__NAMESPACE__",
+              "ignore_not_found": true,
+              "cascade": "background",
+              "wait_until_gone": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "count": "ns_del_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'proxy-helm-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-helm-connect",
+        "source": "start-node",
+        "target": "helm-connect",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-connect-helm-install",
+        "source": "helm-connect",
+        "target": "helm-install",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-install-log-helm",
+        "source": "helm-install",
+        "target": "log-helm",
+        "type": "default"
+      },
+      {
+        "id": "edge-log-helm-helm-uninstall",
+        "source": "log-helm",
+        "target": "helm-uninstall",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-uninstall-delete-ns",
+        "source": "helm-uninstall",
+        "target": "delete-ns",
+        "type": "default"
+      },
+      {
+        "id": "edge-delete-ns-log-done",
+        "source": "delete-ns",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_result": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "helm_status": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "helm_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ns_del_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

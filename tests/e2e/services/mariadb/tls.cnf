@@ -1,0 +1,4 @@
+[mariadbd]
+ssl_cert = /etc/mysql/tls/database.crt
+ssl_key = /etc/mysql/tls/database.key
+ssl_ca = /etc/mysql/tls/ca.pem

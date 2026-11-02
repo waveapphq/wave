@@ -1,0 +1,391 @@
+# WAVE E2E real-service stack (test-only).
+#
+# Managed by scripts/e2e-stack.sh - do NOT invoke docker-compose/podman-compose
+# directly (the wrapper owns the rootless-podman network quirk and image builds).
+#
+# Services:
+#   sshd          - main OpenSSH host; published on 127.0.0.1:9445 (host loopback).
+#   sshd-no-sftp  - SFTP subsystem removed; published :9447.
+#   sshd-no-fwd   - AllowTcpForwarding no; published :9448.
+#   sshd-banner   - prints one line on stdout before every command; :9446.
+#   sshd-badpy    - answers the interpreter probe, runs nothing else; :9462.
+#   nested-sshd   - INTERNAL only (no published port): reachable solely through
+#                   `sshd` as a jump host, proving real multi-hop isolation.
+#   http-target   - INTERNAL only: tunnel-only destination + Remote-Exec target.
+#   http-echo     - published sibling of http-target (same image); :9449/:9450.
+#   tls-lab       - nginx TLS matrix (mTLS, version pins, cipher pins); :9451-9457,
+#                   plus the Helm chart repository: :9463 plain, :9464 https+auth,
+#                   and the chain PKI: :9480 leaf + intermediate, :9481 leaf only.
+#   http-proxy    - tinyproxy open forward proxy; :9458.
+#   http-proxy-auth - tinyproxy BasicAuth forward proxy; :9459.
+#   kwok          - real Kubernetes API: kwok all-in-one cluster, secure serving
+#                   + RBAC only (no insecure port); published :9460.
+#   kwok-internal - identical second kwok cluster, INTERNAL only (no published
+#                   port): in-network / tunnel-target Kubernetes cases.
+#   k8s-gateway   - INTERNAL only: nginx path-prefix front for the published
+#                   kwok API (http://k8s-gateway:8080/k8s/clusters/wave).
+#   k8s-stub      - Kubernetes API fault injector: canned discovery over TLS,
+#                   configurable failure on the resource read; published :9461.
+#   netcat-target - INTERNAL only: raw TCP/UDP target (TCP echo 9470, UDP echo
+#                   9471, UDP silent sink 9472); tunnel far end + Remote-Exec target.
+#   netcat-echo   - published sibling of netcat-target (same image);
+#                   :9470/tcp, :9471/udp, :9472/udp.
+#   postgres      - PostgreSQL, TLS offered (lab CA leaf); published :9473.
+#   mariadb       - MariaDB, TLS offered (lab CA leaf); published :9474.
+#   oracle        - Oracle Database Free, plain TCP only; published :9475.
+#   mssql         - SQL Server 2022, TLS offered (lab CA leaf); published :9476.
+#   opensearch    - OpenSearch 3.8.0 single node, HTTPS only (lab CA leaf), Basic,
+#                   client certificate, JWT and API token logins; published :9477.
+#   opensearch-gateway - nginx plain-HTTP path-prefix front for opensearch
+#                   (http://127.0.0.1:9478/os); published :9478.
+#   oci-registry  - OCI registry (distribution), HTTPS only (lab CA leaf), Basic
+#                   login, one chart baked into the image; published :9482.
+#
+# Shards reach the published ports via the slirp host gateway 10.0.2.2; the host
+# reaches them on 127.0.0.1. Internal services are reachable only on this network
+# by their service name (server-side DNS), never from host or shard.
+
+services:
+  sshd:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-sshd
+    hostname: wave-e2e-host
+    # Remote Execution pushes its worker here as `wave` (gid 1000); the Ping
+    # block needs the unprivileged ICMP path open to that gid.
+    sysctls:
+      net.ipv4.ping_group_range: "1000 1000"
+    ports:
+      - "127.0.0.1:9445:22"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  sshd-no-sftp:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-sshd-no-sftp
+    hostname: sshd-no-sftp
+    command: ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config.no-sftp"]
+    ports:
+      - "127.0.0.1:9447:22"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  sshd-no-fwd:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-sshd-no-fwd
+    hostname: sshd-no-fwd
+    command: ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config.no-fwd"]
+    ports:
+      - "127.0.0.1:9448:22"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  sshd-banner:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-sshd-banner
+    hostname: sshd-banner
+    command: ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config.banner"]
+    ports:
+      - "127.0.0.1:9446:22"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  sshd-badpy:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-sshd-badpy
+    hostname: sshd-badpy
+    command: ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config.badpy"]
+    ports:
+      - "127.0.0.1:9462:22"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  nested-sshd:
+    image: localhost/wave-e2e-sshd:latest
+    container_name: wave-e2e-nested-sshd
+    hostname: nested-host
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/22"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  http-target:
+    image: localhost/wave-e2e-http-target:latest
+    container_name: wave-e2e-http-target
+    hostname: http-target
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:9444/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  http-echo:
+    image: localhost/wave-e2e-http-target:latest
+    container_name: wave-e2e-http-echo
+    hostname: http-echo
+    ports:
+      - "127.0.0.1:9449:9443"
+      - "127.0.0.1:9450:9444"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:9444/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  tls-lab:
+    image: localhost/wave-e2e-tls-lab:latest
+    container_name: wave-e2e-tls-lab
+    hostname: tls-lab
+    ports:
+      - "127.0.0.1:9451:9451"
+      - "127.0.0.1:9452:9452"
+      - "127.0.0.1:9453:9453"
+      - "127.0.0.1:9454:9454"
+      - "127.0.0.1:9455:9455"
+      - "127.0.0.1:9456:9456"
+      - "127.0.0.1:9457:9457"
+      - "127.0.0.1:9463:9463"
+      - "127.0.0.1:9464:9464"
+      - "127.0.0.1:9480:9480"
+      - "127.0.0.1:9481:9481"
+    healthcheck:
+      test: ["CMD", "curl", "-ksf", "--fail-early", "https://127.0.0.1:9454/", "https://127.0.0.1:9480/", "https://127.0.0.1:9481/"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  http-proxy:
+    image: localhost/wave-e2e-http-proxy:latest
+    container_name: wave-e2e-http-proxy
+    hostname: http-proxy
+    ports:
+      - "127.0.0.1:9458:8888"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8888"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  http-proxy-auth:
+    image: localhost/wave-e2e-http-proxy:latest
+    container_name: wave-e2e-http-proxy-auth
+    hostname: http-proxy-auth
+    command: ["tinyproxy", "-d", "-c", "/etc/tinyproxy/tinyproxy-auth.conf"]
+    ports:
+      - "127.0.0.1:9459:8888"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8888"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  kwok:
+    image: localhost/wave-e2e-kwok:latest
+    container_name: wave-e2e-kwok
+    hostname: kwok
+    ports:
+      - "127.0.0.1:9460:6443"
+    # Authenticated readyz + bootstrap gate; a script because podman 3.4.x
+    # word-splits healthcheck strings containing spaces.
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  kwok-internal:
+    image: localhost/wave-e2e-kwok:latest
+    container_name: wave-e2e-kwok-internal
+    hostname: kwok-internal
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  k8s-gateway:
+    image: localhost/wave-e2e-k8s-gateway:latest
+    container_name: wave-e2e-k8s-gateway
+    hostname: k8s-gateway
+    # Authenticated readyz through the prefix: healthy only once kwok answers.
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 2s
+
+  k8s-stub:
+    image: localhost/wave-e2e-k8s-stub:latest
+    container_name: wave-e2e-k8s-stub
+    hostname: k8s-stub
+    ports:
+      - "127.0.0.1:9461:9461"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('https').get({host:'127.0.0.1',port:9461,path:'/version',rejectUnauthorized:false},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  netcat-target:
+    image: localhost/wave-e2e-netcat-target:latest
+    container_name: wave-e2e-netcat-target
+    hostname: netcat-target
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9470"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  netcat-echo:
+    image: localhost/wave-e2e-netcat-target:latest
+    container_name: wave-e2e-netcat-echo
+    hostname: netcat-echo
+    ports:
+      - "127.0.0.1:9470:9470/tcp"
+      - "127.0.0.1:9471:9471/udp"
+      - "127.0.0.1:9472:9472/udp"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9470"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+  postgres:
+    image: localhost/wave-e2e-postgres:latest
+    container_name: wave-e2e-postgres
+    hostname: postgres
+    ports:
+      - "127.0.0.1:9473:5432"
+    # wave login over TCP + the seed procedure: healthy also proves provisioning.
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  mariadb:
+    image: localhost/wave-e2e-mariadb:latest
+    container_name: wave-e2e-mariadb
+    hostname: mariadb
+    ports:
+      - "127.0.0.1:9474:3306"
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  oracle:
+    image: localhost/wave-e2e-oracle:latest
+    container_name: wave-e2e-oracle
+    hostname: oracle
+    ports:
+      - "127.0.0.1:9475:1521"
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  mssql:
+    image: localhost/wave-e2e-mssql:latest
+    container_name: wave-e2e-mssql
+    hostname: mssql
+    ports:
+      - "127.0.0.1:9476:1433"
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  opensearch:
+    image: localhost/wave-e2e-opensearch:latest
+    container_name: wave-e2e-opensearch
+    hostname: opensearch
+    ports:
+      - "127.0.0.1:9477:9200"
+    # One malloc arena per core lets the JVM's native memory outgrow the limit.
+    environment:
+      MALLOC_ARENA_MAX: "2"
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    # Authenticated authinfo over verified TLS: the bootstrap window answers 503.
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  opensearch-gateway:
+    image: localhost/wave-e2e-opensearch-gateway:latest
+    container_name: wave-e2e-opensearch-gateway
+    hostname: opensearch-gateway
+    ports:
+      - "127.0.0.1:9478:9478"
+    depends_on:
+      - opensearch
+    healthcheck:
+      test: ["CMD", "/wave/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 2s
+
+  oci-registry:
+    image: localhost/wave-e2e-oci-registry:latest
+    container_name: wave-e2e-oci-registry
+    hostname: oci-registry
+    # The registry is PID 1 and never reaps the healthcheck's TLS children; an init process does.
+    init: true
+    ports:
+      - "127.0.0.1:9482:5000"
+    # Authenticated tag list over TLS: healthy also proves the baked chart is there.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--no-check-certificate", "https://wave:oci-secret@127.0.0.1:5000/v2/charts/wave-demo/tags/list"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+
+networks:
+  default:
+    external: true
+    name: wave-e2e-net

@@ -1,0 +1,538 @@
+{
+  "name": "V-NULL-PRINT-FORM-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "Failing Asserts whose detail prints the actual value in WAVE's print form (a string quoted, an integer, a list, a list holding null, an actual over 1000 characters cut in the middle), a check on a null variable inside a Try/Catch, and a Log that prints a table holding boolean and null cells.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "3d899351-733c-4a35-9e46-bbfc14a50150",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Assert String Actual",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "A string actual stays quoted",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "s_done",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "other",
+                  "reference_is_expression": false,
+                  "id": "chk-string"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c2ffcf30-ce66-4c4a-a6a4-9a76a4da111c",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 210
+        },
+        "data": {
+          "label": "Assert Integer Actual",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "An integer actual",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "i_three",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 4,
+                  "reference_is_expression": false,
+                  "id": "chk-integer"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "014ca48e-f779-4cf0-a810-b4c837b8b6ed",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 320
+        },
+        "data": {
+          "label": "Assert List Actual",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "A list actual prints as JSON text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "l_pair",
+                  "value_type": "array",
+                  "operator": "contains",
+                  "reference_value": 5,
+                  "reference_is_expression": false,
+                  "id": "chk-list"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2255954b-7d05-4b92-a640-0118c9a0108b",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 430
+        },
+        "data": {
+          "label": "Assert List Null Item",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "A null item prints null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "l_with_null",
+                  "value_type": "array",
+                  "operator": "contains",
+                  "reference_value": 5,
+                  "reference_is_expression": false,
+                  "id": "chk-list-null"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6ca532c7-df6e-4930-81e6-2b11bfb6f056",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 540
+        },
+        "data": {
+          "label": "Assert Long Actual",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "An actual over 1000 characters is cut",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "long_text",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "short",
+                  "reference_is_expression": false,
+                  "id": "chk-long"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8717c631-270b-4c0e-9c27-fe44b2b1a408",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 650
+        },
+        "data": {
+          "label": "Guard Null Actual",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the check on a null variable",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "null_assert_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "69d7c1f9-cf6b-41e7-b36b-9015e602e0e6",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 650
+        },
+        "data": {
+          "label": "Assert Null Actual",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "A check on a variable that holds null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "n_null",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 1,
+                  "reference_is_expression": false,
+                  "id": "chk-null"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1d0b249d-eb44-46de-b77f-d870a12df66d",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 650
+        },
+        "data": {
+          "label": "Null Check Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the check on null failed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-check-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6c982849-e9ee-4f79-9544-2b7a92894da5",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 760
+        },
+        "data": {
+          "label": "Print Table",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints the table through an f-string",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'{svc_table}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "54211702-42ff-455a-bc59-c9dfdb14501b",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 870
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Last block of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-print-form-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "75820afb-2b2b-4e99-bd21-87873352297c",
+        "source": "start-node",
+        "target": "3d899351-733c-4a35-9e46-bbfc14a50150",
+        "type": "default"
+      },
+      {
+        "id": "f1c5e7ae-3c89-4a02-a56c-83ed070713ae",
+        "source": "3d899351-733c-4a35-9e46-bbfc14a50150",
+        "target": "c2ffcf30-ce66-4c4a-a6a4-9a76a4da111c",
+        "type": "default"
+      },
+      {
+        "id": "845eb30b-f1ce-4b15-87c7-cc39209db951",
+        "source": "c2ffcf30-ce66-4c4a-a6a4-9a76a4da111c",
+        "target": "014ca48e-f779-4cf0-a810-b4c837b8b6ed",
+        "type": "default"
+      },
+      {
+        "id": "1f2ac462-14bb-4bbc-aa60-71cdecf179e6",
+        "source": "014ca48e-f779-4cf0-a810-b4c837b8b6ed",
+        "target": "2255954b-7d05-4b92-a640-0118c9a0108b",
+        "type": "default"
+      },
+      {
+        "id": "82d31091-def6-4774-ab81-8b849ed3219b",
+        "source": "2255954b-7d05-4b92-a640-0118c9a0108b",
+        "target": "6ca532c7-df6e-4930-81e6-2b11bfb6f056",
+        "type": "default"
+      },
+      {
+        "id": "a9e769ba-43bf-4f50-ab95-2ed8bfe73fb8",
+        "source": "6ca532c7-df6e-4930-81e6-2b11bfb6f056",
+        "target": "8717c631-270b-4c0e-9c27-fe44b2b1a408",
+        "type": "default"
+      },
+      {
+        "id": "273bd8f5-2158-4fcc-a2c7-60f7e3549eb7",
+        "source": "8717c631-270b-4c0e-9c27-fe44b2b1a408",
+        "target": "69d7c1f9-cf6b-41e7-b36b-9015e602e0e6",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "d668c610-4746-426b-8185-e435c2f59d29",
+        "source": "8717c631-270b-4c0e-9c27-fe44b2b1a408",
+        "target": "1d0b249d-eb44-46de-b77f-d870a12df66d",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "5e32cf58-c70b-449a-ad50-1f165be6c022",
+        "source": "8717c631-270b-4c0e-9c27-fe44b2b1a408",
+        "target": "6c982849-e9ee-4f79-9544-2b7a92894da5",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "3ab2e962-d125-4043-abb1-f063893e8df1",
+        "source": "6c982849-e9ee-4f79-9544-2b7a92894da5",
+        "target": "54211702-42ff-455a-bc59-c9dfdb14501b",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "s_done": {
+      "value": "done",
+      "type": "string",
+      "scope": "test"
+    },
+    "i_three": {
+      "value": 3,
+      "type": "integer",
+      "scope": "test"
+    },
+    "l_pair": {
+      "value": [
+        1,
+        2
+      ],
+      "type": "array",
+      "scope": "test"
+    },
+    "l_with_null": {
+      "value": [
+        1,
+        null
+      ],
+      "type": "array",
+      "scope": "test"
+    },
+    "long_text": {
+      "value": "__LONG_TEXT__",
+      "type": "string",
+      "scope": "test"
+    },
+    "n_null": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "null_assert_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "svc_table": {
+      "value": {
+        "columns": [
+          {
+            "name": "host",
+            "type": "string"
+          },
+          {
+            "name": "healthy",
+            "type": "boolean"
+          },
+          {
+            "name": "note",
+            "type": "string"
+          }
+        ],
+        "rows": [
+          [
+            "web",
+            true,
+            null
+          ],
+          [
+            "db",
+            false,
+            "ok"
+          ],
+          [
+            "cache",
+            null,
+            "warm"
+          ]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

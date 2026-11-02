@@ -1,0 +1,1208 @@
+{
+  "name": "V-PLUGIN-PING-LOCAL",
+  "version": "1.0.0",
+  "description": "Ping on the WAVE server: a loopback and a non-loopback host answering, every Advanced row applied, the four Pass when rules passing and failing, Record and continue, the whole-block Timeout, an unresolvable host, a forced address family with no address, a source address the server does not hold, and Fail the block inside a Try/Catch.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "57b28988-b6b4-40e3-af83-6a83fe02e8de",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Loopback answered",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Loopback answered",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "any",
+              "stream_output": true,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_loop_ok",
+              "summary": "p_loop_summary",
+              "replies": "p_loop_replies"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d6f96a6a-d727-4866-a9d0-ba067d42fd06",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Gateway answered",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Gateway answered",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_gw_ok",
+              "replies": "p_gw_replies"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "79a234d1-50d2-4f9c-945e-fe58ad2255cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Advanced rows applied",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Advanced rows applied",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 0,
+              "timeout": 5,
+              "pass_when": "any",
+              "stream_output": true,
+              "ip_version": "v4",
+              "ttl": 64,
+              "dont_fragment": true,
+              "source_address": "127.0.0.1",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_adv_ok",
+              "replies": "p_adv_replies"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3f1ce4db-33ad-4d4d-88e5-1192610cb1ff",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Answered proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-answered loop-ok={p_loop_ok} loop-sent={p_loop_summary[0]['sent']} loop-received={p_loop_summary[0]['received']} loop-loss={p_loop_summary[0]['loss_percent']} loop-rows={len(p_loop_replies)} loop-status={p_loop_replies[0]['status']} gw-ok={p_gw_ok} gw-source={p_gw_replies[0]['source']} adv-ok={p_adv_ok} adv-bytes={p_adv_replies[0]['bytes']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c29f8561-adc3-4afe-aa2d-6d98a5c53f11",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "No reply recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "No reply recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "any",
+              "stream_output": true,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_noreply_ok",
+              "summary": "p_noreply_summary",
+              "replies": "p_noreply_replies",
+              "error": "p_noreply_error",
+              "reason": "p_noreply_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7008b281-c0b9-44dc-ad49-9ecd9fdcb4bb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "All replies passed",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "All replies passed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "all",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_all_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c1133fd7-fb1d-4a7a-a407-e7e1e3658091",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "All replies recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "All replies recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "all",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_allfail_ok",
+              "error": "p_allfail_error",
+              "reason": "p_allfail_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fb253e42-1a67-4008-aaab-5f9d9a92b1c5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Minimum replies passed",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Minimum replies passed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "min_replies",
+              "min_replies": 2,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_minrep_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9f08e50a-8da2-491f-8b0d-bdfa6f60951e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Minimum replies recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Minimum replies recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "min_replies",
+              "min_replies": 1,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_minrepfail_ok",
+              "error": "p_minrepfail_error",
+              "reason": "p_minrepfail_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bb08fbbc-0cdc-4eb4-8cd3-4fbb6e73e473",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "Minimum rate passed",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Minimum rate passed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "min_rate",
+              "min_rate": 100,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "p_minrate_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "99294ff2-d68c-4ede-bc8f-dc3b4673859d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Minimum rate recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Minimum rate recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 2,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "min_rate",
+              "min_rate": 50,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_minratefail_ok",
+              "error": "p_minratefail_error",
+              "reason": "p_minratefail_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "05cb97ef-eb6b-4ecb-a1f8-fa2220fa20b7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pass rule proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-rules any-ok={p_noreply_ok} any-reason={p_noreply_reason} all-ok={p_all_ok} allfail-ok={p_allfail_ok} allfail-reason={p_allfail_reason} minrep-ok={p_minrep_ok} minrepfail-reason={p_minrepfail_reason} minrate-ok={p_minrate_ok} minratefail-reason={p_minratefail_reason}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b3b0aaf1-9c00-4270-af2f-39fa55e36339",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Timeout recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Timeout recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 4,
+              "interval": 1,
+              "packet_size": 56,
+              "timeout": 2,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_timeout_ok",
+              "summary": "p_timeout_summary",
+              "replies": "p_timeout_replies",
+              "error": "p_timeout_error",
+              "reason": "p_timeout_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0023df8e-65b1-4aa6-9fbc-9a5b0350d0ce",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "Unresolved recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Unresolved recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "ping-no-such-host.invalid",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 5,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_unres_ok",
+              "summary": "p_unres_summary",
+              "replies": "p_unres_replies",
+              "error": "p_unres_error",
+              "reason": "p_unres_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fe9ef47a-b5b3-4644-bdda-1353f7009ec9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "IP version recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "IP version recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 5,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "v6",
+              "dont_fragment": false,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_v6_ok",
+              "error": "p_v6_error",
+              "reason": "p_v6_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d48646dc-11bb-465d-86a1-f7c1cd46d1c1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "Source address recorded",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Source address recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 5,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "source_address": "192.0.2.9",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "p_src_ok",
+              "replies": "p_src_replies",
+              "error": "p_src_error",
+              "reason": "p_src_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5e331e77-83be-4876-baff-cfc2f7b01b6a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Failure proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-failures timeout-reason={p_timeout_reason} timeout-rows={len(p_timeout_replies)} unres-reason={p_unres_reason} unres-rows={len(p_unres_replies)} v6-reason={p_v6_reason} src-reason={p_src_reason} src-rows={len(p_src_replies)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "31b90783-8a97-4158-bb35-5e4f4df98ec8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "p_fail_error",
+              "caught": "p_fail_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "7ca8f15e-5cc7-4eee-8c4b-3d62752017d5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "No reply failed",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "No reply failed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "192.0.2.1",
+              "count": 1,
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "pass_when": "any",
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bae5147c-8b09-406b-81ac-c3655e739b91",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-fail-caught {p_fail_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "56fe8ade-7382-4517-9a71-b8dbec2edadb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ping-local-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d9ee296f-6ec6-43fd-a0c9-43783f40b159",
+        "source": "start-node",
+        "target": "57b28988-b6b4-40e3-af83-6a83fe02e8de",
+        "type": "default"
+      },
+      {
+        "id": "08897f65-0a72-48a5-9908-b9d30e6a9b94",
+        "source": "57b28988-b6b4-40e3-af83-6a83fe02e8de",
+        "target": "d6f96a6a-d727-4866-a9d0-ba067d42fd06",
+        "type": "default"
+      },
+      {
+        "id": "36e7e45e-3bfa-47b6-aea2-3be9fc1a4e70",
+        "source": "d6f96a6a-d727-4866-a9d0-ba067d42fd06",
+        "target": "79a234d1-50d2-4f9c-945e-fe58ad2255cc",
+        "type": "default"
+      },
+      {
+        "id": "b41fb343-6bbd-45a6-a982-b684cdde87fe",
+        "source": "79a234d1-50d2-4f9c-945e-fe58ad2255cc",
+        "target": "3f1ce4db-33ad-4d4d-88e5-1192610cb1ff",
+        "type": "default"
+      },
+      {
+        "id": "be549087-e1a4-4644-b76d-3a2f9a6c0883",
+        "source": "3f1ce4db-33ad-4d4d-88e5-1192610cb1ff",
+        "target": "c29f8561-adc3-4afe-aa2d-6d98a5c53f11",
+        "type": "default"
+      },
+      {
+        "id": "9e490288-3f37-4671-b2be-a7b030db1518",
+        "source": "c29f8561-adc3-4afe-aa2d-6d98a5c53f11",
+        "target": "7008b281-c0b9-44dc-ad49-9ecd9fdcb4bb",
+        "type": "default"
+      },
+      {
+        "id": "f796a067-ddae-44df-8152-d0ddd038f0cb",
+        "source": "7008b281-c0b9-44dc-ad49-9ecd9fdcb4bb",
+        "target": "c1133fd7-fb1d-4a7a-a407-e7e1e3658091",
+        "type": "default"
+      },
+      {
+        "id": "fc15edb0-29fb-4387-a95f-e97dad6873a3",
+        "source": "c1133fd7-fb1d-4a7a-a407-e7e1e3658091",
+        "target": "fb253e42-1a67-4008-aaab-5f9d9a92b1c5",
+        "type": "default"
+      },
+      {
+        "id": "4bbf9da5-6c3c-4fab-874e-d0b4e009007c",
+        "source": "fb253e42-1a67-4008-aaab-5f9d9a92b1c5",
+        "target": "9f08e50a-8da2-491f-8b0d-bdfa6f60951e",
+        "type": "default"
+      },
+      {
+        "id": "1f6a849e-09ca-4222-87a5-61685f636162",
+        "source": "9f08e50a-8da2-491f-8b0d-bdfa6f60951e",
+        "target": "bb08fbbc-0cdc-4eb4-8cd3-4fbb6e73e473",
+        "type": "default"
+      },
+      {
+        "id": "856de9eb-e874-40ad-9d11-2124274e1da0",
+        "source": "bb08fbbc-0cdc-4eb4-8cd3-4fbb6e73e473",
+        "target": "99294ff2-d68c-4ede-bc8f-dc3b4673859d",
+        "type": "default"
+      },
+      {
+        "id": "c707a4c0-d6bd-44cf-b477-fbe52a87ae27",
+        "source": "99294ff2-d68c-4ede-bc8f-dc3b4673859d",
+        "target": "05cb97ef-eb6b-4ecb-a1f8-fa2220fa20b7",
+        "type": "default"
+      },
+      {
+        "id": "3a2f1500-e8e9-409f-9c35-e7d3b4e071cc",
+        "source": "05cb97ef-eb6b-4ecb-a1f8-fa2220fa20b7",
+        "target": "b3b0aaf1-9c00-4270-af2f-39fa55e36339",
+        "type": "default"
+      },
+      {
+        "id": "b184925c-0354-4de5-b6bc-2cd580150897",
+        "source": "b3b0aaf1-9c00-4270-af2f-39fa55e36339",
+        "target": "0023df8e-65b1-4aa6-9fbc-9a5b0350d0ce",
+        "type": "default"
+      },
+      {
+        "id": "75b6cddc-2895-4b41-8522-993ba27e5c81",
+        "source": "0023df8e-65b1-4aa6-9fbc-9a5b0350d0ce",
+        "target": "fe9ef47a-b5b3-4644-bdda-1353f7009ec9",
+        "type": "default"
+      },
+      {
+        "id": "f934d693-f685-411c-af5f-4b3b6d119f31",
+        "source": "fe9ef47a-b5b3-4644-bdda-1353f7009ec9",
+        "target": "d48646dc-11bb-465d-86a1-f7c1cd46d1c1",
+        "type": "default"
+      },
+      {
+        "id": "f1450a71-5c5e-4433-a659-dd7fdaafe1c9",
+        "source": "d48646dc-11bb-465d-86a1-f7c1cd46d1c1",
+        "target": "5e331e77-83be-4876-baff-cfc2f7b01b6a",
+        "type": "default"
+      },
+      {
+        "id": "30d2bee1-d678-466e-97ff-0dedf32dce90",
+        "source": "5e331e77-83be-4876-baff-cfc2f7b01b6a",
+        "target": "31b90783-8a97-4158-bb35-5e4f4df98ec8",
+        "type": "default"
+      },
+      {
+        "id": "8c57fbba-8347-4f19-8531-8960ab34ce01",
+        "source": "31b90783-8a97-4158-bb35-5e4f4df98ec8",
+        "target": "7ca8f15e-5cc7-4eee-8c4b-3d62752017d5",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "9776a446-4f9b-4cdc-a92b-38ddef6e65ed",
+        "source": "31b90783-8a97-4158-bb35-5e4f4df98ec8",
+        "target": "bae5147c-8b09-406b-81ac-c3655e739b91",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "39e34816-e8aa-49e6-a98c-764bbbfd1cf7",
+        "source": "31b90783-8a97-4158-bb35-5e4f4df98ec8",
+        "target": "56fe8ade-7382-4517-9a71-b8dbec2edadb",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "p_loop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_gw_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_adv_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_all_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_minrep_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_minrate_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_noreply_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_allfail_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_minrepfail_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_minratefail_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_timeout_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_unres_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_v6_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_src_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_loop_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_loop_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_gw_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_adv_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_noreply_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_noreply_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_timeout_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_timeout_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_unres_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_unres_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_src_replies": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "p_noreply_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_noreply_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_allfail_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_allfail_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_minrepfail_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_minrepfail_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_minratefail_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_minratefail_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_timeout_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_timeout_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_unres_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_unres_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_v6_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_v6_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_src_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_src_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "p_fail_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "p_fail_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "name": "V-VMGR Demo Panel Variables",
+  "version": "1.0.0",
+  "description": "Demo workflow exposing every Variable Manager row state: each of the 7 variable types, an Output-bound row, an expression row (api_url), and a secret row (password). The For loop's index is bound to retry_count (integer-to-integer) so retry_count surfaces with the OUT badge. The workflow is shaped to be importable; visual tests do not run it.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-init",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 100 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Init Demo State",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "user_name": "bob",
+                "timeout_secs": 5.0,
+                "debug_log": true
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-tag-retry",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 180 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Tag Retry Slot",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 1, "step": 1 },
+            "outputBindings": { "index": "retry_count" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-headers",
+        "type": "workflowNode",
+        "position": { "x": 0, "y": 280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Headers",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(headers)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-init", "type": "default" },
+      { "id": "e2", "source": "varset-init", "target": "for-tag-retry", "type": "default" },
+      { "id": "e3", "source": "for-tag-retry", "target": "log-headers", "sourceHandle": "then" }
+    ]
+  },
+  "variables": {
+    "user_name": { "value": "bob", "type": "string", "scope": "test" },
+    "retry_count": { "value": 0, "type": "integer", "scope": "test" },
+    "timeout_secs": { "value": 0.0, "type": "float", "scope": "test" },
+    "debug_log": { "value": false, "type": "boolean", "scope": "test" },
+    "items": { "value": ["alpha", "beta", "gamma"], "type": "array", "scope": "test" },
+    "headers": { "value": { "Accept": "application/json", "X-Trace": "vmgr" }, "type": "map", "scope": "test" },
+    "results": {
+      "value": [
+        { "id": "1", "name": "alpha", "status": "ok", "score": "9.5" },
+        { "id": "2", "name": "beta", "status": "ok", "score": "8.1" },
+        { "id": "3", "name": "gamma", "status": "warn", "score": "5.0" }
+      ],
+      "type": "table",
+      "scope": "test"
+    },
+    "api_url": {
+      "value": "'https://api.wave.test/v1/services/discovery/lookup'",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    },
+    "password": { "value": "letmein123", "type": "string", "scope": "test", "secret": true }
+  },
+  "metadata": {},
+  "created_at": "2026-05-09T00:00:00.000000",
+  "updated_at": "2026-05-09T00:00:00.000000"
+}

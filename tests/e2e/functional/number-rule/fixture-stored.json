@@ -1,0 +1,191 @@
+{
+  "name": "V-NUMBER-STORED-FORM-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "An HTTP Retry Delay, a Variable Setter row and an Assert compare-to value a REST client sends as 1e-7.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "941b80d2-48f7-5235-a109-bdb9af890585",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "data": {
+          "label": "Tiny Retry",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Tiny Retry",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=stored",
+              "method": "GET",
+              "retry_delay": "__TINY__"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "b022796d-84e9-5fbf-a678-861e08d1db3e",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 210
+        },
+        "data": {
+          "label": "Set Tiny",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Tiny",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "f": "__TINY__"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableTypes": {
+            "f": "float"
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "556250d0-d05f-51a5-8d07-923539badb4d",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 320
+        },
+        "data": {
+          "label": "Check Tiny",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Check Tiny",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "f",
+                  "value_type": "float",
+                  "operator": "equals",
+                  "reference_value": "__TINY__",
+                  "reference_is_expression": false,
+                  "id": "chk-tiny"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "93d49fc6-ab2a-5c65-a7b1-780161b7ef57",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 430
+        },
+        "data": {
+          "label": "Stored Form Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stored Form Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "number-stored-form-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "6799f6db-c9ed-5134-90e0-618c03590123",
+        "source": "start-node",
+        "target": "941b80d2-48f7-5235-a109-bdb9af890585",
+        "type": "default"
+      },
+      {
+        "id": "71c8dddd-6635-5574-8d23-a5eba9b217cb",
+        "source": "941b80d2-48f7-5235-a109-bdb9af890585",
+        "target": "b022796d-84e9-5fbf-a678-861e08d1db3e",
+        "type": "default"
+      },
+      {
+        "id": "a7488fb5-f4db-5f39-a1c9-82dcb76e3d62",
+        "source": "b022796d-84e9-5fbf-a678-861e08d1db3e",
+        "target": "556250d0-d05f-51a5-8d07-923539badb4d",
+        "type": "default"
+      },
+      {
+        "id": "5ed4ea81-9bd7-597c-be09-bf4655572784",
+        "source": "556250d0-d05f-51a5-8d07-923539badb4d",
+        "target": "93d49fc6-ab2a-5c65-a7b1-780161b7ef57",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "f": {
+      "type": "float",
+      "value": 0.5,
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [
+      "e2e",
+      "number-rule"
+    ]
+  }
+}

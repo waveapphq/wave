@@ -1,0 +1,46 @@
+apiVersion: v1
+entries:
+  wave-demo:
+  - apiVersion: v2
+    appVersion: "2.0.0"
+    created: "2026-09-04T00:00:00Z"
+    description: WAVE E2E fixture chart (test-only) - Deployment, Service and a passing test hook.
+    digest: 334d30f8397c7f00ccf7ea975c6af799c2e824a96cee39514f43794dcd16b279
+    name: wave-demo
+    type: application
+    urls:
+    - wave-demo-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: "1.0.0"
+    created: "2026-09-04T00:00:00Z"
+    description: WAVE E2E fixture chart (test-only) - Deployment, Service and a passing test hook.
+    digest: 64f8a1f8bb70d128d36e92eb0bacb4e5ec56e09f43484a87351fe7d419082114
+    name: wave-demo
+    type: application
+    urls:
+    - wave-demo-0.1.0.tgz
+    version: 0.1.0
+  wave-demo-badtest:
+  - apiVersion: v2
+    appVersion: "1.0.0"
+    created: "2026-09-04T00:00:00Z"
+    description: WAVE E2E fixture chart (test-only) - same workload as wave-demo with a failing test hook.
+    digest: 530410aecfae5e453fa4c59cada714f5aef1c2e5e918e7a487861757cfdeb81e
+    name: wave-demo-badtest
+    type: application
+    urls:
+    - wave-demo-badtest-0.1.0.tgz
+    version: 0.1.0
+  wave-demo-stuck:
+  - apiVersion: v2
+    appVersion: "1.0.0"
+    created: "2026-09-04T00:00:00Z"
+    description: WAVE E2E fixture chart (test-only) - a Deployment whose pod never becomes ready.
+    digest: 339adc81a4a460c4447875b070590797313d05050f3525db6c5359148c80159e
+    name: wave-demo-stuck
+    type: application
+    urls:
+    - wave-demo-stuck-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-09-04T00:00:00Z"

@@ -1,0 +1,122 @@
+{
+  "name": "SSH Secrets Masking Canary E2E",
+  "version": "1.0.0",
+  "description": "SSH secret canary: a declared credential LITERAL (password) seals at rest and authenticates; a passphrase LITERAL seals at rest; secret-variable carriers for password / private_key / passphrase mask everywhere. Nothing leaks across console / DEBUG I/O / WS / report / export / disk.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 40 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 110 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Open session with a declared credential LITERAL password + passphrase",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "passphrase": "phrase-lit-canary-7a1b2c",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": { "session_id": "sid1", "connected": "conn1" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-secrets",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 180 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Attempt to print every SSH secret category",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'secret-audit connected={conn1} pass={ssh_pass_var} key={ssh_key_var} phrase={ssh_phrase_var} plain={plain_marker}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'ssh-secrets-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "delay-hold" },
+      { "id": "e-delay-open", "source": "delay-hold", "target": "open-session" },
+      { "id": "e-open-log", "source": "open-session", "target": "log-secrets" },
+      { "id": "e-log-done", "source": "log-secrets", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "sid1": { "value": "", "type": "string", "scope": "test" },
+    "conn1": { "value": false, "type": "boolean", "scope": "test" },
+    "ssh_pass_var": { "value": "wave-secret", "type": "string", "scope": "test", "secret": true },
+    "ssh_key_var": { "value": "key-var-canary-8d2e3f", "type": "string", "scope": "test", "secret": true },
+    "ssh_phrase_var": { "value": "phrase-var-canary-9e4f5a", "type": "string", "scope": "test", "secret": true },
+    "plain_marker": { "value": "ssh-plain-visible-0000", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

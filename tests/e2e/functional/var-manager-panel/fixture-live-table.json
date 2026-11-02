@@ -1,0 +1,123 @@
+{
+  "name": "V-VMGR Live Complex Values",
+  "version": "1.0.0",
+  "description": "A CSV converter binds a real 3x2 table to a variable DECLARED table, and a Var Setter writes a 3-record array to a variable DECLARED array (records first, so a live push that guesses the type from the value would call it a table). A Delay holds the run open so both live rows can be read mid-run; the closing Log prints the true dimensions and count for cross-check.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sku,qty\nA-1,3\nB-2,7\nC-3,5\n"
+            },
+            "outputBindings": { "table": "orders" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "set-order-rows",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 210 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Order Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["order_rows"],
+          "variableTypes": { "order_rows": "array" },
+          "config": {
+            "values": {
+              "variables": {
+                "order_rows": "[{'sku': 'A-1', 'qty': 3}, {'sku': 'B-2', 'qty': 7}, {'sku': 'C-3', 'qty': 5}]"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "hold-open",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Hold Run Open",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "duration": 8000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-truth",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 430 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Truth",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'truth-table-{len(orders)}x{len(orders[0])}-array-{len(order_rows)}-first-{order_rows[0][\"sku\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-orders", "type": "default" },
+      { "id": "e2", "source": "parse-orders", "target": "set-order-rows", "type": "default" },
+      { "id": "e3", "source": "set-order-rows", "target": "hold-open", "type": "default" },
+      { "id": "e4", "source": "hold-open", "target": "log-truth", "type": "default" }
+    ]
+  },
+  "variables": {
+    "orders": { "value": [], "type": "table", "scope": "test" },
+    "order_rows": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

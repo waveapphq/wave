@@ -1,0 +1,306 @@
+{
+  "name": "Block Name Loops E2E",
+  "version": "1.0.0",
+  "description": "Two nested For Loops around a Break and a Continue: the outer one has a Name and a Description, the inner one keeps the default name a second For Loop gets on the canvas.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f6329dda-3b6b-4252-9005-d0746d02ebea",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Before the loops",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marks the start of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'bn-loops-start'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1206279a-a671-4cf7-b356-951f22ace7cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Retry upload",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Tries the upload again until it lands",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "retry_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "80408cd0-0044-4087-839d-7ddf18045e10",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 260
+        },
+        "data": {
+          "label": "For Loop_1",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "attempt_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "17234f0f-3b28-4ee0-a873-dbef29973c59",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 380
+        },
+        "data": {
+          "label": "Count the pass",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Writes one line for every pass",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'bn-loop-pass'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1d9aa4ea-8e78-428a-9c3c-0769791d4c7f",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 480
+        },
+        "data": {
+          "label": "Stop early",
+          "elementType": "break",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Leaves the loop once the upload lands",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "target_loop": "80408cd0-0044-4087-839d-7ddf18045e10"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3511bbdf-9f5f-46f9-acc6-a7b7bbd7d040",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 580
+        },
+        "data": {
+          "label": "Next attempt",
+          "elementType": "continue",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Moves on to the next attempt",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "target_loop": "80408cd0-0044-4087-839d-7ddf18045e10"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2aa97806-28fd-4915-b59a-982e7e32507f",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 260
+        },
+        "data": {
+          "label": "After the loops",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marks the end of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'bn-loops-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "457c2ae7-dc8e-4508-ac9b-b1e070953b7c",
+        "source": "start-node",
+        "target": "f6329dda-3b6b-4252-9005-d0746d02ebea",
+        "type": "default"
+      },
+      {
+        "id": "b24e001f-19f9-48c1-8896-9f77dd42189a",
+        "source": "f6329dda-3b6b-4252-9005-d0746d02ebea",
+        "target": "1206279a-a671-4cf7-b356-951f22ace7cc",
+        "type": "default"
+      },
+      {
+        "id": "feaf9bee-d895-4a60-b1b7-834c1518c2aa",
+        "source": "1206279a-a671-4cf7-b356-951f22ace7cc",
+        "target": "80408cd0-0044-4087-839d-7ddf18045e10",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "7b5a81a3-4f57-4de3-b2bf-4a14e15eecf6",
+        "source": "80408cd0-0044-4087-839d-7ddf18045e10",
+        "target": "17234f0f-3b28-4ee0-a873-dbef29973c59",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "b1c59d26-de43-422f-8bc1-d51431dbaa75",
+        "source": "17234f0f-3b28-4ee0-a873-dbef29973c59",
+        "target": "1d9aa4ea-8e78-428a-9c3c-0769791d4c7f",
+        "type": "default"
+      },
+      {
+        "id": "3c8341db-7a1c-4811-8346-fe2e3f5465b0",
+        "source": "1d9aa4ea-8e78-428a-9c3c-0769791d4c7f",
+        "target": "3511bbdf-9f5f-46f9-acc6-a7b7bbd7d040",
+        "type": "default"
+      },
+      {
+        "id": "ad163e0a-2fdd-40e6-9020-77aec6fb9e86",
+        "source": "1206279a-a671-4cf7-b356-951f22ace7cc",
+        "target": "2aa97806-28fd-4915-b59a-982e7e32507f",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "retry_index": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "attempt_index": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-09T00:00:00.000000",
+  "updated_at": "2026-10-09T00:00:00.000000"
+}

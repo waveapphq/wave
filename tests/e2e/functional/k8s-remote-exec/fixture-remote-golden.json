@@ -1,0 +1,776 @@
+{
+  "name": "K8s Remote Read E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "SSH session the worker rides",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "connect-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 240
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session A: the cluster by its stack name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://kwok:6443",
+              "namespace": "wave-e2e-golden-get",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_a",
+              "cluster_version": "ver_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-cm-map",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 310
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Read the seeded ConfigMap as a map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-cm",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-get",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "cm_result",
+              "names": "cm_names",
+              "count": "cm_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-cm-yaml",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 380
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Read the seeded ConfigMap as YAML",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-cm",
+              "output_format": "yaml",
+              "namespace": "wave-e2e-golden-get",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "cm_yaml"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "events-ns",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 450
+        },
+        "data": {
+          "label": "K8s Events",
+          "elementType": "k8s-events",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Events of the last hour in the events namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "within_seconds": 3600,
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-events",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "ev_result",
+              "count": "ev_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "logs-text",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 520
+        },
+        "data": {
+          "label": "K8s Logs",
+          "elementType": "k8s-logs",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "The app container log as text",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "pod": "wave-pod-multi",
+              "container": "app",
+              "namespace": "wave-e2e-golden-logs",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "logs": "log_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "logs-table",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 590
+        },
+        "data": {
+          "label": "K8s Logs",
+          "elementType": "k8s-logs",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "The same log as a TIME and MESSAGE table",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "pod": "wave-pod-multi",
+              "container": "app",
+              "timestamps": true,
+              "output_format": "array",
+              "namespace": "wave-e2e-golden-logs",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "logs": "log_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "top-pods",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 660
+        },
+        "data": {
+          "label": "K8s Top",
+          "elementType": "k8s-top",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Usage of every pod in the top namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "scope": "pod",
+              "select_by": "all",
+              "namespace": "wave-e2e-golden-top",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "usage": "top_usage",
+              "count": "top_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-missing",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 730
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Get a namespace that does not exist",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "Namespace",
+              "search_by": "name",
+              "name": "does-not-exist-golden00",
+              "output_format": "map",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "names": "miss_names",
+              "count": "miss_count",
+              "success": "miss_ok",
+              "error": "miss_err",
+              "reason": "miss_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "connect-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 800
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: a run token for wave-tests",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://kwok:6443",
+              "namespace": "wave-e2e-golden-get",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "acquire_run_token": true,
+              "run_token_service_account": "wave-tests",
+              "run_token_namespace": "default",
+              "run_token_duration": 14400
+            },
+            "outputBindings": {
+              "session": "sess_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 870
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session B: read the seeded ConfigMap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_b",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-cm",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-get",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "names": "b_names",
+              "count": "b_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-summary",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Summary marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[KR-1] ver={ver_a} cm={cm_count} ev={ev_count} logs={len(log_text)} top={top_count} miss={miss_reason} b={b_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-remote-read-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-open-session",
+        "source": "start-node",
+        "target": "open-session"
+      },
+      {
+        "id": "edge-open-session-container",
+        "source": "open-session",
+        "target": "container"
+      },
+      {
+        "id": "edge-container-body",
+        "source": "container",
+        "target": "connect-a",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "edge-connect-a-get-cm-map",
+        "source": "connect-a",
+        "target": "get-cm-map"
+      },
+      {
+        "id": "edge-get-cm-map-get-cm-yaml",
+        "source": "get-cm-map",
+        "target": "get-cm-yaml"
+      },
+      {
+        "id": "edge-get-cm-yaml-events-ns",
+        "source": "get-cm-yaml",
+        "target": "events-ns"
+      },
+      {
+        "id": "edge-events-ns-logs-text",
+        "source": "events-ns",
+        "target": "logs-text"
+      },
+      {
+        "id": "edge-logs-text-logs-table",
+        "source": "logs-text",
+        "target": "logs-table"
+      },
+      {
+        "id": "edge-logs-table-top-pods",
+        "source": "logs-table",
+        "target": "top-pods"
+      },
+      {
+        "id": "edge-top-pods-get-missing",
+        "source": "top-pods",
+        "target": "get-missing"
+      },
+      {
+        "id": "edge-get-missing-connect-b",
+        "source": "get-missing",
+        "target": "connect-b"
+      },
+      {
+        "id": "edge-connect-b-get-b",
+        "source": "connect-b",
+        "target": "get-b"
+      },
+      {
+        "id": "edge-container-then",
+        "source": "container",
+        "target": "log-summary",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-summary-log-done",
+        "source": "log-summary",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "ver_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "cm_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "cm_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "cm_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "cm_yaml": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ev_result": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "ev_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "log_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "log_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "top_usage": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "top_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "miss_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "miss_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "miss_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "miss_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "miss_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sess_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "b_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "b_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "name": "HTTP Artifact Parent Segments",
+  "version": "1.0.0",
+  "description": "A file outside the run's artifacts directory is planted, then an HTTP upload names it through an artifact:// reference whose parent segments climb out of the artifacts directory.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "plant-outside",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Plant Outside Artifacts",
+          "hasNewerVersion": false,
+          "expressionFields": ["path"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "outside_path",
+              "content": "PLANTED-BESIDE-THE-ARTIFACTS",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-traverse",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Upload Traversing Artifact Reference",
+          "hasNewerVersion": false,
+          "expressionFields": ["url", "file_source"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "PUT",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "url": "f'{base_url}/traversal-upload'",
+              "body_mode": "file",
+              "file_source": "traversing_source"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-uploaded",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 370 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Upload Reached",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'traversal-upload-completed'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "plant-outside", "type": "default" },
+      { "id": "e2", "source": "plant-outside", "target": "http-traverse", "type": "default" },
+      { "id": "e3", "source": "http-traverse", "target": "log-uploaded", "type": "default" }
+    ]
+  },
+  "variables": {
+    "base_url": { "value": "", "type": "string", "scope": "test" },
+    "outside_path": { "value": "", "type": "string", "scope": "test" },
+    "traversing_source": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {}
+}

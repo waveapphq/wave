@@ -1,0 +1,387 @@
+{
+  "name": "zz-11541-s4-default-rule",
+  "version": "1.0.0",
+  "description": "Shell Exec, two HTTP Requests and a Local Function Block whose free-entry fields are not set: the run uses each default.",
+  "variables": {
+    "shell_out": {
+      "value": null,
+      "type": "string",
+      "scope": "test"
+    },
+    "redirect_status": {
+      "value": null,
+      "type": "integer",
+      "scope": "test"
+    },
+    "retry_status": {
+      "value": null,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f41fa3af-20aa-497b-be12-9bd63c6e6c7c",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Defaults",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell, Input Variables and Timeout left not set",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "command": "echo \"shell=$0 a=${A:-unset}\""
+            },
+            "outputBindings": {
+              "stdout": "shell_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "59c958fb-344d-444d-b25d-9c605f4d15a8",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "data": {
+          "label": "Shell Report",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "What the shell printed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"shell-out {shell_out.strip()}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "45cf6657-0a92-4987-ac0c-baea37c1f7b8",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 300
+        },
+        "data": {
+          "label": "Redirect Ten",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Ten redirects under the default Max Redirects",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/redirect/10",
+              "method": "GET",
+              "verify_ssl": false
+            },
+            "outputBindings": {
+              "status_code": "redirect_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7f9bc89a-b744-4623-8a7a-032c141e6a8f",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 400
+        },
+        "data": {
+          "label": "Retry Once",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "One 503 retried under the default codes and delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/retry?key=zz-11541-s4-__TOKEN__&fail_count=1&fail_status=503",
+              "method": "GET",
+              "verify_ssl": false,
+              "retry_count": 1
+            },
+            "outputBindings": {
+              "status_code": "retry_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3830cb27-1939-48f8-a014-f440925ace53",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 500
+        },
+        "data": {
+          "label": "HTTP Report",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "What the requests answered",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"http redirect={redirect_status} retry={retry_status}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b706b9d0-5781-43fe-910c-81339e90b90c",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 600
+        },
+        "data": {
+          "label": "defaults_fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "description": "Logs every input it got",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "defaults_fn",
+            "description": "Logs every input it got",
+            "inputs": [
+              {
+                "name": "region",
+                "type": "string",
+                "required": false,
+                "default": "eu-west-1"
+              },
+              {
+                "name": "tries",
+                "type": "integer",
+                "required": false,
+                "default": 3
+              },
+              {
+                "name": "ratio",
+                "type": "float",
+                "required": false,
+                "default": 2.5
+              },
+              {
+                "name": "labels",
+                "type": "array",
+                "required": false,
+                "default": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "name": "opts",
+                "type": "map",
+                "required": false,
+                "default": {
+                  "k": 1
+                }
+              },
+              {
+                "name": "grid",
+                "type": "table",
+                "required": false,
+                "default": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "type": "string"
+                    }
+                  ],
+                  "rows": [
+                    [
+                      "alpha"
+                    ],
+                    [
+                      "beta"
+                    ]
+                  ]
+                }
+              },
+              {
+                "name": "notes",
+                "type": "string",
+                "required": false,
+                "default": "first line\nsecond line"
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "16de0707-4a9b-413e-8e60-ad95bee0958a",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "Report Inputs",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the inputs the Function got",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "f\"fn region={region} tries={tries} ratio={ratio} labels={labels[0]}+{labels[1]} opts={opts['k']} grid={grid[1]['name']} notes={notes.splitlines()[1]}\"",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "962e4e7b-596a-4adf-9111-cbb49797b78c",
+                  "source": "start-node",
+                  "target": "16de0707-4a9b-413e-8e60-ad95bee0958a",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "fcbecfd2-9791-4118-a26d-e4974877eebf",
+        "source": "start-node",
+        "target": "f41fa3af-20aa-497b-be12-9bd63c6e6c7c",
+        "type": "default"
+      },
+      {
+        "id": "cde65e72-6988-4b93-ab87-5e952100e90d",
+        "source": "f41fa3af-20aa-497b-be12-9bd63c6e6c7c",
+        "target": "59c958fb-344d-444d-b25d-9c605f4d15a8",
+        "type": "default"
+      },
+      {
+        "id": "1b4aaf5a-7f65-4207-8ec7-bfef4381a622",
+        "source": "59c958fb-344d-444d-b25d-9c605f4d15a8",
+        "target": "45cf6657-0a92-4987-ac0c-baea37c1f7b8",
+        "type": "default"
+      },
+      {
+        "id": "cff3ea31-bad1-431d-935e-a8ce41c1ad72",
+        "source": "45cf6657-0a92-4987-ac0c-baea37c1f7b8",
+        "target": "7f9bc89a-b744-4623-8a7a-032c141e6a8f",
+        "type": "default"
+      },
+      {
+        "id": "53c59418-2790-46eb-b7ff-f0c24598db65",
+        "source": "7f9bc89a-b744-4623-8a7a-032c141e6a8f",
+        "target": "3830cb27-1939-48f8-a014-f440925ace53",
+        "type": "default"
+      },
+      {
+        "id": "d6d818e6-a0d6-473c-a36b-9ba10f59d5c2",
+        "source": "3830cb27-1939-48f8-a014-f440925ace53",
+        "target": "b706b9d0-5781-43fe-910c-81339e90b90c",
+        "type": "default"
+      }
+    ]
+  }
+}

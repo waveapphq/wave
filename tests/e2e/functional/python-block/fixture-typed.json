@@ -1,0 +1,444 @@
+{
+  "name": "PY-TYPED __TOKEN__",
+  "version": "1.0.0",
+  "description": "A Python block typed through the script sheet, a block whose typed input variables and typed variable exports round trip, and a block whose export does not fit its bound type.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 2000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-ui",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Script typed through the sheet",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "ui_mark = \"seed\"\n",
+              "script_variables": [
+                "ui_mark"
+              ]
+            },
+            "outputBindings": {
+              "ui_mark": "ui_mark_v",
+              "stdout": "ui_stdout_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-typed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Typed inputs, typed exports",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "input_vars.count",
+            "input_vars.flag",
+            "input_vars.items",
+            "input_vars.pack",
+            "input_vars.readings",
+            "input_vars.ratio",
+            "input_vars.other"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\nM = \"py-\"\nmark = M + \"mark-__TOKEN__\"\nprint(\"out \" + mark)\nsys.stderr.write(\"err \" + mark + \"\\n\")\n\ns_out = \"s-\" + \"__TOKEN__\"\ni_out = 7\nf_out = ratio + other\nb_out = True\na_out = [\"a\", \"b c\", \"\"]\nm_out = {\"k1\": \"v1\", \"k2\": \"v 2\"}\nt_out = [{\"sku\": \"s1\", \"qty\": 2}, {\"sku\": \"s2\", \"qty\": 5}]\nargv_out = sys.argv[1:]\n\nprobe_out = {\n    \"row_keys\": \",\".join(readings[0].keys()),\n    \"row_names\": \",\".join(row[\"name\"] for row in readings),\n    \"row_total\": str(sum(row[\"temp_c\"] for row in readings)),\n    \"row_count\": str(len(readings)),\n    \"cell_kind\": type(readings[0][\"temp_c\"]).__name__,\n    \"note_kind\": type(readings[1][\"note\"]).__name__,\n    \"ratio_kind\": type(ratio).__name__,\n    \"sum_text\": str(ratio + other),\n    \"count_kind\": type(count).__name__,\n    \"flag_kind\": type(flag).__name__,\n    \"list_kind\": type(items).__name__,\n    \"map_kind\": type(pack).__name__,\n    \"text_kind\": type(greeting).__name__,\n}\n",
+              "arguments": [
+                {
+                  "value": "alpha"
+                },
+                {
+                  "value": "beta gamma"
+                },
+                {
+                  "value": "delta"
+                }
+              ],
+              "input_vars": {
+                "greeting": "hello",
+                "count": "n_in",
+                "flag": "yes_in",
+                "items": "items_in",
+                "pack": "pack_in",
+                "readings": "readings_in",
+                "ratio": "ratio_in",
+                "other": "other_in"
+              },
+              "script_variables": [
+                "s_out",
+                "i_out",
+                "f_out",
+                "b_out",
+                "a_out",
+                "m_out",
+                "t_out",
+                "argv_out",
+                "probe_out",
+                "never_out"
+              ]
+            },
+            "outputBindings": {
+              "stdout": "out_v",
+              "stderr": "err_v",
+              "exit_code": "code_v",
+              "success": "ok_v",
+              "s_out": "s_v",
+              "i_out": "i_v",
+              "f_out": "f_v",
+              "b_out": "b_v",
+              "a_out": "a_v",
+              "m_out": "m_v",
+              "t_out": "t_v",
+              "argv_out": "argv_v",
+              "probe_out": "probe_v",
+              "never_out": "keep_v"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-badtype",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "An export that does not fit its type",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "n = \"x\" + \"yz-__TOKEN__\"\n",
+              "script_variables": [
+                "n"
+              ],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "n": "n_v",
+              "error": "bad_err",
+              "reason": "bad_reason",
+              "success": "bad_ok",
+              "exit_code": "bad_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'PY-TYPED-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "ws-hold"
+      },
+      {
+        "id": "e-hold-ui",
+        "source": "ws-hold",
+        "target": "py-ui"
+      },
+      {
+        "id": "e-ui-typed",
+        "source": "py-ui",
+        "target": "py-typed"
+      },
+      {
+        "id": "e-typed-badtype",
+        "source": "py-typed",
+        "target": "py-badtype"
+      },
+      {
+        "id": "e-badtype-done",
+        "source": "py-badtype",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "n_in": {
+      "value": 42,
+      "type": "integer",
+      "scope": "test"
+    },
+    "yes_in": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "items_in": {
+      "value": [
+        "a",
+        2,
+        true
+      ],
+      "type": "array",
+      "scope": "test"
+    },
+    "pack_in": {
+      "value": {
+        "k": "v"
+      },
+      "type": "map",
+      "scope": "test"
+    },
+    "readings_in": {
+      "value": {
+        "columns": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "temp_c",
+            "type": "float"
+          },
+          {
+            "name": "note",
+            "type": "string"
+          }
+        ],
+        "rows": [
+          [
+            "alpha",
+            "20.5",
+            "n1"
+          ],
+          [
+            "beta",
+            "21.25",
+            null
+          ]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "ratio_in": {
+      "value": "0.1",
+      "type": "float",
+      "scope": "test"
+    },
+    "other_in": {
+      "value": "0.2",
+      "type": "float",
+      "scope": "test"
+    },
+    "ui_mark_v": {
+      "value": "untouched",
+      "type": "string",
+      "scope": "test"
+    },
+    "ui_stdout_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "out_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "err_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_v": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ok_v": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s_v": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "i_v": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "f_v": {
+      "value": "0",
+      "type": "float",
+      "scope": "test"
+    },
+    "b_v": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "a_v": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "m_v": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "t_v": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "argv_v": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "probe_v": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "keep_v": {
+      "value": "keep-me",
+      "type": "string",
+      "scope": "test"
+    },
+    "n_v": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bad_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bad_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "bad_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

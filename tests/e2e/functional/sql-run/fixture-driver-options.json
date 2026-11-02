@@ -1,0 +1,327 @@
+{
+  "name": "V-SQL-DRIVER-OPTIONS-TYPED",
+  "version": "1.0.0",
+  "description": "Typed Driver options reach SQLite, PostgreSQL and MariaDB as the types their rows declare",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "1e94b6b5-990b-4f62-b40c-8dd17742d624",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 100
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite whole-number options",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "sqlite",
+              "file": "artifact://typed-options-__TOKEN__.db",
+              "sql": "PRAGMA busy_timeout",
+              "driver_options": {
+                "timeout": "7",
+                "cached_statements": "16"
+              }
+            },
+            "outputBindings": {
+              "rows": "lite_int_rows"
+            },
+            "profileBindings": []
+          },
+          "elementTypes": {
+            "driver_options": {
+              "timeout": "integer",
+              "cached_statements": "integer"
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3c69d810-19f9-4ee8-9da2-5507af7cba25",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 220
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite decimal option",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "sqlite",
+              "file": "artifact://typed-options-__TOKEN__.db",
+              "sql": "PRAGMA busy_timeout",
+              "driver_options": {}
+            },
+            "outputBindings": {
+              "rows": "lite_float_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "07a51fa4-9801-4261-8fb5-24b3695e0a04",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 340
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG typed options",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "sql": "SELECT current_setting('application_name') AS app, current_setting('search_path') AS sp",
+              "parameters": {},
+              "driver_options": {}
+            },
+            "outputBindings": {
+              "rows": "pg_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b1515500-139e-49e8-91f7-070fb4707912",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 460
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG expression option",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "sql": "SELECT current_setting('application_name') AS app",
+              "driver_options": {}
+            },
+            "outputBindings": {
+              "rows": "pg_expr_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "70a4d376-c558-470f-9942-976f265a6c72",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 580
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB typed options",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "tls": false,
+              "sql": "SELECT @typed AS t",
+              "driver_options": {
+                "defer_connect": false,
+                "read_timeout": "30",
+                "init_command": "SET @typed = '02134'"
+              }
+            },
+            "outputBindings": {
+              "rows": "my_rows"
+            },
+            "profileBindings": []
+          },
+          "elementTypes": {
+            "driver_options": {
+              "defer_connect": "boolean",
+              "read_timeout": "integer",
+              "init_command": "string"
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a328df81-2de6-4b4b-8ae7-e37aa30fa733",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Driver options probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"SQL lite_int={lite_int_rows[0]['timeout']} lite_float={lite_float_rows[0]['timeout']} app={pg_rows[0]['app']} app_is_text={type(pg_rows[0]['app']) == str} sp={pg_rows[0]['sp']} expr_app={pg_expr_rows[0]['app']} my={my_rows[0]['t']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "1e94b6b5-990b-4f62-b40c-8dd17742d624",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "1e94b6b5-990b-4f62-b40c-8dd17742d624",
+        "target": "3c69d810-19f9-4ee8-9da2-5507af7cba25",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "3c69d810-19f9-4ee8-9da2-5507af7cba25",
+        "target": "07a51fa4-9801-4261-8fb5-24b3695e0a04",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "07a51fa4-9801-4261-8fb5-24b3695e0a04",
+        "target": "b1515500-139e-49e8-91f7-070fb4707912",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "b1515500-139e-49e8-91f7-070fb4707912",
+        "target": "70a4d376-c558-470f-9942-976f265a6c72",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "70a4d376-c558-470f-9942-976f265a6c72",
+        "target": "a328df81-2de6-4b4b-8ae7-e37aa30fa733",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "wait": {
+      "type": "float",
+      "value": "6.5"
+    },
+    "lite_int_rows": {
+      "type": "table",
+      "value": []
+    },
+    "lite_float_rows": {
+      "type": "table",
+      "value": []
+    },
+    "pg_rows": {
+      "type": "table",
+      "value": []
+    },
+    "pg_expr_rows": {
+      "type": "table",
+      "value": []
+    },
+    "my_rows": {
+      "type": "table",
+      "value": []
+    }
+  },
+  "metadata": {}
+}

@@ -1,0 +1,1372 @@
+{
+  "name": "Switch/Case Control E2E",
+  "version": "1.0.0",
+  "description": "Eight chained Switch blocks covering break, fall-through (matching + non-matching next case), default reached by fall-through and by no-match, no-default, lazy per-case condition evaluation, and the always-present then egress.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 40 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'sw-before'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S1 setup: sw=a",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "a" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 240 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S1: first case matches and breaks",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s1 first",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "a",
+                      "reference_is_expression": false,
+                      "id": "s1-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s1 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "a",
+                      "reference_is_expression": false,
+                      "id": "s1-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 240, "height": 62 }
+      },
+      {
+        "id": "log-s1-c1",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s1-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s1-c2",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s1-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s1-then",
+        "type": "workflowNode",
+        "position": { "x": 560, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S1 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s1-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-2",
+        "type": "workflowNode",
+        "position": { "x": 560, "y": 450 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S2 setup: sw=b",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "b" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-2",
+        "type": "workflowNode",
+        "position": { "x": 560, "y": 550 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S2: break off falls through into a MATCHING next case",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s2 first",
+                  "break": false,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "b",
+                      "reference_is_expression": false,
+                      "id": "s2-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s2 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "b",
+                      "reference_is_expression": false,
+                      "id": "s2-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 240, "height": 62 }
+      },
+      {
+        "id": "log-s2-c1",
+        "type": "workflowNode",
+        "position": { "x": 280, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S2 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s2-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s2-c2",
+        "type": "workflowNode",
+        "position": { "x": 460, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S2 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s2-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s2-then",
+        "type": "workflowNode",
+        "position": { "x": 720, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S2 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s2-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-3",
+        "type": "workflowNode",
+        "position": { "x": 720, "y": 760 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S3 setup: sw=c",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "c" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-3",
+        "type": "workflowNode",
+        "position": { "x": 720, "y": 860 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S3: break off falls through into a NON-matching next case, no default",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s3 first",
+                  "break": false,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "c",
+                      "reference_is_expression": false,
+                      "id": "s3-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s3 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match",
+                      "reference_is_expression": false,
+                      "id": "s3-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 240, "height": 62 }
+      },
+      {
+        "id": "log-s3-c1",
+        "type": "workflowNode",
+        "position": { "x": 440, "y": 970 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S3 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s3-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s3-c2",
+        "type": "workflowNode",
+        "position": { "x": 620, "y": 970 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S3 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s3-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s3-then",
+        "type": "workflowNode",
+        "position": { "x": 880, "y": 970 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S3 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s3-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-4",
+        "type": "workflowNode",
+        "position": { "x": 880, "y": 1070 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S4 setup: sw=d",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "d" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-4",
+        "type": "workflowNode",
+        "position": { "x": 880, "y": 1170 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S4: nothing matches, default runs",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s4 first",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match-1",
+                      "reference_is_expression": false,
+                      "id": "s4-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s4 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match-2",
+                      "reference_is_expression": false,
+                      "id": "s4-cond-1"
+                    }
+                  ]
+                },
+                { "id": "branch_2", "type": "default", "label": "s4 default" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 300, "height": 62 }
+      },
+      {
+        "id": "log-s4-c1",
+        "type": "workflowNode",
+        "position": { "x": 560, "y": 1280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S4 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s4-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s4-c2",
+        "type": "workflowNode",
+        "position": { "x": 740, "y": 1280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S4 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s4-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s4-def",
+        "type": "workflowNode",
+        "position": { "x": 920, "y": 1280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S4 default",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s4-def'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s4-then",
+        "type": "workflowNode",
+        "position": { "x": 1100, "y": 1280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S4 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s4-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-5",
+        "type": "workflowNode",
+        "position": { "x": 1100, "y": 1380 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S5 setup: sw=e",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "e" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-5",
+        "type": "workflowNode",
+        "position": { "x": 1100, "y": 1480 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S5: nothing matches and there is no default",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s5 only",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match",
+                      "reference_is_expression": false,
+                      "id": "s5-cond-0"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 180, "height": 62 }
+      },
+      {
+        "id": "log-s5-c1",
+        "type": "workflowNode",
+        "position": { "x": 960, "y": 1590 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S5 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s5-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s5-then",
+        "type": "workflowNode",
+        "position": { "x": 1200, "y": 1590 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S5 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s5-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-6",
+        "type": "workflowNode",
+        "position": { "x": 1200, "y": 1690 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S6 setup: sw=f, flip=off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "f", "flip": "off" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-6",
+        "type": "workflowNode",
+        "position": { "x": 1200, "y": 1790 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S6: case 1 body flips the variable case 2 tests (lazy evaluation)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s6 flipper",
+                  "break": false,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "f",
+                      "reference_is_expression": false,
+                      "id": "s6-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s6 flipped",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "flip",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "on",
+                      "reference_is_expression": false,
+                      "id": "s6-cond-1"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 240, "height": 62 }
+      },
+      {
+        "id": "vs-6-flip",
+        "type": "workflowNode",
+        "position": { "x": 920, "y": 1900 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S6 case 1 body: flip=on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "flip": "on" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s6-c1",
+        "type": "workflowNode",
+        "position": { "x": 920, "y": 2000 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S6 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s6-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s6-c2",
+        "type": "workflowNode",
+        "position": { "x": 1100, "y": 1900 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S6 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s6-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s6-then",
+        "type": "workflowNode",
+        "position": { "x": 1360, "y": 1900 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S6 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s6-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-7",
+        "type": "workflowNode",
+        "position": { "x": 1360, "y": 2000 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S7 setup: sw=g",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "g" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-7",
+        "type": "workflowNode",
+        "position": { "x": 1360, "y": 2100 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S7: a matched case with break off falls through to the DEFAULT",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s7 first",
+                  "break": false,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "g",
+                      "reference_is_expression": false,
+                      "id": "s7-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s7 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match",
+                      "reference_is_expression": false,
+                      "id": "s7-cond-1"
+                    }
+                  ]
+                },
+                { "id": "branch_2", "type": "default", "label": "s7 default" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 300, "height": 62 }
+      },
+      {
+        "id": "log-s7-c1",
+        "type": "workflowNode",
+        "position": { "x": 1040, "y": 2210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S7 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s7-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-c2",
+        "type": "workflowNode",
+        "position": { "x": 1220, "y": 2210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S7 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s7-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-def",
+        "type": "workflowNode",
+        "position": { "x": 1400, "y": 2210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S7 default",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s7-def'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s7-then",
+        "type": "workflowNode",
+        "position": { "x": 1580, "y": 2210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S7 then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s7-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "vs-8",
+        "type": "workflowNode",
+        "position": { "x": 1580, "y": 2310 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "S8 setup: sw=h",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "sw": "h" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sw-8",
+        "type": "workflowNode",
+        "position": { "x": 1580, "y": 2410 },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "S8: a matched case that BREAKS never reaches the default",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "s8 first",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "h",
+                      "reference_is_expression": false,
+                      "id": "s8-cond-0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "s8 second",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "sw",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no-match",
+                      "reference_is_expression": false,
+                      "id": "s8-cond-1"
+                    }
+                  ]
+                },
+                { "id": "branch_2", "type": "default", "label": "s8 default" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 300, "height": 62 }
+      },
+      {
+        "id": "log-s8-c1",
+        "type": "workflowNode",
+        "position": { "x": 1260, "y": 2520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S8 case 1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s8-c1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s8-c2",
+        "type": "workflowNode",
+        "position": { "x": 1440, "y": 2520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S8 case 2",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s8-c2'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s8-def",
+        "type": "workflowNode",
+        "position": { "x": 1620, "y": 2520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "S8 default",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'s8-def'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 1800, "y": 2520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'sw-after'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before-vs1", "source": "log-before", "target": "vs-1", "type": "default" },
+
+      { "id": "e-vs1-sw1", "source": "vs-1", "target": "sw-1", "type": "default" },
+      { "id": "e-s1-b0", "source": "sw-1", "sourceHandle": "branch_0", "target": "log-s1-c1", "type": "default" },
+      { "id": "e-s1-b1", "source": "sw-1", "sourceHandle": "branch_1", "target": "log-s1-c2", "type": "default" },
+      { "id": "e-s1-then", "source": "sw-1", "sourceHandle": "then", "target": "log-s1-then", "type": "default" },
+
+      { "id": "e-s1then-vs2", "source": "log-s1-then", "target": "vs-2", "type": "default" },
+      { "id": "e-vs2-sw2", "source": "vs-2", "target": "sw-2", "type": "default" },
+      { "id": "e-s2-b0", "source": "sw-2", "sourceHandle": "branch_0", "target": "log-s2-c1", "type": "default" },
+      { "id": "e-s2-b1", "source": "sw-2", "sourceHandle": "branch_1", "target": "log-s2-c2", "type": "default" },
+      { "id": "e-s2-then", "source": "sw-2", "sourceHandle": "then", "target": "log-s2-then", "type": "default" },
+
+      { "id": "e-s2then-vs3", "source": "log-s2-then", "target": "vs-3", "type": "default" },
+      { "id": "e-vs3-sw3", "source": "vs-3", "target": "sw-3", "type": "default" },
+      { "id": "e-s3-b0", "source": "sw-3", "sourceHandle": "branch_0", "target": "log-s3-c1", "type": "default" },
+      { "id": "e-s3-b1", "source": "sw-3", "sourceHandle": "branch_1", "target": "log-s3-c2", "type": "default" },
+      { "id": "e-s3-then", "source": "sw-3", "sourceHandle": "then", "target": "log-s3-then", "type": "default" },
+
+      { "id": "e-s3then-vs4", "source": "log-s3-then", "target": "vs-4", "type": "default" },
+      { "id": "e-vs4-sw4", "source": "vs-4", "target": "sw-4", "type": "default" },
+      { "id": "e-s4-b0", "source": "sw-4", "sourceHandle": "branch_0", "target": "log-s4-c1", "type": "default" },
+      { "id": "e-s4-b1", "source": "sw-4", "sourceHandle": "branch_1", "target": "log-s4-c2", "type": "default" },
+      { "id": "e-s4-b2", "source": "sw-4", "sourceHandle": "branch_2", "target": "log-s4-def", "type": "default" },
+      { "id": "e-s4-then", "source": "sw-4", "sourceHandle": "then", "target": "log-s4-then", "type": "default" },
+
+      { "id": "e-s4then-vs5", "source": "log-s4-then", "target": "vs-5", "type": "default" },
+      { "id": "e-vs5-sw5", "source": "vs-5", "target": "sw-5", "type": "default" },
+      { "id": "e-s5-b0", "source": "sw-5", "sourceHandle": "branch_0", "target": "log-s5-c1", "type": "default" },
+      { "id": "e-s5-then", "source": "sw-5", "sourceHandle": "then", "target": "log-s5-then", "type": "default" },
+
+      { "id": "e-s5then-vs6", "source": "log-s5-then", "target": "vs-6", "type": "default" },
+      { "id": "e-vs6-sw6", "source": "vs-6", "target": "sw-6", "type": "default" },
+      { "id": "e-s6-b0", "source": "sw-6", "sourceHandle": "branch_0", "target": "vs-6-flip", "type": "default" },
+      { "id": "e-s6-flip-log", "source": "vs-6-flip", "target": "log-s6-c1", "type": "default" },
+      { "id": "e-s6-b1", "source": "sw-6", "sourceHandle": "branch_1", "target": "log-s6-c2", "type": "default" },
+      { "id": "e-s6-then", "source": "sw-6", "sourceHandle": "then", "target": "log-s6-then", "type": "default" },
+
+      { "id": "e-s6then-vs7", "source": "log-s6-then", "target": "vs-7", "type": "default" },
+      { "id": "e-vs7-sw7", "source": "vs-7", "target": "sw-7", "type": "default" },
+      { "id": "e-s7-b0", "source": "sw-7", "sourceHandle": "branch_0", "target": "log-s7-c1", "type": "default" },
+      { "id": "e-s7-b1", "source": "sw-7", "sourceHandle": "branch_1", "target": "log-s7-c2", "type": "default" },
+      { "id": "e-s7-b2", "source": "sw-7", "sourceHandle": "branch_2", "target": "log-s7-def", "type": "default" },
+      { "id": "e-s7-then", "source": "sw-7", "sourceHandle": "then", "target": "log-s7-then", "type": "default" },
+
+      { "id": "e-s7then-vs8", "source": "log-s7-then", "target": "vs-8", "type": "default" },
+      { "id": "e-vs8-sw8", "source": "vs-8", "target": "sw-8", "type": "default" },
+      { "id": "e-s8-b0", "source": "sw-8", "sourceHandle": "branch_0", "target": "log-s8-c1", "type": "default" },
+      { "id": "e-s8-b1", "source": "sw-8", "sourceHandle": "branch_1", "target": "log-s8-c2", "type": "default" },
+      { "id": "e-s8-b2", "source": "sw-8", "sourceHandle": "branch_2", "target": "log-s8-def", "type": "default" },
+      { "id": "e-s8-then", "source": "sw-8", "sourceHandle": "then", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "sw": { "value": "", "type": "string", "scope": "test" },
+    "flip": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-08-01T00:00:00.000000",
+  "updated_at": "2026-08-01T00:00:00.000000"
+}

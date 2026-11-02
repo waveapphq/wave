@@ -1,0 +1,475 @@
+{
+ "name": "Secret Leak Canary E2E",
+ "version": "1.0.0",
+ "description": "Truth-gate main run: a secret test variable, a profile credential and a Variable Setter secret literal flow through log / slice / WS / report surfaces. Every secret is sealed at rest, computed on real bytes, and masked on every output.",
+ "workflow": {
+  "nodes": [
+   {
+    "id": "delay-hold",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 60
+    },
+    "data": {
+     "label": "Delay",
+     "elementType": "delay",
+     "nodeType": "control",
+     "category": "timing",
+     "version": "1.0.0",
+     "description": "WS Subscribe Window",
+     "hasNewerVersion": false,
+     "expressionFields": [],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "duration": 3000
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-var-direct",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 140
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Secret Variable Direct",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "canary_var",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-var-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 210
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Secret Variable Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'v-proof=' + canary_var[18:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-cred-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 280
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Profile Credential Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'c-proof=' + creds.auth_key[17:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": [
+       {
+        "profileId": "__PROFILE_ID__",
+        "alias": "creds",
+        "profileName": "__PROFILE_NAME__",
+        "profileType": "http"
+       }
+      ]
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-cred-direct",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 315
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Profile Credential Direct",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'cred-direct=' + creds.auth_key",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": [
+       {
+        "profileId": "__PROFILE_ID__",
+        "alias": "creds",
+        "profileName": "__PROFILE_NAME__",
+        "profileType": "http"
+       }
+      ]
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "setter-secret",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 350
+    },
+    "data": {
+     "label": "Var Setter",
+     "elementType": "variable-setter",
+     "nodeType": "control",
+     "category": "flow",
+     "version": "1.0.0",
+     "description": "Set Secret Literal",
+     "hasNewerVersion": false,
+     "expressionFields": [],
+     "templateFields": [],
+     "variableExpressionKeys": [],
+     "variableTypes": {
+      "setter_secret": "string"
+     },
+     "config": {
+      "values": {
+       "variables": {
+        "setter_secret": "cnr6-set-a1b2c3d4-gamma-real-bytes"
+       }
+      },
+      "variableSecretKeys": [
+       "setter_secret"
+      ],
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-set-proof",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 420
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Setter Secret Slice",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'s-proof=' + setter_secret[18:]",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-plain",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 490
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log Plain Sibling",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'plain=' + plain_marker",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "http-secret",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 560
+    },
+    "data": {
+     "label": "HTTP",
+     "elementType": "http-client",
+     "nodeType": "plugin",
+     "category": "network",
+     "version": "1.0.0",
+     "description": "GET Secret Payload",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "url"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "url": "f'https://127.0.0.1:9449/secret-payload'",
+       "method": "GET",
+       "timeout": 30,
+       "retry_count": 0,
+       "retry_delay": 1,
+       "retry_backoff_factor": 2,
+       "retryable_status_codes": [
+        "502",
+        "503",
+        "504"
+       ],
+       "verify_ssl": false,
+       "allow_redirects": true,
+       "max_redirects": 10
+      },
+      "outputBindings": {
+       "status_code": "http_status",
+       "body": "http_body",
+       "headers": "http_headers"
+      },
+      "outputSecretFields": [
+       "body",
+       "headers"
+      ],
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   },
+   {
+    "id": "log-http-status",
+    "type": "workflowNode",
+    "position": {
+     "x": 400,
+     "y": 630
+    },
+    "data": {
+     "label": "Log",
+     "elementType": "log",
+     "nodeType": "plugin",
+     "category": "system",
+     "version": "1.0.0",
+     "description": "Log HTTP Status Positive Control",
+     "hasNewerVersion": false,
+     "expressionFields": [
+      "message"
+     ],
+     "templateFields": [],
+     "config": {
+      "values": {
+       "message": "'http-status=' + str(http_status)",
+       "level": "INFO"
+      },
+      "outputBindings": {},
+      "profileBindings": []
+     }
+    },
+    "measured": {
+     "width": 120,
+     "height": 62
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "e0",
+    "source": "start-node",
+    "target": "delay-hold",
+    "type": "default"
+   },
+   {
+    "id": "e1",
+    "source": "delay-hold",
+    "target": "log-var-direct",
+    "type": "default"
+   },
+   {
+    "id": "e2",
+    "source": "log-var-direct",
+    "target": "log-var-proof",
+    "type": "default"
+   },
+   {
+    "id": "e3",
+    "source": "log-var-proof",
+    "target": "log-cred-proof",
+    "type": "default"
+   },
+   {
+    "id": "e4",
+    "source": "log-cred-proof",
+    "target": "log-cred-direct",
+    "type": "default"
+   },
+   {
+    "id": "e5",
+    "source": "setter-secret",
+    "target": "log-set-proof",
+    "type": "default"
+   },
+   {
+    "id": "e6",
+    "source": "log-set-proof",
+    "target": "log-plain",
+    "type": "default"
+   },
+   {
+    "id": "e7",
+    "source": "log-plain",
+    "target": "http-secret",
+    "type": "default"
+   },
+   {
+    "id": "e8",
+    "source": "http-secret",
+    "target": "log-http-status",
+    "type": "default"
+   },
+   {
+    "id": "e4b",
+    "source": "log-cred-direct",
+    "target": "setter-secret",
+    "type": "default"
+   }
+  ]
+ },
+ "variables": {
+  "canary_var": {
+   "value": "cnr6-var-a1b2c3d4-alpha-real-bytes",
+   "type": "string",
+   "scope": "test",
+   "secret": true
+  },
+  "setter_secret": {
+   "value": "unset-overwritten-by-setter",
+   "type": "string",
+   "scope": "test",
+   "secret": true
+  },
+  "plain_marker": {
+   "value": "plain-sibling-e5b7a0-cleartext",
+   "type": "string",
+   "scope": "test"
+  },
+  "http_status": {
+   "value": null,
+   "type": "integer",
+   "scope": "test"
+  },
+  "http_body": {
+   "value": "",
+   "type": "string",
+   "scope": "test"
+  },
+  "http_headers": {
+   "value": {},
+   "type": "map",
+   "scope": "test"
+  }
+ },
+ "metadata": {},
+ "created_at": "2026-01-01T00:00:00.000000",
+ "updated_at": "2026-01-01T00:00:00.000000"
+}

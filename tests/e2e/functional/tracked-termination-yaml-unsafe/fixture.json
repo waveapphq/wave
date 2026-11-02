@@ -1,0 +1,55 @@
+{
+  "name": "Tracked Termination YAML-Unsafe Variable Regression",
+  "version": "1.0.0",
+  "description": "Minimal workflow whose XML Parser produces a text-node result - lxml returns such values as `_ElementUnicodeResult`, a `str` subclass that `yaml.safe_dump` refused to represent before the architectural fix. This test proves a tracked execution still transitions to the terminal status and persists the variable.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "xml-parser-text-node",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "XML Text Extract",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root><item id=\"1\">Alpha</item></root>",
+              "queries": { "first_item": "//item[1]/text()" },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "xml_success",
+              "errors": "xml_errors",
+              "results": "xml_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "xml-parser-text-node",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "xml_success": { "value": false, "type": "boolean", "scope": "test" },
+    "xml_errors": { "value": [], "type": "array", "scope": "test" },
+    "xml_results": { "value": {}, "type": "map", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

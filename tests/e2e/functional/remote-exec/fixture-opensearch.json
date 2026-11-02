@@ -1,0 +1,672 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-REMOTE",
+  "version": "1.0.0",
+  "description": "The OpenSearch block inside a Remote Execution body on the sshd host, which has no OpenSearch client installed: a Search and an errors-per-minute Aggregate on the cluster by its compose name, then, recorded, a slow search cut by a 2 second Timeout; the outputs are read on WAVE after the body.",
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ni_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ni_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rs_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rs_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "rs_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ra_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ra_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ra_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rt_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rt_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "rt_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rt_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rt_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_ids": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e631fafe-7039-4cbc-a8f9-724e59d523e0",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the Execution Host session (secret password)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "sess_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "191ee733-88d6-4166-90d6-709e279c15eb",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Try to import an OpenSearch client on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c \"import opensearchpy\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stderr": "ni_err",
+              "exit_code": "ni_exit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "002fc77e-64a1-48c3-ac97-00fe71c9eecd",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log what the remote host has",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-remote-nothing-installed exit={{ ni_exit }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b85e5d6f-38b3-4fbd-aa97-3e4a6e38ce20",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "4988ad6c-1fcb-462d-956c-59e828c2df19",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 390
+        },
+        "data": {
+          "label": "Search on the remote host",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Search on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://opensearch:9200",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "rs_ok",
+              "results": "rs_rows",
+              "total_results": "rs_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "fb2ef7e9-a9d0-467a-9441-3cfbc0a1cf5c",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 460
+        },
+        "data": {
+          "label": "Remote errors per minute",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Errors per minute on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://opensearch:9200",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ra_ok",
+              "results": "ra_rows",
+              "total_results": "ra_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "8663f5e2-1994-4f4d-a3d4-b4606d653273",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 530
+        },
+        "data": {
+          "label": "Slow search on the remote host",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Slow search on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://opensearch:9200",
+              "index": "wave-e2e-__TOKEN__-slow",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "query_dsl",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 2,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "rt_ok",
+              "results": "rt_rows",
+              "total_results": "rt_total",
+              "error": "rt_error",
+              "reason": "rt_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "2a3cafe2-da3d-474e-8eca-eab10bee3cf8",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the remote search on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-remote-search total={{ rs_total }} first={{ rs_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5b84d621-105e-4b35-a01f-de255dc68585",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the remote errors per minute on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-remote-agg total={{ ra_total }} counts={{ ra_rows.cell(0, 'count') }},{{ ra_rows.cell(1, 'count') }},{{ ra_rows.cell(2, 'count') }},{{ ra_rows.cell(3, 'count') }},{{ ra_rows.cell(4, 'count') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a50af001-c508-4705-a29b-a56e43119058",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read the remote timeout on WAVE",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-remote-timeout total={{ rt_total }} reason={{ rt_reason }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "83322e34-2c73-4892-a16c-64b52be46b16",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SSH session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "285acfd9-d698-4382-94e2-cf06461980c2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'os-remote-closes sessions=' + str(len(closed_ids)) + ' os-remote-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "f6d8579b-968d-4acb-8541-6483df0aeb2f",
+        "source": "start-node",
+        "target": "e631fafe-7039-4cbc-a8f9-724e59d523e0",
+        "type": "default"
+      },
+      {
+        "id": "5eb9da26-9cf4-48b9-98ed-71ad441e0fe2",
+        "source": "e631fafe-7039-4cbc-a8f9-724e59d523e0",
+        "target": "191ee733-88d6-4166-90d6-709e279c15eb",
+        "type": "default"
+      },
+      {
+        "id": "ef7b61a1-def1-4e09-9020-c1c15a7572f6",
+        "source": "191ee733-88d6-4166-90d6-709e279c15eb",
+        "target": "002fc77e-64a1-48c3-ac97-00fe71c9eecd",
+        "type": "default"
+      },
+      {
+        "id": "a093b06b-6960-43ca-8211-da2fd0c2968b",
+        "source": "002fc77e-64a1-48c3-ac97-00fe71c9eecd",
+        "target": "b85e5d6f-38b3-4fbd-aa97-3e4a6e38ce20",
+        "type": "default"
+      },
+      {
+        "id": "60c33ded-d745-4be9-b431-a21eada5d1c7",
+        "source": "b85e5d6f-38b3-4fbd-aa97-3e4a6e38ce20",
+        "target": "4988ad6c-1fcb-462d-956c-59e828c2df19",
+        "sourceHandle": "body",
+        "type": "default"
+      },
+      {
+        "id": "c64f2722-3e39-48d1-a9b9-ce092ddd4589",
+        "source": "4988ad6c-1fcb-462d-956c-59e828c2df19",
+        "target": "fb2ef7e9-a9d0-467a-9441-3cfbc0a1cf5c",
+        "type": "default"
+      },
+      {
+        "id": "9e660712-6ddb-48d2-b161-b9f692bd6088",
+        "source": "fb2ef7e9-a9d0-467a-9441-3cfbc0a1cf5c",
+        "target": "8663f5e2-1994-4f4d-a3d4-b4606d653273",
+        "type": "default"
+      },
+      {
+        "id": "27b71264-8a08-4ee6-8851-ff5e33090640",
+        "source": "b85e5d6f-38b3-4fbd-aa97-3e4a6e38ce20",
+        "target": "2a3cafe2-da3d-474e-8eca-eab10bee3cf8",
+        "sourceHandle": "then",
+        "type": "default"
+      },
+      {
+        "id": "9824cf7b-86eb-4ed1-a5e2-529a92827227",
+        "source": "2a3cafe2-da3d-474e-8eca-eab10bee3cf8",
+        "target": "5b84d621-105e-4b35-a01f-de255dc68585",
+        "type": "default"
+      },
+      {
+        "id": "ea84f794-0d40-462c-a5de-5322292fc78e",
+        "source": "5b84d621-105e-4b35-a01f-de255dc68585",
+        "target": "a50af001-c508-4705-a29b-a56e43119058",
+        "type": "default"
+      },
+      {
+        "id": "c0d7e5cf-52cd-4927-9b33-c995a2506be5",
+        "source": "a50af001-c508-4705-a29b-a56e43119058",
+        "target": "83322e34-2c73-4892-a16c-64b52be46b16",
+        "type": "default"
+      },
+      {
+        "id": "acc248cd-5321-4e86-bfc2-77aa564cf88c",
+        "source": "83322e34-2c73-4892-a16c-64b52be46b16",
+        "target": "285acfd9-d698-4382-94e2-cf06461980c2",
+        "type": "default"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

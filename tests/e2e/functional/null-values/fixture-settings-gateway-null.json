@@ -1,0 +1,307 @@
+{
+  "name": "V-NULL-SETTINGS-GATEWAY-NULL",
+  "version": "1.0.0",
+  "description": "Inside a Remote Execution container on the SSH host, a K8s Get through the plain-HTTP gateway with its namespace given None by an expression is refused on WAVE before any request; nothing after it runs and the run fails.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "44b6e4f8-cca3-4289-b98d-280aac248bf0",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Open SSH Session",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "SSH session the container rides",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "14467e7c-c4e0-4976-b17f-50b5be94faf5",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 210
+        },
+        "data": {
+          "label": "Gateway Null Leg",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Runs its body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "dac5cd8e-a1ef-4c79-994a-8bef673bf0de",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 210
+        },
+        "data": {
+          "label": "Connect Gateway",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session through the plain-HTTP gateway, run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "http://k8s-gateway:8080/k8s/clusters/wave",
+              "namespace": "__NAMESPACE__",
+              "timeout": 30,
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "gw_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ead03807-f1e2-47a3-8d0f-ce53a8e47aad",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 320
+        },
+        "data": {
+          "label": "Gateway Get Null Namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Namespace given None by an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session",
+            "namespace"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "gw_session",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "namespace": "None",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "gw_null_names"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "508d851e-04c1-4fdd-bb90-44e1e5ce2d3d",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 430
+        },
+        "data": {
+          "label": "Gateway Get After Refusal",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Must never run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "gw_session",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "namespace": "",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "gw_after_names"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fd3752ad-f18f-46e2-9d03-d4881692fa8e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 540
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Must never run: the body fails",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-gateway-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "dbd499e6-e342-4c21-a1e2-5ca6a9a385dc",
+        "source": "start-node",
+        "target": "44b6e4f8-cca3-4289-b98d-280aac248bf0",
+        "type": "default"
+      },
+      {
+        "id": "42ae346e-d8e4-400d-bc06-811deab823fa",
+        "source": "44b6e4f8-cca3-4289-b98d-280aac248bf0",
+        "target": "14467e7c-c4e0-4976-b17f-50b5be94faf5",
+        "type": "default"
+      },
+      {
+        "id": "bbfe8558-7b79-4fff-81fa-3bd22be24bea",
+        "source": "14467e7c-c4e0-4976-b17f-50b5be94faf5",
+        "target": "dac5cd8e-a1ef-4c79-994a-8bef673bf0de",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "aff24da7-39c3-41e5-8060-ed371b9c939f",
+        "source": "dac5cd8e-a1ef-4c79-994a-8bef673bf0de",
+        "target": "ead03807-f1e2-47a3-8d0f-ce53a8e47aad",
+        "type": "default"
+      },
+      {
+        "id": "c95b7398-d18a-4040-bd8c-82a616a01edc",
+        "source": "ead03807-f1e2-47a3-8d0f-ce53a8e47aad",
+        "target": "508d851e-04c1-4fdd-bb90-44e1e5ce2d3d",
+        "type": "default"
+      },
+      {
+        "id": "4148440e-80a8-47b9-9365-282142000e68",
+        "source": "14467e7c-c4e0-4976-b17f-50b5be94faf5",
+        "target": "fd3752ad-f18f-46e2-9d03-d4881692fa8e",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sid": {
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "gw_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "gw_null_names": {
+      "type": "array",
+      "scope": "test"
+    },
+    "gw_after_names": {
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

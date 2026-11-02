@@ -1,0 +1,255 @@
+{
+  "name": "Remote Standalone + Lifecycle E2E Fixture",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": { "session_id": "sid", "connected": "s_conn" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-open",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log session opened",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'session opened connected={s_conn}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run body on the host",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": { "session_id": "sid" },
+            "outputBindings": { "remote_session_id": "rsid" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "http-in",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 320 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remotable HTTP (runs on host; DNS resolves only in-stack)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://http-target:9444/api",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "rx_status", "body": "rx_body" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-in",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 390 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Non-remotable JSON (runs on WAVE)",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"n\": 7}",
+              "queries": { "n": "$.n" },
+              "output_mode": "combined"
+            },
+            "outputBindings": { "results": "jr" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-in",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 460 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log body result",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'in-body rx={rx_status} jr={jr}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-then",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 540 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log then",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'then rsid_len={len(rsid)} remote-standalone-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-outside",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 610 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Remotable HTTP OUTSIDE any container (runs on WAVE)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{backend_port}/health'",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "out_status" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-outside",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 680 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend + external status",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'outside local status={out_status} remote-standalone-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "open-session" },
+      { "id": "e-open-log", "source": "open-session", "target": "log-open" },
+      { "id": "e-log-container", "source": "log-open", "target": "container" },
+      { "id": "e-body", "source": "container", "sourceHandle": "body", "target": "http-in", "type": "default" },
+      { "id": "e-http-json", "source": "http-in", "target": "json-in" },
+      { "id": "e-json-log", "source": "json-in", "target": "log-in" },
+      { "id": "e-then", "source": "container", "sourceHandle": "then", "target": "log-then", "type": "default" },
+      { "id": "e-then-outside", "source": "log-then", "target": "http-outside" },
+      { "id": "e-outside-log", "source": "http-outside", "target": "log-outside" }
+    ]
+  },
+  "variables": {
+    "sid": { "value": "", "type": "string", "scope": "test" },
+    "s_conn": { "value": false, "type": "boolean", "scope": "test" },
+    "rsid": { "value": "", "type": "string", "scope": "test" },
+    "rx_status": { "value": 0, "type": "integer", "scope": "test" },
+    "rx_body": { "value": "", "type": "string", "scope": "test" },
+    "jr": { "value": {}, "type": "map", "scope": "test" },
+    "out_status": { "value": 0, "type": "integer", "scope": "test" },
+    "backend_port": { "value": 8000, "type": "integer", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

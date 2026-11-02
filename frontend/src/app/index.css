@@ -1,0 +1,1051 @@
+/**
+ * WAVE Design System Styles
+ *
+ * REQ-5.2.1.7: Modern design system with consistent styling
+ * REQ-5.2.1.8: Light and dark theme support
+ * REQ-5.2.1.9: Professional color palette with semantic colors
+ */
+
+/* Tailwind v4: @import must precede all other statements */
+@import 'tailwindcss';
+
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Tailwind v4: Explicitly tell Tailwind where to scan for classes */
+@source "../index.html";
+@source "./**/*.{js,ts,jsx,tsx}";
+
+/* ============================================
+   CSS Custom Properties - Light Theme (Primary)
+   ============================================ */
+:root {
+  /* Native scrollbars, form controls and pickers follow the active theme. */
+  color-scheme: light;
+
+  /* Background Colors */
+  --color-bg-page: #ffffff;
+  --color-bg-card: #fafafa;
+  --color-bg-elevated: #ffffff;
+  --color-bg-overlay: rgb(0 0 0 / 0.4);
+  --color-bg-subtle: #f4f4f5;
+  --color-bg-muted: #e4e4e7;
+
+  /* Text Colors */
+  --color-text-primary: #09090b;
+  --color-text-secondary: #3f3f46;
+  --color-text-muted: #71717a;
+  --color-text-disabled: #a1a1aa;
+
+  /* Border Colors */
+  --color-border-default: #e4e4e7;
+  --color-border-subtle: #f4f4f5;
+  --color-border-strong: #a1a1aa;
+
+  /* Primary Accent (Blue) */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-muted: #dbeafe;
+
+  /* Semantic Colors - Success (Green) */
+  --color-success-bg: #dcfce7;
+  --color-success-text: #166534;
+  --color-success-border: #86efac;
+
+  /* Semantic Colors - Warning (Amber) */
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #92400e;
+  --color-warning-border: #fcd34d;
+
+  /* Semantic Colors - Error (Red) - FORM-26: #dc2626 for destructive */
+  --color-error-bg: #fee2e2;
+  --color-error-text: #dc2626;
+  --color-error-border: #fca5a5;
+
+  /* Semantic Colors - Info (Cyan) */
+  --color-info-bg: #cffafe;
+  --color-info-text: #155e75;
+  --color-info-border: #67e8f9;
+
+  /* Syntax Highlighting */
+  --color-syntax-keyword: #7c3aed;
+  --color-syntax-string: #059669;
+  --color-syntax-number: #db2777;
+  --color-syntax-function: #2563eb;
+  --color-syntax-variable: #09090b;
+  --color-syntax-comment: #6b7280;
+  --color-syntax-type: #d97706;
+  --color-syntax-operator: #475569;
+  --color-syntax-property: #0891b2;
+  --color-syntax-tag: #db2777;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Blue primary for emphasized CTAs */
+  --primary: oklch(0.622 0.193 262.35);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  /* SHELL-2: Blue selection background (#3B82F6) with white icon */
+  --sidebar-primary: oklch(0.622 0.193 262.35);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* ============================================
+   CSS Custom Properties - Dark Theme
+   ============================================ */
+:root.dark,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Background Colors */
+  --color-bg-page: #09090b;
+  --color-bg-card: #0f0f12;
+  --color-bg-elevated: #18181b;
+  --color-bg-overlay: rgb(0 0 0 / 0.8);
+  --color-bg-subtle: #1a1a1e;
+  --color-bg-muted: #27272a;
+
+  /* Text Colors */
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-text-disabled: #52525b;
+
+  /* Border Colors */
+  --color-border-default: #27272a;
+  --color-border-subtle: #1f1f23;
+  --color-border-strong: #3f3f46;
+
+  /* Primary Accent (Blue) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-primary-active: #2563eb;
+  --color-primary-muted: #1e3a5f;
+
+  /* Semantic Colors - Success (Green) */
+  --color-success-bg: #052e16;
+  --color-success-text: #4ade80;
+  --color-success-border: #166534;
+
+  /* Semantic Colors - Warning (Amber) */
+  --color-warning-bg: #422006;
+  --color-warning-text: #fbbf24;
+  --color-warning-border: #92400e;
+
+  /* Semantic Colors - Error (Red) */
+  --color-error-bg: #450a0a;
+  --color-error-text: #f87171;
+  --color-error-border: #991b1b;
+
+  /* Semantic Colors - Info (Cyan) */
+  --color-info-bg: #083344;
+  --color-info-text: #22d3ee;
+  --color-info-border: #155e75;
+
+  /* Syntax Highlighting */
+  --color-syntax-keyword: #c084fc;
+  --color-syntax-string: #86efac;
+  --color-syntax-number: #fda4af;
+  --color-syntax-function: #60a5fa;
+  --color-syntax-variable: #f9fafb;
+  --color-syntax-comment: #6b7280;
+  --color-syntax-type: #fbbf24;
+  --color-syntax-operator: #94a3b8;
+  --color-syntax-property: #67e8f9;
+  --color-syntax-tag: #f472b6;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Scoped to controls so the canvas keeps its own touch-action for pan/zoom.
+     Drops the ~300ms double-tap-zoom wait before a tap registers. */
+  button,
+  a,
+  label,
+  summary,
+  select,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='option'],
+  [role='switch'],
+  [role='checkbox'] {
+    touch-action: manipulation;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    font-family:
+      'Plus Jakarta Sans',
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    background-color: var(--color-bg-page);
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  code,
+  pre {
+    font-family:
+      'JetBrains Mono',
+      'Fira Code',
+      'SF Mono',
+      Consolas,
+      monospace;
+  }
+
+  /* Focus visible styles for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Hide native browser search input clear button (we have our own) */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Custom scrollbar styling - uses theme CSS variables */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-bg-muted) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-bg-muted);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-border-strong);
+  }
+}
+
+/* ============================================
+   Component Styles
+   ============================================ */
+@layer components {
+  /* Badge Component Variants */
+  .badge-default {
+    background-color: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+  }
+
+  .badge-primary {
+    background-color: var(--color-primary-muted);
+    color: var(--color-primary);
+  }
+
+  .badge-success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
+  }
+
+  .badge-warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+  }
+
+  .badge-error {
+    background-color: var(--color-error-bg);
+    color: var(--color-error-text);
+  }
+
+  .badge-info {
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
+  }
+
+  /* Toast Component Variants - REQ-5.2.1.19 */
+  .toast {
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-default);
+    border-left-width: 4px;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .toast-success {
+    border-left-color: var(--color-success-text);
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+
+  .toast-success [data-toast-icon="success"] {
+    color: var(--color-success-text);
+  }
+
+  .toast-error {
+    border-left-color: var(--color-error-text);
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+
+  .toast-error [data-toast-icon="error"] {
+    color: var(--color-error-text);
+  }
+
+  .toast-warning {
+    border-left-color: var(--color-warning-text);
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+
+  .toast-warning [data-toast-icon="warning"] {
+    color: var(--color-warning-text);
+  }
+
+  .toast-info {
+    border-left-color: var(--color-info-text);
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+
+  .toast-info [data-toast-icon="info"] {
+    color: var(--color-info-text);
+  }
+
+  .toast-enter {
+    animation: toast-enter 300ms ease-out;
+  }
+
+  .toast-exit {
+    animation: toast-exit 200ms ease-in forwards;
+  }
+
+  /* Button base styles */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    border-radius: 0.375rem;
+    transition:
+      background-color 150ms ease-in-out,
+      border-color 150ms ease-in-out,
+      box-shadow 150ms ease-in-out,
+      opacity 150ms ease-in-out,
+      transform 150ms ease-in-out;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Card styles */
+  .card {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.5rem;
+  }
+
+  /* Input styles */
+  .input {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    transition: border-color 150ms ease-in-out;
+  }
+
+  .input:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-muted);
+  }
+
+  .input::placeholder {
+    color: var(--color-text-muted);
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+@layer utilities {
+  /* Background utilities */
+  .bg-card {
+    background-color: var(--color-bg-card);
+  }
+
+  .bg-page {
+    background-color: var(--color-bg-page);
+  }
+
+  .bg-subtle {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .bg-elevated {
+    background-color: var(--color-bg-elevated);
+  }
+
+  /* Text utilities */
+  .text-default {
+    color: var(--color-text-primary);
+  }
+
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .text-secondary {
+    color: var(--color-text-secondary);
+  }
+
+  /* Border utilities */
+  .border-default {
+    border-color: var(--color-border-default);
+  }
+
+  .border-subtle {
+    border-color: var(--color-border-subtle);
+  }
+
+  .border-strong {
+    border-color: var(--color-border-strong);
+  }
+
+  /* Muted background for skeleton base - REQ-5.2.1.20 */
+  .bg-muted {
+    background-color: var(--color-bg-muted);
+  }
+
+  /* Gradient via color for skeleton shimmer - REQ-5.2.1.20 */
+  .via-subtle {
+    --tw-gradient-to: var(--color-bg-subtle) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--color-bg-subtle) var(--tw-gradient-via-position), var(--tw-gradient-to);
+  }
+
+  /* Error state utilities for skeleton - REQ-5.2.1.20 */
+  .bg-error-bg {
+    background-color: var(--color-error-bg);
+  }
+
+  .border-error-border {
+    border-color: var(--color-error-border);
+  }
+
+  /* Text color utilities - REQ-5.2.1.23 */
+  .text-foreground {
+    color: var(--color-text-primary);
+  }
+
+  .text-error {
+    color: var(--color-error-text);
+  }
+
+  .text-success {
+    color: var(--color-success-text);
+  }
+
+  .text-warning {
+    color: var(--color-warning-text);
+  }
+
+  .text-info {
+    color: var(--color-info-text);
+  }
+
+  /* Status dot background colors - uses text colors for bright dots */
+  .bg-info {
+    background-color: var(--color-info-text);
+  }
+
+  .bg-success {
+    background-color: var(--color-success-text);
+  }
+
+  .bg-warning {
+    background-color: var(--color-warning-text);
+  }
+
+  .bg-error {
+    background-color: var(--color-error-text);
+  }
+
+  /* Card title text - light in dark theme, dark in light theme */
+  .text-card-title {
+    color: #18181b; /* Dark in light theme (zinc-900) */
+  }
+
+  .dark .text-card-title {
+    color: #e4e4e7; /* Light in dark theme (zinc-200) */
+  }
+
+  /* Primary accent utilities */
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .bg-primary-muted {
+    background-color: var(--color-primary-muted);
+  }
+
+  /* Border error utility - REQ-5.2.1.23 */
+  .border-error {
+    border-color: var(--color-error-border);
+  }
+
+  /* Overlay background utility - REQ-5.2.1.23 */
+  .bg-overlay {
+    background-color: var(--color-bg-overlay);
+  }
+
+  /* Canvas background utility - V-CANVAS-01a */
+  .bg-canvas {
+    background-color: var(--color-bg-subtle);
+    background-image: radial-gradient(circle, var(--color-border-default) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Icon size utilities - REQ-5.2.1.23 */
+  .icon-xl {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Button variant utilities - REQ-5.2.1.23 */
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-hover);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-bg-muted);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-text-primary);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .btn-danger {
+    background-color: var(--color-error-text);
+    color: white;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: #b91c1c;
+  }
+
+  /* Button size utilities - REQ-5.2.1.23 */
+  .btn-sm {
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 0.875rem;
+  }
+
+  .btn-md {
+    height: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: 0.875rem;
+  }
+
+  .btn-lg {
+    height: 48px;
+    padding-left: 24px;
+    padding-right: 24px;
+    font-size: 1rem;
+  }
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Keyframe Animations
+   ============================================ */
+@keyframes toast-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/*---break---
+ */
+
+@theme inline {
+  /* Semantic status colors registered for opacity variants (bg-warning/10 etc.) */
+  --color-warning: var(--color-warning-text);
+  --color-error: var(--color-error-text);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/*---break---
+ */
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* Blue primary for emphasized CTAs */
+  --primary: oklch(0.622 0.193 262.35);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*---break---
+ */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ============================================
+   Execution State Animations - V-CANVAS-04 / REQ-3.2.2.16
+   ============================================ */
+@keyframes execution-pulse {
+  0%, 100% {
+    border-opacity: 1;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    border-opacity: 0.5;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  }
+}
+
+.animate-execution-pulse {
+  animation: execution-pulse 2000ms ease-in-out infinite;
+}
+
+/* Validation Alert Icon Pulse - applied to the alert badge ring after the unified modal closes */
+@keyframes validation-icon-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.animate-validation-icon-pulse {
+  animation: validation-icon-pulse 1500ms ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-validation-icon-pulse {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/* ============================================
+   Draggable Sheet - select pulse (reopen / re-select feedback)
+   ============================================ */
+@keyframes sheet-select-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(99, 102, 241, 0);
+  }
+}
+
+.animate-sheet-select-pulse {
+  animation: sheet-select-pulse 750ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-select-pulse {
+    animation: none;
+  }
+}
+
+/* ============================================
+   Watch-mode live build cues
+   Violet = the holder/assistant identity (matches the mirror banner).
+   ============================================ */
+@keyframes mirror-node-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 15px rgba(139, 92, 246, 0);
+  }
+}
+
+.animate-mirror-node-pulse {
+  animation: mirror-node-pulse 600ms ease-out;
+}
+
+@keyframes variable-mirror-pulse {
+  0% {
+    background-color: rgba(139, 92, 246, 0.18);
+  }
+  100% {
+    background-color: rgba(139, 92, 246, 0);
+  }
+}
+
+.animate-variable-mirror-pulse {
+  animation: variable-mirror-pulse 700ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-mirror-node-pulse,
+  .animate-variable-mirror-pulse {
+    animation: none;
+  }
+}
+
+/* ============================================
+   React Flow Controls - Dark Theme Override
+   ============================================ */
+.react-flow-controls-dark {
+  /* Override button background */
+  & button {
+    background-color: #27272a !important; /* zinc-800 */
+    border-color: #3f3f46 !important; /* zinc-700 */
+  }
+
+  & button:hover {
+    background-color: #3f3f46 !important; /* zinc-700 */
+  }
+
+  /* Override SVG fill color for icons */
+  & button svg {
+    fill: #fafafa !important; /* zinc-50 - light icons on dark bg */
+  }
+
+  /* Override the control panel background */
+  &.react-flow__controls {
+    background-color: #18181b; /* zinc-900 */
+    border-color: #3f3f46; /* zinc-700 */
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  }
+}
+
+/* ============================================
+   Console Log Level Styles - V-CANVAS-01d / REQ-3.7.2.6
+   ============================================ */
+.log-level-debug {
+  color: #71717a; /* zinc-500 - muted gray */
+}
+
+.log-level-info {
+  color: #22d3ee; /* cyan-400 */
+}
+
+.log-level-warn {
+  color: #fbbf24; /* amber-400 */
+}
+
+.log-level-error {
+  color: #f87171; /* red-400 */
+}
+
+.log-level-fatal {
+  color: #f87171; /* red-400 */
+  background-color: rgba(248, 113, 113, 0.1); /* red-400 with 10% opacity */
+}
+
+/* Log variant classes - override level colors for special messages */
+.log-variant-success {
+  color: #4ade80; /* green-400 */
+}
+
+.log-variant-error {
+  color: #f87171; /* red-400 */
+}
+
+.log-variant-warning {
+  color: #fbbf24; /* amber-400 */
+}
+
+/* Parent-scope banners (regression/suite start/finish + suite
+   boundaries inside a regression). Color + subtle left accent +
+   slight background wash so the row reads as a scope delimiter
+   rather than an ordinary log line. */
+.log-variant-regression-banner {
+  color: #c084fc; /* violet-400 - outermost scope */
+  font-weight: 600;
+  border-left: 3px solid #c084fc;
+  background-color: rgba(192, 132, 252, 0.08);
+  padding-left: 6px;
+}
+
+.log-variant-suite-banner {
+  color: #60a5fa; /* blue-400 - intermediate scope */
+  font-weight: 600;
+  border-left: 3px solid #60a5fa;
+  background-color: rgba(96, 165, 250, 0.07);
+  padding-left: 6px;
+}
+
+/* Log entry component styles */
+.log-timestamp {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.log-source {
+  opacity: 0.7;
+}
+
+.log-message {
+  flex: 1;
+}
+
+.source-column {
+  width: 20ch;
+  flex-shrink: 0;
+}
+
+.level-badge {
+  width: 5ch;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+/* Console settings row styling */
+.settings-row {
+  padding: 0.25rem 0;
+}
+
+/* ============================================
+   React Flow Selection Box - REQ-4.2.5
+   Rubber-band selection styling and
+   post-selection bounding box suppression
+   ============================================ */
+
+/* Hide the persistent bounding box around selected nodes -
+   we show selection via per-node dashed borders instead.
+   Both the container AND rect need pointer-events: none
+   so right-click falls through to the pane (canvas context menu). */
+.react-flow__nodesselection,
+.react-flow__nodesselection-rect {
+  pointer-events: none !important;
+}
+
+.react-flow__nodesselection-rect {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Rubber-band drag rectangle - subtle, theme-aware */
+.react-flow__selection {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+  border-radius: 4px;
+}
+
+.dark .react-flow__selection {
+  background: rgba(96, 165, 250, 0.06) !important;
+  border: 1px solid rgba(96, 165, 250, 0.25) !important;
+}
+
+/* Workflow nodes: top/bottom resize edges keep the default cursor (no
+   ns-resize affordance). Left/right edges keep their ew-resize cursor.
+   Corner handles likewise drop their diagonal-resize cursor. */
+.react-flow__node-workflowNode .react-flow__resize-control.line.top,
+.react-flow__node-workflowNode .react-flow__resize-control.line.bottom,
+.react-flow__node-workflowNode .react-flow__resize-control.handle {
+  cursor: default !important;
+}
+
+/* Those same inert top/bottom edges straddle the node border where the ingress
+   and egress handles sit, so on a selected node they would swallow the hover
+   and the drag-to-connect over the middle of every handle. */
+.react-flow__node-workflowNode .react-flow__resize-control.line.top,
+.react-flow__node-workflowNode .react-flow__resize-control.line.bottom {
+  pointer-events: none !important;
+}

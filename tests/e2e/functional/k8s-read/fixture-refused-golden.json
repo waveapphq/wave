@@ -1,0 +1,170 @@
+{
+  "name": "V-K8S-CONFIG-REFUSED golden",
+  "version": "1.0.0",
+  "description": "Shape reference for the R8 case table: one read Block per Block type, each missing one conditionally-required parameter.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "refused-g-38",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "G-38 name absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "'kubeconfig-placeholder'",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "refused-e-06",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "K8s Events",
+          "elementType": "k8s-events",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "E-06 object_name absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "'kubeconfig-placeholder'",
+              "scope_to_object": true,
+              "object_type": "default",
+              "object_kind": "Pod"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "refused-l-02",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "K8s Logs",
+          "elementType": "k8s-logs",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "L-02 pod absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "'kubeconfig-placeholder'",
+              "container": "app"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "refused-t-07",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "K8s Top",
+          "elementType": "k8s-top",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "T-07 name absent",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "'kubeconfig-placeholder'",
+              "scope": "pod",
+              "select_by": "name"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-refused-g-38",
+        "source": "start-node",
+        "target": "refused-g-38"
+      },
+      {
+        "id": "edge-refused-g-38-refused-e-06",
+        "source": "refused-g-38",
+        "target": "refused-e-06"
+      },
+      {
+        "id": "edge-refused-e-06-refused-l-02",
+        "source": "refused-e-06",
+        "target": "refused-l-02"
+      },
+      {
+        "id": "edge-refused-l-02-refused-t-07",
+        "source": "refused-l-02",
+        "target": "refused-t-07"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

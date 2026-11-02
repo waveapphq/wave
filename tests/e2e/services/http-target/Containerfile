@@ -1,0 +1,22 @@
+# WAVE E2E internal HTTP(S) target (test-only).
+# Wraps the existing HTTPS simulator (tests/e2e/simulators/https/server.ts)
+# UNMODIFIED and runs it as an internal-only compose service: the tunnel-only
+# destination, the real target Remote-Exec bundles reach from the sshd host, and
+# the cookie/secret canary source. Do NOT edit server.ts here - a parallel HTTP
+# rework worktree owns that file.
+#
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM node:22-slim
+
+RUN npm install -g tsx@4 >/dev/null 2>&1
+
+WORKDIR /app
+# Context is tests/e2e so the unmodified simulator (server.ts + certs) is copied
+# verbatim - same bytes the in-process host-mode simulator serves.
+COPY simulators/https /app/https
+
+ENV HTTPS_SIMULATOR_PORT=9443
+ENV HTTPS_HEALTH_PORT=9444
+EXPOSE 9443 9444
+
+CMD ["tsx", "/app/https/server.ts"]

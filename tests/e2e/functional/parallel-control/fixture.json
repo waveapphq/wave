@@ -1,0 +1,1712 @@
+{
+  "name": "Parallel Control E2E",
+  "version": "1.0.0",
+  "description": "Six chained Parallel sections: wait-for-all with sibling writes readable after the join, cross-branch coordination through a Watch-mode Wait Until, first-to-finish stopping the loser, a nested section, a disabled section, and a per-branch time limit that ends the run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'par-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P1 wait for all",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "alpha"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "beta"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-p1-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P1 alpha write",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "p1_a": "A"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p1-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P1 alpha",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p1-a'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-p1-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 260
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P1 beta write",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "p1_b": "B"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p1-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P1 beta",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p1-b'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-p1-join",
+        "type": "workflowNode",
+        "position": {
+          "x": 860,
+          "y": 260
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P1 read after the join",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "p1_seen"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "p1_seen": "p1_a + p1_b"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p1-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 860,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P1 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p1-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-2",
+        "type": "workflowNode",
+        "position": {
+          "x": 860,
+          "y": 460
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P2 cross-branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "waiter"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "opener"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "wait-p2",
+        "type": "workflowNode",
+        "position": {
+          "x": 660,
+          "y": 580
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P2 watch the gate",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "expression",
+                  "expression": "gate == 'open'",
+                  "id": "wait-p2-cond"
+                }
+              ],
+              "timeout": 8000,
+              "check_interval": 50,
+              "message": "wait-p2 never opened",
+              "mode": "watch",
+              "fail_current_scope": false
+            },
+            "outputBindings": {
+              "passed": "p2_passed",
+              "elapsed": "p2_elapsed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p2-waited",
+        "type": "workflowNode",
+        "position": {
+          "x": 660,
+          "y": 680
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P2 waiter tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p2-waited'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-p2",
+        "type": "workflowNode",
+        "position": {
+          "x": 900,
+          "y": 580
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P2 opener work",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 400
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "vs-p2-open",
+        "type": "workflowNode",
+        "position": {
+          "x": 900,
+          "y": 680
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P2 open the gate",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "gate": "open"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p2-opened",
+        "type": "workflowNode",
+        "position": {
+          "x": 900,
+          "y": 780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P2 opener tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p2-opened'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p2-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 1160,
+          "y": 580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P2 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p2-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-3",
+        "type": "workflowNode",
+        "position": {
+          "x": 1160,
+          "y": 700
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P3 first to finish",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "quick"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "slow"
+                }
+              ],
+              "join": "first"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p3-fast",
+        "type": "workflowNode",
+        "position": {
+          "x": 980,
+          "y": 820
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P3 quick",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p3-fast'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-p3-fast",
+        "type": "workflowNode",
+        "position": {
+          "x": 980,
+          "y": 720
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P3 fast head",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 500
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-p3",
+        "type": "workflowNode",
+        "position": {
+          "x": 1200,
+          "y": 820
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P3 slow body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p3-slow",
+        "type": "workflowNode",
+        "position": {
+          "x": 1200,
+          "y": 920
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P3 slow tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p3-slow'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p3-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 1440,
+          "y": 820
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P3 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p3-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-4",
+        "type": "workflowNode",
+        "position": {
+          "x": 1440,
+          "y": 1020
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P5 outer",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "outer"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "quiet"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-inner",
+        "type": "workflowNode",
+        "position": {
+          "x": 1240,
+          "y": 1140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P5 inner",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "inner-1"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "inner-2"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-i1",
+        "type": "workflowNode",
+        "position": {
+          "x": 1080,
+          "y": 1260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 inner 1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-i1'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-i2",
+        "type": "workflowNode",
+        "position": {
+          "x": 1260,
+          "y": 1260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 inner 2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-i2'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-inner-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 1440,
+          "y": 1260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 inner exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-inner-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-outer-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 1440,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 outer branch tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-outer-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 1680,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 quiet",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-b'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p5-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 1860,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P5 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p5-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-5",
+        "type": "workflowNode",
+        "position": {
+          "x": 1860,
+          "y": 1260
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P6 disabled",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "off-a"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "off-b"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "disabled": true
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p6-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 1700,
+          "y": 1380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P6 branch a",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p6-a'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p6-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 1880,
+          "y": 1380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P6 branch b",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p6-b'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p6-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 2060,
+          "y": 1380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P6 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p6-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-6",
+        "type": "workflowNode",
+        "position": {
+          "x": 2060,
+          "y": 1480
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "P4 per-branch limit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "capped",
+                  "time_limit": 200
+                },
+                {
+                  "id": "branch_2",
+                  "name": "sibling"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-p4a",
+        "type": "workflowNode",
+        "position": {
+          "x": 1900,
+          "y": 1600
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P4 capped body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p4-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 1900,
+          "y": 1700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P4 capped tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p4-a'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-p4b",
+        "type": "workflowNode",
+        "position": {
+          "x": 2120,
+          "y": 1600
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "P4 sibling body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p4-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 2120,
+          "y": 1700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P4 sibling tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p4-b'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-p4-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 2340,
+          "y": 1600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "P4 exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'p4-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 2340,
+          "y": 1700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'par-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "log-before",
+        "type": "default"
+      },
+      {
+        "id": "e-before-p1",
+        "source": "log-before",
+        "target": "par-1",
+        "type": "default"
+      },
+      {
+        "id": "e-p1-b1",
+        "source": "par-1",
+        "target": "vs-p1-a",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p1-a-log",
+        "source": "vs-p1-a",
+        "target": "log-p1-a",
+        "type": "default"
+      },
+      {
+        "id": "e-p1-b2",
+        "source": "par-1",
+        "target": "vs-p1-b",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p1-b-log",
+        "source": "vs-p1-b",
+        "target": "log-p1-b",
+        "type": "default"
+      },
+      {
+        "id": "e-p1-then",
+        "source": "par-1",
+        "target": "vs-p1-join",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p1-join-log",
+        "source": "vs-p1-join",
+        "target": "log-p1-then",
+        "type": "default"
+      },
+      {
+        "id": "e-p1-p2",
+        "source": "log-p1-then",
+        "target": "par-2",
+        "type": "default"
+      },
+      {
+        "id": "e-p2-b1",
+        "source": "par-2",
+        "target": "wait-p2",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p2-wait-log",
+        "source": "wait-p2",
+        "target": "log-p2-waited",
+        "type": "default"
+      },
+      {
+        "id": "e-p2-b2",
+        "source": "par-2",
+        "target": "delay-p2",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p2-delay-set",
+        "source": "delay-p2",
+        "target": "vs-p2-open",
+        "type": "default"
+      },
+      {
+        "id": "e-p2-set-log",
+        "source": "vs-p2-open",
+        "target": "log-p2-opened",
+        "type": "default"
+      },
+      {
+        "id": "e-p2-then",
+        "source": "par-2",
+        "target": "log-p2-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p2-p3",
+        "source": "log-p2-then",
+        "target": "par-3",
+        "type": "default"
+      },
+      {
+        "id": "e-p3-b1",
+        "source": "par-3",
+        "target": "delay-p3-fast",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p3-fast-head",
+        "source": "delay-p3-fast",
+        "target": "log-p3-fast",
+        "type": "default"
+      },
+      {
+        "id": "e-p3-b2",
+        "source": "par-3",
+        "target": "delay-p3",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p3-slow-tail",
+        "source": "delay-p3",
+        "target": "log-p3-slow",
+        "type": "default"
+      },
+      {
+        "id": "e-p3-then",
+        "source": "par-3",
+        "target": "log-p3-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p3-p5",
+        "source": "log-p3-then",
+        "target": "par-4",
+        "type": "default"
+      },
+      {
+        "id": "e-p5-b1",
+        "source": "par-4",
+        "target": "par-inner",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p5-i1",
+        "source": "par-inner",
+        "target": "log-p5-i1",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p5-i2",
+        "source": "par-inner",
+        "target": "log-p5-i2",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p5-i-then",
+        "source": "par-inner",
+        "target": "log-p5-inner-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p5-i-after",
+        "source": "log-p5-inner-then",
+        "target": "log-p5-outer-after",
+        "type": "default"
+      },
+      {
+        "id": "e-p5-b2",
+        "source": "par-4",
+        "target": "log-p5-b",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p5-then",
+        "source": "par-4",
+        "target": "log-p5-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p5-p6",
+        "source": "log-p5-then",
+        "target": "par-5",
+        "type": "default"
+      },
+      {
+        "id": "e-p6-b1",
+        "source": "par-5",
+        "target": "log-p6-a",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p6-b2",
+        "source": "par-5",
+        "target": "log-p6-b",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p6-then",
+        "source": "par-5",
+        "target": "log-p6-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p6-p4",
+        "source": "log-p6-then",
+        "target": "par-6",
+        "type": "default"
+      },
+      {
+        "id": "e-p4-b1",
+        "source": "par-6",
+        "target": "delay-p4a",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-p4-a-tail",
+        "source": "delay-p4a",
+        "target": "log-p4-a",
+        "type": "default"
+      },
+      {
+        "id": "e-p4-b2",
+        "source": "par-6",
+        "target": "delay-p4b",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-p4-b-tail",
+        "source": "delay-p4b",
+        "target": "log-p4-b",
+        "type": "default"
+      },
+      {
+        "id": "e-p4-then",
+        "source": "par-6",
+        "target": "log-p4-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-p4-after",
+        "source": "log-p4-then",
+        "target": "log-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "p1_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "p1_b": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "p1_seen": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "gate": {
+      "value": "shut",
+      "type": "string",
+      "scope": "test"
+    },
+    "p2_passed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p2_elapsed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-08-03T00:00:00.000000",
+  "updated_at": "2026-08-03T00:00:00.000000"
+}

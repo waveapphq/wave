@@ -1,0 +1,1108 @@
+{
+  "name": "SSH Session Script E2E Execution Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open session to the main real host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "s_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-open",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log session opened",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'session opened connected={s_conn}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-sh",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "sh: real arithmetic",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "echo $((6*7))",
+              "interpreter": "/bin/sh",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_sh",
+              "exit_code": "code_sh"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sh",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log sh result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT sh out={out_sh.strip()} code={code_sh}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-bash",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "bash: arithmetic guarded by $BASH_VERSION",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "[ -n \"$BASH_VERSION\" ] && echo \"$((6*7))-bash\"",
+              "interpreter": "bash",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_bash",
+              "exit_code": "code_bash"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-bash",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log bash result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT bash out={out_bash.strip()} code={code_bash}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-py",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "python3: real print",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "print(6*7)",
+              "interpreter": "python3",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_py",
+              "exit_code": "code_py"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-py",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log python3 result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT py out={out_py.strip()} code={code_py}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-perl",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "perl: real print",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "print 6*7",
+              "interpreter": "perl",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_perl",
+              "exit_code": "code_perl"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-perl",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log perl result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT perl out={out_perl.strip()} code={code_perl}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-node",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "node: real console.log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "console.log(6*7)",
+              "interpreter": "node",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_node",
+              "exit_code": "code_node"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-node",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log node result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT node out={out_node.strip()} code={code_node}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-missing",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "missing interpreter returns the shell's 127",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "echo x",
+              "interpreter": "wave-missing-interp",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "exit_code": "code_missing"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-missing",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log missing-interpreter code",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT missing code={code_missing}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-exit",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "non-zero exit propagates (returned, not raised)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "exit 9",
+              "interpreter": "/bin/sh",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "exit_code": "code_exit"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-exit",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log non-zero exit code",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT exit code={code_exit}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-wd-make",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make the working_dir folder under the remote home",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "d=\"$HOME/wave-e2e-sss-__TOKEN__\"; mkdir -p \"$d\" && printf '%s' \"$d\"",
+              "interpreter": "/bin/sh",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "wd_made"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-wd",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1290
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "working_dir honored",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "working_dir"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "pwd",
+              "interpreter": "/bin/sh",
+              "working_dir": "wd_made",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "out_wd"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-wd",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log working_dir pwd",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'RESULT wd out={out_wd.strip()} made={wd_made}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-wd-clean",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1430
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Remove the working_dir folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "rm -rf \"$HOME/wave-e2e-sss-__TOKEN__\"",
+              "interpreter": "/bin/sh",
+              "timeout": 30
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1500
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the timing-out script",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "timeout_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "script-timeout",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1570
+        },
+        "data": {
+          "label": "SSH Session Script",
+          "elementType": "ssh-session-script",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "sleep past the 2s timeout (must raise)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "script": "sleep 30",
+              "interpreter": "/bin/sh",
+              "timeout": 2
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-timeout-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1640
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the caught timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'timeout-caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-timeout-err",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1710
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the bound timeout error",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'timeout-err err={timeout_err}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ssh-script-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-node-open-session",
+        "source": "start-node",
+        "target": "open-session"
+      },
+      {
+        "id": "edge-open-session-log-open",
+        "source": "open-session",
+        "target": "log-open"
+      },
+      {
+        "id": "edge-log-open-script-sh",
+        "source": "log-open",
+        "target": "script-sh"
+      },
+      {
+        "id": "edge-script-sh-log-sh",
+        "source": "script-sh",
+        "target": "log-sh"
+      },
+      {
+        "id": "edge-log-sh-script-bash",
+        "source": "log-sh",
+        "target": "script-bash"
+      },
+      {
+        "id": "edge-script-bash-log-bash",
+        "source": "script-bash",
+        "target": "log-bash"
+      },
+      {
+        "id": "edge-log-bash-script-py",
+        "source": "log-bash",
+        "target": "script-py"
+      },
+      {
+        "id": "edge-script-py-log-py",
+        "source": "script-py",
+        "target": "log-py"
+      },
+      {
+        "id": "edge-log-py-script-perl",
+        "source": "log-py",
+        "target": "script-perl"
+      },
+      {
+        "id": "edge-script-perl-log-perl",
+        "source": "script-perl",
+        "target": "log-perl"
+      },
+      {
+        "id": "edge-log-perl-script-node",
+        "source": "log-perl",
+        "target": "script-node"
+      },
+      {
+        "id": "edge-script-node-log-node",
+        "source": "script-node",
+        "target": "log-node"
+      },
+      {
+        "id": "edge-log-node-script-missing",
+        "source": "log-node",
+        "target": "script-missing"
+      },
+      {
+        "id": "edge-script-missing-log-missing",
+        "source": "script-missing",
+        "target": "log-missing"
+      },
+      {
+        "id": "edge-log-missing-script-exit",
+        "source": "log-missing",
+        "target": "script-exit"
+      },
+      {
+        "id": "edge-script-exit-log-exit",
+        "source": "script-exit",
+        "target": "log-exit"
+      },
+      {
+        "id": "edge-log-exit-script-wd-make",
+        "source": "log-exit",
+        "target": "script-wd-make"
+      },
+      {
+        "id": "edge-script-wd-make-script-wd",
+        "source": "script-wd-make",
+        "target": "script-wd"
+      },
+      {
+        "id": "edge-script-wd-log-wd",
+        "source": "script-wd",
+        "target": "log-wd"
+      },
+      {
+        "id": "edge-log-wd-script-wd-clean",
+        "source": "log-wd",
+        "target": "script-wd-clean"
+      },
+      {
+        "id": "edge-script-wd-clean-tc-timeout",
+        "source": "script-wd-clean",
+        "target": "tc-timeout"
+      },
+      {
+        "id": "edge-tc-timeout-try",
+        "source": "tc-timeout",
+        "target": "script-timeout",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-timeout-catch",
+        "source": "tc-timeout",
+        "target": "log-timeout-caught",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-timeout-then",
+        "source": "tc-timeout",
+        "target": "log-timeout-err",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-timeout-err-log-done",
+        "source": "log-timeout-err",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "s_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "out_sh": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_sh": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_bash": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_bash": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_py": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_py": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_perl": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_perl": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "out_node": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "code_node": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "code_missing": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "code_exit": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "wd_made": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "out_wd": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "timeout_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

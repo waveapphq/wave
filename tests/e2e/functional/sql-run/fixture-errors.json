@@ -1,0 +1,1893 @@
+{
+  "name": "V-PLUGIN-SQL-RUN-ERRORS",
+  "version": "1.0.0",
+  "description": "SQL block failure paths against the real PostgreSQL, Oracle and SQL Server: Stop on error off with some and with every statement failing, Stop on error on failing and recorded, an undefined :name recorded and failing, Max rows reached, Unreachable, AuthFailed, Timeout with the statement canceled on the database, the session-state warning, and a script that holds its own BEGIN / ROLLBACK and BEGIN / COMMIT.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "197c5a36-22d9-5287-b1ba-d4ff4569f7f0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Failure paths, then drop the table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "run_error",
+              "caught": "run_caught"
+            },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "5a2cddb5-23d3-567b-8502-0a856c2e5f21",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Create the table",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Create the table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "CREATE TABLE e2e_sqlerr___TOKEN__ (id integer PRIMARY KEY, note text)",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c42a3a05-7ce8-5077-ba51-754c09948a3a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Stop off some fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Stop off some fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (1, 'first');\nINSERT INTO e2e_sqlerr___TOKEN___missing (id) VALUES (2);\nINSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (3, 'after the failure');\nSELECT id, note FROM e2e_sqlerr___TOKEN__ ORDER BY id;\nSELECT id FROM e2e_sqlerr___TOKEN___missing\n",
+              "stop_on_error": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "so_ok",
+              "rows": "so_rows",
+              "row_count": "so_count",
+              "rows_changed": "so_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ee8e3fe1-8986-55c8-ad08-d28e65e65266",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof stop off",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-stop-off ok={so_ok} count={so_count} changed={so_changed} ids={','.join(str(r['id']) for r in so_rows)} last-note={so_rows[-1]['note']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8d0ceb0d-e86e-52cd-b45b-49e8fc592116",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 430
+        },
+        "data": {
+          "label": "Stop off all fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Stop off all fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id FROM e2e_sqlerr___TOKEN___missing;\nDELETE FROM e2e_sqlerr___TOKEN___missing\n",
+              "stop_on_error": false,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "af_ok",
+              "rows": "af_rows",
+              "row_count": "af_count",
+              "rows_changed": "af_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7d29d946-42be-539a-b22a-dd4743db44fd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof all failed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-all-failed ok={af_ok} count={af_count} changed={af_changed} rows={len(af_rows)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a8eee582-f80b-5d76-8c9b-dfeaf344367e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 610
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Stop on error caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "stop_error",
+              "caught": "stop_caught"
+            },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "df8c91b9-230b-5b4d-be63-b6d5aa71813d",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 710
+        },
+        "data": {
+          "label": "Stop on error fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Stop on error fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (4, 'before the stop');\nUPDATE e2e_sqlerr___TOKEN___missing SET id = 0;\nINSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (5, 'never sent')\n",
+              "stop_on_error": true,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "29442bdf-3d3d-52d3-97c7-b5cce0caf506",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 710
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stop caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-stop-caught {stop_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "67d326fc-1017-5e58-84b7-fe63629f83e0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "Oracle stop on error recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle stop on error recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual;\nSELECT id FROM e2e_sqlerr___TOKEN___missing;\nSELECT 2 AS two FROM dual\n",
+              "stop_on_error": true,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ora_ok",
+              "rows": "ora_rows",
+              "row_count": "ora_count",
+              "error": "ora_error",
+              "reason": "ora_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "81001c4d-b885-5c9e-8dc0-4ee21f7df51b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 950
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof oracle",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-oracle ok={ora_ok} reason={ora_reason} count={ora_count} rows={len(ora_rows)} code={ora_error.split(':')[0]}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0fbbe607-09b8-57af-865c-98fdd5a040ef",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1040
+        },
+        "data": {
+          "label": "Undefined name recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Undefined name recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (6, :known);\nSELECT id FROM e2e_sqlerr___TOKEN__ WHERE note = :unknown_note\n",
+              "parameters": {
+                "known": "validation record"
+              },
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "vr_ok",
+              "row_count": "vr_count",
+              "rows_changed": "vr_changed",
+              "error": "vr_error",
+              "reason": "vr_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8a728efd-f390-5e9e-b8e9-9b76eb962202",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1130
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof undefined recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-undefined-recorded ok={vr_ok} reason={vr_reason} count={vr_count} changed={vr_changed} error={vr_error}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d0015ec4-7df8-574d-804b-7c57508bbaca",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1220
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Undefined name caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "undef_error",
+              "caught": "undef_caught"
+            },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "b00c4ee8-9086-5f36-8759-49b9f37f9521",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 1320
+        },
+        "data": {
+          "label": "Undefined name fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Undefined name fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "INSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (7, 'validation fail');\nSELECT id FROM e2e_sqlerr___TOKEN__ WHERE id = :unknown_id\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "905fe555-c01d-50c0-bed3-f49093f84b9f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Undefined caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-undefined-caught {undef_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3859bf3b-3fa0-549b-b03e-0ae2196164e6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1470
+        },
+        "data": {
+          "label": "Max rows reached",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Max rows reached",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT n FROM generate_series(1, 9) AS n ORDER BY n\n",
+              "max_rows": 4,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "mr_ok",
+              "rows": "mr_rows",
+              "row_count": "mr_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "077742d8-a342-5937-9eb5-21cb5ff289c2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof max rows",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-max-rows ok={mr_ok} count={mr_count} values={','.join(str(r['n']) for r in mr_rows)}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a8273f57-cfb2-5c90-8bc9-16999aa73923",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1650
+        },
+        "data": {
+          "label": "Unreachable recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Unreachable recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "localhost",
+              "port": 9479,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one\n",
+              "connect_timeout": 5,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "un_ok",
+              "error": "un_error",
+              "reason": "un_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "573ea62d-7a93-5bdc-b865-228b5e397c90",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1740
+        },
+        "data": {
+          "label": "AuthFailed recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "AuthFailed recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "not-the-password",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one\n",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "au_ok",
+              "error": "au_error",
+              "reason": "au_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "172fe563-85a7-5725-b6f8-4d91d784fb2d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1830
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof connection failures",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-connect unreachable-ok={un_ok} unreachable-reason={un_reason} auth-ok={au_ok} auth-reason={au_reason}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b38b75ff-9f9b-532a-bb83-76f0cdbeaf4c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1920
+        },
+        "data": {
+          "label": "Timeout recorded",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Timeout recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT pg_sleep(60) AS e2e_sqlerr___TOKEN___sleep\n",
+              "timeout": 3,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "to_ok",
+              "error": "to_error",
+              "reason": "to_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e98e571b-7eb1-55e7-a89a-e787313d7aee",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2010
+        },
+        "data": {
+          "label": "Sleep gone from the database",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Sleep gone from the database",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS running FROM pg_stat_activity\nWHERE state = 'active' AND position(:marker IN query) > 0 AND pid <> pg_backend_pid()\n",
+              "parameters": {
+                "marker": "e2e_sqlerr___TOKEN___sleep"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "act_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0bd47ea4-dbc9-5ef2-9999-3862111177bd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2100
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-timeout ok={to_ok} reason={to_reason} error={to_error} still-running={act_rows[0]['running']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e22d6059-3d8b-5cae-8e2c-de4702849ba0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2190
+        },
+        "data": {
+          "label": "Session state last",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Session state last",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one;\nSET search_path TO public\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6464a5e4-74e2-5cff-80c0-dcae00460238",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2280
+        },
+        "data": {
+          "label": "Session state first",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Session state first",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SET search_path TO public;\nSELECT current_schema() AS schema_name\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ss_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "42f658ff-9aeb-5870-8093-dba99aaf0a21",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2370
+        },
+        "data": {
+          "label": "Oracle session state last",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle session state last",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual;\nALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "06f72471-04cf-5e41-a415-43e4c12119fe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2460
+        },
+        "data": {
+          "label": "SQL Server batch ends on SET",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server batch ends on SET",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one;\nSET NOCOUNT ON\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ab5e2b11-341e-5f64-b277-b44b2bf4a23a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2550
+        },
+        "data": {
+          "label": "SQL Server SET before GO",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server SET before GO",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SET NOCOUNT ON\nGO\nSELECT 1 AS one\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ms_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8b564099-c58e-5009-a2bb-96c888bdd759",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2640
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof session state",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-session-state schema={ss_rows[0]['schema_name']} mssql-one={ms_rows[0]['one']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "51eb994f-60d4-4763-bcf0-93e830850955",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2730
+        },
+        "data": {
+          "label": "Script transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Script transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "BEGIN;\nINSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (8, 'rolled back');\nROLLBACK;\nBEGIN;\nINSERT INTO e2e_sqlerr___TOKEN__ (id, note) VALUES (9, 'committed');\nCOMMIT;\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "tx_ok",
+              "rows_changed": "tx_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c8be6044-7d53-444b-84d9-e3504974f030",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2820
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof script transaction",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-script-tx ok={tx_ok} changed={tx_changed}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9de5062f-af4c-5bfb-b4e6-fd4278580778",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2910
+        },
+        "data": {
+          "label": "Read back the ids",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Read back the ids",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT id FROM e2e_sqlerr___TOKEN__ ORDER BY id\n",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ids_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c0176f58-2a6b-5377-af5d-00fc9a38eb62",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 160
+        },
+        "data": {
+          "label": "Drop the table",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Drop the table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS e2e_sqlerr___TOKEN__\n",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "drop_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d331b807-6594-5742-a226-92d9c854b82f",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 250
+        },
+        "data": {
+          "label": "Table is gone",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Table is gone",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS left_over FROM information_schema.tables WHERE table_name = :table_name\n",
+              "parameters": {
+                "table_name": "e2e_sqlerr___TOKEN__"
+              },
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "rows": "left_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "747991a8-ea25-5e57-a85f-d5adb0e0b778",
+        "type": "workflowNode",
+        "position": {
+          "x": 750,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof read back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlerr-read-back ids={','.join(str(r['id']) for r in ids_rows)} drop-ok={drop_ok} left-over={left_rows[0]['left_over']} caught={run_caught}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c21b34a4-ca08-5387-bf31-736cfec32abc",
+        "type": "workflowNode",
+        "position": {
+          "x": 1100,
+          "y": 60
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlerr-run-errors-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "bd0b6bab-163c-504f-ae06-773bf1882327",
+        "source": "start-node",
+        "target": "197c5a36-22d9-5287-b1ba-d4ff4569f7f0",
+        "type": "default"
+      },
+      {
+        "id": "689bd68c-7c62-5412-8cf8-2b08851e26dd",
+        "source": "197c5a36-22d9-5287-b1ba-d4ff4569f7f0",
+        "target": "5a2cddb5-23d3-567b-8502-0a856c2e5f21",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "3deb9c2a-93ce-52ca-8259-6235c58ee2e3",
+        "source": "5a2cddb5-23d3-567b-8502-0a856c2e5f21",
+        "target": "c42a3a05-7ce8-5077-ba51-754c09948a3a",
+        "type": "default"
+      },
+      {
+        "id": "3de65a7a-d873-5ac0-b1e4-711faf50cbc6",
+        "source": "c42a3a05-7ce8-5077-ba51-754c09948a3a",
+        "target": "ee8e3fe1-8986-55c8-ad08-d28e65e65266",
+        "type": "default"
+      },
+      {
+        "id": "98520d23-9847-548c-b6ac-5b74ef34c32b",
+        "source": "ee8e3fe1-8986-55c8-ad08-d28e65e65266",
+        "target": "8d0ceb0d-e86e-52cd-b45b-49e8fc592116",
+        "type": "default"
+      },
+      {
+        "id": "a8f638f0-2869-5398-823a-a67d341121d6",
+        "source": "8d0ceb0d-e86e-52cd-b45b-49e8fc592116",
+        "target": "7d29d946-42be-539a-b22a-dd4743db44fd",
+        "type": "default"
+      },
+      {
+        "id": "97842f9a-32b2-57a0-a825-9f1c4cd348b8",
+        "source": "7d29d946-42be-539a-b22a-dd4743db44fd",
+        "target": "a8eee582-f80b-5d76-8c9b-dfeaf344367e",
+        "type": "default"
+      },
+      {
+        "id": "d7678ba5-9ff5-5c28-8306-862ab1cabedf",
+        "source": "a8eee582-f80b-5d76-8c9b-dfeaf344367e",
+        "target": "df8c91b9-230b-5b4d-be63-b6d5aa71813d",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "a57b4688-9420-55d2-8533-a36bbb937612",
+        "source": "a8eee582-f80b-5d76-8c9b-dfeaf344367e",
+        "target": "29442bdf-3d3d-52d3-97c7-b5cce0caf506",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "07a99d84-46d2-581a-b556-68424f7d35db",
+        "source": "a8eee582-f80b-5d76-8c9b-dfeaf344367e",
+        "target": "67d326fc-1017-5e58-84b7-fe63629f83e0",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "21e7283e-da71-56cc-a71d-b368c290734f",
+        "source": "67d326fc-1017-5e58-84b7-fe63629f83e0",
+        "target": "81001c4d-b885-5c9e-8dc0-4ee21f7df51b",
+        "type": "default"
+      },
+      {
+        "id": "c3123e68-781e-5f3e-ba29-54b1cc5ee735",
+        "source": "81001c4d-b885-5c9e-8dc0-4ee21f7df51b",
+        "target": "0fbbe607-09b8-57af-865c-98fdd5a040ef",
+        "type": "default"
+      },
+      {
+        "id": "01eed98f-90f7-528b-a48d-a21bb5e76003",
+        "source": "0fbbe607-09b8-57af-865c-98fdd5a040ef",
+        "target": "8a728efd-f390-5e9e-b8e9-9b76eb962202",
+        "type": "default"
+      },
+      {
+        "id": "f3533fa2-6f62-5ac5-82d5-57572f75c768",
+        "source": "8a728efd-f390-5e9e-b8e9-9b76eb962202",
+        "target": "d0015ec4-7df8-574d-804b-7c57508bbaca",
+        "type": "default"
+      },
+      {
+        "id": "98172ab0-2c21-5f7c-8a57-5b12c4b75654",
+        "source": "d0015ec4-7df8-574d-804b-7c57508bbaca",
+        "target": "b00c4ee8-9086-5f36-8759-49b9f37f9521",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "f8dd1948-f685-55b0-a79c-d973f4d969f9",
+        "source": "d0015ec4-7df8-574d-804b-7c57508bbaca",
+        "target": "905fe555-c01d-50c0-bed3-f49093f84b9f",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "680b1880-bb20-5ef4-b312-f3e50e2136e0",
+        "source": "d0015ec4-7df8-574d-804b-7c57508bbaca",
+        "target": "3859bf3b-3fa0-549b-b03e-0ae2196164e6",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "2e6c543d-c3f3-5202-b5bc-6062474dcc70",
+        "source": "3859bf3b-3fa0-549b-b03e-0ae2196164e6",
+        "target": "077742d8-a342-5937-9eb5-21cb5ff289c2",
+        "type": "default"
+      },
+      {
+        "id": "2142ab49-fa79-5972-9268-176b05d07c82",
+        "source": "077742d8-a342-5937-9eb5-21cb5ff289c2",
+        "target": "a8273f57-cfb2-5c90-8bc9-16999aa73923",
+        "type": "default"
+      },
+      {
+        "id": "37dd1b4d-86e2-55d3-b049-148adb537c5f",
+        "source": "a8273f57-cfb2-5c90-8bc9-16999aa73923",
+        "target": "573ea62d-7a93-5bdc-b865-228b5e397c90",
+        "type": "default"
+      },
+      {
+        "id": "23d3e4e9-b6bd-5dff-b705-cd9f26a8487e",
+        "source": "573ea62d-7a93-5bdc-b865-228b5e397c90",
+        "target": "172fe563-85a7-5725-b6f8-4d91d784fb2d",
+        "type": "default"
+      },
+      {
+        "id": "d7899d6d-56c7-534d-883f-f8f4b8170507",
+        "source": "172fe563-85a7-5725-b6f8-4d91d784fb2d",
+        "target": "b38b75ff-9f9b-532a-bb83-76f0cdbeaf4c",
+        "type": "default"
+      },
+      {
+        "id": "0877aa6d-6cf4-5066-a156-64dafecd489e",
+        "source": "b38b75ff-9f9b-532a-bb83-76f0cdbeaf4c",
+        "target": "e98e571b-7eb1-55e7-a89a-e787313d7aee",
+        "type": "default"
+      },
+      {
+        "id": "679ce9af-bd64-5530-997e-0716b7ef0041",
+        "source": "e98e571b-7eb1-55e7-a89a-e787313d7aee",
+        "target": "0bd47ea4-dbc9-5ef2-9999-3862111177bd",
+        "type": "default"
+      },
+      {
+        "id": "4f2282ac-c4d9-5b21-9972-be75464b4239",
+        "source": "0bd47ea4-dbc9-5ef2-9999-3862111177bd",
+        "target": "e22d6059-3d8b-5cae-8e2c-de4702849ba0",
+        "type": "default"
+      },
+      {
+        "id": "b16b6423-165a-5f11-a6ed-adb4f431e191",
+        "source": "e22d6059-3d8b-5cae-8e2c-de4702849ba0",
+        "target": "6464a5e4-74e2-5cff-80c0-dcae00460238",
+        "type": "default"
+      },
+      {
+        "id": "ce1e6d82-c288-5be3-8e14-30dd16dc0dcb",
+        "source": "6464a5e4-74e2-5cff-80c0-dcae00460238",
+        "target": "42f658ff-9aeb-5870-8093-dba99aaf0a21",
+        "type": "default"
+      },
+      {
+        "id": "9be0fb02-ae63-5a8c-8dbd-ef5086cca284",
+        "source": "42f658ff-9aeb-5870-8093-dba99aaf0a21",
+        "target": "06f72471-04cf-5e41-a415-43e4c12119fe",
+        "type": "default"
+      },
+      {
+        "id": "a94513a5-fc8b-51bd-8d99-c046fe072a61",
+        "source": "06f72471-04cf-5e41-a415-43e4c12119fe",
+        "target": "ab5e2b11-341e-5f64-b277-b44b2bf4a23a",
+        "type": "default"
+      },
+      {
+        "id": "492579d0-9a00-53ae-8cb2-c5fa5e61caea",
+        "source": "ab5e2b11-341e-5f64-b277-b44b2bf4a23a",
+        "target": "8b564099-c58e-5009-a2bb-96c888bdd759",
+        "type": "default"
+      },
+      {
+        "id": "738aee43-033d-58b3-840f-46ea5228a896",
+        "source": "8b564099-c58e-5009-a2bb-96c888bdd759",
+        "target": "51eb994f-60d4-4763-bcf0-93e830850955",
+        "type": "default"
+      },
+      {
+        "id": "adfc3802-0731-4d10-b979-b6fc390c8910",
+        "source": "51eb994f-60d4-4763-bcf0-93e830850955",
+        "target": "c8be6044-7d53-444b-84d9-e3504974f030",
+        "type": "default"
+      },
+      {
+        "id": "c3ae7b14-0eef-4483-9713-8423b9306d41",
+        "source": "c8be6044-7d53-444b-84d9-e3504974f030",
+        "target": "9de5062f-af4c-5bfb-b4e6-fd4278580778",
+        "type": "default"
+      },
+      {
+        "id": "ae869672-eb36-57f0-8b5e-1fa30120397d",
+        "source": "197c5a36-22d9-5287-b1ba-d4ff4569f7f0",
+        "target": "c0176f58-2a6b-5377-af5d-00fc9a38eb62",
+        "type": "default",
+        "sourceHandle": "finally"
+      },
+      {
+        "id": "0db7d9fa-d341-5eff-9123-06913618126b",
+        "source": "c0176f58-2a6b-5377-af5d-00fc9a38eb62",
+        "target": "d331b807-6594-5742-a226-92d9c854b82f",
+        "type": "default"
+      },
+      {
+        "id": "aa9d4c9e-b486-5715-94c6-69004d5e6632",
+        "source": "d331b807-6594-5742-a226-92d9c854b82f",
+        "target": "747991a8-ea25-5e57-a85f-d5adb0e0b778",
+        "type": "default"
+      },
+      {
+        "id": "25a35393-1410-5878-ad05-3816f79cf1c0",
+        "source": "197c5a36-22d9-5287-b1ba-d4ff4569f7f0",
+        "target": "c21b34a4-ca08-5387-bf31-736cfec32abc",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "run_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "run_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "so_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "so_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "so_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "so_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "af_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "af_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "af_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "af_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "stop_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "stop_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ora_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ora_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ora_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "vr_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "vr_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "vr_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "vr_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "vr_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "undef_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "undef_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mr_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mr_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "mr_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "un_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "un_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "un_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "au_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "au_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "au_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "to_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "to_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "to_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "act_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ss_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "tx_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tx_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ids_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "left_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

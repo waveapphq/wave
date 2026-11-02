@@ -1,0 +1,221 @@
+{
+  "name": "Test Data Travel E2E Test",
+  "version": "1.0.0",
+  "description": "Reads a root and a nested test data file through testdata:// and logs both, so an export/import or backup/restore round trip is proved by the run and not by a listing",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-read-root",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Root Test Data File",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://travel-root.txt"
+            },
+            "outputBindings": {
+              "content": "root_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fileio-read-nested",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Nested Test Data File",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "testdata://fixtures/travel-nested.json"
+            },
+            "outputBindings": {
+              "content": "nested_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-root",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Root Test Data Content",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "root_text",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-nested",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Nested Test Data Content",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "nested_text",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-travel-bookend",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 550
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Travel Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'testdata-travel-complete'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "fileio-read-root",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "fileio-read-root",
+        "target": "fileio-read-nested",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "fileio-read-nested",
+        "target": "log-root",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-root",
+        "target": "log-nested",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-nested",
+        "target": "log-travel-bookend",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "root_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "nested_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-09-07T00:00:00.000000",
+  "updated_at": "2026-09-07T00:00:00.000000"
+}

@@ -1,0 +1,96 @@
+{
+  "name": "VarSetter Overrides Expression Variable Regression",
+  "version": "1.0.0",
+  "description": "Regression fixture for the lazy-realization race: an expression variable `s1` (source \"123\", evaluates to the string 123) is overwritten by a Variable Setter to the literal \"new value!\". A Delay holds the run open so any deferred realization push has time to land, and a downstream Log reads `s1`. Before the fix the setter read `s1` to branch on its shape, realizing the pending expression and firing a deferred variable_changed push of the OLD value 123 that raced and clobbered the setter's overwrite push, so the watched Current value reverted to 123. The fix supersedes the pending expression via a direct write WITHOUT realizing it.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-s1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Override Expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "s1": "new value!"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Hold Run Open",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 1000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-s1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log S1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'final=' + s1", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-s1", "type": "default" },
+      { "id": "e2", "source": "varset-s1", "target": "delay-hold", "type": "default" },
+      { "id": "e3", "source": "delay-hold", "target": "log-s1", "type": "default" }
+    ]
+  },
+  "variables": {
+    "s1": {
+      "value": "\"123\"",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-13T00:00:00.000000",
+  "updated_at": "2026-06-13T00:00:00.000000"
+}

@@ -1,0 +1,62 @@
+name: Docs check
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  docs-check:
+    name: Docs check
+    # A release branch of this repo goes into master with no docs branch of its own.
+    if: >-
+      github.repository == 'waveapphq/wave' &&
+      !(startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            const body = (pr.body ?? '').replace(/<!--[\s\S]*?-->/g, '')
+            if (/^\s*[-*]\s*\[x\]\s*No docs change needed/im.test(body)) return
+            let reason = 'Its description ticks no box and links no docs pull request.'
+            const links = body.matchAll(/https:\/\/github\.com\/waveapphq\/wave-docs\/pull\/(\d+)\b/gi)
+            const numbers = [...new Set([...links].map((m) => Number(m[1])))].slice(0, 20)
+            for (const pull_number of numbers) {
+              try {
+                const { data } = await github.rest.pulls.get({ owner: 'waveapphq', repo: 'wave-docs', pull_number })
+                if (data.head.ref !== pr.head.ref) {
+                  reason = `Docs pull request ${pull_number} is on the branch ${data.head.ref}, not ${pr.head.ref}.`
+                } else if (data.state === 'open') {
+                  reason = `Docs pull request ${pull_number} is not merged yet. Merge it, then re-run this check.`
+                } else if (!data.merged_at) {
+                  reason = `Docs pull request ${pull_number} was closed without a merge.`
+                } else {
+                  return
+                }
+              } catch (error) {
+                if (error.status !== 404) throw error
+                reason = `Docs pull request ${pull_number} was not found.`
+              }
+            }
+            const rule =
+              'Each pull request must tick "No docs change needed", or link a merged pull request in waveapphq/wave-docs on a branch with the same name, as "Send a change" in CONTRIBUTING.md says.'
+            const marker = '<!-- docs-check -->'
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: pr.number,
+              per_page: 100,
+            })
+            if (!comments.some((c) => c.body.includes(marker))) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: pr.number,
+                body: `${marker}\n${rule}\n\n${reason}`,
+              })
+            }
+            core.setFailed(`${rule} ${reason}`)

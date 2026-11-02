@@ -1,0 +1,312 @@
+{
+  "name": "Excel Parser - Loop over the rows a workbook was read into",
+  "version": "1.0.0",
+  "description": "A table written to a workbook and read back feeds a For Each bound from the variable picker; each iteration logs the row, stores it through a Variable Setter, and writes its own sheet into a second workbook, which the then-path reads back to prove the sheets accumulated.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-src",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sku,qty\nA-1,3\nB-2,7\nC-3,5\n"
+            },
+            "outputBindings": { "table": "src" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-rows",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://loop-source.xlsx",
+              "sheet": "Rows",
+              "table": "src",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-rows",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://loop-source.xlsx",
+              "sheet": "Rows",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": { "table": "rows_table" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "foreach-rows",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Excel Rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "rows_table" },
+            "outputBindings": { "item": "row_item", "index": "row_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-row",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Row",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-loop-row-' + str(row_item['value']['sku']) + '-' + str(row_item['value']['qty']) + '-at-' + str(row_idx)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "body-store-row",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 620 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Store Row",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["seen_sku", "stored_rows"],
+          "variableTypes": { "seen_sku": "string", "stored_rows": "table" },
+          "config": {
+            "values": {
+              "variables": {
+                "seen_sku": "row_item['value']['sku']",
+                "stored_rows": "rows_table"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "body-write-sheet",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 720 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Sheet Per Row",
+          "hasNewerVersion": false,
+          "expressionFields": ["sheet"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://loop-sheets.xlsx",
+              "sheet": "'S' + str(row_idx)",
+              "table": "rows_table",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "keep_sheets"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-accumulated",
+        "type": "workflowNode",
+        "position": { "x": 640, "y": 520 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Accumulated",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://loop-sheets.xlsx",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": { "sheets": "acc_sheets" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-accumulated",
+        "type": "workflowNode",
+        "position": { "x": 640, "y": 620 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Accumulated",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-acc-sheets=' + ','.join(acc_sheets)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-stored",
+        "type": "workflowNode",
+        "position": { "x": 640, "y": 720 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Stored",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-loop-stored=' + str(len(stored_rows)) + '-last-' + str(seen_sku) + '-cell-' + str(stored_rows.col('qty')[2])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-src", "type": "default" },
+      { "id": "e2", "source": "parse-src", "target": "write-rows", "type": "default" },
+      { "id": "e3", "source": "write-rows", "target": "read-rows", "type": "default" },
+      { "id": "e4", "source": "read-rows", "target": "foreach-rows", "type": "default" },
+      {
+        "id": "e5",
+        "source": "foreach-rows",
+        "sourceHandle": "body",
+        "target": "body-log-row",
+        "type": "default"
+      },
+      { "id": "e6", "source": "body-log-row", "target": "body-store-row", "type": "default" },
+      { "id": "e7", "source": "body-store-row", "target": "body-write-sheet", "type": "default" },
+      {
+        "id": "e8",
+        "source": "foreach-rows",
+        "sourceHandle": "then",
+        "target": "read-accumulated",
+        "type": "default"
+      },
+      { "id": "e9", "source": "read-accumulated", "target": "log-accumulated", "type": "default" },
+      { "id": "e10", "source": "log-accumulated", "target": "log-stored", "type": "default" }
+    ]
+  },
+  "variables": {
+    "src": { "value": [], "type": "table", "scope": "test" },
+    "rows_table": { "value": [], "type": "table", "scope": "test" },
+    "row_item": { "value": {}, "type": "map", "scope": "test" },
+    "row_idx": { "value": 0, "type": "integer", "scope": "test" },
+    "seen_sku": { "value": "", "type": "string", "scope": "test" },
+    "stored_rows": { "value": [], "type": "table", "scope": "test" },
+    "acc_sheets": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": {}
+}

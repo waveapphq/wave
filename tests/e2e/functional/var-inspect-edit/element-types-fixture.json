@@ -1,0 +1,61 @@
+{
+  "name": "V-VMGR-INSPECT-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "A map whose entries carry no declared type; the inspect edit declares one",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e0cb8d7c-ebdb-40d4-bb5b-3bbb4b715616",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Map probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"EDIT n={m['n'] + 1} zip={m['zip'] + '-x'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "e0cb8d7c-ebdb-40d4-bb5b-3bbb4b715616",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "m": {
+      "type": "map",
+      "value": {
+        "n": "16",
+        "zip": "02134"
+      }
+    }
+  },
+  "metadata": {}
+}

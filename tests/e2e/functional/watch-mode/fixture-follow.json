@@ -1,0 +1,150 @@
+{
+  "name": "V-WATCH-FOLLOW",
+  "version": "1.0.0",
+  "description": "A top-level Log far from a local Function (body inner-a). Two variables pre-exist so a watcher can prove variable rows are clean by default. The holder moves top-a / inner-a and edits variables while a second tab mirrors and follows.",
+  "variables": {
+    "existing_a": {
+      "type": "string",
+      "value": "alpha",
+      "scope": "test"
+    },
+    "existing_b": {
+      "type": "string",
+      "value": "beta",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "top-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'top-a'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 560
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Function_1",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-a",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 160,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'inner-a'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-inner",
+                  "source": "start-node",
+                  "target": "inner-a",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-top",
+        "source": "start-node",
+        "target": "top-a",
+        "type": "default"
+      },
+      {
+        "id": "e-top-fn",
+        "source": "top-a",
+        "target": "fn-1",
+        "type": "default"
+      }
+    ]
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

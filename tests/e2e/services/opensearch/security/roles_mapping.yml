@@ -1,0 +1,21 @@
+# WAVE E2E OpenSearch role mapping (test-only): wave-e2e-client is the tls-lab
+# client certificate CN, wave-jwt the JWT subject.
+_meta:
+  type: "rolesmapping"
+  config_version: 2
+all_access:
+  reserved: false
+  backend_roles:
+    - "admin"
+wave_e2e_read:
+  reserved: false
+  users:
+    - "wave"
+    - "wave-e2e-client"
+    - "wave-jwt"
+  backend_roles:
+    - "wave_e2e_read"
+wave_e2e_limited:
+  reserved: false
+  users:
+    - "wave-limited"

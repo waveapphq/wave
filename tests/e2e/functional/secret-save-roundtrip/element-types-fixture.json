@@ -1,0 +1,93 @@
+{
+  "name": "V-SECRET-TYPED-ELEMENTS",
+  "version": "1.0.0",
+  "description": "Secret map and list variables with declared element types, read at run time",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "5d0f3c1e-7a24-4c8b-9f61-2e8a4b7c9d13",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Secret probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"SEC n={sm['n'] + 1} f={sm['f'] * 2} zt={type(sm['zip']) == str} a0={sa[0] + 1} a1t={type(sa[1]) == str} pmn={pm['n'] + 1} sn={suite.ss['n'] + 1} szt={type(suite.ss['zip']) == str} sp={suite.sp} plain={plain_counter}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "5d0f3c1e-7a24-4c8b-9f61-2e8a4b7c9d13",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sm": {
+      "type": "map",
+      "secret": true,
+      "value": {
+        "n": "16",
+        "f": "1.0",
+        "zip": "02134"
+      },
+      "elementTypes": {
+        "n": "integer",
+        "f": "float",
+        "zip": "string"
+      }
+    },
+    "sa": {
+      "type": "array",
+      "secret": true,
+      "value": [
+        "16",
+        "02134"
+      ],
+      "elementTypes": [
+        "integer",
+        "string"
+      ]
+    },
+    "pm": {
+      "type": "map",
+      "value": {
+        "n": "41"
+      },
+      "elementTypes": {
+        "n": "integer"
+      }
+    },
+    "plain_counter": {
+      "type": "integer",
+      "value": "7"
+    }
+  },
+  "metadata": {}
+}

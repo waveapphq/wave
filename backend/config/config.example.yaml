@@ -1,0 +1,83 @@
+# WAVE config file.
+# WAVE reads config/config.yaml in its own folder, or the file WAVE_CONFIG_FILE names.
+# In this repository, copy this file to config.yaml in this folder; config.yaml is not tracked.
+# Settings pages write their values back into that file on Save and keep these comments.
+
+storage:
+  # Data folder: shared work (tests, suites, profiles and more). Relative to this file's folder.
+  base_path: ../data
+
+security:
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+    # Additional ports for a second frontend and backend (when the main dev server uses 3000/8000)
+    - "http://localhost:3001"
+    - "http://127.0.0.1:3001"
+  # Browsing the dev app from another machine sends the host's LAN address as the
+  # origin, which no fixed list can hold. Private networks only, any port.
+  cors_origin_regex: "^http://(localhost|127\\.0\\.0\\.1|10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|172\\.(1[6-9]|2\\d|3[01])\\.\\d+\\.\\d+)(:\\d+)?$"
+  # Secret encryption key (base64, 32 bytes). WAVE does not start without one.
+  # Make your own: run "poetry run wave-new-secret-key" in the backend folder.
+  # Share it only with people who should read the same secrets.
+  secret_key: ""
+
+logging:
+  # DEBUG, INFO, WARN, ERROR or FATAL. WAVE_LOG_LEVEL overrides it at startup.
+  level: INFO
+
+# The settings below are changed in Settings and saved back here.
+secret_masking:
+  run_output: false
+  test_variables: false
+  shared_variables: false
+  credential_inputs: false
+
+network:
+  ssh_hosts:
+    lock_trusted_hosts: false
+    # strict, accept-new or disabled: stamped into newly placed SSH Session Open blocks
+    default_block_action: disabled
+  certificates:
+    # builtin (WAVE's built-in list) or host (this WAVE host's store)
+    public_source: builtin
+  proxy:
+    enabled: false
+    # host (this WAVE host's HTTPS_PROXY, HTTP_PROXY and NO_PROXY) or custom (the keys below)
+    source: host
+    host: ""
+    port: null
+    username: ""
+    # Set from Settings > Network > Proxy, which stores it sealed.
+    password: null
+    # except (all addresses but the listed ones use the proxy) or only (just the listed ones do)
+    list_mode: except
+    # Each entry has a kind (exact or regex) and an address.
+    entries: []
+    # true lets the address list decide for local addresses too; false connects them directly
+    proxy_local_addresses: false
+
+mcp:
+  enabled: false
+  port: 8765
+  bind: local
+  auth_enabled: false
+  auth_username: ""
+  # Set from Settings > MCP Server, which stores it sealed.
+  auth_password: null
+
+backup:
+  schedule:
+    enabled: false
+    cron: ""
+    # null means every backup entity type
+    entity_types: null
+    max_backups: 5
+    save_directory: ~/wave-backups
+    format: yaml
+    compression_method: deflate
+    compression_level: 6
+    secrets: mask
+    # Written by WAVE after each scheduled run
+    last_run: null
+    last_run_status: null

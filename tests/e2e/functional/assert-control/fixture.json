@@ -1,0 +1,2269 @@
+{
+  "name": "Assert Control E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests Assert control execution with all assertion types, operators, grouping, single/split modes",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-init",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Test Variables",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "arr_var",
+            "map_var"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "str_var": "hello world",
+                "int_var": 42,
+                "float_var": 3.14,
+                "bool_var": true,
+                "arr_var": "[1, 2, 3]",
+                "map_var": "{'key': 'value'}"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-single-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Single All Pass",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "hello world",
+                  "reference_is_expression": false,
+                  "id": "a-1"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-2"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-single-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Single Pass",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'single-pass-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-single-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Single Fail Continue",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-3"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-single-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Single Fail Continued",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'single-fail-continued'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-string-ops",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "String Operators",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "contains",
+                  "reference_value": "hello",
+                  "reference_is_expression": false,
+                  "id": "a-4"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "starts_with",
+                  "reference_value": "hello",
+                  "reference_is_expression": false,
+                  "id": "a-5"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "ends_with",
+                  "reference_value": "world",
+                  "reference_is_expression": false,
+                  "id": "a-6"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "does_not_contain",
+                  "reference_value": "foobar",
+                  "reference_is_expression": false,
+                  "id": "a-7"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-string-ops",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log String Ops",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'string-ops-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-regex",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 680
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Regex Match",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "matches_regex",
+                  "reference_value": "^hello.*world$",
+                  "reference_is_expression": false,
+                  "id": "a-8"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-regex",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Regex",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'regex-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-numeric",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 840
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Numeric Comparisons",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "greater_than",
+                  "reference_value": 40,
+                  "reference_is_expression": false,
+                  "id": "a-9"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "float_var",
+                  "value_type": "float",
+                  "operator": "less_than",
+                  "reference_value": 4.0,
+                  "reference_is_expression": false,
+                  "id": "a-10"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "greater_or_equal",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-11"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "less_or_equal",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-12"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "not_equals",
+                  "reference_value": 0,
+                  "reference_is_expression": false,
+                  "id": "a-13"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-numeric",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 920
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Numeric",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'numeric-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-boolean",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Boolean Check",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-14"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-boolean",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Boolean",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'boolean-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-array",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1160
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Array Operators",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "arr_var",
+                  "value_type": "array",
+                  "operator": "contains",
+                  "reference_value": 2,
+                  "reference_is_expression": false,
+                  "id": "a-15"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "arr_var",
+                  "value_type": "array",
+                  "operator": "is_not_empty",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-16"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "arr_var",
+                  "value_type": "array",
+                  "operator": "length_equals",
+                  "reference_value": 3,
+                  "reference_is_expression": false,
+                  "id": "a-17"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-array",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Array",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'array-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-map",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Map Operators",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "map_var",
+                  "value_type": "map",
+                  "operator": "has_key",
+                  "reference_value": "key",
+                  "reference_is_expression": false,
+                  "id": "a-18"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "map_var",
+                  "value_type": "map",
+                  "operator": "is_not_empty",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-19"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-map",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1400
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'map-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-expression",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1480
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Expression Assert",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "int_var > 40 and len(arr_var) == 3",
+                  "id": "a-20"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expression",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'expression-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-group-or",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1640
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Group OR Logic",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "group",
+                  "items": [
+                    {
+                      "type": "literal",
+                      "variable": "int_var",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": 999,
+                      "reference_is_expression": false,
+                      "id": "a-22"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "or"
+                    },
+                    {
+                      "type": "literal",
+                      "variable": "int_var",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": 42,
+                      "reference_is_expression": false,
+                      "id": "a-23"
+                    }
+                  ],
+                  "id": "a-21"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-24"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-group-or",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1720
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Group OR",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'group-or-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-ref-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1800
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Ref Expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "40 + 2",
+                  "reference_is_expression": true,
+                  "id": "a-25"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-ref-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1880
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Ref Expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ref-expr-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-precedence-and-or",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1880
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Precedence AND before OR",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-26"
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-27"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-28"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-precedence-and-or",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Precedence AND OR",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'precedence-and-or-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-precedence-or-before-and",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2040
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Precedence OR before AND",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-29"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-30"
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-31"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-precedence-or-before-and",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Precedence OR before AND",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'precedence-or-before-and-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-all-and-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2200
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "All AND Fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-32"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-33"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-all-and-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2280
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log All AND Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'all-and-fail-continued'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-all-or-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2360
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "All OR Fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-34"
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 888,
+                  "reference_is_expression": false,
+                  "id": "a-35"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-all-or-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log All OR Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'all-or-fail-continued'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-group-override",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2520
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Group Overrides Precedence",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "group",
+                  "items": [
+                    {
+                      "type": "literal",
+                      "variable": "int_var",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": 999,
+                      "reference_is_expression": false,
+                      "id": "a-37"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "or"
+                    },
+                    {
+                      "type": "literal",
+                      "variable": "int_var",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": 42,
+                      "reference_is_expression": false,
+                      "id": "a-38"
+                    }
+                  ],
+                  "id": "a-36"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-39"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-group-override",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Group Override",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'group-override-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-multi-segment",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2680
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Mixed Multi-Segment",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-40"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-41"
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-42"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "str_var",
+                  "value_type": "string",
+                  "operator": "contains",
+                  "reference_value": "hello",
+                  "reference_is_expression": false,
+                  "id": "a-43"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-multi-segment",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Multi-Segment",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'multi-segment-ok'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-split-precedence",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2840
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Split with Precedence",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-44"
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 42,
+                  "reference_is_expression": false,
+                  "id": "a-45"
+                }
+              ],
+              "mode": "split"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-prec-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 2960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Prec Pass",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-prec-pass-branch'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-prec-fail-unreachable",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 2960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Prec Fail Unreachable",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-prec-fail-unreachable'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-split-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3080
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Split Pass",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "bool_var",
+                  "value_type": "boolean",
+                  "operator": "is_true",
+                  "reference_value": null,
+                  "reference_is_expression": false,
+                  "id": "a-46"
+                }
+              ],
+              "mode": "split"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-pass-branch",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 3200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Pass Branch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-pass-branch'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-pass-unreachable",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 3200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Pass Unreachable",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-pass-unreachable'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-split-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 3320
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Split Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "int_var",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": 999,
+                  "reference_is_expression": false,
+                  "id": "a-47"
+                }
+              ],
+              "mode": "split"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-fail-unreachable",
+        "type": "workflowNode",
+        "position": {
+          "x": 50,
+          "y": 3440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Fail Unreachable",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-fail-unreachable'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-split-fail-branch",
+        "type": "workflowNode",
+        "position": {
+          "x": 350,
+          "y": 3440
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Split Fail Branch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'split-fail-branch'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e01",
+        "source": "start-node",
+        "target": "varset-init",
+        "type": "default"
+      },
+      {
+        "id": "e02",
+        "source": "varset-init",
+        "target": "assert-single-pass",
+        "type": "default"
+      },
+      {
+        "id": "e03",
+        "source": "assert-single-pass",
+        "target": "log-single-pass",
+        "type": "default"
+      },
+      {
+        "id": "e04",
+        "source": "log-single-pass",
+        "target": "assert-single-fail",
+        "type": "default"
+      },
+      {
+        "id": "e05",
+        "source": "assert-single-fail",
+        "target": "log-single-fail",
+        "type": "default"
+      },
+      {
+        "id": "e06",
+        "source": "log-single-fail",
+        "target": "assert-string-ops",
+        "type": "default"
+      },
+      {
+        "id": "e07",
+        "source": "assert-string-ops",
+        "target": "log-string-ops",
+        "type": "default"
+      },
+      {
+        "id": "e08",
+        "source": "log-string-ops",
+        "target": "assert-regex",
+        "type": "default"
+      },
+      {
+        "id": "e09",
+        "source": "assert-regex",
+        "target": "log-regex",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-regex",
+        "target": "assert-numeric",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "assert-numeric",
+        "target": "log-numeric",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-numeric",
+        "target": "assert-boolean",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "assert-boolean",
+        "target": "log-boolean",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "log-boolean",
+        "target": "assert-array",
+        "type": "default"
+      },
+      {
+        "id": "e15",
+        "source": "assert-array",
+        "target": "log-array",
+        "type": "default"
+      },
+      {
+        "id": "e16",
+        "source": "log-array",
+        "target": "assert-map",
+        "type": "default"
+      },
+      {
+        "id": "e17",
+        "source": "assert-map",
+        "target": "log-map",
+        "type": "default"
+      },
+      {
+        "id": "e18",
+        "source": "log-map",
+        "target": "assert-expression",
+        "type": "default"
+      },
+      {
+        "id": "e19",
+        "source": "assert-expression",
+        "target": "log-expression",
+        "type": "default"
+      },
+      {
+        "id": "e20",
+        "source": "log-expression",
+        "target": "assert-group-or",
+        "type": "default"
+      },
+      {
+        "id": "e21",
+        "source": "assert-group-or",
+        "target": "log-group-or",
+        "type": "default"
+      },
+      {
+        "id": "e22",
+        "source": "log-group-or",
+        "target": "assert-ref-expr",
+        "type": "default"
+      },
+      {
+        "id": "e23",
+        "source": "assert-ref-expr",
+        "target": "log-ref-expr",
+        "type": "default"
+      },
+      {
+        "id": "e24",
+        "source": "log-ref-expr",
+        "target": "assert-precedence-and-or",
+        "type": "default"
+      },
+      {
+        "id": "e25",
+        "source": "assert-precedence-and-or",
+        "target": "log-precedence-and-or",
+        "type": "default"
+      },
+      {
+        "id": "e26",
+        "source": "log-precedence-and-or",
+        "target": "assert-precedence-or-before-and",
+        "type": "default"
+      },
+      {
+        "id": "e27",
+        "source": "assert-precedence-or-before-and",
+        "target": "log-precedence-or-before-and",
+        "type": "default"
+      },
+      {
+        "id": "e28",
+        "source": "log-precedence-or-before-and",
+        "target": "assert-all-and-fail",
+        "type": "default"
+      },
+      {
+        "id": "e29",
+        "source": "assert-all-and-fail",
+        "target": "log-all-and-fail",
+        "type": "default"
+      },
+      {
+        "id": "e30",
+        "source": "log-all-and-fail",
+        "target": "assert-all-or-fail",
+        "type": "default"
+      },
+      {
+        "id": "e31",
+        "source": "assert-all-or-fail",
+        "target": "log-all-or-fail",
+        "type": "default"
+      },
+      {
+        "id": "e32",
+        "source": "log-all-or-fail",
+        "target": "assert-group-override",
+        "type": "default"
+      },
+      {
+        "id": "e33",
+        "source": "assert-group-override",
+        "target": "log-group-override",
+        "type": "default"
+      },
+      {
+        "id": "e34",
+        "source": "log-group-override",
+        "target": "assert-multi-segment",
+        "type": "default"
+      },
+      {
+        "id": "e35",
+        "source": "assert-multi-segment",
+        "target": "log-multi-segment",
+        "type": "default"
+      },
+      {
+        "id": "e36",
+        "source": "log-multi-segment",
+        "target": "assert-split-precedence",
+        "type": "default"
+      },
+      {
+        "id": "e37",
+        "source": "assert-split-precedence",
+        "sourceHandle": "pass",
+        "target": "log-split-prec-pass",
+        "type": "default"
+      },
+      {
+        "id": "e38",
+        "source": "assert-split-precedence",
+        "sourceHandle": "fail",
+        "target": "log-split-prec-fail-unreachable",
+        "type": "default"
+      },
+      {
+        "id": "e39",
+        "source": "log-split-prec-pass",
+        "target": "assert-split-pass",
+        "type": "default"
+      },
+      {
+        "id": "e40",
+        "source": "assert-split-pass",
+        "sourceHandle": "pass",
+        "target": "log-split-pass-branch",
+        "type": "default"
+      },
+      {
+        "id": "e41",
+        "source": "assert-split-pass",
+        "sourceHandle": "fail",
+        "target": "log-split-pass-unreachable",
+        "type": "default"
+      },
+      {
+        "id": "e42",
+        "source": "log-split-pass-branch",
+        "target": "assert-split-fail",
+        "type": "default"
+      },
+      {
+        "id": "e43",
+        "source": "assert-split-fail",
+        "sourceHandle": "pass",
+        "target": "log-split-fail-unreachable",
+        "type": "default"
+      },
+      {
+        "id": "e44",
+        "source": "assert-split-fail",
+        "sourceHandle": "fail",
+        "target": "log-split-fail-branch",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "str_var": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "int_var": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "float_var": {
+      "value": 0.0,
+      "type": "float",
+      "scope": "test"
+    },
+    "bool_var": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "arr_var": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "map_var": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

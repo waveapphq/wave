@@ -1,0 +1,757 @@
+{
+  "name": "V-NULL-OPENSEARCH",
+  "version": "1.0.0",
+  "description": "A null {{ }} value in the OpenSearch Query row: standing alone as a JSON value in Query DSL it is sent as JSON null, which a script query reads as null, while empty text stays the empty string; inside a JSON string, and anywhere in DQL, it fails the block before any request is sent and names the piece.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8bd7cd8e-3c06-4ebd-97c5-f9eb1a09e30a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "DSL null alone",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DSL null alone",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-nulls",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "query_dsl",
+              "query": "{\"script\": {\"script\": {\"source\": \"params.v == null\", \"params\": {\"v\": {{ nothing }}}}}}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "alone_null_rows",
+              "total_results": "alone_null_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "1f3ece30-7dae-4e3d-99af-591201b6ad37",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "DSL empty alone",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DSL empty alone",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-nulls",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "query_dsl",
+              "query": "{\"script\": {\"script\": {\"source\": \"params.v == null\", \"params\": {\"v\": {{ empty }}}}}}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "alone_empty_rows",
+              "total_results": "alone_empty_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "1d4634a7-d790-46fb-9385-77e61716e986",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Standalone proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-os-alone null_total={{ alone_null_total }} empty_total={{ alone_empty_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3f1c2020-bd45-49d8-bed8-b11fbae59f1f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Quoted in Query DSL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "dsl_quoted_error",
+              "caught": "dsl_quoted_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "abf95fb2-462f-4ef7-80af-c76035f0682f",
+        "type": "workflowNode",
+        "position": {
+          "x": 250,
+          "y": 460
+        },
+        "data": {
+          "label": "DSL null quoted",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DSL null quoted",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-nulls",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "query_dsl",
+              "query": "{\"term\": {\"msg\": \"{{ nothing }}\"}}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "total_results": "dsl_quoted_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "d36c39ac-ba68-4102-896e-5e292f008e45",
+        "type": "workflowNode",
+        "position": {
+          "x": 550,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "DSL quoted caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-os-dsl-quoted caught={{ dsl_quoted_caught }} message={{ dsl_quoted_error['message'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c6b09cae-3385-48bf-8c35-19778128c385",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Bare in DQL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "dql_bare_error",
+              "caught": "dql_bare_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "20915cc6-2033-4206-bc15-2eaa38a27627",
+        "type": "workflowNode",
+        "position": {
+          "x": 250,
+          "y": 660
+        },
+        "data": {
+          "label": "DQL null bare",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DQL null bare",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-nulls",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "dql",
+              "query": "msg: {{ nothing }}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "total_results": "dql_bare_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "29ef8a6c-d4d1-4b0d-9178-e8d02bb4af3d",
+        "type": "workflowNode",
+        "position": {
+          "x": 550,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "DQL bare caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-os-dql-bare caught={{ dql_bare_caught }} message={{ dql_bare_error['message'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "70aacd07-10a6-4b6a-9598-ab8e80e2cdf0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Quoted in DQL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "dql_quoted_error",
+              "caught": "dql_quoted_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "b9332b1d-6f36-4d5e-9a8a-9e1c40a12f00",
+        "type": "workflowNode",
+        "position": {
+          "x": 250,
+          "y": 860
+        },
+        "data": {
+          "label": "DQL null quoted",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DQL null quoted",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-nulls",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "dql",
+              "query": "msg: \"{{ nothing }}\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "total_results": "dql_quoted_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "eceaa1b5-9fda-4ff7-9609-977e91f5b553",
+        "type": "workflowNode",
+        "position": {
+          "x": 550,
+          "y": 860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "DQL quoted caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-os-dql-quoted caught={{ dql_quoted_caught }} message={{ dql_quoted_error['message'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ca965a15-42c0-4a39-8ebf-750cd73ca29f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-os-done caught={{ dsl_quoted_caught }}/{{ dql_bare_caught }}/{{ dql_quoted_caught }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e7f5fd14-8d48-4f95-905d-9bfec19128e6",
+        "source": "start-node",
+        "target": "8bd7cd8e-3c06-4ebd-97c5-f9eb1a09e30a",
+        "type": "default"
+      },
+      {
+        "id": "188161a9-854c-4198-820b-ad4b36c033cb",
+        "source": "8bd7cd8e-3c06-4ebd-97c5-f9eb1a09e30a",
+        "target": "1f3ece30-7dae-4e3d-99af-591201b6ad37",
+        "type": "default"
+      },
+      {
+        "id": "45de894d-dfd3-40f8-9114-5476f4c4c5ae",
+        "source": "1f3ece30-7dae-4e3d-99af-591201b6ad37",
+        "target": "1d4634a7-d790-46fb-9385-77e61716e986",
+        "type": "default"
+      },
+      {
+        "id": "b9d5fc6c-11a9-4c33-b2b6-7219024cabe1",
+        "source": "1d4634a7-d790-46fb-9385-77e61716e986",
+        "target": "3f1c2020-bd45-49d8-bed8-b11fbae59f1f",
+        "type": "default"
+      },
+      {
+        "id": "03cdfa84-35a6-4781-8a90-74e584442502",
+        "source": "3f1c2020-bd45-49d8-bed8-b11fbae59f1f",
+        "sourceHandle": "try",
+        "target": "abf95fb2-462f-4ef7-80af-c76035f0682f",
+        "type": "default"
+      },
+      {
+        "id": "2b5c2eeb-d8e1-4dda-86fa-846fd3460b65",
+        "source": "3f1c2020-bd45-49d8-bed8-b11fbae59f1f",
+        "sourceHandle": "catch",
+        "target": "d36c39ac-ba68-4102-896e-5e292f008e45",
+        "type": "default"
+      },
+      {
+        "id": "86116f9a-7deb-4ed0-a2df-f33710c7b182",
+        "source": "3f1c2020-bd45-49d8-bed8-b11fbae59f1f",
+        "sourceHandle": "then",
+        "target": "c6b09cae-3385-48bf-8c35-19778128c385",
+        "type": "default"
+      },
+      {
+        "id": "b77b7608-e9fd-4750-b461-abe44d59a650",
+        "source": "c6b09cae-3385-48bf-8c35-19778128c385",
+        "sourceHandle": "try",
+        "target": "20915cc6-2033-4206-bc15-2eaa38a27627",
+        "type": "default"
+      },
+      {
+        "id": "3e1f2ab5-f0d1-4e14-b0f5-7e5867e529c5",
+        "source": "c6b09cae-3385-48bf-8c35-19778128c385",
+        "sourceHandle": "catch",
+        "target": "29ef8a6c-d4d1-4b0d-9178-e8d02bb4af3d",
+        "type": "default"
+      },
+      {
+        "id": "ce2d9058-be44-472c-a4c7-e8971906850b",
+        "source": "c6b09cae-3385-48bf-8c35-19778128c385",
+        "sourceHandle": "then",
+        "target": "70aacd07-10a6-4b6a-9598-ab8e80e2cdf0",
+        "type": "default"
+      },
+      {
+        "id": "231842ce-82b4-40f2-a448-1322f31f74b1",
+        "source": "70aacd07-10a6-4b6a-9598-ab8e80e2cdf0",
+        "sourceHandle": "try",
+        "target": "b9332b1d-6f36-4d5e-9a8a-9e1c40a12f00",
+        "type": "default"
+      },
+      {
+        "id": "31154e9b-081a-46b9-a6dc-32e76325bc1c",
+        "source": "70aacd07-10a6-4b6a-9598-ab8e80e2cdf0",
+        "sourceHandle": "catch",
+        "target": "eceaa1b5-9fda-4ff7-9609-977e91f5b553",
+        "type": "default"
+      },
+      {
+        "id": "9f165780-d8f0-4dea-afc6-e1c23ef33616",
+        "source": "70aacd07-10a6-4b6a-9598-ab8e80e2cdf0",
+        "sourceHandle": "then",
+        "target": "ca965a15-42c0-4a39-8ebf-750cd73ca29f",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "nothing": {
+      "value": null,
+      "type": "string",
+      "scope": "test"
+    },
+    "empty": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "alone_null_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "alone_null_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "alone_empty_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "alone_empty_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dsl_quoted_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dsl_quoted_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "dsl_quoted_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dql_bare_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dql_bare_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "dql_bare_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dql_quoted_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dql_quoted_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "dql_quoted_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

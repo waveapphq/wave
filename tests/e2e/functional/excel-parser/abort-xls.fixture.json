@@ -1,0 +1,40 @@
+{
+  "name": "Excel Parser - Legacy .xls is refused",
+  "version": "1.0.0",
+  "description": "Reading a pre-2007 workbook aborts the run with the actionable format message.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "read-legacy",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Legacy",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://legacy.xls",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [{ "id": "e1", "source": "start-node", "target": "read-legacy", "type": "default" }]
+  },
+  "variables": {},
+  "metadata": {}
+}

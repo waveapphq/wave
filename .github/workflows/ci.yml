@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master, 'release/**']
+  push:
+    branches: [master, 'release/**']
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install
+
+      - name: Text checks
+        run: ./scripts/check-text.sh
+
+      - name: Fetch remote-host wheels
+        run: ./scripts/fetch-remote-wheels.sh
+
+      - name: Run tests with coverage (suite-based execution)
+        run: ./scripts/run-coverage-backend.sh --clean -n auto
+
+      - name: Type check with mypy
+        working-directory: ./backend
+        run: poetry run mypy wavecore/
+
+      - name: Check code formatting with black
+        working-directory: ./backend
+        run: poetry run black --check wavecore/
+
+      - name: Lint with ruff
+        working-directory: ./backend
+        run: poetry run ruff check wavecore/
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Type check
+        working-directory: ./frontend
+        run: npm run type-check
+
+      - name: ESLint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Run tests with the coverage gate
+        working-directory: ./frontend
+        run: npm run test:coverage
+
+      - name: Check for orphaned files
+        run: ./scripts/check-orphaned-files.sh
+
+      - name: Build
+        working-directory: ./frontend
+        run: npm run build
+
+  e2e-type-check:
+    name: E2E Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./tests/e2e
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
+
+      - name: Type check
+        working-directory: ./tests/e2e
+        run: npm run type-check

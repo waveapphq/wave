@@ -1,0 +1,629 @@
+{
+  "name": "Network Certificates Chain E2E",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "tc-full",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 40
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: Full chain, CA blank",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "full_err",
+              "caught": "full_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-full",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 110
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Full chain, CA blank",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9480/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "full_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-full-ok",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log full passed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'chain-full passed status={full_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-full-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 250
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log full caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"chain-full caught msg={full_err['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-leaf",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 320
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: Leaf only, CA blank",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "leaf_err",
+              "caught": "leaf_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-leaf",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 390
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Leaf only, CA blank",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9481/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "leaf_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-leaf-ok",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log leaf passed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'chain-leaf passed status={leaf_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-leaf-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 530
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log leaf caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"chain-leaf caught msg={leaf_err['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-blockca",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 600
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: Full chain, CA set to the WAVE Test CA",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "blockca_err",
+              "caught": "blockca_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-blockca",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 670
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Full chain, CA set to the WAVE Test CA",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9480/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "ca_cert": "ca_pem"
+            },
+            "outputBindings": {
+              "status_code": "blockca_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-blockca-ok",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 740
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log blockca passed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'chain-blockca passed status={blockca_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-blockca-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 810
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log blockca caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"chain-blockca caught msg={blockca_err['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 880
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Summary",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'chain-done full={full_status} leaf={leaf_status} blockca={blockca_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-tc-full",
+        "source": "start-node",
+        "target": "tc-full",
+        "type": "default"
+      },
+      {
+        "id": "e-full-try",
+        "source": "tc-full",
+        "target": "http-full",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-full-ok",
+        "source": "http-full",
+        "target": "log-full-ok",
+        "type": "default"
+      },
+      {
+        "id": "e-full-catch",
+        "source": "tc-full",
+        "target": "log-full-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-tc-leaf",
+        "source": "tc-full",
+        "target": "tc-leaf",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-leaf-try",
+        "source": "tc-leaf",
+        "target": "http-leaf",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-leaf-ok",
+        "source": "http-leaf",
+        "target": "log-leaf-ok",
+        "type": "default"
+      },
+      {
+        "id": "e-leaf-catch",
+        "source": "tc-leaf",
+        "target": "log-leaf-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-tc-blockca",
+        "source": "tc-leaf",
+        "target": "tc-blockca",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-blockca-try",
+        "source": "tc-blockca",
+        "target": "http-blockca",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-blockca-ok",
+        "source": "http-blockca",
+        "target": "log-blockca-ok",
+        "type": "default"
+      },
+      {
+        "id": "e-blockca-catch",
+        "source": "tc-blockca",
+        "target": "log-blockca-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-done",
+        "source": "tc-blockca",
+        "target": "log-done",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "ca_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "full_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "full_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "full_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "leaf_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "leaf_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "leaf_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "blockca_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "blockca_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "blockca_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

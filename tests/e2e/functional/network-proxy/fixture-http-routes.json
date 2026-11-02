@@ -1,0 +1,809 @@
+{
+  "name": "V-NET-PROXY HTTP Routes",
+  "version": "1.0.0",
+  "description": "Four HTTP blocks against proxy-only targets, each in a Try/Catch: WAVE setting and Off on the plain http-target port, WAVE setting on the chart repository, and WAVE setting on the HTTPS http-target port.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "tc-setting",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Setting guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "setting_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-setting",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Route setting",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Route setting",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://http-target:9444/api",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "wave-setting"
+            },
+            "outputBindings": {
+              "status_code": "setting_status",
+              "body": "setting_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-setting-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Setting guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route-setting caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-setting",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Setting guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"route-setting status={setting_status} caught={setting_err['message'] if setting_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-off",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Off guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "off_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-off",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Route off",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Route off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://http-target:9444/api",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "off"
+            },
+            "outputBindings": {
+              "status_code": "off_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-off-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Off guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route-off caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-off",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Off guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"route-off status={off_status} caught={off_err['message'] if off_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-other",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Other guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "other_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-other",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "Route other",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Route other",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://tls-lab:9463/index.yaml",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "wave-setting"
+            },
+            "outputBindings": {
+              "status_code": "other_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-other-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Other guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route-other caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-other",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Other guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"route-other status={other_status} caught={other_err['message'] if other_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TLS guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "tls_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "Route tls",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Route tls",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/echo",
+              "method": "GET",
+              "timeout": 15,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "proxy_mode": "wave-setting",
+              "ca_cert": "lab_ca"
+            },
+            "outputBindings": {
+              "status_code": "tls_status",
+              "body": "tls_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tls-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TLS guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route-tls caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TLS guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"route-tls status={tls_status} caught={tls_err['message'] if tls_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'proxy-routes-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-tc-setting",
+        "source": "start-node",
+        "target": "tc-setting",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-setting-try",
+        "source": "tc-setting",
+        "target": "http-setting",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-setting-catch",
+        "source": "tc-setting",
+        "target": "log-setting-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-setting-then",
+        "source": "tc-setting",
+        "target": "log-setting",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-setting-tc-off",
+        "source": "log-setting",
+        "target": "tc-off",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-off-try",
+        "source": "tc-off",
+        "target": "http-off",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-off-catch",
+        "source": "tc-off",
+        "target": "log-off-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-off-then",
+        "source": "tc-off",
+        "target": "log-off",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-off-tc-other",
+        "source": "log-off",
+        "target": "tc-other",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-other-try",
+        "source": "tc-other",
+        "target": "http-other",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-other-catch",
+        "source": "tc-other",
+        "target": "log-other-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-other-then",
+        "source": "tc-other",
+        "target": "log-other",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-other-tc-tls",
+        "source": "log-other",
+        "target": "tc-tls",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-tls-try",
+        "source": "tc-tls",
+        "target": "http-tls",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-tls-catch",
+        "source": "tc-tls",
+        "target": "log-tls-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-tls-then",
+        "source": "tc-tls",
+        "target": "log-tls",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-tls-log-done",
+        "source": "log-tls",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "lab_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "setting_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "setting_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "setting_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "off_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "off_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "other_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "other_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "tls_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tls_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

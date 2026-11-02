@@ -1,0 +1,13 @@
+{
+  "name": "Profile Drives SSH",
+  "type": "ssh",
+  "description": "SSH profile whose own fields drive a real ssh-session-open against the stack sshd",
+  "config": {
+    "host": "",
+    "port": 0,
+    "username": "",
+    "password": "",
+    "connect_timeout": 30
+  },
+  "tags": ["e2e"]
+}

@@ -1,0 +1,276 @@
+{
+  "name": "zz-11541-s3-entry-nulls",
+  "version": "1.0.0",
+  "description": "Null entries per Block: SQL parameters bind NULL, K8s Apply data refuses null",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9d762599-c92a-49b2-b349-2fe6a927c03f",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Echo Id Header",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "X-Id header entry the window switches to an empty expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "verify_ssl": false,
+              "headers": {
+                "X-Id": ""
+              }
+            },
+            "outputBindings": {
+              "status_code": "id_status",
+              "body": "id_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "c06bf978-05db-4dd7-985d-25bb7d568f67",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 210 },
+        "data": {
+          "label": "PG Null Parameters",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "A literal null and a None parameter bind NULL, empty text binds empty text",
+          "hasNewerVersion": false,
+          "expressionFields": ["parameters.expr_null"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "SELECT CAST(:lit_null AS VARCHAR(10)) IS NULL AS lit_is_null, CAST(:expr_null AS VARCHAR(10)) IS NULL AS expr_is_null, CAST(:empty_text AS VARCHAR(10)) IS NULL AS empty_is_null, CAST(:empty_text AS VARCHAR(10)) AS empty_value;",
+              "parameters": {
+                "lit_null": null,
+                "expr_null": "None",
+                "empty_text": ""
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pg_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "3c3f70e6-8b5e-4514-aa57-304430f4065b",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 320 },
+        "data": {
+          "label": "Connect Kwok",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session whose namespace is the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NAMESPACE__",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "a22fc18c-e4d9-4a82-a029-b425589d280f",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 430 },
+        "data": {
+          "label": "Guard Apply Null Data",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Keeps the run going when the Apply refuses its null data entry",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "apply_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "5395b4bc-4840-43b0-b679-944d452445a6",
+        "type": "workflowNode",
+        "position": { "x": 420, "y": 540 },
+        "data": {
+          "label": "Apply Null Data",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "ConfigMap form whose data entry k is null",
+          "hasNewerVersion": false,
+          "expressionFields": ["session"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "zz-11541-s3-null-data",
+              "data": {
+                "k": null,
+                "j": "kept"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "15d965c9-864e-4021-82de-4a93bb5e1ae8",
+        "type": "workflowNode",
+        "position": { "x": 640, "y": 540 },
+        "data": {
+          "label": "Apply Null Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch path of the Apply guard",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'apply-null-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "91ce0243-8012-4e00-ae98-2b871d53932a",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 650 },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Run end marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'entry-nulls-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "26ca69a8-1aeb-412c-a161-750ffe0e944f",
+        "source": "start-node",
+        "target": "9d762599-c92a-49b2-b349-2fe6a927c03f",
+        "type": "default"
+      },
+      {
+        "id": "4df7e4d2-2583-49a5-a69c-eff1d6f8db6d",
+        "source": "9d762599-c92a-49b2-b349-2fe6a927c03f",
+        "target": "c06bf978-05db-4dd7-985d-25bb7d568f67",
+        "type": "default"
+      },
+      {
+        "id": "546c0c30-7294-49af-a625-59bfc430fd67",
+        "source": "c06bf978-05db-4dd7-985d-25bb7d568f67",
+        "target": "3c3f70e6-8b5e-4514-aa57-304430f4065b",
+        "type": "default"
+      },
+      {
+        "id": "8209683f-7142-467f-9b41-79e87d171979",
+        "source": "3c3f70e6-8b5e-4514-aa57-304430f4065b",
+        "target": "a22fc18c-e4d9-4a82-a029-b425589d280f",
+        "type": "default"
+      },
+      {
+        "id": "2d044749-d77d-4c19-a76a-e69c743d7541",
+        "source": "a22fc18c-e4d9-4a82-a029-b425589d280f",
+        "sourceHandle": "try",
+        "target": "5395b4bc-4840-43b0-b679-944d452445a6"
+      },
+      {
+        "id": "0bdc7e49-1a5e-4f18-adb0-aee747d704e6",
+        "source": "a22fc18c-e4d9-4a82-a029-b425589d280f",
+        "sourceHandle": "catch",
+        "target": "15d965c9-864e-4021-82de-4a93bb5e1ae8"
+      },
+      {
+        "id": "e1a73396-4328-4641-854d-f2621061de41",
+        "source": "a22fc18c-e4d9-4a82-a029-b425589d280f",
+        "sourceHandle": "then",
+        "target": "91ce0243-8012-4e00-ae98-2b871d53932a"
+      }
+    ]
+  },
+  "variables": {
+    "id_status": { "type": "integer", "scope": "test" },
+    "id_body": { "type": "string", "scope": "test" },
+    "pg_rows": { "type": "table", "scope": "test" },
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_session": { "type": "string", "scope": "test" },
+    "apply_err": { "type": "map", "scope": "test" }
+  },
+  "metadata": {}
+}

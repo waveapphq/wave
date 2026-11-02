@@ -1,0 +1,727 @@
+{
+  "name": "HTTP TLS Version Pins E2E",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-v10",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 0
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Version pin TLSv1 vs tls10",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9452/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.0",
+              "tls_max_version": "1.0"
+            },
+            "outputBindings": {
+              "status_code": "v10_status",
+              "body": "v10_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-v10",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 70
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log v10",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'v10 status={v10_status} body={v10_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-v11",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 140
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Version pin TLSv1.1 vs tls11",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9453/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.1",
+              "tls_max_version": "1.1"
+            },
+            "outputBindings": {
+              "status_code": "v11_status",
+              "body": "v11_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-v11",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 210
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log v11",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'v11 status={v11_status} body={v11_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-v12",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 280
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Version pin TLSv1.2 vs tls12",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9454/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2"
+            },
+            "outputBindings": {
+              "status_code": "v12_status",
+              "body": "v12_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-v12",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log v12",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'v12 status={v12_status} body={v12_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-v13",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Version pin TLSv1.3 vs tls13",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9455/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.3",
+              "tls_max_version": "1.3"
+            },
+            "outputBindings": {
+              "status_code": "v13_status",
+              "body": "v13_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-v13",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 490
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log v13",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'v13 status={v13_status} body={v13_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-h2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 560
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP/1.1 against the HTTP/1.1-only listener",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9454/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "h2_status",
+              "body": "h2_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-h2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 630
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log h2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'h2 status={h2_status} body={h2_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-mismatch",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 700
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: version mismatch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "ver_err",
+              "caught": "ver_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-mismatch",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 770
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Pin max 1.2 vs 1.3-only listener",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9455/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.0",
+              "tls_max_version": "1.2"
+            },
+            "outputBindings": {
+              "status_code": "mm_status",
+              "body": "mm_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-mismatch",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 840
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log mismatch caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'ver-mismatch-caught status={mm_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-book",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 910
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'http-tls-versions-done caught={ver_caught}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-v10",
+        "source": "start-node",
+        "target": "http-v10",
+        "type": "default"
+      },
+      {
+        "id": "e-v10-log",
+        "source": "http-v10",
+        "target": "log-v10",
+        "type": "default"
+      },
+      {
+        "id": "e-v11",
+        "source": "log-v10",
+        "target": "http-v11",
+        "type": "default"
+      },
+      {
+        "id": "e-v11-log",
+        "source": "http-v11",
+        "target": "log-v11",
+        "type": "default"
+      },
+      {
+        "id": "e-v12",
+        "source": "log-v11",
+        "target": "http-v12",
+        "type": "default"
+      },
+      {
+        "id": "e-v12-log",
+        "source": "http-v12",
+        "target": "log-v12",
+        "type": "default"
+      },
+      {
+        "id": "e-v13",
+        "source": "log-v12",
+        "target": "http-v13",
+        "type": "default"
+      },
+      {
+        "id": "e-v13-log",
+        "source": "http-v13",
+        "target": "log-v13",
+        "type": "default"
+      },
+      {
+        "id": "e-h2",
+        "source": "log-v13",
+        "target": "http-h2",
+        "type": "default"
+      },
+      {
+        "id": "e-h2-log",
+        "source": "http-h2",
+        "target": "log-h2",
+        "type": "default"
+      },
+      {
+        "id": "e-mismatch",
+        "source": "log-h2",
+        "target": "tc-mismatch",
+        "type": "default"
+      },
+      {
+        "id": "e-mismatch-try",
+        "source": "tc-mismatch",
+        "target": "http-mismatch",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-mismatch-catch",
+        "source": "tc-mismatch",
+        "target": "log-mismatch",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-mismatch-then",
+        "source": "tc-mismatch",
+        "target": "log-book",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "v10_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "v10_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "v11_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "v11_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "v12_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "v12_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "v13_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "v13_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "h2_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "h2_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ver_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "ver_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mm_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "mm_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

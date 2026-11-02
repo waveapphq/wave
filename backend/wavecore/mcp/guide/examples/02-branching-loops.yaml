@@ -1,0 +1,77 @@
+test:
+  name: Recipe Example - Branching and Loops
+  description: Route on conditions and drive count, range, collection, and while loops with break
+  tags: [example, control-flow]
+variables:
+  transport: {type: string, value: TCP}
+  health: {type: integer, value: 200}
+  hosts: {type: array, value: [alpha, beta, gamma]}
+  retries: {type: integer, value: 0}
+  pod_phase: {type: string, value: ""}
+  session_token: {type: string}
+flow:
+  - if:
+      when: "health == 200"
+      then:
+        - block: log
+          settings: {message: Service healthy}
+      elif:
+        - when: {variable: transport, operator: equals, value: UDP, value_type: string}
+          then:
+            - block: log
+              settings: {message: Degraded over UDP}
+        - when: {variable: session_token, operator: is_null}
+          then:
+            - block: log
+              settings: {message: No session token yet}
+      else:
+        - block: log
+          settings: {message: Service down}
+  - switch:
+      label: Route on status
+      cases:
+        - when: "health == 200"
+          break: false
+          steps:
+            - block: log
+              settings: {message: All good}
+        - when: {variable: transport, operator: equals, value: TCP, value_type: string}
+          steps:
+            - block: log
+              settings: {message: Still on TCP}
+      default:
+        - block: log
+          settings: {message: Unexpected status}
+  - for:
+      count: 3
+      body:
+        - block: log
+          settings: {message: Ping attempt}
+  - for:
+      range: {start: 0, end: 10, step: 2}
+      body:
+        - block: log
+          settings: {message: Even tick}
+  - for_each:
+      collection: {expr: "hosts"}
+      capture: {item: current_host, index: host_index}
+      body:
+        - block: log
+          settings: {message: "Checking {{ current_host['value'] }}"}
+  - while:
+      label: retry_loop
+      conditions: "retries < 5"
+      body:
+        - set: {retries: {expr: "retries + 1"}}
+        - if:
+            when: "retries == 3"
+            then:
+              - break: {loop: retry_loop}
+  - wait_until:
+      that: ["pod_phase == 'Running'"]
+      timeout: 30000
+      interval: 1000
+      message: Pod never reached Running
+      retry:
+        - set: {pod_phase: Running}
+      capture: {passed: pod_ready, elapsed: waited_ms}

@@ -1,0 +1,161 @@
+{
+  "name": "V-VMGR-03 Inspect Modal Variables",
+  "version": "1.0.0",
+  "description": "Test exposing every variable-inspect-modal state for V-VMGR-03 and V-VMGR-04: scalar literals (string / integer / boolean / float), an expression row (api_url), a secret row (password), a huge multiline string (huge_log, injected by the spec for the viewport-cap scenario), complex rows with mixed element types (items array incl. a nested map and null, headers map, results table with typed columns), empty complex values (empty_list, empty_map, schema_only 0-row table), a 500-cap array (big_list, injected by the spec), and an expression-typed array (computed_items, no View dropdown). The workflow carries a Log node (element-config cross-surface stacking) and a local Function with a declared input and a local variable (scope-drill persistence). The visual specs never run the workflow.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Inspect Anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "v-vmgr-03 anchor", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": { "x": 540, "y": 200 },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "name": "Function_1",
+            "inputs": [{ "name": "user_id", "type": "string", "default": "u-1" }],
+            "outputs": [],
+            "variables": [{ "name": "fn_tmp", "type": "integer", "value": 7 }],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": { "x": 300, "y": 200 },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Inner Log",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "config": {
+                      "values": { "message": "inner", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                { "id": "e-inner-1", "source": "start-node", "target": "inner-log" }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-1", "type": "default" }
+    ]
+  },
+  "variables": {
+    "user_name": { "value": "bob", "type": "string", "scope": "test" },
+    "attempt": { "value": 1, "type": "integer", "scope": "test" },
+    "debug_log": { "value": true, "type": "boolean", "scope": "test" },
+    "ratio": { "value": 0.5, "type": "float", "scope": "test" },
+    "api_url": {
+      "value": "'https://api.wave.test/v1/services/discovery/' + user_name",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    },
+    "password": { "value": "hunter2-secret", "type": "string", "scope": "test", "secret": true },
+    "huge_log": { "value": "placeholder - the spec injects ~300 lines here", "type": "string", "scope": "test" },
+    "items": {
+      "value": ["alpha", 42, true, { "retries": 3, "host": "srv-a" }, null],
+      "type": "array",
+      "scope": "test"
+    },
+    "headers": {
+      "value": {
+        "Content-Type": "application/json",
+        "retries": 3,
+        "secure": true,
+        "timeout": 1.5
+      },
+      "type": "map",
+      "scope": "test"
+    },
+    "results": {
+      "value": {
+        "columns": [
+          { "name": "id", "type": "integer" },
+          { "name": "name", "type": "string" },
+          { "name": "retries", "type": "integer" },
+          { "name": "ok", "type": "boolean" }
+        ],
+        "rows": [
+          [1, "alpha", 3, true],
+          [2, "beta", 0, false],
+          [3, "gamma", 7, true]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "empty_list": { "value": [], "type": "array", "scope": "test" },
+    "empty_map": { "value": {}, "type": "map", "scope": "test" },
+    "schema_only": {
+      "value": {
+        "columns": [
+          { "name": "id", "type": "integer" },
+          { "name": "name", "type": "string" },
+          { "name": "ok", "type": "boolean" }
+        ],
+        "rows": []
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "big_list": {
+      "value": ["placeholder - the spec injects 512 integers here"],
+      "type": "array",
+      "scope": "test"
+    },
+    "computed_items": {
+      "value": "items + ['omega']",
+      "type": "array",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-12T00:00:00.000000",
+  "updated_at": "2026-06-12T00:00:00.000000"
+}

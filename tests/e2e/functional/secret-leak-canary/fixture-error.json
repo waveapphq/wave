@@ -1,0 +1,148 @@
+{
+  "name": "Secret Leak Canary Error E2E",
+  "version": "1.0.0",
+  "description": "Error-surface canary: a node fails while a secret is in scope so the raw error message embeds the secret bytes (int(secret) -> ValueError with the literal). The failure is caught; the error must be masked on the node error state, the WS error event, the bound error variable and the error_message log.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 3000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catch Secret-Bearing Error",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 132, "height": 62 }
+      },
+      {
+        "id": "log-fail",
+        "type": "workflowNode",
+        "position": { "x": 620, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail With Secret In Error",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "int(canary_var)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-in-catch",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Branch Marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'tc-in-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After Try/Catch",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'tc-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start-node", "target": "delay-hold", "type": "default" },
+      { "id": "e1", "source": "delay-hold", "target": "tc-1", "type": "default" },
+      { "id": "e2", "source": "tc-1", "sourceHandle": "try", "target": "log-fail", "type": "default" },
+      { "id": "e3", "source": "tc-1", "sourceHandle": "catch", "target": "log-in-catch", "type": "default" },
+      { "id": "e4", "source": "tc-1", "sourceHandle": "then", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "canary_var": {
+      "value": "cnr6-var-a1b2c3d4-alpha-real-bytes",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "tc_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "tc_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

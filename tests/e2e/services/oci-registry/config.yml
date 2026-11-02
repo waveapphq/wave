@@ -1,0 +1,18 @@
+# WAVE E2E OCI registry (test-only): distribution registry over TLS on the
+# registry leaf, basic auth from the checked-in htpasswd.
+version: 0.1
+log:
+  level: info
+storage:
+  # Not the image's declared volume, so the chart pushed at build stays in the image.
+  filesystem:
+    rootdirectory: /wave/registry
+http:
+  addr: :5000
+  tls:
+    certificate: /wave/certs/registry.crt
+    key: /wave/certs/registry.key
+auth:
+  htpasswd:
+    realm: WAVE OCI registry
+    path: /wave/htpasswd

@@ -1,0 +1,14 @@
+# TEST-ONLY OpenSSL config for the tls-lab container: lowers the system
+# security level so the TLSv1/TLSv1.1 listeners can negotiate (OpenSSL 3.x
+# refuses legacy protocols at the default SECLEVEL).
+openssl_conf = default_conf
+
+[default_conf]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+MinProtocol = TLSv1
+CipherString = DEFAULT@SECLEVEL=0

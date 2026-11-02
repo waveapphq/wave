@@ -1,0 +1,25 @@
+# WAVE E2E OpenSearch node (test-only): single node, TLS on HTTP and transport
+# with the lab-CA leaf, security configuration loaded from
+# config/opensearch-security on first start.
+cluster.name: wave-e2e
+network.host: 0.0.0.0
+
+plugins.security.ssl.transport.pemcert_filepath: certs/opensearch.crt
+plugins.security.ssl.transport.pemkey_filepath: certs/opensearch.key
+plugins.security.ssl.transport.pemtrustedcas_filepath: certs/ca.pem
+plugins.security.ssl.transport.enforce_hostname_verification: false
+
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: certs/opensearch.crt
+plugins.security.ssl.http.pemkey_filepath: certs/opensearch.key
+plugins.security.ssl.http.pemtrustedcas_filepath: certs/ca.pem
+plugins.security.ssl.http.clientauth_mode: OPTIONAL
+
+plugins.security.allow_default_init_securityindex: true
+plugins.security.authcz.admin_dn: ["CN=wave-e2e-admin,O=WAVE Test"]
+plugins.security.nodes_dn: ["CN=wave-e2e-opensearch,O=WAVE Test"]
+plugins.security.restapi.roles_enabled: ["all_access"]
+plugins.security.system_indices.enabled: true
+plugins.security.audit.type: noop
+
+cluster.routing.allocation.disk.threshold_enabled: false

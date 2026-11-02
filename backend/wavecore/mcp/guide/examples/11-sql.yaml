@@ -1,0 +1,57 @@
+test:
+  name: Recipe Example - SQL
+  description: Create a table in a SQLite file among the run's artifacts, load a table variable into it, and read back the large orders with a named parameter
+  tags: [example, sql]
+variables:
+  orders:
+    type: table
+    value:
+      - {id: 1, qty: 4}
+      - {id: 2, qty: 12}
+      - {id: 3, qty: 25}
+  min_qty: {type: integer, value: 10}
+  loaded: {type: integer}
+  big_orders: {type: table}
+  big_count: {type: integer}
+flow:
+  - block: sql-client
+    label: Create the orders table
+    settings:
+      operation: run_sql
+      database_type: sqlite
+      file: artifact://shop.db
+      driver_options: {cached_statements: "64"}
+      sql: |
+        CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY, qty INTEGER NOT NULL);
+        DELETE FROM orders;
+    element_types:
+      driver_options: {cached_statements: integer}   # "64" reaches the driver as a number
+  - block: sql-client
+    label: Load the orders
+    settings:
+      operation: load_table
+      database_type: sqlite
+      file: artifact://shop.db
+      table: {expr: "orders"}
+      target_table: orders
+      mode: add
+    capture: {rows_changed: loaded}
+  - block: sql-client
+    label: Read the large orders
+    settings:
+      operation: run_sql
+      database_type: sqlite
+      file: artifact://shop.db
+      sql: |
+        SELECT id, qty
+        FROM orders
+        WHERE qty >= :min_qty
+        ORDER BY id
+      parameters:
+        min_qty: {expr: "min_qty"}
+    capture: {rows: big_orders, row_count: big_count}
+  - assert:
+      that: ["loaded == 3", "big_count == 2"]
+      fail_current_scope: true
+  - block: log
+    settings: {message: "Loaded {{ loaded }} orders; {{ big_count }} have at least {{ min_qty }} items"}

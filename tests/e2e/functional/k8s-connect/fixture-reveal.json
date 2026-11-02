@@ -1,0 +1,172 @@
+{
+  "name": "K8s Connect Session Reveal E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-default",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Default TLS range, session output deliberately revealed",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_def",
+              "cluster_version": "ver_def"
+            },
+            "outputSecretFields": [],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-def",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the default-range leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sreveal-def ver={ver_def}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-narrow",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "TLS range pinned to 1.3, session output deliberately revealed",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "tls_min_version": "1.3",
+              "tls_max_version": "1.3"
+            },
+            "outputBindings": {
+              "session": "sess_narrow",
+              "cluster_version": "ver_narrow"
+            },
+            "outputSecretFields": [],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-narrow",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the narrowed-range leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sreveal-narrow ver={ver_narrow}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-reveal-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-connect-default", "source": "start-node", "target": "connect-default" },
+      { "id": "edge-connect-default-log-def", "source": "connect-default", "target": "log-def" },
+      { "id": "edge-log-def-connect-narrow", "source": "log-def", "target": "connect-narrow" },
+      { "id": "edge-connect-narrow-log-narrow", "source": "connect-narrow", "target": "log-narrow" },
+      { "id": "edge-log-narrow-log-done", "source": "log-narrow", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "sess_def": { "value": "", "type": "string", "scope": "test" },
+    "sess_narrow": { "value": "", "type": "string", "scope": "test" },
+    "ver_def": { "value": "", "type": "string", "scope": "test" },
+    "ver_narrow": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

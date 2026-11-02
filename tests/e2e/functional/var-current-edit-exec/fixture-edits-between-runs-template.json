@@ -1,0 +1,107 @@
+{
+  "name": "Edits Between Runs Template",
+  "version": "1.0.0",
+  "description": "A literal integer (port) and a template (base_url) that reads it. Log Port prints port, Log URL prints base_url, so each console line shows exactly which port and which template source a block run used. No request is sent: the URL is only printed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-port",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log Port",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Port",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'port={port}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-url",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log URL",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log URL",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'base_url={base_url}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-port",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "log-port",
+        "target": "log-url",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "port": {
+      "value": 8080,
+      "type": "integer",
+      "scope": "test"
+    },
+    "base_url": {
+      "value": "http://api.example:{{ port }}/health",
+      "type": "string",
+      "scope": "test",
+      "isTemplate": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-07T00:00:00.000000",
+  "updated_at": "2026-10-07T00:00:00.000000"
+}

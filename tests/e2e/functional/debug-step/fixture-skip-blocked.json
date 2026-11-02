@@ -1,0 +1,131 @@
+{
+  "name": "Debug Step - Skip Block blocked on diverging parent (If-Else)",
+  "version": "1.0.0",
+  "description": "Two-branch If-Else with branch_if Log 'T' and branch_else Log 'F'. Skip Block at the If-Else pause is expected to be rejected with 409 by the API and disabled by the Paused Toolbar.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-init",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set transport",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "TCP" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "if-else",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if",
+                  "id": "branch_if",
+                  "label": "TCP",
+                  "conditions": [{
+                    "type": "literal",
+                    "variable": "transport",
+                    "value_type": "string",
+                    "operator": "equals",
+                    "reference_value": "TCP",
+                    "reference_is_expression": false,
+                    "id": "cond-tcp"
+                  }]
+                },
+                { "type": "else", "id": "branch_else", "label": "Other" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-true",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Branch T",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'branch-T'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-false",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Branch F",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'branch-F'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "varset-init", "type": "default" },
+      { "id": "e-vs-ie", "source": "varset-init", "target": "if-else", "type": "default" },
+      { "id": "e-if-t", "source": "if-else", "sourceHandle": "branch_if", "target": "log-true", "type": "default" },
+      { "id": "e-if-f", "source": "if-else", "sourceHandle": "branch_else", "target": "log-false", "type": "default" }
+    ]
+  },
+  "variables": {
+    "transport": { "type": "string", "value": "", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-04-25T00:00:00.000000",
+  "updated_at": "2026-04-25T00:00:00.000000"
+}

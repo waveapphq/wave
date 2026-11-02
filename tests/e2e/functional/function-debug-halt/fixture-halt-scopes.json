@@ -1,0 +1,423 @@
+{
+  "name": "V-FN-HALT-SCOPES",
+  "version": "1.0.0",
+  "description": "Three Function instances exercising function-scope Halt: passed (caller continues, PASS badge), skipped (caller continues, SKIP badge), and failed inside a Try/Catch try-branch (caught, then-egress continues). REQ-3.5.1.14.",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'halt-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-passed",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "FnPassed",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "FnPassed",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "halt-p",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Halt",
+                    "elementType": "halt",
+                    "nodeType": "control",
+                    "category": "flow",
+                    "version": "1.0.0",
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "scope": "function",
+                        "status": "passed",
+                        "message": "function-scope passed"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-hp",
+                  "source": "start-node",
+                  "target": "halt-p",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-skipped",
+        "type": "workflowNode",
+        "position": {
+          "x": 500,
+          "y": 200
+        },
+        "data": {
+          "label": "FnSkipped",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "FnSkipped",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "halt-s",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Halt",
+                    "elementType": "halt",
+                    "nodeType": "control",
+                    "category": "flow",
+                    "version": "1.0.0",
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "scope": "function",
+                        "status": "skipped",
+                        "message": "function-scope skipped"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-hs",
+                  "source": "start-node",
+                  "target": "halt-s",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 200
+        },
+        "data": {
+          "label": "Try/Catch/Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-failed",
+        "type": "workflowNode",
+        "position": {
+          "x": 760,
+          "y": 200
+        },
+        "data": {
+          "label": "FnFailed",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "FnFailed",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "halt-f",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Halt",
+                    "elementType": "halt",
+                    "nodeType": "control",
+                    "category": "flow",
+                    "version": "1.0.0",
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "scope": "function",
+                        "status": "failed",
+                        "message": "boom-in-function"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-hf",
+                  "source": "start-node",
+                  "target": "halt-f",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": 760,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'halt-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 940,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'halt-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-before",
+        "source": "start-node",
+        "target": "log-before",
+        "type": "default"
+      },
+      {
+        "id": "e-before-passed",
+        "source": "log-before",
+        "target": "fn-passed",
+        "type": "default"
+      },
+      {
+        "id": "e-passed-skipped",
+        "source": "fn-passed",
+        "target": "fn-skipped",
+        "type": "default"
+      },
+      {
+        "id": "e-skipped-tc",
+        "source": "fn-skipped",
+        "target": "tc",
+        "type": "default"
+      },
+      {
+        "id": "e-tc-try",
+        "source": "tc",
+        "target": "fn-failed",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-tc-catch",
+        "source": "tc",
+        "target": "log-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-tc-then",
+        "source": "tc",
+        "target": "log-after",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

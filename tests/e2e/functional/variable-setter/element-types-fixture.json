@@ -1,0 +1,146 @@
+{
+  "name": "V-VARSET-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "A Variable Setter writes a typed map and list; two probes read them",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "32df9c58-c020-4066-a204-ae25960ac87a",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set typed collections",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTypes": {
+            "m": "map",
+            "a": "array"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "m": {},
+                "a": []
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3d3f1baa-603f-48c6-963a-1a0ca3d0e429",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Map probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__MAP_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6cf00dbf-2273-4a78-82fd-a67644eec9a5",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__LIST_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "32df9c58-c020-4066-a204-ae25960ac87a",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "32df9c58-c020-4066-a204-ae25960ac87a",
+        "target": "3d3f1baa-603f-48c6-963a-1a0ca3d0e429",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "3d3f1baa-603f-48c6-963a-1a0ca3d0e429",
+        "target": "6cf00dbf-2273-4a78-82fd-a67644eec9a5",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "m": {
+      "type": "map",
+      "value": {}
+    },
+    "a": {
+      "type": "array",
+      "value": []
+    }
+  },
+  "metadata": {}
+}

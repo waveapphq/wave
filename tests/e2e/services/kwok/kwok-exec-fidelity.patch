@@ -1,0 +1,57 @@
+Patch for pkg/utils/exec/exec.go in kwok v0.7.0 (https://github.com/kubernetes-sigs/kwok),
+Copyright 2023 The Kubernetes Authors, Apache-2.0. This patch changes that file. See NOTICE.
+
+--- a/pkg/utils/exec/exec.go
++++ b/pkg/utils/exec/exec.go
+@@ -19,6 +19,7 @@
+ import (
+ 	"bytes"
+ 	"context"
++	"errors"
+ 	"fmt"
+ 	"io"
+ 	"os"
+@@ -223,6 +224,7 @@
+ 				return nil, err
+ 			}
+ 			go func() {
++				defer func() { _ = inPipe.Close() }()
+ 				_, _ = io.Copy(inPipe, opt.In)
+ 			}()
+ 		} else {
+@@ -246,11 +248,33 @@
+ 	if opt.Wait {
+ 		err = cmd.Wait()
+ 		if err != nil {
++			var wrapped error
+ 			if buf, ok := cmd.Stderr.(*bytes.Buffer); ok {
+-				return nil, fmt.Errorf("cmd wait: %s %s: %w\n%s", name, strings.Join(args, " "), err, buf.String())
++				wrapped = fmt.Errorf("cmd wait: %s %s: %w\n%s", name, strings.Join(args, " "), err, buf.String())
++			} else {
++				wrapped = fmt.Errorf("cmd wait: %s %s: %w", name, strings.Join(args, " "), err)
+ 			}
+-			return nil, fmt.Errorf("cmd wait: %s %s: %w", name, strings.Join(args, " "), err)
++			var exitErr *exec.ExitError
++			if errors.As(err, &exitErr) {
++				return nil, &ExitError{ExitError: exitErr, msg: wrapped.Error()}
++			}
++			return nil, wrapped
+ 		}
+ 	}
+ 	return cmd, nil
+ }
++
++// ExitError carries a non-zero process exit so callers can read the code.
++type ExitError struct {
++	*exec.ExitError
++	msg string
++}
++
++// Error returns the wrapped message.
++func (e *ExitError) Error() string { return e.msg }
++
++// Unwrap returns the underlying exit error.
++func (e *ExitError) Unwrap() error { return e.ExitError }
++
++// ExitStatus satisfies k8s.io/utils/exec.ExitError, which os.ProcessState does not.
++func (e *ExitError) ExitStatus() int { return e.ExitError.ExitCode() }

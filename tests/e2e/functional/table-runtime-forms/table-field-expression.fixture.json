@@ -1,0 +1,275 @@
+{
+  "name": "Table Runtime Forms - the table field takes an expression",
+  "version": "1.0.0",
+  "description": "Excel Write and CSV Serialize each receive a fluent filter/order_by chain typed straight into their table parameter, instead of a bound variable.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "CSV Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "region,amount\nwest,10\neast,20\nwest,30\neast,5\n"
+            },
+            "outputBindings": {
+              "table": "seed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "serialize-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "CSV Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "seed.filter('amount').greater_than(5).order_by(('amount','desc'))",
+              "has_header": true,
+              "delimiter": ","
+            },
+            "outputBindings": {
+              "csv_content": "expr_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Excel Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "table"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://expr.xlsx",
+              "sheet": "Expr",
+              "table": "seed.filter('region').equals('east').order_by('amount')",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-expr",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 480
+        },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Excel Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://expr.xlsx",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "expr_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-text",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'expr-csv=' + expr_text.replace('\\n', '~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-table",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xlsx-expr-regions=' + ','.join(expr_table.col('region')) + ' amounts=' + str(expr_table.col('amount'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "parse-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "parse-seed",
+        "target": "serialize-expr",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "serialize-expr",
+        "target": "write-expr",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "write-expr",
+        "target": "read-expr",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "read-expr",
+        "target": "log-expr-text",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-expr-text",
+        "target": "log-expr-table",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "seed": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "expr_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "expr_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

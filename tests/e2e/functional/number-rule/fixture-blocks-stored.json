@@ -1,0 +1,174 @@
+{
+  "name": "V-NUMBER-BLOCKS-STORED",
+  "version": "1.0.0",
+  "description": "Stored values the window refuses: a 20-digit integer, a 29-digit float, an interval below 0.2 by a hair, text in an integer row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "3fc47ef5-8d98-5b4e-8b02-e18065f84d0b",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 100
+        },
+        "data": {
+          "label": "Too Many Digits",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Too Many Digits",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=too-many",
+              "method": "GET",
+              "max_size": "12345678901234567890",
+              "retry_delay": "0.12345678901234567890123456789"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "13ee8d49-6d09-5f17-8be1-a6ecf9974786",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 210
+        },
+        "data": {
+          "label": "Interval Bound",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Interval Bound",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "count": 1,
+              "interval": "0.19999999999999999999"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "39849171-5a7d-5a75-8e1e-38c131ee539c",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 320
+        },
+        "data": {
+          "label": "Text Digits",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Text Digits",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=text",
+              "method": "GET",
+              "max_size": "abc"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "8664282c-86ad-512b-90e3-8602dc2a7d7f",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 430
+        },
+        "data": {
+          "label": "Stored Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stored Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "number-stored-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d4d0f2f8-7cf0-5570-bfee-1cf02659ee27",
+        "source": "start-node",
+        "target": "3fc47ef5-8d98-5b4e-8b02-e18065f84d0b",
+        "type": "default"
+      },
+      {
+        "id": "cb992e9e-0bde-5fb5-a4a9-8826530c8fbe",
+        "source": "3fc47ef5-8d98-5b4e-8b02-e18065f84d0b",
+        "target": "13ee8d49-6d09-5f17-8be1-a6ecf9974786",
+        "type": "default"
+      },
+      {
+        "id": "d956e932-ed36-57b1-8750-7e1c20f9a69e",
+        "source": "13ee8d49-6d09-5f17-8be1-a6ecf9974786",
+        "target": "39849171-5a7d-5a75-8e1e-38c131ee539c",
+        "type": "default"
+      },
+      {
+        "id": "6bb087d9-3358-5aeb-8714-16eb932c763b",
+        "source": "39849171-5a7d-5a75-8e1e-38c131ee539c",
+        "target": "8664282c-86ad-512b-90e3-8602dc2a7d7f",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [
+      "e2e",
+      "number-rule"
+    ]
+  }
+}

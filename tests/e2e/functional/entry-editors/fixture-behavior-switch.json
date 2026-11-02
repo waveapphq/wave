@@ -1,0 +1,99 @@
+{
+  "name": "zz-11541-s6b-switch",
+  "version": "1.0.0",
+  "description": "A Function Block whose typed map and list inputs hold text, number, List and Map entries",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "01a305eb-b4dc-42bd-a57a-5d61b99ac02d",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 160 },
+        "data": {
+          "label": "Cfg_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "elementTypes": {
+            "cfg": { "txt": "string", "num": "integer", "sub": "map", "arr": "array", "empty": "string" },
+            "lst": ["string", "array", "map", "string"]
+          },
+          "config": {
+            "values": {
+              "cfg": { "txt": "hello", "num": "5", "sub": { "a": "1" }, "arr": ["1", "2"], "empty": "" },
+              "lst": ["hello", ["1", "2"], { "k": "v" }, ""]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Cfg_Fn",
+            "description": "Logs its map and list inputs",
+            "inputs": [
+              { "name": "cfg", "type": "map", "required": false },
+              { "name": "lst", "type": "array", "required": false }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "ccd7fc10-8133-465b-83d5-96167168c78b",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Entry probe",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "f\"SW txt=[{cfg['txt']}] num={cfg['num'] + 0} sub={len(cfg['sub'])} arr={len(cfg['arr'])} empty={cfg['empty']} l0=[{lst[0]}] l1={lst[1][0] + 0} l2={len(lst[2])} l3={lst[3]}\"",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "8d643243-5dd5-48a3-87c0-e234fadb8987",
+                  "source": "start-node",
+                  "target": "ccd7fc10-8133-465b-83d5-96167168c78b",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "eaac523b-c772-4f8e-9196-537745af1ab2",
+        "source": "start-node",
+        "target": "01a305eb-b4dc-42bd-a57a-5d61b99ac02d",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "note": { "type": "string", "scope": "test", "value": "hello" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

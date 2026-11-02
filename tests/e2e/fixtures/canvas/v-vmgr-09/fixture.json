@@ -1,0 +1,234 @@
+{
+  "name": "V-VMGR-09 Null Rows",
+  "version": "1.0.0",
+  "description": "Variable Manager rows in the null look (VMGR-93): a null and an empty variable of each of the seven types, a string holding the text null, and a local Function whose input default, output default and local variable are stored null. No block references a variable, so every row carries the Unused badge. The visual spec never runs the workflow.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ff9d1272-642f-47e0-92e2-079820c656f8",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 200
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Rows Anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "v-vmgr-09 anchor",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e081b010-e87f-403f-b539-9ceb52e0ed24",
+        "type": "workflowNode",
+        "position": {
+          "x": 540,
+          "y": 200
+        },
+        "data": {
+          "label": "Fn_null_params",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Fn_null_params",
+            "inputs": [
+              {
+                "name": "fn_in",
+                "type": "string",
+                "required": false,
+                "default": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "fn_out",
+                "type": "integer",
+                "default": null
+              }
+            ],
+            "variables": [
+              {
+                "name": "fn_local",
+                "type": "string",
+                "value": null
+              }
+            ],
+            "dependencies": {
+              "functions": [],
+              "plugins": []
+            },
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "de01a7c4-68b1-4315-92cf-45515ad0738f",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 300,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Inner Log",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "config": {
+                      "values": {
+                        "message": "v-vmgr-09 inner",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "5d8c72c4-ab2e-48a9-9ba8-545d2eba219a",
+                  "source": "start-node",
+                  "target": "de01a7c4-68b1-4315-92cf-45515ad0738f"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d2a166de-a529-4f18-814b-cd258fe17c09",
+        "source": "start-node",
+        "target": "ff9d1272-642f-47e0-92e2-079820c656f8",
+        "type": "default"
+      },
+      {
+        "id": "786256d0-c6bd-4ac2-9f17-c8f3ef4826d1",
+        "source": "ff9d1272-642f-47e0-92e2-079820c656f8",
+        "target": "e081b010-e87f-403f-b539-9ceb52e0ed24",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "null_array": {
+      "value": null,
+      "type": "array",
+      "scope": "test"
+    },
+    "null_boolean": {
+      "value": null,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "null_float": {
+      "value": null,
+      "type": "float",
+      "scope": "test"
+    },
+    "null_integer": {
+      "value": null,
+      "type": "integer",
+      "scope": "test"
+    },
+    "null_map": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "null_string": {
+      "value": null,
+      "type": "string",
+      "scope": "test"
+    },
+    "null_table": {
+      "value": null,
+      "type": "table",
+      "scope": "test"
+    },
+    "empty_array": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "empty_boolean": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "empty_float": {
+      "value": 0,
+      "type": "float",
+      "scope": "test"
+    },
+    "empty_integer": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "empty_map": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "empty_string": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "empty_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "text_null": {
+      "value": "null",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-15T00:00:00.000000",
+  "updated_at": "2026-10-15T00:00:00.000000"
+}

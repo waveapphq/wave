@@ -1,0 +1,87 @@
+{
+  "name": "Console Source-Column Resize Regression",
+  "version": "1.0.0",
+  "description": "Three Log plugins that produce three log entries so the console source-column resize handle can be exercised against a real virtualized log.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-a",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log A",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'console-resize-line-a'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-b",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log B",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'console-resize-line-b'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log C",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'console-resize-line-c'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-a", "type": "default" },
+      { "id": "e2", "source": "log-a",      "target": "log-b", "type": "default" },
+      { "id": "e3", "source": "log-b",      "target": "log-c", "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-04-27T00:00:00.000000",
+  "updated_at": "2026-04-27T00:00:00.000000"
+}

@@ -1,0 +1,130 @@
+{
+  "name": "V-SECRET-SETTER-TYPED-ELEMENTS",
+  "version": "1.0.0",
+  "description": "A Variable Setter writes a secret typed map and list; a probe reads them",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8b1f6d2e-4c3a-4e7b-9d15-6a2f0c8e3b71",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set secret typed collections",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTypes": {
+            "xm": "map",
+            "xa": "array"
+          },
+          "variableElementTypes": {
+            "xm": {
+              "n": "integer",
+              "zip": "string"
+            },
+            "xa": [
+              "integer",
+              "string"
+            ]
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "xm": {
+                  "n": "16",
+                  "zip": "02134"
+                },
+                "xa": [
+                  "16",
+                  "02134"
+                ]
+              }
+            },
+            "variableSecretKeys": [
+              "xm",
+              "xa"
+            ],
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c4e9a1d7-2b6f-4f83-8a0e-5d7c3b9f1e24",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Setter secret probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"XSEC n={xm['n'] + 1} zt={type(xm['zip']) == str} a0={xa[0] + 1} a1t={type(xa[1]) == str} plain={plain_counter}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "8b1f6d2e-4c3a-4e7b-9d15-6a2f0c8e3b71",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "8b1f6d2e-4c3a-4e7b-9d15-6a2f0c8e3b71",
+        "target": "c4e9a1d7-2b6f-4f83-8a0e-5d7c3b9f1e24",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "xm": {
+      "type": "map",
+      "value": {}
+    },
+    "xa": {
+      "type": "array",
+      "value": []
+    },
+    "plain_counter": {
+      "type": "integer",
+      "value": "7"
+    }
+  },
+  "metadata": {}
+}

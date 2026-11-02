@@ -1,0 +1,23 @@
+# Left out of every image build from the repository root.
+.git
+backend/data
+backend/config/config.yaml
+backend/config/config.local.yaml
+frontend/build
+**/.env
+**/.env.*
+**/secrets.yaml
+**/*-secret.yaml
+**/*-secrets.yaml
+**/node_modules
+**/__pycache__
+**/.venv
+**/.cache
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/.scannerwork
+**/.coverage
+**/coverage
+**/coverage.xml
+**/htmlcov

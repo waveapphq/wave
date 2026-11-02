@@ -1,0 +1,20 @@
+# WAVE E2E OpenSearch roles (test-only).
+_meta:
+  type: "roles"
+  config_version: 2
+wave_e2e_read:
+  reserved: false
+  cluster_permissions:
+    - "cluster_composite_ops_ro"
+  index_permissions:
+    - index_patterns:
+        - "wave-e2e-*"
+      allowed_actions:
+        - "read"
+wave_e2e_limited:
+  reserved: false
+  index_permissions:
+    - index_patterns:
+        - "wave-e2e-other-*"
+      allowed_actions:
+        - "read"

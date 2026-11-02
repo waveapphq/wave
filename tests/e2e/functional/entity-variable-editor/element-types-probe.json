@@ -1,0 +1,173 @@
+{
+  "name": "V-ENTITY-VAR-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "Reads a typed map from the Suite, Regression and System scopes",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "4eb6d1e4-9db9-47ee-b705-4c92f64c4f88",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Suite probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__SUITE_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f4e61c7c-ad83-4f38-8e4f-1f088167b67d",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Regression probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__REG_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8c7a6032-c133-4961-9a21-09f9f3c926b8",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "System probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__SYS_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "40ee6595-9ca9-4108-ae99-bbe1198bf527",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Scalar probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"SCALAR {suite.count + 1}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "4eb6d1e4-9db9-47ee-b705-4c92f64c4f88",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "4eb6d1e4-9db9-47ee-b705-4c92f64c4f88",
+        "target": "f4e61c7c-ad83-4f38-8e4f-1f088167b67d",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "f4e61c7c-ad83-4f38-8e4f-1f088167b67d",
+        "target": "8c7a6032-c133-4961-9a21-09f9f3c926b8",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "8c7a6032-c133-4961-9a21-09f9f3c926b8",
+        "target": "40ee6595-9ca9-4108-ae99-bbe1198bf527",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

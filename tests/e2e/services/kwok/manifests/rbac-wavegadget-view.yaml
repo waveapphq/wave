@@ -1,0 +1,14 @@
+# Aggregates read access to the custom resource into the built-in view role, so the
+# limited token, the minted run tokens and every other view-bound subject can read a
+# WaveGadget. Without this only cluster-admin can, and the 403 reads like a discovery
+# failure.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wave-gadget-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups: ["wave.e2e"]
+  resources: ["wavegadgets"]
+  verbs: ["get", "list", "watch"]

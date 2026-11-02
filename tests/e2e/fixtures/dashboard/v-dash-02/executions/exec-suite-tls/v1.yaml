@@ -1,0 +1,15 @@
+id: exec-suite-tls
+test_id: tls-validation
+status: completed
+progress: 100
+current_block: null
+variables:
+  namespace: Dev-West-NS3
+  tests_selected: 15
+  tests_total: 15
+error: null
+started_at: "2025-12-28T09:55:00Z"
+updated_at: "2025-12-28T09:57:45Z"
+completed_at: "2025-12-28T09:57:45Z"
+artifacts: []
+debug_state: null

@@ -1,0 +1,50 @@
+test:
+  name: Recipe Example - Try, Parallel, Assert
+  description: Recover from failures with try/catch/finally, fan out in parallel, assert in both modes
+  tags: [example, resilience]
+variables:
+  service_ok: {type: boolean, value: true}
+  last_attempt_ok: {type: boolean, value: false}
+flow:
+  - try:
+      steps:
+        - block: http-client
+          settings: {url: "http://blackbox.local/flaky", method: GET}
+          capture: {status_code: flaky_status}
+        - block: log
+          settings: {message: "Upstream answered {{ flaky_status }}"}
+        - set: {last_attempt_ok: true}
+      catch:
+        - block: log
+          settings: {message: Fetch failed - continuing, level: WARN}
+        - set: {last_attempt_ok: false}
+        - delay: 100
+      finally:
+        - block: log
+          settings: {message: Fetch attempt finished}
+        - block: log
+          settings: {message: "Recovered: {{ last_attempt_ok }}"}
+      capture: {error: fetch_error, caught: fetch_failed}
+  - parallel:
+      join: all
+      branches:
+        - name: quick
+          steps:
+            - delay: 100
+        - name: slow
+          steps:
+            - delay: 250
+  - assert:
+      that:
+        - "service_ok"
+        - {variable: service_ok, operator: is_true, value_type: boolean}
+  - assert:
+      that:
+        - "flaky_status != 500"
+      on_pass:
+        - block: log
+          settings: {message: Assertions passed}
+      on_fail:
+        - block: log
+          settings: {message: Assertions failed, level: ERROR}
+        - halt: {scope: test, status: failed, message: aborting on failed assertion}

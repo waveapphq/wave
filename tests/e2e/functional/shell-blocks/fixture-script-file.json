@@ -1,0 +1,101 @@
+{
+  "name": "SH-2 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Script File mode: a Test Data script picked through Browse runs under the Shell row whatever its first line says; a missing Script File is StartFailed under Record and continue.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-file",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Script File Through Browse",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo placeholder",
+              "arguments": [{ "value": "ok" }]
+            },
+            "outputBindings": { "stdout": "file_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-file-missing",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Missing Script File",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "file",
+              "script_file": "testdata://scripts/missing-__TOKEN__.sh",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "m_ok",
+              "reason": "m_reason",
+              "error": "m_err",
+              "exit_code": "m_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-2-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-2-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-file", "source": "start-node", "target": "sh-file" },
+      { "id": "e-file-missing", "source": "sh-file", "target": "sh-file-missing" },
+      { "id": "e-missing-done", "source": "sh-file-missing", "target": "sh-2-done" }
+    ]
+  },
+  "variables": {
+    "file_out": { "value": "", "type": "string", "scope": "test" },
+    "m_ok": { "value": true, "type": "boolean", "scope": "test" },
+    "m_reason": { "value": "", "type": "string", "scope": "test" },
+    "m_err": { "value": "", "type": "string", "scope": "test" },
+    "m_code": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

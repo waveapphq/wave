@@ -1,0 +1,20 @@
+id: exec-suite-gui-smoke
+test_id: gui-smoke-tests
+status: failed
+progress: 50
+current_block: null
+variables:
+  namespace: Dev-East-NS2
+  tests_selected: 5
+  tests_total: 10
+error:
+  message: "2 tests failed: login-timeout, button-click-unresponsive"
+  code: TEST_FAILURE
+  block_id: block-gui-interactions
+  timestamp: "2025-12-28T09:45:00Z"
+  stack_trace: null
+started_at: "2025-12-28T09:30:00Z"
+updated_at: "2025-12-28T09:45:00Z"
+completed_at: "2025-12-28T09:45:00Z"
+artifacts: []
+debug_state: null

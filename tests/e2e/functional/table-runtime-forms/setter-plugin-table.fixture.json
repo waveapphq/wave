@@ -1,0 +1,125 @@
+{
+  "name": "Table Runtime Forms - Store a plugin-produced table",
+  "version": "1.0.0",
+  "description": "A CSV converter binds its table output to a table variable; a Variable Setter stores that table (and a filtered derivative) into further table variables that downstream Logs read.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sku,qty\nA-1,3\nB-2,7\n"
+            },
+            "outputBindings": { "table": "orders" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "store-table",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Store Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["stored_orders", "big_orders"],
+          "variableTypes": { "stored_orders": "table", "big_orders": "table" },
+          "config": {
+            "values": {
+              "variables": {
+                "stored_orders": "orders",
+                "big_orders": "orders.filter('qty').greater_than(5)"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-stored",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 370 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Stored",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'stored-{stored_orders[0][\"sku\"]}-rows-{len(stored_orders)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-derived",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 480 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Derived",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'derived-{big_orders[0][\"sku\"]}-rows-{len(big_orders)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-orders", "type": "default" },
+      { "id": "e2", "source": "parse-orders", "target": "store-table", "type": "default" },
+      { "id": "e3", "source": "store-table", "target": "log-stored", "type": "default" },
+      { "id": "e4", "source": "log-stored", "target": "log-derived", "type": "default" }
+    ]
+  },
+  "variables": {
+    "orders": { "value": [], "type": "table", "scope": "test" },
+    "stored_orders": { "value": [], "type": "table", "scope": "test" },
+    "big_orders": { "value": [], "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

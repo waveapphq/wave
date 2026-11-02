@@ -1,0 +1,64 @@
+{
+  "name": "Var Inspect Edit E2E",
+  "version": "1.0.0",
+  "description": "Edit-in-modal functional fixture: a scalar integer (count), a string (greeting), an array (colors), a map (headers), a table (results), a rename-target string (base), and a computed expression (derived = 'svc-' + base) so the spec can exercise scalar edit + persist, complex Visual/Code edit + Format, the invalid-JSON guard, rename-with-refactoring, and the expression-cycle Save gate. A single Log node anchors the workflow so the test validates with zero errors.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "var-inspect-edit anchor", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-1", "type": "default" }
+    ]
+  },
+  "variables": {
+    "count": { "value": 3, "type": "integer", "scope": "test" },
+    "greeting": { "value": "hello", "type": "string", "scope": "test" },
+    "colors": { "value": ["red", "green", "blue"], "type": "array", "scope": "test" },
+    "headers": { "value": { "x": "1", "y": "2" }, "type": "map", "scope": "test" },
+    "results": {
+      "value": {
+        "columns": [
+          { "name": "id", "type": "integer" },
+          { "name": "name", "type": "string" }
+        ],
+        "rows": [
+          [1, "alpha"],
+          [2, "beta"]
+        ]
+      },
+      "type": "table",
+      "scope": "test"
+    },
+    "base": { "value": "wave", "type": "string", "scope": "test" },
+    "derived": {
+      "value": "'svc-' + base",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-17T00:00:00.000000",
+  "updated_at": "2026-06-17T00:00:00.000000"
+}

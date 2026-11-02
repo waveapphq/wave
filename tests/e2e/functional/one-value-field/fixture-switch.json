@@ -1,0 +1,340 @@
+{
+  "name": "zz-11541-s4-switch",
+  "version": "1.0.0",
+  "description": "Shell Exec, HTTP Request, OpenSearch and a Local Function Block whose fields of every type hold a value, and a stored password, for the switch warning.",
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e2987488-9aad-4207-9450-027fd249d1c9",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Switch",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Text, map and number fields holding values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "command": "echo switch",
+              "shell": "/bin/bash",
+              "env_vars": {
+                "MODE": "x"
+              },
+              "working_dir": "/tmp",
+              "timeout": 120
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "858cfd7e-aca2-4d1e-b99c-e77b93154b1d",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "data": {
+          "label": "HTTP Switch",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "List, map, float, choice and true / false fields holding values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "POST",
+              "verify_ssl": false,
+              "allow_redirects": false,
+              "headers": {
+                "X-A": "1"
+              },
+              "retry_delay": 2.5,
+              "retryable_status_codes": [
+                "500"
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9f8e46a1-3261-47d2-ab2d-0efdc09985da",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 300
+        },
+        "data": {
+          "label": "Query Switch",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A code field holding a query, and a stored password",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-switch",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "dql",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "order": "desc",
+              "timeout": 60,
+              "verify_ssl": true,
+              "on_error": "fail",
+              "query": "msg:alpha",
+              "username": "wave",
+              "password": "zz-11541-s4-secret"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6fe1f528-1d1f-4965-b185-843031e205b9",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 400
+        },
+        "data": {
+          "label": "switch_fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "description": "Table, text, list, map and number inputs holding values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "grid": {
+                "columns": [
+                  {
+                    "name": "name",
+                    "type": "string"
+                  }
+                ],
+                "rows": [
+                  [
+                    "gamma"
+                  ]
+                ]
+              },
+              "note": "hello",
+              "items": [
+                "a",
+                "b"
+              ],
+              "conf": {
+                "k": "v"
+              },
+              "rows": {
+                "columns": [
+                  {
+                    "name": "name",
+                    "type": "string"
+                  }
+                ],
+                "rows": [
+                  [
+                    "r1"
+                  ]
+                ]
+              },
+              "count": 5,
+              "level": 0.5
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "switch_fn",
+            "description": "Table, text, list, map and number inputs holding values",
+            "inputs": [
+              {
+                "name": "grid",
+                "type": "table",
+                "required": false,
+                "default": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "type": "string"
+                    }
+                  ],
+                  "rows": [
+                    [
+                      "alpha"
+                    ]
+                  ]
+                }
+              },
+              {
+                "name": "note",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "items",
+                "type": "array",
+                "required": false
+              },
+              {
+                "name": "conf",
+                "type": "map",
+                "required": false
+              },
+              {
+                "name": "rows",
+                "type": "table",
+                "required": false
+              },
+              {
+                "name": "count",
+                "type": "integer",
+                "required": false
+              },
+              {
+                "name": "level",
+                "type": "float",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "08f445a3-1aa8-45e9-ae8d-1a888f6e1c2a",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "Report Inputs",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the inputs the Function got",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'switch-fn'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "897b9ea1-6c0b-47c9-b40f-9aefd8eed284",
+                  "source": "start-node",
+                  "target": "08f445a3-1aa8-45e9-ae8d-1a888f6e1c2a",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "6da516b0-05b4-476b-aa54-1eb225457950",
+        "source": "start-node",
+        "target": "e2987488-9aad-4207-9450-027fd249d1c9",
+        "type": "default"
+      },
+      {
+        "id": "8e75fc47-8f9f-46b2-9627-b9f1b6198ae3",
+        "source": "e2987488-9aad-4207-9450-027fd249d1c9",
+        "target": "858cfd7e-aca2-4d1e-b99c-e77b93154b1d",
+        "type": "default"
+      },
+      {
+        "id": "df3c448f-37ac-432d-a13f-0a89dcc1255f",
+        "source": "858cfd7e-aca2-4d1e-b99c-e77b93154b1d",
+        "target": "9f8e46a1-3261-47d2-ab2d-0efdc09985da",
+        "type": "default"
+      },
+      {
+        "id": "d72d8cbe-d041-4cbb-9e3b-20df119922ba",
+        "source": "9f8e46a1-3261-47d2-ab2d-0efdc09985da",
+        "target": "6fe1f528-1d1f-4965-b185-843031e205b9",
+        "type": "default"
+      }
+    ]
+  }
+}

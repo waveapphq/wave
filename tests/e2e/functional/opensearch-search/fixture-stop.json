@@ -1,0 +1,146 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-SEARCH-STOP",
+  "version": "1.0.0",
+  "description": "One slow Search with a 300 second Timeout that the run's Stop ends, then a Log that never runs.",
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  },
+  "variables": {
+    "stop_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "stop_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "stop_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "stop_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "stop_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "41400f1f-ad05-40c9-bca1-e924cfc0b27a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Slow search",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Slow search",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-stop-slow",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "query_dsl",
+              "query": "__SLOW_QUERY__",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 300,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "stop_ok",
+              "results": "stop_rows",
+              "total_results": "stop_total",
+              "error": "stop_error",
+              "reason": "stop_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "3a55c9a7-e35d-4974-9ff0-9e6221a96d22",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-stop-after reason={{ stop_reason }} error={{ stop_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "417ea779-e22f-47e7-ba93-2becc2940e7c",
+        "source": "start-node",
+        "target": "41400f1f-ad05-40c9-bca1-e924cfc0b27a",
+        "type": "default"
+      },
+      {
+        "id": "78998de3-255d-4239-ab4c-52bb7c216cc5",
+        "source": "41400f1f-ad05-40c9-bca1-e924cfc0b27a",
+        "target": "3a55c9a7-e35d-4974-9ff0-9e6221a96d22",
+        "type": "default"
+      }
+    ]
+  }
+}

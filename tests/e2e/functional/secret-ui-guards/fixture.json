@@ -1,0 +1,62 @@
+{
+  "name": "Secret UI Guards E2E",
+  "version": "1.0.0",
+  "description": "Saved secret scalar + map + plain variable; the Log proof node resolves the scalar secret so a run proves the stored value survived (or was dropped by) the editor flows",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-key-proof",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prove Stored Secret Intact",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'KEY-INTACT' if api_key == 'k3y-real-v4lue-8811' else 'KEY-DROPPED'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-key-proof", "type": "default" }
+    ]
+  },
+  "variables": {
+    "api_key": {
+      "value": "k3y-real-v4lue-8811",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "cred_map": {
+      "value": {
+        "api_key": "ui-map-k3y-6621",
+        "db_password": "ui-map-p4ss-6622"
+      },
+      "type": "map",
+      "scope": "test",
+      "secret": true
+    },
+    "plain_note": {
+      "value": "release-42",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

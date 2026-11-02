@@ -1,0 +1,216 @@
+{
+  "name": "SH-6 __TOKEN__",
+  "version": "1.0.0",
+  "description": "A non-zero exit under Fail inside Try/Catch and under Record and continue, and a script that installs its own EXIT trap.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "tc-exit",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard for the Fail leg",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "f_error" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "sh-exit-fail",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 160 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit 3 under Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo out; echo err >&2; exit 3",
+              "on_error": "fail"
+            },
+            "outputBindings": { "stdout": "f_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-exit-catch",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 160 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch branch",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-6-catch-ran-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-exit-msg",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 160 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Caught message",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"SH-6-caught-__TOKEN__ msg={f_error['message'] if f_error else 'NO-ERROR-CAUGHT'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-exit-record",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 240 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit 3 under Record",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo out; echo err >&2; exit 3",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "stdout": "r_out",
+              "stderr": "r_err",
+              "exit_code": "r_code",
+              "success": "r_ok",
+              "reason": "r_reason",
+              "error": "r_msg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-exit-trap",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 320 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Own EXIT trap",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "trap 'STATUS=cleaned' EXIT; COUNT=5; exit 4",
+              "script_variables": ["STATUS", "COUNT"],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "STATUS": "t_status",
+              "COUNT": "t_count",
+              "exit_code": "t_code",
+              "reason": "t_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-6-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "tc-exit" },
+      { "id": "e-tc-try", "source": "tc-exit", "sourceHandle": "try", "target": "sh-exit-fail", "type": "default" },
+      { "id": "e-tc-catch", "source": "tc-exit", "sourceHandle": "catch", "target": "log-exit-catch", "type": "default" },
+      { "id": "e-tc-then", "source": "tc-exit", "sourceHandle": "then", "target": "log-exit-msg", "type": "default" },
+      { "id": "e-msg-record", "source": "log-exit-msg", "target": "sh-exit-record" },
+      { "id": "e-record-trap", "source": "sh-exit-record", "target": "sh-exit-trap" },
+      { "id": "e-trap-done", "source": "sh-exit-trap", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "f_out": { "value": "unset", "type": "string", "scope": "test" },
+    "f_error": { "value": {}, "type": "map", "scope": "test" },
+    "r_out": { "value": "", "type": "string", "scope": "test" },
+    "r_err": { "value": "", "type": "string", "scope": "test" },
+    "r_code": { "value": 0, "type": "integer", "scope": "test" },
+    "r_ok": { "value": true, "type": "boolean", "scope": "test" },
+    "r_reason": { "value": "", "type": "string", "scope": "test" },
+    "r_msg": { "value": "", "type": "string", "scope": "test" },
+    "t_status": { "value": "keep-status", "type": "string", "scope": "test" },
+    "t_count": { "value": 11, "type": "integer", "scope": "test" },
+    "t_code": { "value": 0, "type": "integer", "scope": "test" },
+    "t_reason": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

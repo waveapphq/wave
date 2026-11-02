@@ -1,0 +1,422 @@
+{
+  "name": "zz-11541-s5-args __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Script and Python Arguments built in the shared list editor: a literal, an {x} and a typed item reach the script in order; a null item fails the Block naming its row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ab47631f-b65b-4ff9-9204-421e3097d21c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell arguments from the editor",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell arguments from the editor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "printf '%s|' \"$@\"; echo \"n=$#\"",
+              "arguments": [
+                {
+                  "value": "alpha"
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "sh_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4cb5d73b-f6d3-43b4-a2fd-6e2aa8fc516f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Python arguments from the editor",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python arguments from the editor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\nprint('|'.join(sys.argv[1:]) + '|n=' + str(len(sys.argv) - 1))",
+              "arguments": [
+                {
+                  "value": "alpha"
+                }
+              ]
+            },
+            "outputBindings": {
+              "stdout": "py_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "140f5f59-5ffc-4105-a24d-3f017acacb26",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "Try Shell argument 2 null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Shell argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_sh_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "95facf03-3d83-414c-90e4-097a000e8877",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 410
+        },
+        "data": {
+          "label": "Shell argument 2 null",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo \"ran $#\"",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "b"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0f6f02aa-0b88-4f29-a1b2-7ee27449a2b1",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 410
+        },
+        "data": {
+          "label": "Catch Shell argument 2 null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Shell argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught sh-null: ' + e_sh_null['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "382a8ac4-b9d0-4447-8211-1d2924a32a34",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "Try Python argument 2 null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Python argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "e_py_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "ab558a92-a807-49e8-b508-8847dacba67f",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 590
+        },
+        "data": {
+          "label": "Python argument 2 null",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Python argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print('ran')",
+              "arguments": [
+                {
+                  "value": "a"
+                },
+                {
+                  "value": "b"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "500b9f28-50b0-4841-b930-41f2153a6e81",
+        "type": "workflowNode",
+        "position": {
+          "x": 1000,
+          "y": 590
+        },
+        "data": {
+          "label": "Catch Python argument 2 null",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Python argument 2 null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'caught py-null: ' + e_py_null['message']",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c8012be4-3919-450b-babb-60672b22e4d4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'zz-11541-s5-args-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "d5ace79c-180e-4d72-92c0-b78a7a180880",
+        "source": "start-node",
+        "target": "ab47631f-b65b-4ff9-9204-421e3097d21c",
+        "type": "default"
+      },
+      {
+        "id": "b600ecaf-8471-4bfb-961b-f8703455d7e2",
+        "source": "ab47631f-b65b-4ff9-9204-421e3097d21c",
+        "target": "4cb5d73b-f6d3-43b4-a2fd-6e2aa8fc516f",
+        "type": "default"
+      },
+      {
+        "id": "5ef4cc7f-e517-4185-8532-b96854da1ba0",
+        "source": "4cb5d73b-f6d3-43b4-a2fd-6e2aa8fc516f",
+        "target": "140f5f59-5ffc-4105-a24d-3f017acacb26",
+        "type": "default"
+      },
+      {
+        "id": "4ffe4722-20cc-4620-938e-abd4b198e586",
+        "source": "140f5f59-5ffc-4105-a24d-3f017acacb26",
+        "target": "95facf03-3d83-414c-90e4-097a000e8877",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "04fc941d-23ce-44b5-8106-c708326311a2",
+        "source": "140f5f59-5ffc-4105-a24d-3f017acacb26",
+        "target": "0f6f02aa-0b88-4f29-a1b2-7ee27449a2b1",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "c6517b4f-aa2f-4c67-87f8-4cab165d8536",
+        "source": "140f5f59-5ffc-4105-a24d-3f017acacb26",
+        "target": "382a8ac4-b9d0-4447-8211-1d2924a32a34",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "caa59066-9120-4070-805c-cd32a293d44d",
+        "source": "382a8ac4-b9d0-4447-8211-1d2924a32a34",
+        "target": "ab558a92-a807-49e8-b508-8847dacba67f",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "7374de04-d49a-4745-bfec-1c1d1e2175dc",
+        "source": "382a8ac4-b9d0-4447-8211-1d2924a32a34",
+        "target": "500b9f28-50b0-4841-b930-41f2153a6e81",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "dbfa1661-71bf-4f5a-8ded-cca233304de5",
+        "source": "382a8ac4-b9d0-4447-8211-1d2924a32a34",
+        "target": "c8012be4-3919-450b-babb-60672b22e4d4",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "run_id": {
+      "value": "r-__TOKEN__",
+      "type": "string",
+      "scope": "test"
+    },
+    "sh_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "py_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_sh_null": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    },
+    "e_py_null": {
+      "value": null,
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

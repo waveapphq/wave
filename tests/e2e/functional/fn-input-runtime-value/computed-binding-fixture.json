@@ -1,0 +1,263 @@
+{
+  "name": "V-FN-INPUT-COMPUTED-BINDING",
+  "version": "1.0.0",
+  "description": "A literal integer (port), an expression (expr_url) and a template (tmpl_url) that both read it. Two local Functions each take one of the two computed variables as their input and print it; a Log after them prints both. Nothing reads a computed variable before the Function bound to it. No request is sent: the URLs are only printed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "0ceec847-3bba-466d-ae5b-f2f088318141",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 120
+        },
+        "data": {
+          "label": "Reads_Expression",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": ["target"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "target": "expr_url"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Reads_Expression",
+            "description": "Prints its input, which the Test binds to the expression variable",
+            "inputs": [
+              {
+                "name": "target",
+                "type": "string",
+                "required": true
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "baac30f8-f2eb-4e02-872d-afc1114424d2",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "Print Expression Input",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Prints the input bound to expr_url",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-expr:' + target",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e1",
+                  "source": "start-node",
+                  "target": "baac30f8-f2eb-4e02-872d-afc1114424d2",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8ee0aae3-2c1a-41d5-90fb-0cf42fea0d2e",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Reads_Template",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": ["target"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "target": "tmpl_url"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Reads_Template",
+            "description": "Prints its input, which the Test binds to the template variable",
+            "inputs": [
+              {
+                "name": "target",
+                "type": "string",
+                "required": true
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "b50d4919-c835-42b6-bed2-092b14da893f",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "Print Template Input",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Prints the input bound to tmpl_url",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-tmpl:' + target",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e1",
+                  "source": "start-node",
+                  "target": "b50d4919-c835-42b6-bed2-092b14da893f",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0850580c-f275-4e61-b1e9-392b1b9704e9",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 400
+        },
+        "data": {
+          "label": "Outer Read",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints both computed variables on the Test canvas",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'outer-read:' + expr_url + '|' + tmpl_url",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "0ceec847-3bba-466d-ae5b-f2f088318141",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "0ceec847-3bba-466d-ae5b-f2f088318141",
+        "target": "8ee0aae3-2c1a-41d5-90fb-0cf42fea0d2e",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "8ee0aae3-2c1a-41d5-90fb-0cf42fea0d2e",
+        "target": "0850580c-f275-4e61-b1e9-392b1b9704e9",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "port": {
+      "value": 8080,
+      "type": "integer",
+      "scope": "test"
+    },
+    "expr_url": {
+      "value": "f'http://api.example:{port}/expression'",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    },
+    "tmpl_url": {
+      "value": "http://api.example:{{ port }}/template",
+      "type": "string",
+      "scope": "test",
+      "isTemplate": true
+    }
+  },
+  "metadata": {}
+}

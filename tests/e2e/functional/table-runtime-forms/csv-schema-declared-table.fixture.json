@@ -1,0 +1,75 @@
+{
+  "name": "Table Runtime Forms - Declared table as a schema source",
+  "version": "1.0.0",
+  "description": "A table variable declared in the Variable Manager drives schema-mode typing in the CSV converter; the resolved column descriptors are logged.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-with-schema",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse With Declared Schema",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,id\nAlice,7\n",
+              "column_types": "schema",
+              "schema_source": "declared_schema"
+            },
+            "outputBindings": { "schema": "schema_cols", "row_count": "schema_rows" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-schema",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Resolved Schema",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'declared-schema={schema_cols[0][\"name\"]}:{schema_cols[0][\"type\"]},{schema_cols[1][\"name\"]}:{schema_cols[1][\"type\"]}-rows-{schema_rows}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-with-schema", "type": "default" },
+      { "id": "e2", "source": "parse-with-schema", "target": "log-schema", "type": "default" }
+    ]
+  },
+  "variables": {
+    "declared_schema": {
+      "value": [{ "id": 1, "name": "sample" }],
+      "type": "table",
+      "scope": "test"
+    },
+    "schema_cols": { "value": [], "type": "array", "scope": "test" },
+    "schema_rows": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {}
+}

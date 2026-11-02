@@ -1,0 +1,83 @@
+{
+  "name": "Secret Field Reveal Cycle E2E",
+  "version": "1.0.0",
+  "description": "One HTTP block hits the http-echo service cookie endpoint and a Log prints its response headers, so a test can drive the 'Mask specific fields' UI to reveal then re-mask Set-Cookie across two runs.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-cookie",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Cookie Credential",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/cookie'",
+              "method": "GET",
+              "verify_ssl": false,
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "headers": "resp_headers"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 132, "height": 62 }
+      },
+      {
+        "id": "log-headers",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Response Headers",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(resp_headers)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start-node", "target": "http-cookie", "type": "default" },
+      { "id": "e1", "source": "http-cookie", "target": "log-headers", "type": "default" }
+    ]
+  },
+  "variables": {
+    "resp_headers": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

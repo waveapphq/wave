@@ -1,0 +1,353 @@
+{
+  "name": "SFTP Stop __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "A 4 GiB sparse server file downloaded with no size limit, ended by Timeout or by the canvas Stop.",
+  "variables": {
+    "stop_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "make_exit": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "make_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "big_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "big_success": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "big_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "big_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "del_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_exists": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "__NEW_ID_OPEN__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the stop session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "strict"
+            },
+            "outputBindings": {
+              "session_id": "stop_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_MAKE__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 180
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Make the sparse file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "stop_session",
+              "command": "mkdir -p __FOLDER__ && python3 -c \"open('__FOLDER__/big-__RUN_UUID__.bin','wb').truncate(4294967296)\"",
+              "timeout": 60
+            },
+            "outputBindings": {
+              "exit_code": "make_exit",
+              "stderr": "make_stderr"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_DOWNLOAD__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 260
+        },
+        "data": {
+          "label": "Download the big file",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Download the big file",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "stop_session",
+              "operation": "download",
+              "source": "__FOLDER__/big-__RUN_UUID__.bin",
+              "if_exists": "overwrite",
+              "timeout": 300,
+              "max_size_mib": 0,
+              "max_files": 10000,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "summary": "big_summary",
+              "success": "big_success",
+              "error": "big_error",
+              "reason": "big_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_DELETE__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 340
+        },
+        "data": {
+          "label": "Delete the stop folder",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Delete the stop folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "stop_session",
+              "operation": "delete",
+              "path": "__FOLDER__",
+              "missing_ok": false
+            },
+            "outputBindings": {
+              "success": "del_success"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_STATS__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "SFTP",
+          "elementType": "sftp",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Stats of the stop folder",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "stop_session",
+              "operation": "stats",
+              "path": "__FOLDER__"
+            },
+            "outputBindings": {
+              "exists": "gone_exists"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_CLOSE__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 500
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the stop session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "stop_session"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "__NEW_ID_DONE__",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sftp-stop-done-__RUN_UUID__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "__NEW_ID_EDGE_1__",
+        "source": "start-node",
+        "target": "__NEW_ID_OPEN__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_2__",
+        "source": "__NEW_ID_OPEN__",
+        "target": "__NEW_ID_MAKE__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_3__",
+        "source": "__NEW_ID_MAKE__",
+        "target": "__NEW_ID_DOWNLOAD__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_4__",
+        "source": "__NEW_ID_DOWNLOAD__",
+        "target": "__NEW_ID_DELETE__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_5__",
+        "source": "__NEW_ID_DELETE__",
+        "target": "__NEW_ID_STATS__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_6__",
+        "source": "__NEW_ID_STATS__",
+        "target": "__NEW_ID_CLOSE__"
+      },
+      {
+        "id": "__NEW_ID_EDGE_7__",
+        "source": "__NEW_ID_CLOSE__",
+        "target": "__NEW_ID_DONE__"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

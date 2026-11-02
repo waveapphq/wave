@@ -1,0 +1,522 @@
+{
+  "name": "Variable Setter E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests Variable Setter control execution: literals, expressions, loop body accumulation, nested loops, and try-catch",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-literals",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Literal Values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "str_var": "hello world",
+                "int_var": 42,
+                "float_var": 3.14,
+                "bool_var": true
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-str",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log String Var",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str_var", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-int",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Integer Var",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(int_var)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-float",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 390 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Float Var",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'{float_var}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-bool",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 460 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Boolean Var",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(bool_var)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-expressions",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 560 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Expression Values",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["computed_str", "computed_sum"],
+          "config": {
+            "values": {
+              "variables": {
+                "computed_str": "str(int_var) + ' is the answer'",
+                "computed_sum": "int_var + 8"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-computed-str",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Computed String",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "computed_str", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-computed-sum",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Computed Sum",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'{computed_sum}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-multi-assign",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Multi Assign Proof",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(str_var) + '|' + str(int_var) + '|' + str(float_var) + '|' + str(bool_var) + '|' + str(computed_str) + '|' + str(computed_sum)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-loop",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 920 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For 5 Loop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 5, "step": 1 },
+            "outputBindings": { "index": "i" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "vs-incr",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1020 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Increment Counter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["counter"],
+          "variableTypes": { "counter": "integer" },
+          "config": {
+            "values": { "variables": { "counter": "counter + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-loop-body",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1100 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Loop Counter",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'loop-counter=' + str(counter)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-outer",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1220 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Outer 3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "step": 1 },
+            "outputBindings": { "index": "j" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-inner",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1320 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Inner 2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 2, "step": 1 },
+            "outputBindings": { "index": "k" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "vs-nested",
+        "type": "workflowNode",
+        "position": { "x": 50, "y": 1420 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Nested Increment",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["nested_sum"],
+          "variableTypes": { "nested_sum": "integer" },
+          "config": {
+            "values": { "variables": { "nested_sum": "nested_sum + 1" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nested",
+        "type": "workflowNode",
+        "position": { "x": 50, "y": 1500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Nested",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'nested=' + str(nested_sum)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "try-catch-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1520 },
+        "data": {
+          "label": "Try / Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Catch VarSetter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "vs-in-try",
+        "type": "workflowNode",
+        "position": { "x": 250, "y": 1620 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "VarSet In Try",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["try_val"],
+          "variableTypes": { "try_val": "integer" },
+          "config": {
+            "values": { "variables": { "try_val": "counter + nested_sum" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-in-try",
+        "type": "workflowNode",
+        "position": { "x": 250, "y": 1700 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log In Try",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'try-val=' + str(try_val)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-final",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Final Summary",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'final:counter=' + str(counter) + ',nested_sum=' + str(nested_sum) + ',try_val=' + str(try_val)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-literals", "type": "default" },
+      { "id": "e2", "source": "varset-literals", "target": "log-str", "type": "default" },
+      { "id": "e3", "source": "log-str", "target": "log-int", "type": "default" },
+      { "id": "e4", "source": "log-int", "target": "log-float", "type": "default" },
+      { "id": "e5", "source": "log-float", "target": "log-bool", "type": "default" },
+      { "id": "e6", "source": "log-bool", "target": "varset-expressions", "type": "default" },
+      { "id": "e7", "source": "varset-expressions", "target": "log-computed-str", "type": "default" },
+      { "id": "e8", "source": "log-computed-str", "target": "log-computed-sum", "type": "default" },
+      { "id": "e9", "source": "log-computed-sum", "target": "log-multi-assign", "type": "default" },
+      { "id": "e10", "source": "log-multi-assign", "target": "for-loop", "type": "default" },
+      { "id": "e11", "source": "for-loop", "target": "vs-incr", "sourceHandle": "body" },
+      { "id": "e12", "source": "vs-incr", "target": "log-loop-body", "type": "default" },
+      { "id": "e13", "source": "for-loop", "target": "for-outer", "sourceHandle": "then" },
+      { "id": "e14", "source": "for-outer", "target": "for-inner", "sourceHandle": "body" },
+      { "id": "e15", "source": "for-inner", "target": "vs-nested", "sourceHandle": "body" },
+      { "id": "e16", "source": "vs-nested", "target": "log-nested", "type": "default" },
+      { "id": "e17", "source": "for-outer", "target": "try-catch-1", "sourceHandle": "then" },
+      { "id": "e18", "source": "try-catch-1", "target": "vs-in-try", "sourceHandle": "try" },
+      { "id": "e19", "source": "vs-in-try", "target": "log-in-try", "type": "default" },
+      { "id": "e20", "source": "try-catch-1", "target": "log-final", "sourceHandle": "then" }
+    ]
+  },
+  "variables": {
+    "str_var": { "value": "", "type": "string", "scope": "test" },
+    "int_var": { "value": 0, "type": "integer", "scope": "test" },
+    "float_var": { "value": 0.0, "type": "float", "scope": "test" },
+    "bool_var": { "value": false, "type": "boolean", "scope": "test" },
+    "computed_str": { "value": "", "type": "string", "scope": "test" },
+    "computed_sum": { "value": 0, "type": "integer", "scope": "test" },
+    "counter": { "value": 0, "type": "integer", "scope": "test" },
+    "nested_sum": { "value": 0, "type": "integer", "scope": "test" },
+    "try_val": { "value": 0, "type": "integer", "scope": "test" },
+    "i": { "value": 0, "type": "integer", "scope": "test" },
+    "j": { "value": 0, "type": "integer", "scope": "test" },
+    "k": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

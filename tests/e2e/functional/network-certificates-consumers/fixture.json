@@ -1,0 +1,743 @@
+{
+  "name": "V-NET-CERT-CONSUMERS",
+  "version": "1.0.0",
+  "description": "A blank CA with verification on in every non-HTTP block that dials TLS: PostgreSQL, SQL Server, OpenSearch, K8s Connect and a Helm Install from the HTTPS chart repository, each recording or catching its failure so one run shows them all; a PostgreSQL block with TLS off reads its own session from pg_stat_ssl.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "pg-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "PG trust",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG trust",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "port": 9473,
+              "tls": true,
+              "verify_ssl": true,
+              "ca_cert": "",
+              "script_type": "source",
+              "sql": "SELECT s.ssl, s.version FROM pg_stat_ssl AS s WHERE s.pid = pg_backend_pid()",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "pg_ok",
+              "error": "pg_err",
+              "reason": "pg_reason",
+              "rows": "pg_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "pg-plain",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "PG plain",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG plain",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "port": 9473,
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "plain_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ms-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "SQL Server trust",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server trust",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "port": 9476,
+              "tls": true,
+              "verify_ssl": true,
+              "ca_cert": "",
+              "script_type": "source",
+              "sql": "SELECT c.encrypt_option FROM sys.dm_exec_connections AS c WHERE c.session_id = @@SPID",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ms_ok",
+              "error": "ms_err",
+              "reason": "ms_reason",
+              "rows": "ms_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "os-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "OpenSearch trust",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "OpenSearch trust",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-trust",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "os_ok",
+              "error": "os_err",
+              "reason": "os_reason",
+              "total_results": "os_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-k8s",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "K8s trust guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "k8s_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "k8s-tls",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "K8s trust",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "K8s trust",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": ""
+            },
+            "outputBindings": {
+              "cluster_version": "k8s_version"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-k8s-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": 650,
+          "y": 560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "K8s refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'trust-k8s caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-k8s",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "K8s outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"trust-k8s version={k8s_version} caught={k8s_err['message'] if k8s_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "helm-connect",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Helm session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NAMESPACE__",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "helm-install",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "Helm trust",
+          "elementType": "helm-install",
+          "nodeType": "plugin",
+          "category": "helm",
+          "version": "1.0.0",
+          "description": "Helm trust",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "release": "wave-trust-__TOKEN__",
+              "chart": "wave-demo",
+              "version": "0.1.0",
+              "repo": "https://127.0.0.1:9464",
+              "repo_username": "wave",
+              "repo_password": "",
+              "repo_ca_cert": "",
+              "repo_verify_ssl": true,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "result": "helm_result",
+              "status": "helm_status",
+              "success": "helm_ok",
+              "error": "helm_err",
+              "reason": "helm_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "helm-uninstall",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Helm cleanup",
+          "elementType": "helm-uninstall",
+          "nodeType": "plugin",
+          "category": "helm",
+          "version": "1.0.0",
+          "description": "Helm cleanup",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "release": "wave-trust-__TOKEN__",
+              "ignore_not_found": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-summary",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Trust summary",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"trust-summary pg={pg_ok}/{pg_reason} plain={plain_rows[0]['ssl']} ms={ms_ok}/{ms_reason} os={os_ok}/{os_reason}/{os_total} helm={helm_ok}/{helm_reason}/{helm_status}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'trust-consumers-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-pg-tls",
+        "source": "start-node",
+        "target": "pg-tls",
+        "type": "default"
+      },
+      {
+        "id": "edge-pg-tls-pg-plain",
+        "source": "pg-tls",
+        "target": "pg-plain",
+        "type": "default"
+      },
+      {
+        "id": "edge-pg-plain-ms-tls",
+        "source": "pg-plain",
+        "target": "ms-tls",
+        "type": "default"
+      },
+      {
+        "id": "edge-ms-tls-os-tls",
+        "source": "ms-tls",
+        "target": "os-tls",
+        "type": "default"
+      },
+      {
+        "id": "edge-os-tls-tc-k8s",
+        "source": "os-tls",
+        "target": "tc-k8s",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-k8s-try",
+        "source": "tc-k8s",
+        "target": "k8s-tls",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-tc-k8s-catch",
+        "source": "tc-k8s",
+        "target": "log-k8s-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-k8s-then",
+        "source": "tc-k8s",
+        "target": "log-k8s",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-k8s-helm-connect",
+        "source": "log-k8s",
+        "target": "helm-connect",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-connect-helm-install",
+        "source": "helm-connect",
+        "target": "helm-install",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-install-helm-uninstall",
+        "source": "helm-install",
+        "target": "helm-uninstall",
+        "type": "default"
+      },
+      {
+        "id": "edge-helm-uninstall-log-summary",
+        "source": "helm-uninstall",
+        "target": "log-summary",
+        "type": "default"
+      },
+      {
+        "id": "edge-log-summary-log-done",
+        "source": "log-summary",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "pg_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "pg_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "plain_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ms_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ms_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "os_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "os_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "os_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "os_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "k8s_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "k8s_version": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "helm_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "helm_result": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "helm_status": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

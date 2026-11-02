@@ -1,0 +1,46 @@
+# Adapted from kustomize/stage/pod/fast/pod-complete.yaml
+# in kwok v0.7.0 (https://github.com/kubernetes-sigs/kwok), Copyright 2023 The Kubernetes
+# Authors, Apache-2.0. Changed for WAVE's E2E tests. See NOTICE.
+
+# Opt-in failing helm test hook for pods that also carry wave.e2e/helm-test-fail=true:
+# weight 1 beats pod-helm-test-complete's 0 while both match, and phase Failed ends the
+# other Stage's match, so the hook pod terminates with exit 1 instead of exit 0.
+# Hook pods without the extra label keep the pod-helm-test-complete path.
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: Stage
+metadata:
+  name: pod-helm-test-fail
+spec:
+  resourceRef:
+    apiGroup: v1
+    kind: Pod
+  selector:
+    matchLabels:
+      wave.e2e/helm-test: "true"
+      wave.e2e/helm-test-fail: "true"
+    matchExpressions:
+    - key: '.metadata.deletionTimestamp'
+      operator: 'DoesNotExist'
+    - key: '.status.phase'
+      operator: 'In'
+      values:
+      - 'Running'
+  weight: 1
+  next:
+    statusTemplate: |
+      {{ $now := Now }}
+      containerStatuses:
+      {{ range .spec.containers }}
+      - image: {{ .image | Quote }}
+        name: {{ .name | Quote }}
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            exitCode: 1
+            finishedAt: {{ $now | Quote }}
+            reason: Error
+            startedAt: {{ $now | Quote }}
+      {{ end }}
+      phase: Failed

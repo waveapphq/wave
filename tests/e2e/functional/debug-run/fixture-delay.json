@@ -1,0 +1,62 @@
+{
+  "name": "Debug - Delay Chain",
+  "version": "1.0.0",
+  "description": "Delay-anchored chain used by debug visual tests that need to observe the Running toolbar. A 2000ms Delay keeps the session in the Running state long enough to assert on toolbar visibility.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Long Delay",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After Delay",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'delay-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "delay-1", "type": "default" },
+      { "id": "e-1-log", "source": "delay-1", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-04-24T00:00:00.000000",
+  "updated_at": "2026-04-24T00:00:00.000000"
+}

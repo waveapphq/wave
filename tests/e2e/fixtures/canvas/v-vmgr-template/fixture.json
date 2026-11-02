@@ -1,0 +1,67 @@
+{
+  "name": "V-VMGR-TEMPLATE inspect fixture",
+  "version": "1.0.0",
+  "description": "Template watcher fixture: a template `greeting` ({{ }} source), a literal-JSON `note` (Auto re-detect), and an expression `total` (no source metric). No run - the static inspect-modal interaction is the proof.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-anchor",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Anchor",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'anchor'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-anchor", "type": "default" }
+    ]
+  },
+  "variables": {
+    "user": {
+      "value": "Ada",
+      "type": "string",
+      "scope": "test"
+    },
+    "n": {
+      "value": 21,
+      "type": "integer",
+      "scope": "test"
+    },
+    "greeting": {
+      "value": "Hello {{user}}!",
+      "type": "string",
+      "scope": "test",
+      "isTemplate": true
+    },
+    "note": {
+      "value": "{\"env\":\"prod\",\"retries\":3}",
+      "type": "string",
+      "scope": "test"
+    },
+    "total": {
+      "value": "n * 2",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-21T00:00:00.000000",
+  "updated_at": "2026-06-21T00:00:00.000000"
+}

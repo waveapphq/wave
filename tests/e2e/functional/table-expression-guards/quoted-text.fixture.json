@@ -1,0 +1,77 @@
+{
+  "name": "Table Expression Guards - Text inside quotes",
+  "version": "1.0.0",
+  "description": "Two Log Blocks the spec fills through the config sheet: a template marker reading the '@timestamp' column of a table, and an expression whose quoted text carries '#', ';' and ')'. Neither may show a finding; the run logs both values.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-quoted-cell",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Quoted Cell",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Quoted Cell",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "pending",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-quoted-marks",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Quoted Marks",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Quoted Marks",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'pending'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-quoted-cell", "type": "default" },
+      { "id": "e2", "source": "log-quoted-cell", "target": "log-quoted-marks", "type": "default" }
+    ]
+  },
+  "variables": {
+    "final": {
+      "value": {
+        "columns": [
+          { "name": "@timestamp", "type": "string" },
+          { "name": "count", "type": "integer" }
+        ],
+        "rows": [["2026-09-27T10:00:00.000Z", 3]]
+      },
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

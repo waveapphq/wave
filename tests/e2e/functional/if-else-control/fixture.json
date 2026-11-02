@@ -1,0 +1,547 @@
+{
+  "name": "If/Else Control E2E",
+  "version": "1.0.0",
+  "description": "Five chained If/Else blocks: 3-branch (IF/ELSE IF/ELSE) x3 + 2-branch (IF/ELSE) x2.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 50 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-all'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "varset-c1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter", "elementType": "variable-setter", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "Set transport=TCP",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "TCP" } },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ifelse-c1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 280 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "C1: 3-branch IF test",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_tcp", "label": "TCP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "TCP",
+                    "reference_is_expression": false, "id": "c1-cond-tcp"
+                  }]
+                },
+                {
+                  "type": "else_if", "id": "branch_udp", "label": "UDP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "UDP",
+                    "reference_is_expression": false, "id": "c1-cond-udp"
+                  }]
+                },
+                { "type": "else", "id": "branch_other", "label": "Other" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-c1-tcp",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 400 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C1 TCP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c1-tcp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c1-udp",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C1 UDP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c1-udp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c1-other",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 400 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C1 Other Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c1-other'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "varset-c2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 550 },
+        "data": {
+          "label": "Var Setter", "elementType": "variable-setter", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "Set transport=UDP",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "UDP" } },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ifelse-c2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 680 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "C2: 3-branch ELSE IF test",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_tcp", "label": "TCP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "TCP",
+                    "reference_is_expression": false, "id": "c2-cond-tcp"
+                  }]
+                },
+                {
+                  "type": "else_if", "id": "branch_udp", "label": "UDP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "UDP",
+                    "reference_is_expression": false, "id": "c2-cond-udp"
+                  }]
+                },
+                { "type": "else", "id": "branch_other", "label": "Other" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-c2-tcp",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 800 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C2 TCP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c2-tcp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c2-udp",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C2 UDP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c2-udp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c2-other",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 800 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C2 Other Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c2-other'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "varset-c3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 950 },
+        "data": {
+          "label": "Var Setter", "elementType": "variable-setter", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "Set transport=SCTP",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "SCTP" } },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ifelse-c3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1080 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "C3: 3-branch ELSE test",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_tcp", "label": "TCP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "TCP",
+                    "reference_is_expression": false, "id": "c3-cond-tcp"
+                  }]
+                },
+                {
+                  "type": "else_if", "id": "branch_udp", "label": "UDP Path",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "UDP",
+                    "reference_is_expression": false, "id": "c3-cond-udp"
+                  }]
+                },
+                { "type": "else", "id": "branch_other", "label": "Other" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-c3-tcp",
+        "type": "workflowNode",
+        "position": { "x": 150, "y": 1200 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C3 TCP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c3-tcp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c3-udp",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1200 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C3 UDP Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c3-udp'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c3-other",
+        "type": "workflowNode",
+        "position": { "x": 650, "y": 1200 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C3 Other Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c3-other'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "varset-c4",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1350 },
+        "data": {
+          "label": "Var Setter", "elementType": "variable-setter", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "Set transport=TCP (2-branch)",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "TCP" } },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ifelse-c4",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1480 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "C4: 2-branch IF test",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_if", "label": "TCP Match",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "TCP",
+                    "reference_is_expression": false, "id": "c4-cond-if"
+                  }]
+                },
+                { "type": "else", "id": "branch_else", "label": "No Match" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-c4-if",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1600 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C4 IF Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c4-if'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c4-else",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 1600 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C4 ELSE Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c4-else'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "varset-c5",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1750 },
+        "data": {
+          "label": "Var Setter", "elementType": "variable-setter", "nodeType": "control",
+          "category": "flow", "version": "1.0.0",
+          "description": "Set transport=SCTP (2-branch)",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "transport": "SCTP" } },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ifelse-c5",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1880 },
+        "data": {
+          "label": "If/Else", "elementType": "if-else", "nodeType": "control",
+          "category": "conditional", "version": "1.0.0",
+          "description": "C5: 2-branch ELSE test",
+          "hasNewerVersion": false,
+          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if", "id": "branch_if", "label": "TCP Match",
+                  "conditions": [{
+                    "type": "literal", "variable": "transport", "value_type": "string",
+                    "operator": "equals", "reference_value": "TCP",
+                    "reference_is_expression": false, "id": "c5-cond-if"
+                  }]
+                },
+                { "type": "else", "id": "branch_else", "label": "No Match" }
+              ]
+            },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-c5-if",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 2000 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C5 IF Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c5-if'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-c5-else",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 2000 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "C5 ELSE Log",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'c5-else'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 2150 },
+        "data": {
+          "label": "Log", "elementType": "log", "nodeType": "plugin",
+          "category": "system", "version": "1.0.0", "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all'", "level": "INFO" },
+            "outputBindings": {}, "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start",      "source": "start-node",  "target": "log-before",  "type": "default" },
+      { "id": "e-before-vs1", "source": "log-before",  "target": "varset-c1",   "type": "default" },
+      { "id": "e-vs1-ie1",    "source": "varset-c1",   "target": "ifelse-c1",   "type": "default" },
+      { "id": "e-c1-tcp",     "source": "ifelse-c1", "sourceHandle": "branch_tcp",   "target": "log-c1-tcp",   "type": "default" },
+      { "id": "e-c1-udp",     "source": "ifelse-c1", "sourceHandle": "branch_udp",   "target": "log-c1-udp",   "type": "default" },
+      { "id": "e-c1-other",   "source": "ifelse-c1", "sourceHandle": "branch_other", "target": "log-c1-other", "type": "default" },
+      { "id": "e-c1-next",    "source": "log-c1-tcp",  "target": "varset-c2",   "type": "default" },
+
+      { "id": "e-vs2-ie2",    "source": "varset-c2",   "target": "ifelse-c2",   "type": "default" },
+      { "id": "e-c2-tcp",     "source": "ifelse-c2", "sourceHandle": "branch_tcp",   "target": "log-c2-tcp",   "type": "default" },
+      { "id": "e-c2-udp",     "source": "ifelse-c2", "sourceHandle": "branch_udp",   "target": "log-c2-udp",   "type": "default" },
+      { "id": "e-c2-other",   "source": "ifelse-c2", "sourceHandle": "branch_other", "target": "log-c2-other", "type": "default" },
+      { "id": "e-c2-next",    "source": "log-c2-udp",  "target": "varset-c3",   "type": "default" },
+
+      { "id": "e-vs3-ie3",    "source": "varset-c3",   "target": "ifelse-c3",   "type": "default" },
+      { "id": "e-c3-tcp",     "source": "ifelse-c3", "sourceHandle": "branch_tcp",   "target": "log-c3-tcp",   "type": "default" },
+      { "id": "e-c3-udp",     "source": "ifelse-c3", "sourceHandle": "branch_udp",   "target": "log-c3-udp",   "type": "default" },
+      { "id": "e-c3-other",   "source": "ifelse-c3", "sourceHandle": "branch_other", "target": "log-c3-other", "type": "default" },
+      { "id": "e-c3-next",    "source": "log-c3-other","target": "varset-c4",   "type": "default" },
+
+      { "id": "e-vs4-ie4",    "source": "varset-c4",   "target": "ifelse-c4",   "type": "default" },
+      { "id": "e-c4-if",      "source": "ifelse-c4", "sourceHandle": "branch_if",   "target": "log-c4-if",   "type": "default" },
+      { "id": "e-c4-else",    "source": "ifelse-c4", "sourceHandle": "branch_else", "target": "log-c4-else", "type": "default" },
+      { "id": "e-c4-next",    "source": "log-c4-if",   "target": "varset-c5",   "type": "default" },
+
+      { "id": "e-vs5-ie5",    "source": "varset-c5",   "target": "ifelse-c5",   "type": "default" },
+      { "id": "e-c5-if",      "source": "ifelse-c5", "sourceHandle": "branch_if",   "target": "log-c5-if",   "type": "default" },
+      { "id": "e-c5-else",    "source": "ifelse-c5", "sourceHandle": "branch_else", "target": "log-c5-else", "type": "default" },
+      { "id": "e-c5-next",    "source": "log-c5-else", "target": "log-after",   "type": "default" }
+    ]
+  },
+  "variables": {
+    "transport": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-03-29T00:00:00.000000",
+  "updated_at": "2026-03-29T00:00:00.000000"
+}

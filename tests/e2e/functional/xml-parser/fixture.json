@@ -1,0 +1,658 @@
+{
+  "name": "XML Parser E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests XML Parser plugin execution with combined and individual modes, type coercion, namespace queries, and error handling",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "xml-combined",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "XML Combined Mode",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root><item id=\"1\">Alpha</item><item id=\"2\">Beta</item><count>42</count></root>",
+              "queries": {
+                "first_item": "//item[1]/text()",
+                "item_count": "count(//item)",
+                "all_items": "//item/text()"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "xml_combined_success",
+              "errors": "xml_combined_errors",
+              "results": "xml_combined_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-combined-first",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined First Item",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "xml_combined_results['first_item']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-combined-count",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined Count",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(xml_combined_results['item_count']['value'])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-combined-success",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 390
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined Success",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(xml_combined_success)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "xml-individual",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 490
+        },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "XML Individual Mode",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root><price>19.99</price><quantity>5</quantity><active>true</active></root>",
+              "queries": {
+                "price_val": "//price/text()",
+                "qty_val": "//quantity/text()",
+                "is_active": "//active/text()"
+              },
+              "output_mode": "individual",
+              "query_output_types": {
+                "price_val": "float",
+                "qty_val": "integer",
+                "is_active": "boolean"
+              }
+            },
+            "outputBindings": {
+              "success": "xml_individual_success",
+              "errors": "xml_individual_errors",
+              "price_val": "price_val",
+              "qty_val": "qty_val",
+              "is_active": "is_active"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-individual-price",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Price",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'{price_val}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-individual-qty",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Qty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(qty_val)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-individual-active",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 730
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Active",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(is_active)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "xml-error-handling",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 830
+        },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "XML Error Handling",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root><item>Good</item></root>",
+              "queries": {
+                "good_query": "//item/text()",
+                "bad_query": "//[invalid"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "xml_error_success",
+              "errors": "xml_error_errors",
+              "results": "xml_error_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-error-success",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 930
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Success Flag",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(xml_error_success)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-error-good-query",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Good Query",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "xml_error_results['good_query']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-error-count",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1070
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Count",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(len(xml_error_errors))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "xml-namespace",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1170
+        },
+        "data": {
+          "label": "XML Parser",
+          "elementType": "xml-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "XML Namespace Query",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "xml_content": "<root xmlns:ex=\"http://example.com\"><ex:item>Namespaced</ex:item></root>",
+              "queries": {
+                "ns_item": "//ex:item/text()"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "xml_ns_success",
+              "results": "xml_ns_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-ns-result",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1270
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log NS Result",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "xml_ns_results['ns_item']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "xml-combined",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "xml-combined",
+        "target": "log-combined-first",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-combined-first",
+        "target": "log-combined-count",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-combined-count",
+        "target": "log-combined-success",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-combined-success",
+        "target": "xml-individual",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "xml-individual",
+        "target": "log-individual-price",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-individual-price",
+        "target": "log-individual-qty",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "log-individual-qty",
+        "target": "log-individual-active",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "log-individual-active",
+        "target": "xml-error-handling",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "xml-error-handling",
+        "target": "log-error-success",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "log-error-success",
+        "target": "log-error-good-query",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-error-good-query",
+        "target": "log-error-count",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "log-error-count",
+        "target": "xml-namespace",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "xml-namespace",
+        "target": "log-ns-result",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "xml_combined_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "xml_combined_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "xml_combined_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "xml_individual_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "xml_individual_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "price_val": {
+      "value": 0.0,
+      "type": "float",
+      "scope": "test"
+    },
+    "qty_val": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "is_active": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "xml_error_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "xml_error_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "xml_error_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "xml_ns_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "xml_ns_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

@@ -1,0 +1,199 @@
+{
+  "name": "Variable Edits Logs E2E",
+  "version": "1.0.0",
+  "description": "Log blocks that print a literal, an expression and a template variable, a local Function whose input is bound to a Test variable, and a Variable Setter that writes 0 to a variable with no value. Each test edits one variable between block runs and reads the next block run's console line.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-top",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 100 },
+        "data": {
+          "label": "Top Port",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Top Port",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'top port={lport}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fn-port",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 220 },
+        "data": {
+          "label": "Port Function",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": ["port"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": { "values": { "port": "lport" }, "outputBindings": {}, "profileBindings": [] },
+          "localDefinition": {
+            "name": "Port Function",
+            "description": "Prints the port it was called with",
+            "inputs": [{ "name": "port", "type": "integer", "required": false, "default": 7070 }],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": { "x": 240, "y": 200 },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Inner Port",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "f'inner port={port}'", "level": "INFO" },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [{ "id": "e-start-inner", "source": "start-node", "target": "inner-log" }]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-url",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 340 },
+        "data": {
+          "label": "Print Url",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Print Url",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'url=' + url", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-retries",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 460 },
+        "data": {
+          "label": "Print Retries",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Print Retries",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'retries={retries}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "set-zero",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 580 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Write Zero",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTemplateKeys": [],
+          "variableTypes": { "count": "integer" },
+          "config": {
+            "values": { "variables": { "count": 0 } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-staged",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 700 },
+        "data": {
+          "label": "Print Staged",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Print Staged",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tpl=' + tpl", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-top", "type": "default" },
+      { "id": "e2", "source": "log-top", "target": "fn-port", "type": "default" },
+      { "id": "e3", "source": "fn-port", "target": "log-url", "type": "default" },
+      { "id": "e4", "source": "log-url", "target": "log-retries", "type": "default" },
+      { "id": "e5", "source": "log-retries", "target": "set-zero", "type": "default" },
+      { "id": "e6", "source": "set-zero", "target": "log-staged", "type": "default" }
+    ]
+  },
+  "variables": {
+    "lport": { "value": 8080, "type": "integer", "scope": "test" },
+    "host": { "value": "b", "type": "string", "scope": "test" },
+    "url": { "value": "'http://' + host", "type": "string", "scope": "test", "isExpression": true },
+    "tpl": { "value": "ws://{{ host }}", "type": "string", "scope": "test", "isTemplate": true },
+    "retries": { "value": 3, "type": "integer", "scope": "test" },
+    "count": { "type": "integer" }
+  },
+  "metadata": {},
+  "created_at": "2026-10-07T00:00:00.000000",
+  "updated_at": "2026-10-07T00:00:00.000000"
+}

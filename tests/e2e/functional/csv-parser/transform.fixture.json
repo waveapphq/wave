@@ -1,0 +1,1246 @@
+{
+  "name": "CSV Transform E2E",
+  "version": "1.0.0",
+  "description": "Declarative sort/filter matrix",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "set-threshold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set threshold=75",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTypes": {
+            "threshold": "integer"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "threshold": 75
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T1 sort desc",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "sorts": [
+                {
+                  "id": "t1-sort-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "direction": "desc"
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t1"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T1=' + str(t1.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T2 multikey",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "region,score,id\nwest,10,1\neast,20,2\nwest,10,3\neast,25,4\n,99,5\n",
+              "sorts": [
+                {
+                  "id": "t2-sort-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "region"
+                  },
+                  "direction": "asc"
+                },
+                {
+                  "id": "t2-sort-2",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "direction": "desc"
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t2"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T2=' + str(t2.col('id'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T3 filter gt75",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t3-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t3-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "75",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t3"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T3",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T3=' + str(t3.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T4 filter expr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,\nCarol,70\n",
+              "filters": [
+                {
+                  "id": "t4-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t4-filter-1-cond-1",
+                      "type": "expression",
+                      "expression": "_cell != None"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t4"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T4",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T4=' + str(t4.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T5 and",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t5-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t5-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "75",
+                      "reference_is_expression": false
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "t5-filter-1-cond-2",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "less_than",
+                      "reference_value": "90",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t5"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T5",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T5=' + str(t5.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T6 or",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t6-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t6-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": "80",
+                      "reference_is_expression": false
+                    },
+                    {
+                      "type": "operator",
+                      "value": "or"
+                    },
+                    {
+                      "id": "t6-filter-1-cond-2",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": "70",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t6"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T6",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T6=' + str(t6.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T7 two blocks",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score,active\nAlice,80,true\nBob,95,false\nCarol,70,true\n",
+              "filters": [
+                {
+                  "id": "t7-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t7-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "75",
+                      "reference_is_expression": false
+                    }
+                  ]
+                },
+                {
+                  "id": "t7-filter-2",
+                  "column": {
+                    "mode": "name",
+                    "value": "active"
+                  },
+                  "asType": "boolean",
+                  "conditions": [
+                    {
+                      "id": "t7-filter-2-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "boolean",
+                      "operator": "is_true",
+                      "reference_value": "",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t7"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T7",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T7=' + str(t7.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T8 index ref",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t8-filter-1",
+                  "column": {
+                    "mode": "index",
+                    "value": "1"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t8-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "75",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t8"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T8",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T8=' + str(t8.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t10",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T10 expr var",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t10-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t10-filter-1-cond-1",
+                      "type": "expression",
+                      "expression": "_cell > threshold"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t10"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t10",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T10",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T10=' + str(t10.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t11",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1950
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T11 ref expr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t11-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t11-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "threshold",
+                      "reference_is_expression": true
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t11"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t11",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2040
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T11",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T11=' + str(t11.col('name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "t12",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2130
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T12 sort+filter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\nBob,95\nCarol,70\nDave,88\n",
+              "filters": [
+                {
+                  "id": "t12-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t12-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "75",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ],
+              "sorts": [
+                {
+                  "id": "t12-sort-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "direction": "asc"
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t12",
+              "row_count": "t12rc"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-t12",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2220
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log T12",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'T12=' + str(t12.col('name')) + '|rc=' + str(t12rc)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "set-threshold",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "set-threshold",
+        "target": "t1",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "t1",
+        "target": "log-t1",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-t1",
+        "target": "t2",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "t2",
+        "target": "log-t2",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-t2",
+        "target": "t3",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "t3",
+        "target": "log-t3",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "log-t3",
+        "target": "t4",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "t4",
+        "target": "log-t4",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-t4",
+        "target": "t5",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "t5",
+        "target": "log-t5",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-t5",
+        "target": "t6",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "t6",
+        "target": "log-t6",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "log-t6",
+        "target": "t7",
+        "type": "default"
+      },
+      {
+        "id": "e15",
+        "source": "t7",
+        "target": "log-t7",
+        "type": "default"
+      },
+      {
+        "id": "e16",
+        "source": "log-t7",
+        "target": "t8",
+        "type": "default"
+      },
+      {
+        "id": "e17",
+        "source": "t8",
+        "target": "log-t8",
+        "type": "default"
+      },
+      {
+        "id": "e18",
+        "source": "log-t8",
+        "target": "t10",
+        "type": "default"
+      },
+      {
+        "id": "e19",
+        "source": "t10",
+        "target": "log-t10",
+        "type": "default"
+      },
+      {
+        "id": "e20",
+        "source": "log-t10",
+        "target": "t11",
+        "type": "default"
+      },
+      {
+        "id": "e21",
+        "source": "t11",
+        "target": "log-t11",
+        "type": "default"
+      },
+      {
+        "id": "e22",
+        "source": "log-t11",
+        "target": "t12",
+        "type": "default"
+      },
+      {
+        "id": "e23",
+        "source": "t12",
+        "target": "log-t12",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "threshold": {
+      "value": 75,
+      "type": "integer",
+      "scope": "test"
+    },
+    "t1": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t2": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t3": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t4": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t5": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t6": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t7": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t8": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t10": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t11": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t12": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "t12rc": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

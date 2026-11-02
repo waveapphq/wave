@@ -1,0 +1,1722 @@
+{
+  "name": "SSH Tunnel E2E Execution Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open session (secret password)",
+          "hasNewerVersion": false,
+          "expressionFields": ["password"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "sess_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-open",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log session opened",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'session opened connected={sess_conn}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-fixed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Open tunnel on a fixed local port",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 19446,
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_fixed",
+              "local_port": "lport_fixed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tunnel-fixed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log fixed tunnel handle + resolved port",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-fixed tid={tid_fixed} lport={lport_fixed}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-fixed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET health through the fixed tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_fixed}/health'",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "status_fixed",
+              "body": "body_fixed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-http-fixed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log fixed-tunnel HTTP response",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'http-fixed status={status_fixed} body={body_fixed}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-auto",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Open tunnel with an auto-assigned local port",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_auto",
+              "local_port": "lport_auto"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tunnel-auto",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 590 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log auto tunnel handle + resolved port",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-auto tid={tid_auto} lport={lport_auto}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-auto",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 660 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET health through the auto-assigned tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_auto}/health'",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "status_auto",
+              "body": "body_auto"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-http-auto",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log auto-tunnel HTTP response",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'http-auto status={status_auto} body={body_auto}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-fixed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 800 },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the fixed tunnel by id",
+          "hasNewerVersion": false,
+          "expressionFields": ["tunnel_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid_fixed"
+            },
+            "outputBindings": {
+              "closed": "closed_fixed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-fixed-again",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 870 },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Re-close the fixed tunnel (idempotent no-op)",
+          "hasNewerVersion": false,
+          "expressionFields": ["tunnel_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid_fixed"
+            },
+            "outputBindings": {
+              "closed": "closed_again"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-closes",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 940 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log explicit + idempotent close results",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'close-fixed closed={closed_fixed} close-again closed={closed_again}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-post-close",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 958 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the request through the closed tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "post_close_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-after-close",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 976 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the CLOSED fixed tunnel (must be refused)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_fixed}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-post-close-caught",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 994 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused post-close request",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'post-close-caught request-refused'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-post-close-err",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1002 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the bound post-close error",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'post-close-err err={post_close_err}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Default tunnel to a closed port",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Default tunnel to a closed port",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "netcat-target",
+              "remote_port": 9479
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_closed",
+              "local_port": "lport_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 170 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard traffic through the closed-port tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "closed_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 240 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the closed-port tunnel (the SSH host cannot connect)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_closed}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-closed-caught",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 310 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused closed-port traffic",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'closed-caught traffic-refused'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the closed-port tunnel port",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-closed lport={lport_closed}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "exec-late-port",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 450 },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Pick a free port on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "python3 -c 'import socket; s = socket.socket(); s.bind((\"127.0.0.1\", 0)); print(s.getsockname()[1]); s.close()'"
+            },
+            "outputBindings": {
+              "stdout": "late_port_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-late",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 520 },
+        "data": {
+          "label": "Default tunnel, starts later",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Default tunnel to a destination that starts later",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id", "remote_port"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "127.0.0.1",
+              "remote_port": "int(late_port_out.strip())"
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_late",
+              "local_port": "lport_late"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-late-before",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 590 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard traffic before the destination listens",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "late_before_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-late-before",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 660 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET before the destination listens (refused)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_late}/'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-late-before-caught",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused early traffic",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'late-before-caught traffic-refused'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "exec-late-start",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 800 },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Start the destination and wait until it listens",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id", "command"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f\"nohup timeout 120 python3 -m http.server {int(late_port_out)} --bind 127.0.0.1 </dev/null >/dev/null 2>&1 & for i in $(seq 100); do if curl -s -o /dev/null http://127.0.0.1:{int(late_port_out)}/; then echo listening; exit 0; fi; sleep 0.1; done; echo not-listening; exit 1\""
+            },
+            "outputBindings": {
+              "stdout": "late_start_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-late-after",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 870 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the same tunnel once the destination listens",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_late}/'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "late_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-late",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 940 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the late-start results",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-late lport={lport_late} start={late_start_out.strip()} status={late_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-vt-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1010 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the checked tunnel to a closed port",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "vt_closed_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-vt-closed",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1080 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Checked tunnel to a closed port",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "netcat-target",
+              "remote_port": 9479,
+              "validate_target": true
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_vt_closed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-vt-closed-caught",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the failed closed-port check",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'vt-closed-caught check-failed'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "exec-oneshot",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1220 },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Start a one-shot listener on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "f=$(mktemp); nohup timeout 120 python3 -c 'import socket, sys\ns = socket.socket()\ns.bind((\"127.0.0.1\", 0))\ns.listen(1)\nwith open(sys.argv[1], \"w\") as fh:\n    fh.write(str(s.getsockname()[1]))\nc, _ = s.accept()\ns.close()\ndata = b\"\"\nwhile b\"\\r\\n\\r\\n\" not in data:\n    chunk = c.recv(4096)\n    if not chunk:\n        break\n    data += chunk\nc.sendall(b\"HTTP/1.1 200 OK\\r\\nContent-Length: 8\\r\\nConnection: close\\r\\n\\r\\none-shot\")\nc.close()' \"$f\" </dev/null >/dev/null 2>&1 & for i in $(seq 100); do if [ -s \"$f\" ]; then cat \"$f\"; rm -f \"$f\"; exit 0; fi; sleep 0.1; done; exit 1"
+            },
+            "outputBindings": {
+              "stdout": "oneshot_port_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-oneshot",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1290 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Checked tunnel to the one-shot listener",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id", "remote_port"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "127.0.0.1",
+              "remote_port": "int(oneshot_port_out.strip())",
+              "validate_target": true
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_oneshot",
+              "local_port": "lport_oneshot"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-oneshot",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1360 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the checked tunnel (the held connection)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_oneshot}/'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "oneshot_status",
+              "body": "oneshot_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-oneshot",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1430 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the one-shot response",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'oneshot status={oneshot_status} body={oneshot_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-blank",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1500 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Default tunnel with a blank Local Port",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id", "local_port"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": "",
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_blank",
+              "local_port": "lport_blank"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-blank",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1570 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the blank-Local-Port tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_blank}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "status_blank",
+              "body": "body_blank"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-blank",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1640 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the blank-Local-Port results",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-blank lport={lport_blank} status={status_blank} body={body_blank}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-null-port",
+        "type": "workflowNode",
+        "position": { "x": 475, "y": 1500 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the tunnel whose Local Port is None",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "null_port_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-null-port",
+        "type": "workflowNode",
+        "position": { "x": 475, "y": 1570 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Default tunnel with Local Port None",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id", "local_port"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": "None",
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_null_port"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-null-port-caught",
+        "type": "workflowNode",
+        "position": { "x": 475, "y": 1640 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused Local Port None",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'null-port-caught local-port-null'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-session",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1010 },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the session (cascades to the still-open auto tunnel)",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-session-closed",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1080 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log session close + Connected flip",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'session-closed ids={closed_ids} conn={sess_conn}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "close-auto",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1150 },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the auto tunnel after session close (already reaped)",
+          "hasNewerVersion": false,
+          "expressionFields": ["tunnel_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid_auto"
+            },
+            "outputBindings": {
+              "closed": "closed_auto"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "open-nofwd",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1158 },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open session on the forwarding-disabled host",
+          "hasNewerVersion": false,
+          "expressionFields": ["password"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9448,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "nofwd_sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-nofwd",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1166 },
+        "data": {
+          "label": "Default tunnel on no-fwd host",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Default tunnel on the no-fwd host",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "nofwd_sid",
+              "local_port": 0,
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_nofwd",
+              "local_port": "lport_nofwd"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tunnel-nofwd",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1174 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the no-fwd tunnel handle",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'tunnel-nofwd tid={tid_nofwd} lport={lport_nofwd}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-nofwd",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1182 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard traffic through the no-fwd tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "nofwd_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-nofwd",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1190 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET through the no-fwd tunnel (server refuses the channel)",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_nofwd}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nofwd-caught",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1198 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused no-fwd traffic",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nofwd-caught traffic-refused'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nofwd-err",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1206 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the bound no-fwd error",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'nofwd-err err={nofwd_err}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-vt-nofwd",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1780 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard the checked tunnel on the no-fwd host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "vt_nofwd_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tunnel-vt-nofwd",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1850 },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Checked tunnel on the no-fwd host",
+          "hasNewerVersion": false,
+          "expressionFields": ["session_id"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "nofwd_sid",
+              "local_port": 0,
+              "remote_host": "http-target",
+              "remote_port": 9444,
+              "validate_target": true
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_vt_nofwd"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-vt-nofwd-caught",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 1920 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the failed no-fwd check",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'vt-nofwd-caught check-failed'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend + cascade close result",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'close-auto-after-cascade closed={closed_auto} ssh-tunnel-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-open-session", "source": "start-node", "target": "open-session" },
+      { "id": "edge-open-session-log-open", "source": "open-session", "target": "log-open" },
+      { "id": "edge-log-open-tunnel-fixed", "source": "log-open", "target": "tunnel-fixed" },
+      { "id": "edge-tunnel-fixed-log", "source": "tunnel-fixed", "target": "log-tunnel-fixed" },
+      { "id": "edge-log-tunnel-fixed-http", "source": "log-tunnel-fixed", "target": "http-fixed" },
+      { "id": "edge-http-fixed-log", "source": "http-fixed", "target": "log-http-fixed" },
+      { "id": "edge-log-http-fixed-tunnel-auto", "source": "log-http-fixed", "target": "tunnel-auto" },
+      { "id": "edge-tunnel-auto-log", "source": "tunnel-auto", "target": "log-tunnel-auto" },
+      { "id": "edge-log-tunnel-auto-http", "source": "log-tunnel-auto", "target": "http-auto" },
+      { "id": "edge-http-auto-log", "source": "http-auto", "target": "log-http-auto" },
+      { "id": "edge-log-http-auto-close-fixed", "source": "log-http-auto", "target": "close-fixed" },
+      { "id": "edge-close-fixed-again", "source": "close-fixed", "target": "close-fixed-again" },
+      { "id": "edge-close-fixed-again-log", "source": "close-fixed-again", "target": "log-closes" },
+      { "id": "edge-log-closes-tc-post-close", "source": "log-closes", "target": "tc-post-close" },
+      { "id": "edge-tc-post-close-try", "source": "tc-post-close", "target": "http-after-close", "sourceHandle": "try" },
+      { "id": "edge-tc-post-close-catch", "source": "tc-post-close", "target": "log-post-close-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-post-close-then", "source": "tc-post-close", "target": "log-post-close-err", "sourceHandle": "then" },
+      { "id": "edge-log-post-close-err-tunnel-closed", "source": "log-post-close-err", "target": "tunnel-closed" },
+      { "id": "edge-tunnel-closed-tc-closed", "source": "tunnel-closed", "target": "tc-closed" },
+      { "id": "edge-tc-closed-http-closed", "source": "tc-closed", "target": "http-closed", "sourceHandle": "try" },
+      { "id": "edge-tc-closed-log-closed-caught", "source": "tc-closed", "target": "log-closed-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-closed-log-closed", "source": "tc-closed", "target": "log-closed", "sourceHandle": "then" },
+      { "id": "edge-log-closed-exec-late-port", "source": "log-closed", "target": "exec-late-port" },
+      { "id": "edge-exec-late-port-tunnel-late", "source": "exec-late-port", "target": "tunnel-late" },
+      { "id": "edge-tunnel-late-tc-late-before", "source": "tunnel-late", "target": "tc-late-before" },
+      { "id": "edge-tc-late-before-http-late-before", "source": "tc-late-before", "target": "http-late-before", "sourceHandle": "try" },
+      { "id": "edge-tc-late-before-log-late-before-caught", "source": "tc-late-before", "target": "log-late-before-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-late-before-exec-late-start", "source": "tc-late-before", "target": "exec-late-start", "sourceHandle": "then" },
+      { "id": "edge-exec-late-start-http-late-after", "source": "exec-late-start", "target": "http-late-after" },
+      { "id": "edge-http-late-after-log-late", "source": "http-late-after", "target": "log-late" },
+      { "id": "edge-log-late-tc-vt-closed", "source": "log-late", "target": "tc-vt-closed" },
+      { "id": "edge-tc-vt-closed-tunnel-vt-closed", "source": "tc-vt-closed", "target": "tunnel-vt-closed", "sourceHandle": "try" },
+      { "id": "edge-tc-vt-closed-log-vt-closed-caught", "source": "tc-vt-closed", "target": "log-vt-closed-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-vt-closed-exec-oneshot", "source": "tc-vt-closed", "target": "exec-oneshot", "sourceHandle": "then" },
+      { "id": "edge-exec-oneshot-tunnel-oneshot", "source": "exec-oneshot", "target": "tunnel-oneshot" },
+      { "id": "edge-tunnel-oneshot-http-oneshot", "source": "tunnel-oneshot", "target": "http-oneshot" },
+      { "id": "edge-http-oneshot-log-oneshot", "source": "http-oneshot", "target": "log-oneshot" },
+      { "id": "edge-log-oneshot-tunnel-blank", "source": "log-oneshot", "target": "tunnel-blank" },
+      { "id": "edge-tunnel-blank-http-blank", "source": "tunnel-blank", "target": "http-blank" },
+      { "id": "edge-http-blank-log-blank", "source": "http-blank", "target": "log-blank" },
+      { "id": "edge-log-blank-tc-null-port", "source": "log-blank", "target": "tc-null-port" },
+      { "id": "edge-tc-null-port-tunnel-null-port", "source": "tc-null-port", "target": "tunnel-null-port", "sourceHandle": "try" },
+      { "id": "edge-tc-null-port-log-null-port-caught", "source": "tc-null-port", "target": "log-null-port-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-null-port-close-session", "source": "tc-null-port", "target": "close-session", "sourceHandle": "then" },
+      { "id": "edge-close-session-log", "source": "close-session", "target": "log-session-closed" },
+      { "id": "edge-log-session-closed-close-auto", "source": "log-session-closed", "target": "close-auto" },
+      { "id": "edge-close-auto-open-nofwd", "source": "close-auto", "target": "open-nofwd" },
+      { "id": "edge-open-nofwd-tunnel-nofwd", "source": "open-nofwd", "target": "tunnel-nofwd" },
+      { "id": "edge-tunnel-nofwd-log", "source": "tunnel-nofwd", "target": "log-tunnel-nofwd" },
+      { "id": "edge-log-tunnel-nofwd-tc-nofwd", "source": "log-tunnel-nofwd", "target": "tc-nofwd" },
+      { "id": "edge-tc-nofwd-try", "source": "tc-nofwd", "target": "http-nofwd", "sourceHandle": "try" },
+      { "id": "edge-tc-nofwd-catch", "source": "tc-nofwd", "target": "log-nofwd-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-nofwd-then", "source": "tc-nofwd", "target": "log-nofwd-err", "sourceHandle": "then" },
+      { "id": "edge-log-nofwd-err-tc-vt-nofwd", "source": "log-nofwd-err", "target": "tc-vt-nofwd" },
+      { "id": "edge-tc-vt-nofwd-tunnel-vt-nofwd", "source": "tc-vt-nofwd", "target": "tunnel-vt-nofwd", "sourceHandle": "try" },
+      { "id": "edge-tc-vt-nofwd-log-vt-nofwd-caught", "source": "tc-vt-nofwd", "target": "log-vt-nofwd-caught", "sourceHandle": "catch" },
+      { "id": "edge-tc-vt-nofwd-log-done", "source": "tc-vt-nofwd", "target": "log-done", "sourceHandle": "then" }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": { "value": "wave-secret", "type": "string", "scope": "test", "secret": true },
+    "sid": { "value": "", "type": "string", "scope": "test" },
+    "sess_conn": { "value": false, "type": "boolean", "scope": "test" },
+    "tid_fixed": { "value": "", "type": "string", "scope": "test" },
+    "lport_fixed": { "value": 0, "type": "integer", "scope": "test" },
+    "status_fixed": { "value": 0, "type": "integer", "scope": "test" },
+    "body_fixed": { "value": "", "type": "string", "scope": "test" },
+    "tid_auto": { "value": "", "type": "string", "scope": "test" },
+    "lport_auto": { "value": 0, "type": "integer", "scope": "test" },
+    "status_auto": { "value": 0, "type": "integer", "scope": "test" },
+    "body_auto": { "value": "", "type": "string", "scope": "test" },
+    "closed_fixed": { "value": false, "type": "boolean", "scope": "test" },
+    "closed_again": { "value": false, "type": "boolean", "scope": "test" },
+    "closed_ids": { "value": [], "type": "array", "scope": "test" },
+    "closed_auto": { "value": false, "type": "boolean", "scope": "test" },
+    "post_close_err": { "value": {}, "type": "map", "scope": "test" },
+    "nofwd_sid": { "value": "", "type": "string", "scope": "test" },
+    "tid_nofwd": { "value": "", "type": "string", "scope": "test" },
+    "lport_nofwd": { "value": 0, "type": "integer", "scope": "test" },
+    "nofwd_err": { "value": {}, "type": "map", "scope": "test" },
+    "tid_closed": { "value": "", "type": "string", "scope": "test" },
+    "late_port_out": { "value": "", "type": "string", "scope": "test" },
+    "tid_late": { "value": "", "type": "string", "scope": "test" },
+    "late_start_out": { "value": "", "type": "string", "scope": "test" },
+    "tid_vt_closed": { "value": "", "type": "string", "scope": "test" },
+    "oneshot_port_out": { "value": "", "type": "string", "scope": "test" },
+    "tid_oneshot": { "value": "", "type": "string", "scope": "test" },
+    "oneshot_body": { "value": "", "type": "string", "scope": "test" },
+    "tid_blank": { "value": "", "type": "string", "scope": "test" },
+    "body_blank": { "value": "", "type": "string", "scope": "test" },
+    "tid_vt_nofwd": { "value": "", "type": "string", "scope": "test" },
+    "lport_closed": { "value": 0, "type": "integer", "scope": "test" },
+    "lport_late": { "value": 0, "type": "integer", "scope": "test" },
+    "late_status": { "value": 0, "type": "integer", "scope": "test" },
+    "lport_oneshot": { "value": 0, "type": "integer", "scope": "test" },
+    "oneshot_status": { "value": 0, "type": "integer", "scope": "test" },
+    "lport_blank": { "value": 0, "type": "integer", "scope": "test" },
+    "status_blank": { "value": 0, "type": "integer", "scope": "test" },
+    "closed_err": { "value": {}, "type": "map", "scope": "test" },
+    "late_before_err": { "value": {}, "type": "map", "scope": "test" },
+    "vt_closed_err": { "value": {}, "type": "map", "scope": "test" },
+    "vt_nofwd_err": { "value": {}, "type": "map", "scope": "test" },
+    "tid_null_port": { "value": "", "type": "string", "scope": "test" },
+    "null_port_err": { "value": {}, "type": "map", "scope": "test" }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

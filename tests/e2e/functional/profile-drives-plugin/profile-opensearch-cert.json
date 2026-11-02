@@ -1,0 +1,12 @@
+{
+  "name": "Profile Drives OpenSearch Client Certificate",
+  "type": "opensearch",
+  "description": "OpenSearch profile whose cluster URL, CA and client identity drive a real Search",
+  "config": {
+    "url": "",
+    "ca_cert": "",
+    "client_cert": "",
+    "client_key": ""
+  },
+  "tags": ["e2e"]
+}

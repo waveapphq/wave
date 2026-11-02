@@ -1,0 +1,110 @@
+{
+  "name": "Excel Parser - Declared type mismatch under fail",
+  "version": "1.0.0",
+  "description": "A sheet holding text is read under a schema that declares the column as whole numbers; with the fail policy the run aborts on the first cell that does not fit.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-text",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "code\nabc\n",
+              "column_types": "string"
+            },
+            "outputBindings": { "table": "text_table" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-text",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://mismatch.xlsx",
+              "sheet": "Codes",
+              "table": "text_table",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-schema-fail",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Under Schema",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://mismatch.xlsx",
+              "sheet": "Codes",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "schema",
+              "schema_source": "int_schema",
+              "on_mismatch": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-text", "type": "default" },
+      { "id": "e2", "source": "parse-text", "target": "write-text", "type": "default" },
+      { "id": "e3", "source": "write-text", "target": "read-schema-fail", "type": "default" }
+    ]
+  },
+  "variables": {
+    "text_table": { "value": [], "type": "table", "scope": "test" },
+    "int_schema": {
+      "value": [{ "code": 1 }],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

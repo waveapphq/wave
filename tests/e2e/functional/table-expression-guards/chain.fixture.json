@@ -1,0 +1,184 @@
+{
+  "name": "Table Expression Guards - A chained query shapes both converters",
+  "version": "1.0.0",
+  "description": "One fluent chain - two filters and a two-key ordering - is typed straight into the CSV converter's and the Excel converter's table parameter; the emitted text and the written workbook both carry the shaped rows while the source variable keeps every row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-seed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "region,rep,amount\nwest,ada,10\neast,bob,20\nwest,cy,30\neast,dee,5\nwest,zoe,10\n"
+            },
+            "outputBindings": { "table": "seed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "serialize-chain",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Chain",
+          "hasNewerVersion": false,
+          "expressionFields": ["table"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "seed.filter('region').equals('west').filter('amount').greater_than(8).order_by(('amount', 'desc'), 'rep')",
+              "has_header": true,
+              "delimiter": ","
+            },
+            "outputBindings": { "csv_content": "chain_text" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-chain",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Chain",
+          "hasNewerVersion": false,
+          "expressionFields": ["table"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://chain.xlsx",
+              "sheet": "Chain",
+              "table": "seed.filter('region').equals('west').filter('amount').greater_than(8).order_by(('amount', 'desc'), 'rep')",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-chain",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Chain",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://chain.xlsx",
+              "sheet": "Chain",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": { "table": "chain_table" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-chain-text",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Chain Text",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-chain=' + chain_text.replace('\\n', '~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-chain-table",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 600 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Chain Table",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-xlsx=' + ','.join(chain_table.col('rep')) + '|' + str(chain_table.col('amount')) + '|source-rows-' + str(len(seed))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-seed", "type": "default" },
+      { "id": "e2", "source": "parse-seed", "target": "serialize-chain", "type": "default" },
+      { "id": "e3", "source": "serialize-chain", "target": "write-chain", "type": "default" },
+      { "id": "e4", "source": "write-chain", "target": "read-chain", "type": "default" },
+      { "id": "e5", "source": "read-chain", "target": "log-chain-text", "type": "default" },
+      { "id": "e6", "source": "log-chain-text", "target": "log-chain-table", "type": "default" }
+    ]
+  },
+  "variables": {
+    "seed": { "value": [], "type": "table", "scope": "test" },
+    "chain_text": { "value": "", "type": "string", "scope": "test" },
+    "chain_table": { "value": [], "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

@@ -1,0 +1,564 @@
+{
+  "name": "JSON Parser E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests JSON Parser plugin execution with combined and individual modes, type coercion, nested queries, and error handling",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "json-combined",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "JSON Combined Mode",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"store\":{\"name\":\"BookShop\",\"books\":[{\"title\":\"Alpha\",\"price\":9.99,\"in_stock\":true},{\"title\":\"Beta\",\"price\":14.50,\"in_stock\":false}],\"count\":2}}",
+              "queries": {
+                "store_name": "$.store.name",
+                "first_title": "$.store.books[0].title",
+                "book_count": "$.store.count",
+                "all_titles": "$.store.books[*].title"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "json_combined_success",
+              "errors": "json_combined_errors",
+              "results": "json_combined_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-combined-name",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined Store Name",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "json_combined_results['store_name']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-combined-first-title",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined First Title",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "json_combined_results['first_title']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-combined-count",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 390 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(json_combined_results['book_count']['value'])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-combined-all-titles",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 460 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined All Titles",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "','.join(json_combined_results['all_titles']['value'])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-combined-success",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 530 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Combined Success",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(json_combined_success)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-individual",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 630 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "JSON Individual Mode",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"price\":19.99,\"quantity\":5,\"active\":true}",
+              "queries": {
+                "price_val": "$.price",
+                "qty_val": "$.quantity",
+                "is_active": "$.active"
+              },
+              "output_mode": "individual",
+              "query_output_types": {
+                "price_val": "float",
+                "qty_val": "integer",
+                "is_active": "boolean"
+              }
+            },
+            "outputBindings": {
+              "success": "json_individual_success",
+              "errors": "json_individual_errors",
+              "price_val": "price_val",
+              "qty_val": "qty_val",
+              "is_active": "is_active"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-individual-price",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Price",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'{price_val}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-individual-qty",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Qty",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(qty_val)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-individual-active",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 870 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Individual Active",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(is_active)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-error-handling",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 970 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "JSON Error Handling",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"item\":\"Good\",\"value\":42}",
+              "queries": {
+                "good_query": "$.item",
+                "bad_query": "$[invalid_syntax"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "json_error_success",
+              "errors": "json_error_errors",
+              "results": "json_error_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-error-success",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1070 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Success Flag",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(json_error_success)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-error-good-query",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1140 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Good Query",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "json_error_results['good_query']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-error-count",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1210 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Error Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(len(json_error_errors))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-nested",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1310 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "JSON Nested Query",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"level1\":{\"level2\":{\"level3\":{\"deep_value\":\"NestedOk\"}}},\"tags\":[\"alpha\",\"beta\",\"gamma\"]}",
+              "queries": {
+                "deep_val": "$.level1.level2.level3.deep_value",
+                "second_tag": "$.tags[1]"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "json_nested_success",
+              "results": "json_nested_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nested-deep",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1410 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Nested Deep Value",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "json_nested_results['deep_val']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-nested-tag",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1480 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Nested Second Tag",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "json_nested_results['second_tag']['value']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "json-combined", "type": "default" },
+      { "id": "e2", "source": "json-combined", "target": "log-combined-name", "type": "default" },
+      { "id": "e3", "source": "log-combined-name", "target": "log-combined-first-title", "type": "default" },
+      { "id": "e4", "source": "log-combined-first-title", "target": "log-combined-count", "type": "default" },
+      { "id": "e5", "source": "log-combined-count", "target": "log-combined-all-titles", "type": "default" },
+      { "id": "e6", "source": "log-combined-all-titles", "target": "log-combined-success", "type": "default" },
+      { "id": "e7", "source": "log-combined-success", "target": "json-individual", "type": "default" },
+      { "id": "e8", "source": "json-individual", "target": "log-individual-price", "type": "default" },
+      { "id": "e9", "source": "log-individual-price", "target": "log-individual-qty", "type": "default" },
+      { "id": "e10", "source": "log-individual-qty", "target": "log-individual-active", "type": "default" },
+      { "id": "e11", "source": "log-individual-active", "target": "json-error-handling", "type": "default" },
+      { "id": "e12", "source": "json-error-handling", "target": "log-error-success", "type": "default" },
+      { "id": "e13", "source": "log-error-success", "target": "log-error-good-query", "type": "default" },
+      { "id": "e14", "source": "log-error-good-query", "target": "log-error-count", "type": "default" },
+      { "id": "e15", "source": "log-error-count", "target": "json-nested", "type": "default" },
+      { "id": "e16", "source": "json-nested", "target": "log-nested-deep", "type": "default" },
+      { "id": "e17", "source": "log-nested-deep", "target": "log-nested-tag", "type": "default" }
+    ]
+  },
+  "variables": {
+    "json_combined_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "json_combined_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "json_combined_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "json_individual_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "json_individual_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "price_val": {
+      "value": 0.0,
+      "type": "float",
+      "scope": "test"
+    },
+    "qty_val": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "is_active": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "json_error_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "json_error_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "json_error_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "json_nested_success": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "json_nested_results": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

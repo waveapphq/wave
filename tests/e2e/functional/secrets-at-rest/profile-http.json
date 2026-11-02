@@ -1,0 +1,11 @@
+{
+  "name": "Secrets At Rest Profile",
+  "type": "http",
+  "description": "HTTP profile carrying the canary-B credential for the encrypt-at-rest E2E",
+  "config": {
+    "base_url": "https://at-rest.example.local/v1",
+    "auth_key": "cnrB-8c2a6e51d0f3-bravo-real-bytes",
+    "timeout": 30
+  },
+  "tags": ["e2e"]
+}

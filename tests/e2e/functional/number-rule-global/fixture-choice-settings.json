@@ -1,0 +1,54 @@
+{
+  "name": "zz-11541-s10-choice-settings",
+  "version": "1.0.0",
+  "description": "SSH Session Open placed before and after a Settings change (FIELD-8)",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "2d829f11-78e6-4dd4-aeae-5eb8a1a44ce7",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 100
+        },
+        "data": {
+          "label": "Anchor",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The Block new Blocks are dropped under",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "settings anchor",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "049fbe9d-f548-4068-8d7a-c2c771232a40",
+        "source": "start-node",
+        "target": "2d829f11-78e6-4dd4-aeae-5eb8a1a44ce7",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

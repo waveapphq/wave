@@ -1,0 +1,285 @@
+{
+  "name": "JSON Parser Content Kinds Execution Test",
+  "version": "1.0.0",
+  "description": "json_content runs as a literal, an expression, and a template; combined + individual output modes both drive results end-to-end",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "json-lit",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Literal Combined",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "{\"name\": \"Ada\", \"count\": 7}",
+              "queries": {
+                "name_q": "$.name",
+                "count_q": "$.count"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "lit_success",
+              "errors": "lit_errors",
+              "results": "lit_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-lit-name",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal Name",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "lit_results['name_q']['value']", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-lit-count",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(lit_results['count_q']['value'])", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-expr",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 420 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Expression Individual",
+          "hasNewerVersion": false,
+          "expressionFields": ["json_content"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "json_content": "raw_json",
+              "queries": {
+                "price_val": "$.price",
+                "qty_val": "$.qty",
+                "active_val": "$.active"
+              },
+              "output_mode": "individual",
+              "query_output_types": {
+                "price_val": "float",
+                "qty_val": "integer",
+                "active_val": "boolean"
+              }
+            },
+            "outputBindings": {
+              "success": "expr_success",
+              "errors": "expr_errors",
+              "price_val": "price_val",
+              "qty_val": "qty_val",
+              "active_val": "active_val"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr-price",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Price",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "f'{price_val}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr-qty",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 590 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Qty",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(qty_val)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr-active",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Active",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(active_val)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "json-tmpl",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 760 },
+        "data": {
+          "label": "JSON Parser",
+          "elementType": "json-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Template Combined",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["json_content"],
+          "config": {
+            "values": {
+              "json_content": "{\"store\": \"{{ who }}\", \"n\": 2}",
+              "queries": {
+                "store_q": "$.store",
+                "n_q": "$.n"
+              },
+              "output_mode": "combined"
+            },
+            "outputBindings": {
+              "success": "tmpl_success",
+              "errors": "tmpl_errors",
+              "results": "tmpl_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-tmpl-store",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 860 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template Store",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "tmpl_results['store_q']['value']", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "json-lit", "type": "default" },
+      { "id": "e2", "source": "json-lit", "target": "log-lit-name", "type": "default" },
+      { "id": "e3", "source": "log-lit-name", "target": "log-lit-count", "type": "default" },
+      { "id": "e4", "source": "log-lit-count", "target": "json-expr", "type": "default" },
+      { "id": "e5", "source": "json-expr", "target": "log-expr-price", "type": "default" },
+      { "id": "e6", "source": "log-expr-price", "target": "log-expr-qty", "type": "default" },
+      { "id": "e7", "source": "log-expr-qty", "target": "log-expr-active", "type": "default" },
+      { "id": "e8", "source": "log-expr-active", "target": "json-tmpl", "type": "default" },
+      { "id": "e9", "source": "json-tmpl", "target": "log-tmpl-store", "type": "default" }
+    ]
+  },
+  "variables": {
+    "raw_json": {
+      "value": "{\"price\": 19.99, \"qty\": 5, \"active\": true}",
+      "type": "string",
+      "scope": "test"
+    },
+    "who": {
+      "value": "BookShop",
+      "type": "string",
+      "scope": "test"
+    },
+    "lit_success": { "value": false, "type": "boolean", "scope": "test" },
+    "lit_errors": { "value": [], "type": "array", "scope": "test" },
+    "lit_results": { "value": {}, "type": "map", "scope": "test" },
+    "expr_success": { "value": false, "type": "boolean", "scope": "test" },
+    "expr_errors": { "value": [], "type": "array", "scope": "test" },
+    "price_val": { "value": 0.0, "type": "float", "scope": "test" },
+    "qty_val": { "value": 0, "type": "integer", "scope": "test" },
+    "active_val": { "value": false, "type": "boolean", "scope": "test" },
+    "tmpl_success": { "value": false, "type": "boolean", "scope": "test" },
+    "tmpl_errors": { "value": [], "type": "array", "scope": "test" },
+    "tmpl_results": { "value": {}, "type": "map", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

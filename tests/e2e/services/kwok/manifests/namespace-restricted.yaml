@@ -1,0 +1,5 @@
+# Read-only namespace: RBAC negative tests assert against it; no test writes here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: restricted

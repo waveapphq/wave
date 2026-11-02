@@ -1,0 +1,527 @@
+{
+  "name": "CSV Parse Schema E2E",
+  "version": "1.0.0",
+  "description": "Schema-mode mapping + mismatch policy (non-aborting)",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schema-s1-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "S1 Schema Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,x\n"
+            },
+            "outputBindings": {
+              "table": "sc_s1"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-s1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse S1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,id\nAlice,1\nBob,2\n",
+              "column_types": "schema",
+              "schema_source": "sc_s1"
+            },
+            "outputBindings": {
+              "table": "s1"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-s1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log S1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'S1=' + str(s1.col_names()) + '|' + str(s1.col_types()) + '|id=' + str(s1.cell(0,'id')) + '|name=' + str(s1.cell(0,'name'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "schema-s2-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "S2 Schema Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "a,b\n1,x\n"
+            },
+            "outputBindings": {
+              "table": "sc_s2"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-s2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse S2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "10,hello\n20,world\n",
+              "has_header": false,
+              "column_types": "schema",
+              "schema_source": "sc_s2"
+            },
+            "outputBindings": {
+              "table": "s2"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-s2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log S2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'S2=' + str(s2.col_names()) + '|a=' + str(s2.cell(0,'a')) + '|b=' + str(s2.cell(0,'b'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "schema-s3-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "S3 Schema Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "age\n1\n"
+            },
+            "outputBindings": {
+              "table": "sc_s3"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-s3a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse S3a",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "age\n30\nabc\n",
+              "column_types": "schema",
+              "schema_source": "sc_s3",
+              "on_mismatch": "skip_row"
+            },
+            "outputBindings": {
+              "table": "s3a",
+              "row_count": "s3a_rc",
+              "success": "s3a_ok",
+              "errors": "s3a_errs"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-s3a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log S3a",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'S3a=' + str(s3a_rc) + '|c0=' + str(s3a.cell(0,'age')) + '|ok=' + str(s3a_ok) + '|elen=' + str(len(s3a_errs)) + '|erow=' + str(s3a_errs[0]['row']) + '|ecol=' + str(s3a_errs[0]['column'])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-s3b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse S3b",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "age\n30\nabc\n",
+              "column_types": "schema",
+              "schema_source": "sc_s3",
+              "on_mismatch": "replace_default"
+            },
+            "outputBindings": {
+              "table": "s3b",
+              "row_count": "s3b_rc",
+              "success": "s3b_ok",
+              "errors": "s3b_errs"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-s3b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log S3b",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'S3b=' + str(s3b_rc) + '|c0=' + str(s3b.cell(0,'age')) + '|c1=' + str(s3b.cell(1,'age')) + '|ok=' + str(s3b_ok) + '|elen=' + str(len(s3b_errs))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "schema-s1-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "schema-s1-seed",
+        "target": "parse-s1",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "parse-s1",
+        "target": "log-s1",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-s1",
+        "target": "schema-s2-seed",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "schema-s2-seed",
+        "target": "parse-s2",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "parse-s2",
+        "target": "log-s2",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-s2",
+        "target": "schema-s3-seed",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "schema-s3-seed",
+        "target": "parse-s3a",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "parse-s3a",
+        "target": "log-s3a",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-s3a",
+        "target": "parse-s3b",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "parse-s3b",
+        "target": "log-s3b",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sc_s1": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s1": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "sc_s2": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s2": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "sc_s3": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s3a": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s3a_rc": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "s3a_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s3a_errs": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "s3b": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s3b_rc": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "s3b_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "s3b_errs": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

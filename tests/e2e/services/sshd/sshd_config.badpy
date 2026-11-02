@@ -1,0 +1,12 @@
+# WAVE E2E real-service SSH server - interpreter probe passes, nothing else runs (test-only).
+# Proves a host that answers the version probe and then cannot start the pushed worker.
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AllowTcpForwarding yes
+PermitRootLogin no
+X11Forwarding no
+PrintMotd no
+ForceCommand /usr/local/bin/wave-badpy-shim
+Subsystem sftp /usr/lib/openssh/sftp-server

@@ -1,0 +1,56 @@
+# The cluster's only custom resource, so resource_type=custom can be proven against
+# a real CRD instead of a built-in. Namespaced, so an instance lives in a test's own
+# run namespace. Two served versions with the default None conversion: v1 is stored
+# and preferred, v1alpha1 is served only, so a manifest naming either version proves
+# the write lands at the version it names. kind, plural, singular and both short names
+# are all declared, so every discovery match field resolves it.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: wavegadgets.wave.e2e
+spec:
+  group: wave.e2e
+  scope: Namespaced
+  names:
+    kind: WaveGadget
+    listKind: WaveGadgetList
+    plural: wavegadgets
+    singular: wavegadget
+    shortNames:
+    - wgad
+    - wg
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              size:
+                type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+  - name: v1alpha1
+    served: true
+    storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              size:
+                type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string

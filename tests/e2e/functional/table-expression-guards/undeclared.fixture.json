@@ -1,0 +1,39 @@
+{
+  "name": "Table Expression Guards - A genuinely undeclared name is still refused",
+  "version": "1.0.0",
+  "description": "The counterpart to the comprehension fixture: a field expression naming a variable that exists nowhere must still be reported, so widening the save-time scan did not blind it.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-undeclared",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Undeclared",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-undeclared=' + str(nowhere_var)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-undeclared", "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

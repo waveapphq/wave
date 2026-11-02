@@ -1,0 +1,97 @@
+# WAVE CI Container Image
+# Pre-built image with all CI dependencies installed
+# Built once, reused for all CI runs
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update -qq && \
+    apt-get install -y -qq \
+    software-properties-common \
+    curl \
+    git \
+    > /dev/null && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python 3.12 from deadsnakes PPA
+RUN add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update -qq && \
+    apt-get install -y -qq \
+    python3.12 \
+    python3.12-venv \
+    python3.12-dev \
+    python3-pip \
+    > /dev/null && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.12 as default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+
+# Install Poetry system-wide
+# Set POETRY_HOME to install to /opt/poetry instead of user's home directory
+ENV POETRY_HOME=/opt/poetry
+RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 - && \
+    ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry
+
+# Configure Poetry to NOT create virtualenvs in project directory
+# This way the venv stays in the cache and survives volume mounts
+RUN poetry config virtualenvs.in-project false
+
+# Verify installations
+RUN python3 --version && \
+    poetry --version
+
+# Install Node.js 22 (for frontend CI)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - > /dev/null && \
+    apt-get install -y -qq nodejs > /dev/null && \
+    rm -rf /var/lib/apt/lists/*
+
+# Pin npm so each build gets the same one
+RUN npm install -g npm@12.2.0 --quiet && \
+    node --version && \
+    npm --version
+
+# Set working directory and ensure it's writable by ciuser
+WORKDIR /workspace
+
+# Create non-root user for CI runs BEFORE installing dependencies
+# This ensures permission-based tests work correctly (UID 1000, typical for first user)
+RUN useradd -m -u 1000 -s /bin/bash ciuser && \
+    mkdir -p /home/ciuser/.local/share && \
+    chown -R ciuser:ciuser /home/ciuser && \
+    chown ciuser:ciuser /workspace
+
+# Switch to non-root user for dependency installation
+USER ciuser
+WORKDIR /workspace
+
+# Copy backend project files for dependency installation
+COPY --chown=ciuser:ciuser backend/ /workspace/backend/
+
+# Fill the remote-host wheel cache the bundle tests push (pinned in backend/vendor/wheels.lock)
+COPY --chown=ciuser:ciuser scripts/fetch-remote-wheels.sh /workspace/scripts/fetch-remote-wheels.sh
+RUN /workspace/scripts/fetch-remote-wheels.sh
+
+# Pre-install Python dependencies as ciuser
+# The project is installed too, as a link to the mounted source, so a child Python can import it
+RUN cd /workspace/backend && \
+    poetry install --no-interaction --quiet --only main,dev
+
+# Copy frontend dependency files
+COPY --chown=ciuser:ciuser frontend/package.json frontend/package-lock.json /workspace/frontend/
+
+# Pre-install npm dependencies as ciuser
+RUN cd /workspace/frontend && \
+    npm ci --quiet && \
+    npm cache clean --force
+
+# Remove only the source code, keep pyproject.toml and poetry.lock for cache
+# This preserves the virtualenv association with /workspace/backend
+RUN cd /workspace/backend && rm -rf wavecore tests .coverage .mypy_cache .pytest_cache .ruff_cache htmlcov *.json && \
+    cd /workspace/frontend && rm -rf src public index.html vite.config.ts tsconfig*.json *.test.* node_modules
+
+# Default command
+CMD ["/bin/bash"]

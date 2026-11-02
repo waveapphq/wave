@@ -1,0 +1,98 @@
+{
+  "name": "zz-11541-s6a-look-advisory",
+  "version": "1.0.0",
+  "description": "The unsecured-credential advisory on the Headers one-line field (HTTP-4, SECFLD-2): one Block holds a short plain Authorization header, the other a long one whose line is cut.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "a88256e5-269b-4dde-8edc-156fc59cb292",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 50
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Advisory Short",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "http://127.0.0.1:9449/echo",
+              "headers": {
+                "Authorization": "Bearer abc"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f2e9909b-2059-4e11-9bd0-17d49077ebb3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 170
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Advisory Long",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "method": "GET",
+              "url": "http://127.0.0.1:9449/echo",
+              "headers": {
+                "Authorization": "Bearer abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789",
+                "X-Trace": "zz-11541-s6a-trace"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "42cd4151-20ea-4083-bad6-00629c5c4118",
+        "source": "start-node",
+        "target": "a88256e5-269b-4dde-8edc-156fc59cb292",
+        "type": "default"
+      },
+      {
+        "id": "62504271-7ec6-47e0-829d-10718499191d",
+        "source": "a88256e5-269b-4dde-8edc-156fc59cb292",
+        "target": "f2e9909b-2059-4e11-9bd0-17d49077ebb3",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

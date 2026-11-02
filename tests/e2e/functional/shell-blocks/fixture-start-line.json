@@ -1,0 +1,542 @@
+{
+  "name": "SL-START __TOKEN__",
+  "version": "1.0.0",
+  "description": "One INFO start line per local block naming the program that runs the script, and the non-zero exit message carrying the last Stderr line.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sl-typed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Typed script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Typed script",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo sl-typed-body-__TOKEN__",
+              "shell": "/bin/bash"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-file",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "File mode",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "File mode",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "file",
+              "script_file": "testdata://scripts/sl-probe.sh",
+              "shell": "/bin/sh"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exec",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Default shell",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Default shell",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "echo sl-exec-cmd-__TOKEN__"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-py",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Empty Interpreter row",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Empty Interpreter row",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print('sl-py-body-__TOKEN__')"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exit-short",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 380
+        },
+        "data": {
+          "label": "Last Stderr line",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Last Stderr line",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "shell": "/bin/bash -o pipefail",
+              "on_error": "record",
+              "script": "echo out\necho err-first-__TOKEN__ >&2\necho \"sl-last-__TOKEN__   \" >&2\necho >&2\nexit 3"
+            },
+            "outputBindings": {
+              "error": "e_short",
+              "exit_code": "c_short",
+              "reason": "r_short"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exit-long",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Stderr cut to 200",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Stderr cut to 200",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "shell": "/bin/bash",
+              "on_error": "record",
+              "script": "L=$(printf 'L%.0s' {1..250})\necho \"   $L   \" >&2\nexit 4"
+            },
+            "outputBindings": {
+              "error": "e_long"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exit-bare",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 540
+        },
+        "data": {
+          "label": "No Stderr",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "No Stderr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "shell": "/bin/bash",
+              "on_error": "record",
+              "script": "exit 5"
+            },
+            "outputBindings": {
+              "error": "e_bare"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exit-ws",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 620
+        },
+        "data": {
+          "label": "Whitespace-only Stderr",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Whitespace-only Stderr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "shell": "/bin/bash",
+              "on_error": "record",
+              "script": "printf '  \\n\\t\\n' >&2\nexit 6"
+            },
+            "outputBindings": {
+              "error": "e_ws"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-secret",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Secret Stderr",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Secret Stderr",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "shell": "/bin/bash",
+              "on_error": "record",
+              "script": "echo sl-canary-__TOKEN__-real >&2\nexit 7"
+            },
+            "outputBindings": {
+              "error": "e_secret",
+              "stderr": "sec_err"
+            },
+            "profileBindings": [],
+            "outputSecretFields": [
+              "stderr"
+            ]
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-exec-exit",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Shell Exec non-zero exit",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shell Exec non-zero exit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "echo sl-cmd-err-__TOKEN__ >&2; exit 9",
+              "shell": "/bin/bash",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "error": "e_exec"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-py-exit",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "Named interpreter",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Named interpreter",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "interpreter": "python3",
+              "on_error": "record",
+              "script": "import sys\nsys.stderr.write('sl-py-err-__TOKEN__' + '\\n')\nsys.exit(8)"
+            },
+            "outputBindings": {
+              "error": "e_py",
+              "exit_code": "c_py"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sl-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-19-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-typed",
+        "source": "start-node",
+        "target": "sl-typed"
+      },
+      {
+        "id": "e-sl-typed-sl-file",
+        "source": "sl-typed",
+        "target": "sl-file"
+      },
+      {
+        "id": "e-sl-file-sl-exec",
+        "source": "sl-file",
+        "target": "sl-exec"
+      },
+      {
+        "id": "e-sl-exec-sl-py",
+        "source": "sl-exec",
+        "target": "sl-py"
+      },
+      {
+        "id": "e-sl-py-sl-exit-short",
+        "source": "sl-py",
+        "target": "sl-exit-short"
+      },
+      {
+        "id": "e-sl-exit-short-sl-exit-long",
+        "source": "sl-exit-short",
+        "target": "sl-exit-long"
+      },
+      {
+        "id": "e-sl-exit-long-sl-exit-bare",
+        "source": "sl-exit-long",
+        "target": "sl-exit-bare"
+      },
+      {
+        "id": "e-sl-exit-bare-sl-exit-ws",
+        "source": "sl-exit-bare",
+        "target": "sl-exit-ws"
+      },
+      {
+        "id": "e-sl-exit-ws-sl-secret",
+        "source": "sl-exit-ws",
+        "target": "sl-secret"
+      },
+      {
+        "id": "e-sl-secret-sl-exec-exit",
+        "source": "sl-secret",
+        "target": "sl-exec-exit"
+      },
+      {
+        "id": "e-sl-exec-exit-sl-py-exit",
+        "source": "sl-exec-exit",
+        "target": "sl-py-exit"
+      },
+      {
+        "id": "e-sl-py-exit-sl-done",
+        "source": "sl-py-exit",
+        "target": "sl-done"
+      }
+    ]
+  },
+  "variables": {
+    "e_short": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c_short": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "r_short": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_long": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_bare": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_ws": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_secret": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sec_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_exec": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e_py": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "c_py": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

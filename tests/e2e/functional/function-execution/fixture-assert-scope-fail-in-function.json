@@ -1,0 +1,85 @@
+{
+  "name": "V-CANVAS-FN-ASSERT-SCOPE-FAIL-01 fixture",
+  "version": "1.0.0",
+  "description": "A Test with Function(Assert(fail_current_scope=True, condition=False)) -> Log_after. After run: Function block reports failed, the parent flow stops there (Log_after does not run), test ends failed.",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-scope-fail",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 200 },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "name": "Function_1",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-assert",
+                  "type": "workflowNode",
+                  "position": { "x": 300, "y": 200 },
+                  "data": {
+                    "label": "Assert",
+                    "elementType": "assert",
+                    "nodeType": "control",
+                    "version": "1.0.0",
+                    "config": {
+                      "values": {
+                        "assertions": [
+                          {"type": "expression", "expression": "False"}
+                        ],
+                        "mode": "split",
+                        "fail_current_scope": true
+                      },
+                      "profileBindings": [],
+                      "outputBindings": {}
+                    }
+                  }
+                }
+              ],
+              "edges": [
+                {"id": "e-start-assert", "source": "start-node", "target": "inner-assert"}
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 500, "y": 200 },
+        "data": {
+          "label": "Log_after",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {"message": "'after fn'", "level": "INFO"},
+            "profileBindings": [],
+            "outputBindings": {}
+          }
+        }
+      }
+    ],
+    "edges": [
+      {"id": "e-start-fn", "source": "start-node", "target": "fn-scope-fail"},
+      {"id": "e-fn-log", "source": "fn-scope-fail", "target": "log-after"}
+    ]
+  }
+}

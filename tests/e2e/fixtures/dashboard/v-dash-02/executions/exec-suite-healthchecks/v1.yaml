@@ -1,0 +1,15 @@
+id: exec-suite-healthchecks
+test_id: healthchecks
+status: running
+progress: 23
+current_block: block-api-check
+variables:
+  namespace: Dev-West-NS3
+  tests_selected: 3
+  tests_total: 10
+error: null
+started_at: "2025-12-28T09:59:15Z"
+updated_at: "2025-12-28T10:00:00Z"
+completed_at: null
+artifacts: []
+debug_state: null

@@ -1,0 +1,47 @@
+{
+  "name": "Table Type Validation E2E",
+  "version": "1.0.0",
+  "description": "Design-time table validation functional fixture: a single table variable (results) carried as row-objects with an integer id column and a string name column, plus a Log anchor so the test validates with zero errors. The spec opens the inspect modal in edit and drives the shared table-schema validator across the Visual and Code views - invalid cells, duplicate / unexpected / missing columns, the multi-problem (+N more) list, the invalid-JSON and structure Visual-switch locks, and the Compare mode pill color.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "anchor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "table-type-validation anchor", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-1", "type": "default" }
+    ]
+  },
+  "variables": {
+    "results": {
+      "value": [
+        { "id": 1, "name": "alpha" },
+        { "id": 2, "name": "beta" }
+      ],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-20T00:00:00.000000",
+  "updated_at": "2026-06-20T00:00:00.000000"
+}

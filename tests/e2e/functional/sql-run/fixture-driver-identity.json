@@ -1,0 +1,1423 @@
+{
+  "name": "V-PLUGIN-SQL-DRIVER-IDENTITY",
+  "version": "1.0.0",
+  "description": "SQL block driver identity on the real databases: the program name WAVE on PostgreSQL, MariaDB, SQL Server and Oracle; an Oracle dsn that connects as an address, as a connect descriptor and with spaces around it; and every Oracle Driver option WAVE refuses before it connects (a TNS alias, a configuration provider, a directory address, a dsn or protocol that disagrees with the TLS row).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "6f1f6fb0-89f2-4e54-adaa-8556819a05aa",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "PG program name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PostgreSQL reads its application name back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "port": 9473,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT current_setting('application_name')",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "pg_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7c9eed74-1b8e-4d8c-8cb6-e420b9e5514b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "MariaDB program name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB reads its program_name connection attribute back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "port": 9474,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT ATTR_VALUE FROM performance_schema.session_connect_attrs WHERE PROCESSLIST_ID = CONNECTION_ID() AND ATTR_NAME = 'program_name'",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "my_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "37553e80-8fb0-48d3-8373-d458242ae2e4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "SQL Server program name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQL Server reads its application name back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "mssql",
+              "host": "127.0.0.1",
+              "port": 9476,
+              "database": "wave",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT APP_NAME()",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ms_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9fd7a896-7351-44e9-a1f1-3e1075528d0e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Oracle program name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Oracle reads its client program name back",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT SYS_CONTEXT('USERENV', 'CLIENT_PROGRAM_NAME') FROM dual",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "ora_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9425b856-fea1-4c4c-a67e-6304e7bd3a78",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Oracle dsn easy connect",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A host:port/service dsn beside a Port row nothing listens on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9479,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "127.0.0.1:9475/FREEPDB1"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ez_ok",
+              "row_count": "ez_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4d49e7e8-c6f3-4dac-9a9c-a23ecc4aeb89",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "Oracle dsn descriptor",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A full connect descriptor beside a Port row nothing listens on",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9479,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=9475))(CONNECT_DATA=(SERVICE_NAME=FREEPDB1)))"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ds_ok",
+              "row_count": "ds_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d06dd15b-fd99-451a-86bd-7c32beebdd4a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Oracle dsn with spaces",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The host:port/service dsn with two spaces on each side",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9479,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "  127.0.0.1:9475/FREEPDB1  "
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "sp_ok",
+              "row_count": "sp_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "573f1b49-ad1e-4a66-a5cb-935e88475482",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Oracle alias",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A dsn that is only a name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "FREEPDB1"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "alias_ok",
+              "error": "alias_error",
+              "reason": "alias_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0c80ce89-a078-4015-932b-356d8d87333e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Alias under Fail the block",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the alias refusal of a block left at Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "fail_error",
+              "caught": "fail_caught"
+            },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "77f7c409-5339-409d-bb96-82898408dce0",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 870
+        },
+        "data": {
+          "label": "Oracle alias fail",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The same dsn with On error left at Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "FREEPDB1"
+              },
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "05df32c0-8c28-4b15-a41a-2e22decce2e1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "Alias caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The Catch path of the alias refusal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlid-alias-caught {fail_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d2c53fe2-1679-40b9-a7ad-e35e5e974a3b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1020
+        },
+        "data": {
+          "label": "Oracle config provider",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A dsn that names a configuration provider",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "config-file:///srv/ora/app.json"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "cfg_ok",
+              "error": "cfg_error",
+              "reason": "cfg_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "81a96e32-f249-49cc-970b-69f48215b6fb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1110
+        },
+        "data": {
+          "label": "Oracle directory ldap",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A dsn that is a directory address",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "ldap://ldap.example.com/cn=orcl,cn=OracleContext"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ldap_ok",
+              "error": "ldap_error",
+              "reason": "ldap_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "12a37f7c-8663-404a-8107-f39d2470b6e0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1200
+        },
+        "data": {
+          "label": "Oracle directory LDAPS",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A directory address in upper case",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "LDAPS://ldap.example.com/cn=orcl,cn=OracleContext"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ldaps_ok",
+              "error": "ldaps_error",
+              "reason": "ldaps_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d556352b-0d4b-4820-95d9-3e6e390dcbed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1290
+        },
+        "data": {
+          "label": "Oracle host and port only",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A host:port dsn with no service name, spaces around it",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "  127.0.0.1:9475  "
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "hp_ok",
+              "error": "hp_error",
+              "reason": "hp_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "afa4b188-c115-4948-80b8-4120a48c1b46",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1380
+        },
+        "data": {
+          "label": "TLS on plain descriptor",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS on beside a connect descriptor whose address is TCP",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=9475))(CONNECT_DATA=(SERVICE_NAME=FREEPDB1)))"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "tls_desc_ok",
+              "error": "tls_desc_error",
+              "reason": "tls_desc_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b169b9e6-ff8f-4d57-b8b5-071c184638a8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1470
+        },
+        "data": {
+          "label": "TLS on mixed descriptor",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS on beside a connect descriptor with one TCPS and one TCP address",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCPS)(HOST=127.0.0.1)(PORT=9475))(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=9475)))(CONNECT_DATA=(SERVICE_NAME=FREEPDB1)))"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "tls_mixed_ok",
+              "error": "tls_mixed_error",
+              "reason": "tls_mixed_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d587c0ce-247f-4232-97f8-405cfc186e32",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "TLS on plain easy connect",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS on beside a host:port/service dsn",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "127.0.0.1:9475/FREEPDB1"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "tls_easy_ok",
+              "error": "tls_easy_error",
+              "reason": "tls_easy_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e023962a-7896-43b9-9284-7ee63e33fef8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1650
+        },
+        "data": {
+          "label": "TLS off tcps address",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS off beside a tcps:// dsn",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "tcps://127.0.0.1:9475/FREEPDB1"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "plain_tcps_ok",
+              "error": "plain_tcps_error",
+              "reason": "plain_tcps_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "53eec9af-1d9a-4ae6-ad42-b7b558920193",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1740
+        },
+        "data": {
+          "label": "TLS off mixed descriptor",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS off beside a connect descriptor with one TCPS and one TCP address",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "dsn": "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCPS)(HOST=127.0.0.1)(PORT=9475))(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=9475)))(CONNECT_DATA=(SERVICE_NAME=FREEPDB1)))"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "plain_mixed_ok",
+              "error": "plain_mixed_error",
+              "reason": "plain_mixed_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ff4f331d-7446-4759-bc2c-fb35c48ed3ce",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1830
+        },
+        "data": {
+          "label": "TLS on protocol tcp",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS on beside a protocol option of TCP, spaces around it",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": true,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "protocol": " TCP "
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "proto_tcp_ok",
+              "error": "proto_tcp_error",
+              "reason": "proto_tcp_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "97f893b2-a303-4110-908f-600a2c2e7733",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1920
+        },
+        "data": {
+          "label": "TLS off protocol tcps",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "TLS off beside a protocol option of tcps",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "tls": false,
+              "script_type": "source",
+              "sql": "SELECT 1 AS one FROM dual",
+              "driver_options": {
+                "protocol": "tcps"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "proto_tcps_ok",
+              "error": "proto_tcps_error",
+              "reason": "proto_tcps_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2c48a339-1227-4a23-a6fe-e8c019913ded",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2010
+        },
+        "data": {
+          "label": "Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlid-driver-identity-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "1fd5a261-a44e-41f0-ba51-833b23e56be3",
+        "source": "start-node",
+        "target": "6f1f6fb0-89f2-4e54-adaa-8556819a05aa",
+        "type": "default"
+      },
+      {
+        "id": "7c42bbf9-3293-4f80-9b5a-14ee99cbaf70",
+        "source": "6f1f6fb0-89f2-4e54-adaa-8556819a05aa",
+        "target": "7c9eed74-1b8e-4d8c-8cb6-e420b9e5514b",
+        "type": "default"
+      },
+      {
+        "id": "53f31513-82ca-470b-9f99-e58ac7b83093",
+        "source": "7c9eed74-1b8e-4d8c-8cb6-e420b9e5514b",
+        "target": "37553e80-8fb0-48d3-8373-d458242ae2e4",
+        "type": "default"
+      },
+      {
+        "id": "d9df64f8-635a-4e69-b474-40567fa0d050",
+        "source": "37553e80-8fb0-48d3-8373-d458242ae2e4",
+        "target": "9fd7a896-7351-44e9-a1f1-3e1075528d0e",
+        "type": "default"
+      },
+      {
+        "id": "5ece92f2-d49c-42b7-856d-a13b31274c68",
+        "source": "9fd7a896-7351-44e9-a1f1-3e1075528d0e",
+        "target": "9425b856-fea1-4c4c-a67e-6304e7bd3a78",
+        "type": "default"
+      },
+      {
+        "id": "1753eabd-f6cb-4103-9c20-219aef4ae723",
+        "source": "9425b856-fea1-4c4c-a67e-6304e7bd3a78",
+        "target": "4d49e7e8-c6f3-4dac-9a9c-a23ecc4aeb89",
+        "type": "default"
+      },
+      {
+        "id": "a93eb46e-9103-436c-a24f-56f65c535703",
+        "source": "4d49e7e8-c6f3-4dac-9a9c-a23ecc4aeb89",
+        "target": "d06dd15b-fd99-451a-86bd-7c32beebdd4a",
+        "type": "default"
+      },
+      {
+        "id": "08bbdcdc-2f2c-499f-9734-05870a964f33",
+        "source": "d06dd15b-fd99-451a-86bd-7c32beebdd4a",
+        "target": "573f1b49-ad1e-4a66-a5cb-935e88475482",
+        "type": "default"
+      },
+      {
+        "id": "b5605917-6d42-448f-850d-a415da9acd69",
+        "source": "573f1b49-ad1e-4a66-a5cb-935e88475482",
+        "target": "0c80ce89-a078-4015-932b-356d8d87333e",
+        "type": "default"
+      },
+      {
+        "id": "44efba10-775f-4bfc-a300-07ed020bf17f",
+        "source": "0c80ce89-a078-4015-932b-356d8d87333e",
+        "target": "77f7c409-5339-409d-bb96-82898408dce0",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "71d043aa-baf8-4565-a25b-87c8db3a66f1",
+        "source": "0c80ce89-a078-4015-932b-356d8d87333e",
+        "target": "05df32c0-8c28-4b15-a41a-2e22decce2e1",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "bf371e38-48f9-4ec1-aa5a-caadd2823491",
+        "source": "0c80ce89-a078-4015-932b-356d8d87333e",
+        "target": "d2c53fe2-1679-40b9-a7ad-e35e5e974a3b",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "5acd7606-0fc3-4e3e-a8c3-8714660d0a7d",
+        "source": "d2c53fe2-1679-40b9-a7ad-e35e5e974a3b",
+        "target": "81a96e32-f249-49cc-970b-69f48215b6fb",
+        "type": "default"
+      },
+      {
+        "id": "142fc381-63cf-4b31-bb04-e2bb26696bd2",
+        "source": "81a96e32-f249-49cc-970b-69f48215b6fb",
+        "target": "12a37f7c-8663-404a-8107-f39d2470b6e0",
+        "type": "default"
+      },
+      {
+        "id": "c5419366-5de1-4e2d-b412-fbc9617de8c6",
+        "source": "12a37f7c-8663-404a-8107-f39d2470b6e0",
+        "target": "d556352b-0d4b-4820-95d9-3e6e390dcbed",
+        "type": "default"
+      },
+      {
+        "id": "8836e207-9ede-4110-9289-645d50ec5f54",
+        "source": "d556352b-0d4b-4820-95d9-3e6e390dcbed",
+        "target": "afa4b188-c115-4948-80b8-4120a48c1b46",
+        "type": "default"
+      },
+      {
+        "id": "52cec20f-64fe-4b4e-8375-65d39c8b8e32",
+        "source": "afa4b188-c115-4948-80b8-4120a48c1b46",
+        "target": "b169b9e6-ff8f-4d57-b8b5-071c184638a8",
+        "type": "default"
+      },
+      {
+        "id": "0140ae60-bf88-4eff-8a31-ff8185c6fc77",
+        "source": "b169b9e6-ff8f-4d57-b8b5-071c184638a8",
+        "target": "d587c0ce-247f-4232-97f8-405cfc186e32",
+        "type": "default"
+      },
+      {
+        "id": "24a247d6-7050-4e79-ae64-36bb647e736d",
+        "source": "d587c0ce-247f-4232-97f8-405cfc186e32",
+        "target": "e023962a-7896-43b9-9284-7ee63e33fef8",
+        "type": "default"
+      },
+      {
+        "id": "42c58859-1bd5-4f40-b16f-9bc5bf88b250",
+        "source": "e023962a-7896-43b9-9284-7ee63e33fef8",
+        "target": "53eec9af-1d9a-4ae6-ad42-b7b558920193",
+        "type": "default"
+      },
+      {
+        "id": "e105e708-11c3-4828-8ba9-8df5d3318d4d",
+        "source": "53eec9af-1d9a-4ae6-ad42-b7b558920193",
+        "target": "ff4f331d-7446-4759-bc2c-fb35c48ed3ce",
+        "type": "default"
+      },
+      {
+        "id": "ad9243d2-825f-4a84-9c35-b3cba33613ac",
+        "source": "ff4f331d-7446-4759-bc2c-fb35c48ed3ce",
+        "target": "97f893b2-a303-4110-908f-600a2c2e7733",
+        "type": "default"
+      },
+      {
+        "id": "f8fc0e81-f5dd-4c2e-8145-93ad6cd90940",
+        "source": "97f893b2-a303-4110-908f-600a2c2e7733",
+        "target": "2c48a339-1227-4a23-a6fe-e8c019913ded",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "pg_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ms_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ora_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "fail_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "fail_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ez_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ez_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ds_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ds_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sp_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "sp_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "alias_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "alias_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "alias_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "cfg_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "cfg_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "cfg_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ldap_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ldap_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ldap_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ldaps_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ldaps_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ldaps_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "hp_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "hp_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "hp_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_desc_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tls_desc_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_desc_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_mixed_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tls_mixed_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_mixed_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_easy_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tls_easy_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tls_easy_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_tcps_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "plain_tcps_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_tcps_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_mixed_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "plain_mixed_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "plain_mixed_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "proto_tcp_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "proto_tcp_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "proto_tcp_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "proto_tcps_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "proto_tcps_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "proto_tcps_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "name": "V-FN-NESTED-3LEVEL",
+  "version": "1.0.0",
+  "description": "Three local Functions nested Level1 > Level2 > Level3, each logging a line; deepest line proves 3-level execution + propagation (REQ-3.1.1.4).",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn3-lvl1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Level1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Level1",
+            "description": "",
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "log1",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 120,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn3-lvl1'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "fn3-lvl2",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 300,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Level2",
+                    "elementType": "function",
+                    "nodeType": "function",
+                    "functionLifecycle": "local",
+                    "category": "function",
+                    "version": "1.0.0",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {},
+                      "outputBindings": {},
+                      "profileBindings": []
+                    },
+                    "localDefinition": {
+                      "name": "Level2",
+                      "description": "",
+                      "inputs": [],
+                      "outputs": [],
+                      "variables": [],
+                      "workflow": {
+                        "nodes": [
+                          {
+                            "id": "log2",
+                            "type": "workflowNode",
+                            "position": {
+                              "x": 120,
+                              "y": 200
+                            },
+                            "data": {
+                              "label": "Log",
+                              "elementType": "log",
+                              "nodeType": "plugin",
+                              "category": "system",
+                              "version": "1.0.0",
+                              "expressionFields": [
+                                "message"
+                              ],
+                              "templateFields": [],
+                              "variableExpressionKeys": [],
+                              "config": {
+                                "values": {
+                                  "message": "'fn3-lvl2'",
+                                  "level": "INFO"
+                                },
+                                "outputBindings": {},
+                                "profileBindings": []
+                              }
+                            },
+                            "measured": {
+                              "width": 120,
+                              "height": 62
+                            }
+                          },
+                          {
+                            "id": "fn3-lvl3",
+                            "type": "workflowNode",
+                            "position": {
+                              "x": 300,
+                              "y": 200
+                            },
+                            "data": {
+                              "label": "Level3",
+                              "elementType": "function",
+                              "nodeType": "function",
+                              "functionLifecycle": "local",
+                              "category": "function",
+                              "version": "1.0.0",
+                              "hasNewerVersion": false,
+                              "expressionFields": [],
+                              "templateFields": [],
+                              "variableExpressionKeys": [],
+                              "config": {
+                                "values": {},
+                                "outputBindings": {},
+                                "profileBindings": []
+                              },
+                              "localDefinition": {
+                                "name": "Level3",
+                                "description": "",
+                                "inputs": [],
+                                "outputs": [],
+                                "variables": [],
+                                "workflow": {
+                                  "nodes": [
+                                    {
+                                      "id": "log3",
+                                      "type": "workflowNode",
+                                      "position": {
+                                        "x": 200,
+                                        "y": 200
+                                      },
+                                      "data": {
+                                        "label": "Log",
+                                        "elementType": "log",
+                                        "nodeType": "plugin",
+                                        "category": "system",
+                                        "version": "1.0.0",
+                                        "expressionFields": [
+                                          "message"
+                                        ],
+                                        "templateFields": [],
+                                        "variableExpressionKeys": [],
+                                        "config": {
+                                          "values": {
+                                            "message": "'fn3-lvl3-deepest'",
+                                            "level": "INFO"
+                                          },
+                                          "outputBindings": {},
+                                          "profileBindings": []
+                                        }
+                                      },
+                                      "measured": {
+                                        "width": 120,
+                                        "height": 62
+                                      }
+                                    }
+                                  ],
+                                  "edges": [
+                                    {
+                                      "id": "e-l3",
+                                      "source": "start-node",
+                                      "target": "log3"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "measured": {
+                              "width": 140,
+                              "height": 62
+                            }
+                          }
+                        ],
+                        "edges": [
+                          {
+                            "id": "e-l2-log",
+                            "source": "start-node",
+                            "target": "log2"
+                          },
+                          {
+                            "id": "e-l2-fn",
+                            "source": "log2",
+                            "target": "fn3-lvl3"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "measured": {
+                    "width": 140,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-l1-log",
+                  "source": "start-node",
+                  "target": "log1"
+                },
+                {
+                  "id": "e-l1-fn",
+                  "source": "log1",
+                  "target": "fn3-lvl2"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-l1",
+        "source": "start-node",
+        "target": "fn3-lvl1",
+        "type": "default"
+      }
+    ]
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

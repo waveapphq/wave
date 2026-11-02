@@ -1,0 +1,148 @@
+{
+  "name": "Block Name Blank Loop E2E",
+  "version": "1.0.0",
+  "description": "A For Loop whose Name is empty, inside a named one, around a Break. The empty Name fails validation, so this Test is stored as a hand-edited file would be.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "27e03d58-96ce-4d08-9b1d-c9dd141b8869",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Retry upload",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Tries the upload again until it lands",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "retry_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "2aed6918-80d6-4be8-9b83-94bb23069605",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 160
+        },
+        "data": {
+          "label": "",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "blank_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8d0b5edb-1fd0-404c-963f-9e0a3d4ac318",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 280
+        },
+        "data": {
+          "label": "Stop early",
+          "elementType": "break",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Leaves the loop once the upload lands",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "target_loop": "2aed6918-80d6-4be8-9b83-94bb23069605"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "816051fc-dca9-46cf-9f17-c0814ec4b6e2",
+        "source": "start-node",
+        "target": "27e03d58-96ce-4d08-9b1d-c9dd141b8869",
+        "type": "default"
+      },
+      {
+        "id": "bdfcce42-deb2-40f7-995a-f24df069ffbd",
+        "source": "27e03d58-96ce-4d08-9b1d-c9dd141b8869",
+        "target": "2aed6918-80d6-4be8-9b83-94bb23069605",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "86b31469-bb35-4e9f-bc27-cbb2a0689f63",
+        "source": "2aed6918-80d6-4be8-9b83-94bb23069605",
+        "target": "8d0b5edb-1fd0-404c-963f-9e0a3d4ac318",
+        "type": "default",
+        "sourceHandle": "body"
+      }
+    ]
+  },
+  "variables": {
+    "retry_index": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    },
+    "blank_index": {
+      "type": "integer",
+      "value": 0,
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-09T00:00:00.000000",
+  "updated_at": "2026-10-09T00:00:00.000000"
+}

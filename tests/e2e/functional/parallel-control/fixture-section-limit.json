@@ -1,0 +1,220 @@
+{
+  "name": "Parallel Section Limit E2E",
+  "version": "1.0.0",
+  "description": "A Parallel whose whole-section time limit expires while both one-Block lanes are still working: both lanes must settle stopped and the exit lane must be skipped.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-tl-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tl-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-tl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Section limit expires with both lanes in flight",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "north"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "south"
+                }
+              ],
+              "join": "all",
+              "time_limit": 500
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-tl-north",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "North lane, one Block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 8000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-tl-south",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "South lane, one Block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 8000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-tl-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'tl-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-tl-start",
+        "source": "start-node",
+        "target": "log-tl-before",
+        "type": "default"
+      },
+      {
+        "id": "e-tl-before",
+        "source": "log-tl-before",
+        "target": "par-tl",
+        "type": "default"
+      },
+      {
+        "id": "e-tl-b1",
+        "source": "par-tl",
+        "target": "delay-tl-north",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-tl-b2",
+        "source": "par-tl",
+        "target": "delay-tl-south",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-tl-then",
+        "source": "par-tl",
+        "target": "log-tl-then",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

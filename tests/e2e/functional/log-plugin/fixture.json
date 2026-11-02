@@ -1,0 +1,572 @@
+{
+  "name": "Log Plugin E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests Log plugin execution with all log levels, expression messages, type coercion, literal strings, and level metadata",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-test-data",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Test Variables",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "user_name": "Alice",
+                "record_count": 42,
+                "success_rate": 99.5,
+                "is_enabled": true
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-literal-info",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal INFO",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Workflow started successfully",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-literal-debug",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal DEBUG",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Debug diagnostics enabled",
+              "level": "DEBUG"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-literal-warn",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 390
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal WARN",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Resource usage approaching threshold",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-literal-error",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal ERROR",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Connection pool exhausted",
+              "level": "ERROR"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-literal-fatal",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 530
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Literal FATAL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Critical system failure detected",
+              "level": "FATAL"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-default-level",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Default Level",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Message with default level"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-string",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 670
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr String",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Hello, ' + user_name + '!'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-int",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 740
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Integer",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(record_count)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-float",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 810
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Float",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'{success_rate}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-bool",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 880
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Boolean",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(is_enabled)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-computed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 950
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Computed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Records: ' + str(record_count) + ', Rate: ' + str(success_rate) + '%'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-expr-arithmetic",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1020
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Arithmetic",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(record_count * 2)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-multiline-proof",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1090
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log All Vars Proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(user_name) + '|' + str(record_count) + '|' + str(success_rate) + '|' + str(is_enabled)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "varset-test-data",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "varset-test-data",
+        "target": "log-literal-info",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-literal-info",
+        "target": "log-literal-debug",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-literal-debug",
+        "target": "log-literal-warn",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-literal-warn",
+        "target": "log-literal-error",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-literal-error",
+        "target": "log-literal-fatal",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-literal-fatal",
+        "target": "log-default-level",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "log-default-level",
+        "target": "log-expr-string",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "log-expr-string",
+        "target": "log-expr-int",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-expr-int",
+        "target": "log-expr-float",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "log-expr-float",
+        "target": "log-expr-bool",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-expr-bool",
+        "target": "log-expr-computed",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "log-expr-computed",
+        "target": "log-expr-arithmetic",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "log-expr-arithmetic",
+        "target": "log-multiline-proof",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "user_name": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "record_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "success_rate": {
+      "value": 0.0,
+      "type": "float",
+      "scope": "test"
+    },
+    "is_enabled": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

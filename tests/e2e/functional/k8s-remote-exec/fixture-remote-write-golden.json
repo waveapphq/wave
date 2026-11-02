@@ -1,0 +1,797 @@
+{
+  "name": "K8s Remote Write E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-session",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "SSH session the worker rides",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "rsid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "connect-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 240
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "The cluster by its stack name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://kwok:6443",
+              "namespace": "wave-e2e-golden-write",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_a",
+              "cluster_version": "ver_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-cm",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 310
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Apply a ConfigMap from the form",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "namespace": "wave-e2e-golden-write",
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-remote-cm",
+              "data": {
+                "locus": "remote"
+              },
+              "if_exists": "update",
+              "output_format": "map",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "summary": "cm_summary",
+              "result": "cm_result",
+              "names": "cm_names",
+              "count": "cm_count",
+              "success": "cm_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-cm",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 380
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Read the applied ConfigMap back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-remote-cm",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-write",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "read_result",
+              "count": "read_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-dated",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 450
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Apply a manifest whose date is text",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "namespace": "wave-e2e-golden-write",
+              "define_with": "manifest",
+              "manifest": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: wave-remote-dated\ndata:\n  expires: 2026-01-01\n---\n",
+              "if_exists": "update",
+              "output_format": "map",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "summary": "dt_summary",
+              "result": "dt_result",
+              "names": "dt_names",
+              "count": "dt_count",
+              "success": "dt_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-dated",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 520
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Read the dated ConfigMap back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-remote-dated",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-write",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "result": "dt_read",
+              "count": "dt_read_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delete-cm",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 590
+        },
+        "data": {
+          "label": "K8s Delete",
+          "elementType": "k8s-delete",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Delete the form ConfigMap by name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "namespace": "wave-e2e-golden-write",
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "delete_by": "name",
+              "name": "wave-remote-cm",
+              "wait_until_gone": true,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "summary": "drop_summary",
+              "names": "drop_names",
+              "count": "drop_count",
+              "success": "drop_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-dropped",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 660
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Read the ConfigMap the delete removed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-remote-cm",
+              "output_format": "map",
+              "namespace": "wave-e2e-golden-write",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "names": "miss_names",
+              "count": "miss_count",
+              "success": "miss_ok",
+              "error": "miss_err",
+              "reason": "miss_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "scale-deploy",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 730
+        },
+        "data": {
+          "label": "K8s Scale",
+          "elementType": "k8s-scale",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Scale the seeded Deployment to three",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "namespace": "wave-e2e-golden-write",
+              "resource_type": "default",
+              "kind": "Deployment",
+              "name": "wave-deploy",
+              "replicas": 3,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "summary": "scale_summary",
+              "success": "scale_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "rollout-status",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 800
+        },
+        "data": {
+          "label": "K8s Rollout",
+          "elementType": "k8s-rollout",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Report the Deployment rollout",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_a",
+              "timeout": 30,
+              "namespace": "wave-e2e-golden-write",
+              "operation": "status",
+              "kind": "Deployment",
+              "name": "wave-deploy",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "summary": "roll_summary",
+              "status": "roll_status",
+              "success": "roll_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-summary",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Summary marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[KR-8] cm={cm_count} dated={dt_count} drop={drop_count} miss={miss_reason} roll={roll_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-remote-write-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-open-session",
+        "source": "start-node",
+        "target": "open-session"
+      },
+      {
+        "id": "edge-open-session-container",
+        "source": "open-session",
+        "target": "container"
+      },
+      {
+        "id": "edge-container-body",
+        "source": "container",
+        "target": "connect-a",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "edge-connect-a-apply-cm",
+        "source": "connect-a",
+        "target": "apply-cm"
+      },
+      {
+        "id": "edge-apply-cm-get-cm",
+        "source": "apply-cm",
+        "target": "get-cm"
+      },
+      {
+        "id": "edge-get-cm-apply-dated",
+        "source": "get-cm",
+        "target": "apply-dated"
+      },
+      {
+        "id": "edge-apply-dated-get-dated",
+        "source": "apply-dated",
+        "target": "get-dated"
+      },
+      {
+        "id": "edge-get-dated-delete-cm",
+        "source": "get-dated",
+        "target": "delete-cm"
+      },
+      {
+        "id": "edge-delete-cm-get-dropped",
+        "source": "delete-cm",
+        "target": "get-dropped"
+      },
+      {
+        "id": "edge-get-dropped-scale-deploy",
+        "source": "get-dropped",
+        "target": "scale-deploy"
+      },
+      {
+        "id": "edge-scale-deploy-rollout-status",
+        "source": "scale-deploy",
+        "target": "rollout-status"
+      },
+      {
+        "id": "edge-container-then",
+        "source": "container",
+        "target": "log-summary",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-summary-log-done",
+        "source": "log-summary",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rsid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "ver_a": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "cm_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "cm_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "cm_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "cm_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "cm_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "read_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "read_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dt_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "dt_result": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "dt_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "dt_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dt_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dt_read": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "dt_read_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "drop_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "drop_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "drop_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "miss_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "miss_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "miss_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "miss_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "miss_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "scale_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "scale_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "roll_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "roll_status": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "roll_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

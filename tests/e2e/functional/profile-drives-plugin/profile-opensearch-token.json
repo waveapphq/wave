@@ -1,0 +1,11 @@
+{
+  "name": "Profile Drives OpenSearch Bearer",
+  "type": "opensearch",
+  "description": "OpenSearch profile whose cluster URL, Bearer token and CA drive a real Search",
+  "config": {
+    "url": "",
+    "bearer_token": "",
+    "ca_cert": ""
+  },
+  "tags": ["e2e"]
+}

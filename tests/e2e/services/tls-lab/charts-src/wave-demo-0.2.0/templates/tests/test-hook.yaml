@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-wave-demo-test
+  labels:
+    app.kubernetes.io/name: wave-demo
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    wave.e2e/helm-test: "true"
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+  - name: test
+    image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+    command: ["/bin/true"]

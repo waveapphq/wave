@@ -1,0 +1,72 @@
+{
+  "name": "ForEach Control - A collection that is not one",
+  "version": "1.0.0",
+  "description": "A For Each whose collection expression resolves to a number aborts the run naming the three types the loop accepts.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "foreach-bad",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Non Collection",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "10 + 5" },
+            "outputBindings": { "item": "bad_item", "index": "bad_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-bad",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 280 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Bad",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'non-collection body executed - BUG'",
+              "level": "ERROR"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "foreach-bad", "type": "default" },
+      {
+        "id": "e2",
+        "source": "foreach-bad",
+        "sourceHandle": "body",
+        "target": "body-log-bad",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "bad_item": { "value": {}, "type": "map", "scope": "test" },
+    "bad_idx": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {}
+}

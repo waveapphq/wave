@@ -1,0 +1,1504 @@
+{
+  "name": "Console Source Names",
+  "version": "1.0.0",
+  "description": "One block of every kind the console Source rule names, chained so one run writes a line from each.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "1669efb1-0bca-5b82-9250-552e66f9f745",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The first line of the run, written by a block that keeps its type's name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-palette-name'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "33fb40a8-04fc-5407-a956-1fff4c9da6a6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 190
+        },
+        "data": {
+          "label": "",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "A block whose Name was cleared",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-empty-name'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3476bedb-b399-52af-849d-05c0c08a1192",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 280
+        },
+        "data": {
+          "label": "Say hello",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Greets whoever reads the console",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-own-name'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e9d0a616-f7cf-5acb-aa0a-dfc03126ff37",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "HTTP Client",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Asks the echo service whether it is up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=catalog",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "status_first"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9002cffb-b357-5b41-9b28-5f10630274e1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "GET http://host/x",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "The same request under a Name that holds a colon",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=colon",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "status_second"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a9248475-cfb3-58ae-9cc6-3086bfc162b4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 550
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Reads one row from the scratch database",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://source-names.db",
+              "script_type": "source",
+              "sql": "SELECT 1 AS plain_one",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ae19ec9b-7a45-5797-b3df-aed6bb7c4e7f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 640
+        },
+        "data": {
+          "label": "Run PSQL Proc",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Calls the stored procedure that loads the seed rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://source-names.db",
+              "script_type": "source",
+              "sql": "SELECT 2 AS proc_two",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6d0d6c50-dc8a-5d2c-a19a-05e381f314c4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 730
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Reads two rows of inline text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,alpha\n2,bravo\n"
+            },
+            "outputBindings": {
+              "row_count": "csv_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef770401-b0d6-5186-977f-f0419297490e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 820
+        },
+        "data": {
+          "label": "Variable Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Chooses the route the next blocks take",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "route": "left"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0477ba79-362f-5ab4-8d3e-1bb5bbe128e1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 910
+        },
+        "data": {
+          "label": "Reset the counter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Starts the While Loop from zero",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "counter": 0
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "105358e5-c013-51c6-bdb2-6576f6d88482",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1000
+        },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Takes the left path when the route says so",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if",
+                  "id": "branch_left",
+                  "label": "Left",
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "route",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "left",
+                      "reference_is_expression": false,
+                      "id": "d7138cf2-1f07-5db7-a30c-5fb38d60aad1"
+                    }
+                  ]
+                },
+                {
+                  "type": "else",
+                  "id": "branch_other",
+                  "label": "Other"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "bd25dab2-5682-58ff-9385-9658ae399010",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1000
+        },
+        "data": {
+          "label": "On the left path",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-if-branch'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8bfc0f91-c3de-578f-b720-a15f91bf0df3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1090
+        },
+        "data": {
+          "label": "Pick a route",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Sends the run down the case that matches the route",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "left",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "route",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "left",
+                      "reference_is_expression": false,
+                      "id": "4ce182c3-1a24-5423-afc4-e4b2e3673500"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 240,
+          "height": 62
+        }
+      },
+      {
+        "id": "dc45c393-ed3b-50de-9737-0fe3e5e34a47",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1090
+        },
+        "data": {
+          "label": "In the left case",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-switch-case'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a3d87f18-5332-5a15-b6e6-33ca99a24bb9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1180
+        },
+        "data": {
+          "label": "Try/Catch/Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Keeps the run going when the guarded block fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "caught_error",
+              "caught": "was_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "7423d29f-b5ff-5300-a147-ae3c974536d5",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1180
+        },
+        "data": {
+          "label": "Inside the guard",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-try-body'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b12480ac-5615-5a19-8202-70f849c8d0a7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1270
+        },
+        "data": {
+          "label": "Count to two",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Runs its body twice to show a loop's own lines",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "for_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "4c223270-abf1-5b0d-a4e1-9154693f937b",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1270
+        },
+        "data": {
+          "label": "For body",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-for-body'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "52f9ab42-4bef-5e7b-b44c-abb3efccc843",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1360
+        },
+        "data": {
+          "label": "Each host",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Visits every host in the list",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "collection"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "collection": "hosts"
+            },
+            "outputBindings": {
+              "item": "each_item",
+              "index": "each_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef9f0ee6-f3ab-5abd-b811-12016c8d6808",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1360
+        },
+        "data": {
+          "label": "Each body",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-foreach-body'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1c561aaa-e388-58a7-b8fb-793f5f368d18",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1450
+        },
+        "data": {
+          "label": "Until done",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Repeats until the counter reaches two",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "counter",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "2",
+                  "reference_is_expression": false,
+                  "id": "d867a85f-780c-52cc-8b8c-1b2ef71137e2"
+                }
+              ]
+            },
+            "outputBindings": {
+              "index": "while_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "0d938006-350c-5e71-a228-3d0209078ff3",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1450
+        },
+        "data": {
+          "label": "Add one",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [
+            "counter"
+          ],
+          "config": {
+            "values": {
+              "variables": {
+                "counter": "counter + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableTypes": {
+            "counter": "integer"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4d7f4f7c-780b-5e02-a1fb-f5056b3ed2ee",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1540
+        },
+        "data": {
+          "label": "Sign in",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "description": "Greets the user from inside a Function",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Sign in",
+            "description": "Writes one welcome line.",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "4390a8bc-2b5b-59bb-b82a-4dbc99269f68",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Say welcome",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Written from a Function body",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'src-function-body'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "ec8a885b-fc62-540a-92fa-b4c446678257",
+                  "source": "start-node",
+                  "target": "4390a8bc-2b5b-59bb-b82a-4dbc99269f68",
+                  "type": "default"
+                }
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "a46105b1-d94d-56a0-8589-6941b0a7f58b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1630
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Opens the session the next blocks ride",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "05e1484f-b412-5d1b-8983-aa0f10368380",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1720
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Prints one word on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "echo src-ssh-exec",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "ssh_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9f31f576-a2c2-560a-8fb5-68e53c60b8f0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1810
+        },
+        "data": {
+          "label": "On the far host",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Runs its body on the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "remote_session_id": "remote_sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "dd08ca51-c23f-5179-aeb3-92f83adcf208",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 1810
+        },
+        "data": {
+          "label": "Count on the host",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints one line from the remote host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "print('src-remote-body')\n",
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "471b5381-81eb-5897-ba8c-fc1cd68a4ffc",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1900
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Closes the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "05d0f23f-11ce-50c1-bb53-d21d140141e1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1990
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Opens the cluster session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fd9839c5-ed72-5419-92a9-d049ad2b776e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2080
+        },
+        "data": {
+          "label": "Read the namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Reads the default namespace by its name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "resource_type": "default",
+              "kind": "Namespace",
+              "search_by": "name",
+              "name": "default",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "count": "namespace_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5bdd21ca-ada3-5d16-b7bf-9bca772640f3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2170
+        },
+        "data": {
+          "label": "Mark the end",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The last line of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'src-names-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "8e00010a-c9c8-5075-81ec-7315f69ac665",
+        "source": "start-node",
+        "target": "1669efb1-0bca-5b82-9250-552e66f9f745",
+        "type": "default"
+      },
+      {
+        "id": "c674b2b5-077a-5c0c-83d4-2f6e9825a63b",
+        "source": "1669efb1-0bca-5b82-9250-552e66f9f745",
+        "target": "33fb40a8-04fc-5407-a956-1fff4c9da6a6",
+        "type": "default"
+      },
+      {
+        "id": "39ab24a3-aa4d-5038-a95c-ff96534c24d9",
+        "source": "33fb40a8-04fc-5407-a956-1fff4c9da6a6",
+        "target": "3476bedb-b399-52af-849d-05c0c08a1192",
+        "type": "default"
+      },
+      {
+        "id": "8400415e-bda3-5106-9582-9f816d20bc21",
+        "source": "3476bedb-b399-52af-849d-05c0c08a1192",
+        "target": "e9d0a616-f7cf-5acb-aa0a-dfc03126ff37",
+        "type": "default"
+      },
+      {
+        "id": "a1b5189b-3e2c-5960-9a98-6c9863bd4cd8",
+        "source": "e9d0a616-f7cf-5acb-aa0a-dfc03126ff37",
+        "target": "9002cffb-b357-5b41-9b28-5f10630274e1",
+        "type": "default"
+      },
+      {
+        "id": "4cf89480-133a-5cd7-b7d3-8fa2b5db8d65",
+        "source": "9002cffb-b357-5b41-9b28-5f10630274e1",
+        "target": "a9248475-cfb3-58ae-9cc6-3086bfc162b4",
+        "type": "default"
+      },
+      {
+        "id": "5dcc0fe6-6e7f-504a-a0ad-a70c488dce0a",
+        "source": "a9248475-cfb3-58ae-9cc6-3086bfc162b4",
+        "target": "ae19ec9b-7a45-5797-b3df-aed6bb7c4e7f",
+        "type": "default"
+      },
+      {
+        "id": "65617a9b-0b53-5d80-8ebc-9c3bc8cf4967",
+        "source": "ae19ec9b-7a45-5797-b3df-aed6bb7c4e7f",
+        "target": "6d0d6c50-dc8a-5d2c-a19a-05e381f314c4",
+        "type": "default"
+      },
+      {
+        "id": "0b6d1143-3b5f-5fdb-9a3d-f9673dec6427",
+        "source": "6d0d6c50-dc8a-5d2c-a19a-05e381f314c4",
+        "target": "ef770401-b0d6-5186-977f-f0419297490e",
+        "type": "default"
+      },
+      {
+        "id": "848d9f88-34a9-55d3-806d-8da38fdadab0",
+        "source": "ef770401-b0d6-5186-977f-f0419297490e",
+        "target": "0477ba79-362f-5ab4-8d3e-1bb5bbe128e1",
+        "type": "default"
+      },
+      {
+        "id": "81bac898-32dc-5031-925a-c4d6d2b06ba5",
+        "source": "0477ba79-362f-5ab4-8d3e-1bb5bbe128e1",
+        "target": "105358e5-c013-51c6-bdb2-6576f6d88482",
+        "type": "default"
+      },
+      {
+        "id": "fea0dac2-9bca-5aac-b174-e04fe3a8524a",
+        "source": "105358e5-c013-51c6-bdb2-6576f6d88482",
+        "target": "bd25dab2-5682-58ff-9385-9658ae399010",
+        "type": "default",
+        "sourceHandle": "branch_left"
+      },
+      {
+        "id": "3bd16700-68ef-5673-bc1f-0bb40fae2898",
+        "source": "bd25dab2-5682-58ff-9385-9658ae399010",
+        "target": "8bfc0f91-c3de-578f-b720-a15f91bf0df3",
+        "type": "default"
+      },
+      {
+        "id": "25e3ef03-3ff8-5df1-bab7-a7ebc156bd44",
+        "source": "8bfc0f91-c3de-578f-b720-a15f91bf0df3",
+        "target": "dc45c393-ed3b-50de-9737-0fe3e5e34a47",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "9d707120-951d-5172-9458-b24ebdc942d5",
+        "source": "8bfc0f91-c3de-578f-b720-a15f91bf0df3",
+        "target": "a3d87f18-5332-5a15-b6e6-33ca99a24bb9",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "f3990823-ff47-5380-bf25-6eb2db18d214",
+        "source": "a3d87f18-5332-5a15-b6e6-33ca99a24bb9",
+        "target": "7423d29f-b5ff-5300-a147-ae3c974536d5",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "4bd7945a-81cf-5fad-9713-64c8bcc4fd62",
+        "source": "a3d87f18-5332-5a15-b6e6-33ca99a24bb9",
+        "target": "b12480ac-5615-5a19-8202-70f849c8d0a7",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "20fb9613-309b-5852-96f0-396a6f436c17",
+        "source": "b12480ac-5615-5a19-8202-70f849c8d0a7",
+        "target": "4c223270-abf1-5b0d-a4e1-9154693f937b",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "5d1cc7e4-bcfe-50f1-8f4e-b34ad7422f53",
+        "source": "b12480ac-5615-5a19-8202-70f849c8d0a7",
+        "target": "52f9ab42-4bef-5e7b-b44c-abb3efccc843",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "aa27eedb-d8cd-5d61-93f2-54326e96fd24",
+        "source": "52f9ab42-4bef-5e7b-b44c-abb3efccc843",
+        "target": "ef9f0ee6-f3ab-5abd-b811-12016c8d6808",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "3470d011-6032-557b-ba9a-61d349c323f0",
+        "source": "52f9ab42-4bef-5e7b-b44c-abb3efccc843",
+        "target": "1c561aaa-e388-58a7-b8fb-793f5f368d18",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "904be821-b0e3-5c05-a172-6fa2ac337bc5",
+        "source": "1c561aaa-e388-58a7-b8fb-793f5f368d18",
+        "target": "0d938006-350c-5e71-a228-3d0209078ff3",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "b1cdc73f-5923-51f2-b376-77c3651fc60e",
+        "source": "1c561aaa-e388-58a7-b8fb-793f5f368d18",
+        "target": "4d7f4f7c-780b-5e02-a1fb-f5056b3ed2ee",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "31187eab-4fdc-5739-ac6c-ec7e6d303cfc",
+        "source": "4d7f4f7c-780b-5e02-a1fb-f5056b3ed2ee",
+        "target": "a46105b1-d94d-56a0-8589-6941b0a7f58b",
+        "type": "default"
+      },
+      {
+        "id": "30a9669f-175f-55b0-b1df-54232c7dbb3a",
+        "source": "a46105b1-d94d-56a0-8589-6941b0a7f58b",
+        "target": "05e1484f-b412-5d1b-8983-aa0f10368380",
+        "type": "default"
+      },
+      {
+        "id": "8e7e09f1-303a-55f1-a479-4ee77ed63b5b",
+        "source": "05e1484f-b412-5d1b-8983-aa0f10368380",
+        "target": "9f31f576-a2c2-560a-8fb5-68e53c60b8f0",
+        "type": "default"
+      },
+      {
+        "id": "b53774ad-5bbe-575b-bc9e-db79d85792f3",
+        "source": "9f31f576-a2c2-560a-8fb5-68e53c60b8f0",
+        "target": "dd08ca51-c23f-5179-aeb3-92f83adcf208",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "363759b3-6a9c-51da-8695-fc9a5616ce76",
+        "source": "9f31f576-a2c2-560a-8fb5-68e53c60b8f0",
+        "target": "471b5381-81eb-5897-ba8c-fc1cd68a4ffc",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e7376e82-51e4-5df7-abbf-a4256faf1736",
+        "source": "471b5381-81eb-5897-ba8c-fc1cd68a4ffc",
+        "target": "05d0f23f-11ce-50c1-bb53-d21d140141e1",
+        "type": "default"
+      },
+      {
+        "id": "be4de7ad-6d4f-5f37-946d-9254d9032f8f",
+        "source": "05d0f23f-11ce-50c1-bb53-d21d140141e1",
+        "target": "fd9839c5-ed72-5419-92a9-d049ad2b776e",
+        "type": "default"
+      },
+      {
+        "id": "a9b0ba04-ef3e-55a9-a31c-f09e939e0bf9",
+        "source": "fd9839c5-ed72-5419-92a9-d049ad2b776e",
+        "target": "5bdd21ca-ada3-5d16-b7bf-9bca772640f3",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "route": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "counter": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "hosts": {
+      "value": [
+        "alpha",
+        "bravo"
+      ],
+      "type": "array",
+      "scope": "test"
+    },
+    "status_first": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "status_second": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "csv_rows": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "caught_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "was_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "for_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "each_item": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "each_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "while_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "ssh_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "remote_sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "namespace_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

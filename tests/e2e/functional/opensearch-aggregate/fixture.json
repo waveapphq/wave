@@ -1,0 +1,1281 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-AGGREGATE",
+  "version": "1.0.0",
+  "description": "The OpenSearch block in Aggregate against the real cluster: counts and a percentile per minute, Top values of a field with an average and a unique count, Increase across a counter restart, the whole window in one row, Custom (JSON) columns, errors per minute feeding two Asserts, and two Stats lists refused before any request.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "db647a94-899c-4d37-95de-8eeb4a92f14e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "By minute",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "By minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "percentile",
+                    "field": "latency_ms",
+                    "percent": 95
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "minute_ok",
+              "results": "minute_rows",
+              "total_results": "minute_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "55395fb3-a585-42a5-a2dc-ec1b7632bb42",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof by minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-by-minute total={{ minute_total }} rows={{ minute_rows.row_count() }} first={{ minute_rows.cell(0, 'count') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cd24b762-dc31-4568-85c1-a7060bf2aa76",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "By field",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "By field",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "none",
+              "group_by_field": "service.name",
+              "top_values": 2,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "average",
+                    "field": "latency_ms"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "unique_count",
+                    "field": "user.id"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "field_ok",
+              "results": "field_rows",
+              "total_results": "field_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "167d7bfb-f559-4ec5-9961-5f46fbed1256",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof by field",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-by-field total={{ field_total }} top={{ field_rows.cell(0, 'service.name') }} count={{ field_rows.cell(0, 'count') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9b91e2eb-0b42-4555-bec5-d8683951a50b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Increase per minute",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Increase per minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "increase",
+                    "field": "requests_total"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "rise_ok",
+              "results": "rise_rows",
+              "total_results": "rise_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "f3985e0c-4f77-47fd-bda1-8451899bd058",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof increase",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-increase total={{ rise_total }} rows={{ rise_rows.row_count() }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "33e6bf92-9da0-4cfb-8f52-924c20f1b3d9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 660
+        },
+        "data": {
+          "label": "Whole window",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Whole window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "none",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "sum",
+                    "field": "bytes"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "min",
+                    "field": "latency_ms"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "max",
+                    "field": "latency_ms"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "increase",
+                    "field": "requests_total"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "whole_ok",
+              "results": "whole_rows",
+              "total_results": "whole_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "e0d75283-c8e8-4461-8e34-e585b9f5c1b8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof whole",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-whole total={{ whole_total }} rows={{ whole_rows.row_count() }} count={{ whole_rows.cell(0, 'count') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a37eb4f2-3b33-4fae-ae8c-7f58160d6659",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "Custom JSON",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Custom JSON",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "none",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "custom",
+                    "json": "{\"max\": {\"field\": \"latency_ms\"}}",
+                    "name": "slowest"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "custom",
+                    "json": "{\"min\": {\"field\": \"latency_ms\"}}"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "custom_ok",
+              "results": "custom_rows",
+              "total_results": "custom_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "81bb4df3-8c3a-4b39-b596-5e6ba80861e7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof custom",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-custom total={{ custom_total }} columns={{ custom_rows.col_count() }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fc719979-2612-4ac6-961c-3aafa43c1936",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "Errors per minute",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Errors per minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "errors_ok",
+              "results": "errors",
+              "total_results": "errors_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "9125eb27-dab6-4201-9a56-4b6395cd9835",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1160
+        },
+        "data": {
+          "label": "No minute over 5",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "No minute over 5",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "max(errors.col('count')) <= 5",
+                  "id": "c550e4dd-7cec-41a4-8c44-92282e6232cd"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "98cdbb52-35fc-4a68-a923-10aeec5a198c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1260
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Busy minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "busy_error",
+              "caught": "busy_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "536b2b38-cb2a-4407-9b37-6a7c81c27118",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1360
+        },
+        "data": {
+          "label": "No minute over 3",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "No minute over 3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "max(errors.col('count')) <= 3",
+                  "id": "2c4090ae-2858-4a98-b774-28020297f94a"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "07d22610-a18f-4238-b004-4c4cf29eddc2",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Busy minute caught",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "os-agg-busy-minute-caught",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a88ee7d8-6999-43ce-a631-afdc627138c7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof errors per minute",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-errors-per-minute total={{ errors_total }} busiest={{ max(errors.col('count')) }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e709f04e-4292-41a0-b9e8-50174a9cb088",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "Stat with no field",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Stat with no field",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "sum",
+                    "field": ""
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nofield_ok",
+              "results": "nofield_rows",
+              "total_results": "nofield_total",
+              "error": "nofield_error",
+              "reason": "nofield_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "0c74acae-886f-4e2d-b0ec-843623bbd030",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof stat with no field",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-stat-no-field ok={{ nofield_ok }} reason={{ nofield_reason }} error={{ nofield_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9572dc26-fd47-4007-8d61-a9851ad53007",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1760
+        },
+        "data": {
+          "label": "Two counts",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Two counts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-metrics",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "aggregate",
+              "group_by_time": "1m",
+              "group_by_field": "",
+              "top_values": 10,
+              "stats": [
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                },
+                {
+                  "value": {
+                    "stat": "count"
+                  }
+                }
+              ],
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "dup_ok",
+              "results": "dup_rows",
+              "total_results": "dup_total",
+              "error": "dup_error",
+              "reason": "dup_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 150,
+          "height": 62
+        }
+      },
+      {
+        "id": "cc10afe8-0acd-4de7-93ea-f8b0c7541aba",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof two counts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-agg-stat-dup ok={{ dup_ok }} reason={{ dup_reason }} error={{ dup_error }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1853ca20-d6ed-4561-8057-8e9fc6526b50",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "os-agg-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "4ee0c610-7f8a-4775-a38a-f1cfb3d19247",
+        "source": "start-node",
+        "target": "db647a94-899c-4d37-95de-8eeb4a92f14e",
+        "type": "default"
+      },
+      {
+        "id": "e523db80-bc7e-4d50-bd26-6a930fa7d125",
+        "source": "db647a94-899c-4d37-95de-8eeb4a92f14e",
+        "target": "55395fb3-a585-42a5-a2dc-ec1b7632bb42",
+        "type": "default"
+      },
+      {
+        "id": "0cfbb3fb-28d5-4d55-b648-3b59fda626f4",
+        "source": "55395fb3-a585-42a5-a2dc-ec1b7632bb42",
+        "target": "cd24b762-dc31-4568-85c1-a7060bf2aa76",
+        "type": "default"
+      },
+      {
+        "id": "a000678f-753a-4da0-989c-6759f4dd6ad1",
+        "source": "cd24b762-dc31-4568-85c1-a7060bf2aa76",
+        "target": "167d7bfb-f559-4ec5-9961-5f46fbed1256",
+        "type": "default"
+      },
+      {
+        "id": "e6af6808-4ad0-48f0-a22d-0380a85b23db",
+        "source": "167d7bfb-f559-4ec5-9961-5f46fbed1256",
+        "target": "9b91e2eb-0b42-4555-bec5-d8683951a50b",
+        "type": "default"
+      },
+      {
+        "id": "2a7e5cf2-629c-46dc-8060-75350ed920eb",
+        "source": "9b91e2eb-0b42-4555-bec5-d8683951a50b",
+        "target": "f3985e0c-4f77-47fd-bda1-8451899bd058",
+        "type": "default"
+      },
+      {
+        "id": "988c68e9-368f-46d4-9cad-a2bb03e7215e",
+        "source": "f3985e0c-4f77-47fd-bda1-8451899bd058",
+        "target": "33e6bf92-9da0-4cfb-8f52-924c20f1b3d9",
+        "type": "default"
+      },
+      {
+        "id": "bb77a24b-d186-499c-b2b8-1433f036af05",
+        "source": "33e6bf92-9da0-4cfb-8f52-924c20f1b3d9",
+        "target": "e0d75283-c8e8-4461-8e34-e585b9f5c1b8",
+        "type": "default"
+      },
+      {
+        "id": "d7ce370b-d6a1-4a8f-9499-7b881b859e08",
+        "source": "e0d75283-c8e8-4461-8e34-e585b9f5c1b8",
+        "target": "a37eb4f2-3b33-4fae-ae8c-7f58160d6659",
+        "type": "default"
+      },
+      {
+        "id": "971a87f6-dee4-419d-a90f-60d3516287f0",
+        "source": "a37eb4f2-3b33-4fae-ae8c-7f58160d6659",
+        "target": "81bb4df3-8c3a-4b39-b596-5e6ba80861e7",
+        "type": "default"
+      },
+      {
+        "id": "b1346bb2-6b23-4bee-9d75-a6b23c85e16e",
+        "source": "81bb4df3-8c3a-4b39-b596-5e6ba80861e7",
+        "target": "fc719979-2612-4ac6-961c-3aafa43c1936",
+        "type": "default"
+      },
+      {
+        "id": "5a897f8f-8f45-4e54-ad0b-a744465a1cd9",
+        "source": "fc719979-2612-4ac6-961c-3aafa43c1936",
+        "target": "9125eb27-dab6-4201-9a56-4b6395cd9835",
+        "type": "default"
+      },
+      {
+        "id": "3985e313-bdba-4c2d-9f3f-964b05b58543",
+        "source": "9125eb27-dab6-4201-9a56-4b6395cd9835",
+        "target": "98cdbb52-35fc-4a68-a923-10aeec5a198c",
+        "type": "default"
+      },
+      {
+        "id": "0c89d132-5fd8-4a25-b0bf-f182aba82fe9",
+        "source": "98cdbb52-35fc-4a68-a923-10aeec5a198c",
+        "target": "536b2b38-cb2a-4407-9b37-6a7c81c27118",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "da9934b4-8338-43b8-8894-c7ef52cf39ba",
+        "source": "98cdbb52-35fc-4a68-a923-10aeec5a198c",
+        "target": "07d22610-a18f-4238-b004-4c4cf29eddc2",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "995d2cf0-9baf-4d24-b3a3-2ee268b18699",
+        "source": "98cdbb52-35fc-4a68-a923-10aeec5a198c",
+        "target": "a88ee7d8-6999-43ce-a631-afdc627138c7",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "1c51fbf8-84f3-4c64-809d-405f76a675f5",
+        "source": "a88ee7d8-6999-43ce-a631-afdc627138c7",
+        "target": "e709f04e-4292-41a0-b9e8-50174a9cb088",
+        "type": "default"
+      },
+      {
+        "id": "24c0f7a6-fbc0-467b-8b2d-cf341c0ba0df",
+        "source": "e709f04e-4292-41a0-b9e8-50174a9cb088",
+        "target": "0c74acae-886f-4e2d-b0ec-843623bbd030",
+        "type": "default"
+      },
+      {
+        "id": "e2bcacfa-4767-4737-ad15-f385a362ad47",
+        "source": "0c74acae-886f-4e2d-b0ec-843623bbd030",
+        "target": "9572dc26-fd47-4007-8d61-a9851ad53007",
+        "type": "default"
+      },
+      {
+        "id": "3da37a1b-6929-4dfb-9814-d0972542c9de",
+        "source": "9572dc26-fd47-4007-8d61-a9851ad53007",
+        "target": "cc10afe8-0acd-4de7-93ea-f8b0c7541aba",
+        "type": "default"
+      },
+      {
+        "id": "337dae0f-0b29-4c13-8685-8ff7b4f0b674",
+        "source": "cc10afe8-0acd-4de7-93ea-f8b0c7541aba",
+        "target": "1853ca20-d6ed-4561-8057-8e9fc6526b50",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "minute_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "minute_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "minute_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "field_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "field_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "field_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rise_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rise_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "rise_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "whole_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "whole_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "whole_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "custom_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "custom_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "custom_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "errors_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "errors": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "errors_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "busy_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "busy_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nofield_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nofield_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nofield_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "nofield_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nofield_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "dup_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "dup_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "dup_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dup_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "dup_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

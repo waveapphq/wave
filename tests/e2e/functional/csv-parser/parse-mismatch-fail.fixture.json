@@ -1,0 +1,107 @@
+{
+  "name": "CSV Parse Mismatch Fail E2E",
+  "version": "1.0.0",
+  "description": "S4 on_mismatch=fail aborts the run",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schema-s4-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "S4 Schema Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "age\n1\n"
+            },
+            "outputBindings": {
+              "table": "sc_s4"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "parse-s4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse S4 Fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "age\n30\nabc\n",
+              "column_types": "schema",
+              "schema_source": "sc_s4",
+              "on_mismatch": "fail"
+            },
+            "outputBindings": {
+              "table": "s4"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "schema-s4-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "schema-s4-seed",
+        "target": "parse-s4",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "sc_s4": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "s4": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

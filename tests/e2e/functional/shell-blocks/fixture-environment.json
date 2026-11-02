@@ -1,0 +1,251 @@
+{
+  "name": "SH-13 __TOKEN__",
+  "version": "1.0.0",
+  "description": "WAVE_TESTDATA_DIR and WAVE_ARTIFACTS_DIR, a refused write into Test Data, and the server environment inherited whole.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-td",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Test Data, write an artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "cat \"$WAVE_TESTDATA_DIR/inputs/data-__TOKEN__.txt\"; mkdir -p \"$WAVE_ARTIFACTS_DIR/sh-13-__TOKEN__\"; P=ar; echo \"${P}t-__TOKEN__\" > \"$WAVE_ARTIFACTS_DIR/sh-13-__TOKEN__/out.txt\""
+            },
+            "outputBindings": {
+              "stdout": "td_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-td-write",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write into Test Data",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo x > \"$WAVE_TESTDATA_DIR/inputs/new-__TOKEN__.txt\"",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "exit_code": "w_code",
+              "reason": "w_reason",
+              "stderr": "w_stderr",
+              "error": "w_msg"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-env",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Which server variables are present",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo \"[${WAVE_CONFIG_FILE+present}][${WAVE_ADMIN_ALLOWED+present}][${WAVE_STORAGE_BASE_PATH+present}][${WAVE_TESTDATA_DIR+present}][${WAVE_ARTIFACTS_DIR+present}]\"; printenv WAVE_CONFIG_FILE > /dev/null; echo \"rc=$?\""
+            },
+            "outputBindings": {
+              "stdout": "env_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "sh-env-exec",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 400
+        },
+        "data": {
+          "label": "Shell Exec",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "WAVE_CONFIG_FILE reaches a Shell Exec",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "printenv WAVE_CONFIG_FILE > /dev/null; echo \"rc=$?\""
+            },
+            "outputBindings": {
+              "stdout": "env_exec_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-13-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "sh-td",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-td-sh-td-write",
+        "source": "sh-td",
+        "target": "sh-td-write",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-td-write-sh-env",
+        "source": "sh-td-write",
+        "target": "sh-env",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-env-sh-env-exec",
+        "source": "sh-env",
+        "target": "sh-env-exec",
+        "type": "default"
+      },
+      {
+        "id": "e-sh-env-exec-log-done",
+        "source": "sh-env-exec",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "td_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "w_code": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "w_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "w_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "w_msg": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "env_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "env_exec_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

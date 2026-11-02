@@ -1,0 +1,100 @@
+{
+  "name": "Block Name Variable E2E",
+  "version": "1.0.0",
+  "description": "A CSV block named Load rows, with a Description, binds its table to the variable rows; a Log follows it.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9632e2c6-3c2f-413f-9c34-ba56667dbedf",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Load rows",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Reads the seed rows the checks compare against",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n2,Bob\n"
+            },
+            "outputBindings": {
+              "table": "rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "99c44e0d-df0d-4c2e-a0a2-1c6be42ad801",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Show the rows",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Writes one line once the rows are in",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'bn-rows-loaded'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "1bab307b-13a4-4a62-a366-e9c5ff64cbc2",
+        "source": "start-node",
+        "target": "9632e2c6-3c2f-413f-9c34-ba56667dbedf",
+        "type": "default"
+      },
+      {
+        "id": "bb3e2140-7b9b-4fed-a627-6adcce2ea861",
+        "source": "9632e2c6-3c2f-413f-9c34-ba56667dbedf",
+        "target": "99c44e0d-df0d-4c2e-a0a2-1c6be42ad801",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-09T00:00:00.000000",
+  "updated_at": "2026-10-09T00:00:00.000000"
+}

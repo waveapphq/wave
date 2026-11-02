@@ -1,0 +1,143 @@
+{
+  "name": "V-VMGR-04 Inspect Live Complex Values",
+  "version": "1.0.0",
+  "description": "Runnable workflow for the V-VMGR-04 live scenarios: a Variable Setter writes a 6-element mixed-type array (incl. a nested map and null) into `metrics`, a Delay holds the run open so the watcher observes the FULL fetched value, a second Variable Setter mutates `metrics` to a 3-element array mid-run (event-driven re-fetch), a second Delay holds again, and a Log reads the variable so it is workflow-referenced. The `token` string variable is declared secret and backs the masking regression scenario (the row + the session variables endpoint mask it).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "varset-metrics-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Write Full Array",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "metrics": ["alpha", 42, true, { "retries": 3, "host": "srv-a" }, null, "zeta"]
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-hold-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Hold For First Value",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2500 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-metrics-2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 350 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Mutate Mid-Run",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "metrics": ["omega", 99, false]
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-hold-2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 450 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Hold For Second Value",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2500 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-metrics",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 550 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Metrics",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "str(metrics)", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "varset-metrics-1", "type": "default" },
+      { "id": "e2", "source": "varset-metrics-1", "target": "delay-hold-1", "type": "default" },
+      { "id": "e3", "source": "delay-hold-1", "target": "varset-metrics-2", "type": "default" },
+      { "id": "e4", "source": "varset-metrics-2", "target": "delay-hold-2", "type": "default" },
+      { "id": "e5", "source": "delay-hold-2", "target": "log-metrics", "type": "default" }
+    ]
+  },
+  "variables": {
+    "metrics": { "value": [1, 2], "type": "array", "scope": "test" },
+    "token": { "value": "tok-123", "type": "string", "scope": "test", "secret": true }
+  },
+  "metadata": {},
+  "created_at": "2026-06-12T00:00:00.000000",
+  "updated_at": "2026-06-12T00:00:00.000000"
+}

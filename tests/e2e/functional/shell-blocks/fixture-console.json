@@ -1,0 +1,174 @@
+{
+  "name": "SH-11 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Log Output: live stdout and stderr lines, an unticked block, a secret stdout stream and a secret input value.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-live",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "P=li; echo \"${P}ne-one-__TOKEN__\"; sleep 15; echo \"${P}ne-two-__TOKEN__\"; echo \"${P}ne-err-__TOKEN__\" >&2",
+              "stream_output": true
+            },
+            "outputBindings": { "stdout": "live_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-quiet",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "P=qu; echo \"${P}iet-__TOKEN__\"",
+              "stream_output": false
+            },
+            "outputBindings": { "stdout": "quiet_out" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-secret-stream",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "P=shsec; echo \"${P}-live-__TOKEN__\"",
+              "stream_output": true
+            },
+            "outputBindings": { "stdout": "sec_out" },
+            "outputSecretFields": ["stdout"],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-secret-input",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 380 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": ["input_vars.SECRET_IN"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo \"got $SECRET_IN\"",
+              "input_vars": { "SECRET_IN": "sec_var" },
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 460 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-11-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "ws-hold" },
+      { "id": "e-hold-live", "source": "ws-hold", "target": "sh-live" },
+      { "id": "e-live-quiet", "source": "sh-live", "target": "sh-quiet" },
+      { "id": "e-quiet-stream", "source": "sh-quiet", "target": "sh-secret-stream" },
+      { "id": "e-stream-input", "source": "sh-secret-stream", "target": "sh-secret-input" },
+      { "id": "e-input-done", "source": "sh-secret-input", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "live_out": { "value": "seed", "type": "string", "scope": "test" },
+    "quiet_out": { "value": "", "type": "string", "scope": "test" },
+    "sec_out": { "value": "", "type": "string", "scope": "test" },
+    "sec_var": { "value": "shsec-in-__TOKEN__", "type": "string", "scope": "test", "secret": true }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

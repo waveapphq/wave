@@ -1,0 +1,324 @@
+{
+  "name": "K8s Write Golden",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-admin",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session for sess_admin",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "sess_admin"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "apply-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "K8s Apply",
+          "elementType": "k8s-apply",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "golden: ConfigMap by form, create",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "define_with": "form",
+              "kind": "ConfigMap",
+              "name": "wave-write-cm",
+              "data": {
+                "mode": "form"
+              },
+              "if_exists": "update",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "summary": "golden_summary",
+              "names": "golden_names",
+              "count": "golden_count",
+              "result": "golden_result"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marker for golden",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[KW-01|KW-02] golden count={golden_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-readback",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "readback: read the applied ConfigMap back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_admin",
+              "resource_type": "default",
+              "kind": "ConfigMap",
+              "search_by": "name",
+              "name": "wave-write-cm",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "readback_names",
+              "count": "readback_count",
+              "result": "readback_result"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-readback",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marker for readback",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'[KW-02] readback count={readback_count}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-write-golden-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-connect-admin",
+        "source": "start-node",
+        "target": "connect-admin"
+      },
+      {
+        "id": "edge-connect-admin-apply-golden",
+        "source": "connect-admin",
+        "target": "apply-golden"
+      },
+      {
+        "id": "edge-apply-golden-log-golden",
+        "source": "apply-golden",
+        "target": "log-golden"
+      },
+      {
+        "id": "edge-log-golden-get-readback",
+        "source": "log-golden",
+        "target": "get-readback"
+      },
+      {
+        "id": "edge-get-readback-log-readback",
+        "source": "get-readback",
+        "target": "log-readback"
+      },
+      {
+        "id": "edge-log-readback-log-done",
+        "source": "log-readback",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_admin": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "golden_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "golden_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "golden_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "golden_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "readback_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "readback_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "readback_result": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

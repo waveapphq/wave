@@ -1,0 +1,64 @@
+{
+  "name": "Table Expression Guards - A field expression may not restructure a table",
+  "version": "1.0.0",
+  "description": "An element field expression calls a whole-column mutator on a table variable; the read-only guard must abort the run instead of letting the workflow's table be restructured mid-run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "operation": "parse", "csv_content": "sku,qty\nA-1,3\nB-2,7\n" },
+            "outputBindings": { "table": "orders" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-mutate",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Mutating Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-' + str(orders.add_col(['x', 'y'], 'flag', 'string'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-orders", "type": "default" },
+      { "id": "e2", "source": "parse-orders", "target": "log-mutate", "type": "default" }
+    ]
+  },
+  "variables": {
+    "orders": { "value": [], "type": "table", "scope": "test" }
+  },
+  "metadata": {}
+}

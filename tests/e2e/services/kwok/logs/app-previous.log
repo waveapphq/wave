@@ -1,0 +1,4 @@
+2025-12-31T23:59:50.000000001Z stdout F app: starting payments-api v2.3.0
+2025-12-31T23:59:51.000000001Z stdout F app: listening on :8080
+2025-12-31T23:59:55.000000001Z stderr F app: ERROR database connection refused (db:5432)
+2025-12-31T23:59:56.000000001Z stderr F app: FATAL exiting with code 1

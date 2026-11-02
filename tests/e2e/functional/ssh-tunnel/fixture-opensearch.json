@@ -1,0 +1,694 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-TUNNEL",
+  "version": "1.0.0",
+  "description": "The OpenSearch block through SSH tunnels to the cluster: the Local Port dialed as localhost and as 127.0.0.1 with Verify Server Certificate on, then, recorded, a tunnel to a far name the certificate does not list.",
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tid_os": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_os": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tid_far": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_far": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tun_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tun_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "tun_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "loop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "loop_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "loop_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "far_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "far_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "far_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "far_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "far_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_ids": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "f70c4d7f-65f4-4b3e-b351-398ad7f7f7fd",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the SSH session behind both tunnels (secret password)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "sess_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c849156b-6ad0-488e-be11-d1c85174084d",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Forward a local port to OpenSearch by its compose name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "opensearch",
+              "remote_port": 9200
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_os",
+              "local_port": "lport_os"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "59663311-f783-4c17-b35b-97ac605a3ca2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Forward a local port to OpenSearch by its container name, which its certificate does not list",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "wave-e2e-opensearch",
+              "remote_port": 9200
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_far",
+              "local_port": "lport_far"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c2dbe502-9402-49b3-956e-436b7982846c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log both tunnel Local Ports",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-tunnel-ports near={{ lport_os }} far={{ lport_far }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "31486ac1-fe51-4b9e-a0fc-b893fd408089",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Through the tunnel at localhost",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Through the tunnel at localhost",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "'https://localhost:' + str(lport_os)",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "tun_ok",
+              "results": "tun_rows",
+              "total_results": "tun_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "8df3d632-bd91-4141-af76-bb84629306d9",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-tunnel-localhost total={{ tun_total }} first={{ tun_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "03cd935b-7d1f-4618-972b-1f3acaaf7c9d",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Through the tunnel at 127.0.0.1",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Through the tunnel at 127.0.0.1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "'https://127.0.0.1:' + str(lport_os)",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "loop_ok",
+              "results": "loop_rows",
+              "total_results": "loop_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "46dbb159-a3f5-46d9-815d-b4e92f1880ff",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof loopback",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-tunnel-loopback total={{ loop_total }} first={{ loop_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f767f765-1073-40f4-b1a0-2c883d25227c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Far name not in the certificate",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Far name the certificate does not list",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "'https://localhost:' + str(lport_far)",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "far_ok",
+              "results": "far_rows",
+              "total_results": "far_total",
+              "error": "far_error",
+              "reason": "far_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "c7ac0f2b-5fb4-4ecb-9bbb-4af4c364d706",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Proof far name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-tunnel-far-name total={{ far_total }} reason={{ far_reason }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "47a1d019-614e-4d61-8891-a53a2452f3b2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SSH session; its tunnels close with it",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fd901ee2-069e-4623-8b74-d1461c09546a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'os-tunnel-closes sessions=' + str(len(closed_ids)) + ' os-tunnel-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "59d14d5d-22bf-4a8e-a47a-ee86a8de7389",
+        "source": "start-node",
+        "target": "f70c4d7f-65f4-4b3e-b351-398ad7f7f7fd",
+        "type": "default"
+      },
+      {
+        "id": "47cba66a-5889-4abd-bb42-a9eff6d25f73",
+        "source": "f70c4d7f-65f4-4b3e-b351-398ad7f7f7fd",
+        "target": "c849156b-6ad0-488e-be11-d1c85174084d",
+        "type": "default"
+      },
+      {
+        "id": "ef60737a-1092-4758-9241-076a04458e9a",
+        "source": "c849156b-6ad0-488e-be11-d1c85174084d",
+        "target": "59663311-f783-4c17-b35b-97ac605a3ca2",
+        "type": "default"
+      },
+      {
+        "id": "adb494e6-56a3-4ecc-bed8-6b5de6978ca5",
+        "source": "59663311-f783-4c17-b35b-97ac605a3ca2",
+        "target": "c2dbe502-9402-49b3-956e-436b7982846c",
+        "type": "default"
+      },
+      {
+        "id": "55d8eaea-c8ae-48b5-9044-e26f33cd2303",
+        "source": "c2dbe502-9402-49b3-956e-436b7982846c",
+        "target": "31486ac1-fe51-4b9e-a0fc-b893fd408089",
+        "type": "default"
+      },
+      {
+        "id": "bc5d3180-c801-434c-9dfb-98797d95a477",
+        "source": "31486ac1-fe51-4b9e-a0fc-b893fd408089",
+        "target": "8df3d632-bd91-4141-af76-bb84629306d9",
+        "type": "default"
+      },
+      {
+        "id": "db1fec71-3d7f-4afe-b7aa-37c25662c3b6",
+        "source": "8df3d632-bd91-4141-af76-bb84629306d9",
+        "target": "03cd935b-7d1f-4618-972b-1f3acaaf7c9d",
+        "type": "default"
+      },
+      {
+        "id": "68115b2a-075f-481a-856e-5856b5fbb0cc",
+        "source": "03cd935b-7d1f-4618-972b-1f3acaaf7c9d",
+        "target": "46dbb159-a3f5-46d9-815d-b4e92f1880ff",
+        "type": "default"
+      },
+      {
+        "id": "0809b3b5-0b09-4f1a-859f-86fe5fc23de5",
+        "source": "46dbb159-a3f5-46d9-815d-b4e92f1880ff",
+        "target": "f767f765-1073-40f4-b1a0-2c883d25227c",
+        "type": "default"
+      },
+      {
+        "id": "a04477ca-15c1-4778-a03e-8a7a1cc1b7c3",
+        "source": "f767f765-1073-40f4-b1a0-2c883d25227c",
+        "target": "c7ac0f2b-5fb4-4ecb-9bbb-4af4c364d706",
+        "type": "default"
+      },
+      {
+        "id": "0243a94f-d35d-462a-9d82-ecc0424aa4eb",
+        "source": "c7ac0f2b-5fb4-4ecb-9bbb-4af4c364d706",
+        "target": "47a1d019-614e-4d61-8891-a53a2452f3b2",
+        "type": "default"
+      },
+      {
+        "id": "8e7096d3-e787-443d-8587-55a7e43ab6c5",
+        "source": "47a1d019-614e-4d61-8891-a53a2452f3b2",
+        "target": "fd901ee2-069e-4623-8b74-d1461c09546a",
+        "type": "default"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

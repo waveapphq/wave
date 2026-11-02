@@ -1,0 +1,124 @@
+{
+  "name": "Artifact Browser E2E",
+  "version": "1.0.0",
+  "description": "A failing test that exercises every artifact-browser section: File I/O writes drop File artifacts under data/, a Log emits an ERROR that error.json aggregates, and an Assert(fail_current_scope) fails the run so error.json is written. On completion the per-test log persists as logs/<test>.log; report.json/report.html are generated on demand via POST /executions/{id}/report.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-write-output",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Output Artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://data/output.json",
+              "content": "{\"result\": \"generated\", \"items\": 3}",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fileio-write-longname",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Long-Named Artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://data/regression-run-detailed-output-summary-with-an-intentionally-long-file-name.json",
+              "content": "{\"note\": \"long name exercises the truncation popover\"}",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-error",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 350 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Simulated Failure",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Artifact browser simulated failure'",
+              "level": "ERROR"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "assert-fail",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 450 },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Fail The Scope",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [{ "type": "expression", "expression": "False" }],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "fileio-write-output", "type": "default" },
+      { "id": "e2", "source": "fileio-write-output", "target": "fileio-write-longname", "type": "default" },
+      { "id": "e3", "source": "fileio-write-longname", "target": "log-error", "type": "default" },
+      { "id": "e4", "source": "log-error", "target": "assert-fail", "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-07-01T00:00:00.000000",
+  "updated_at": "2026-07-01T00:00:00.000000"
+}

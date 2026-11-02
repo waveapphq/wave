@@ -1,0 +1,17 @@
+{
+  "name": "wave-e2e",
+  "version": "0.1.0",
+  "description": "WAVE E2E Tests - End-to-end tests spanning frontend and backend",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test:list": "playwright test --list",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3"
+  }
+}

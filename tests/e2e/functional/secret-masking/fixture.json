@@ -1,0 +1,322 @@
+{
+  "name": "Secret Masking E2E",
+  "version": "1.0.0",
+  "description": "Runtime secret masking: composed expressions, direct leaks, verbatim copy, byte-transform escape, per-node unmask, full-opacity containers, response credential headers",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 3000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-copy",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Copy Secret Verbatim",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["leaked_copy"],
+          "variableTemplateKeys": [],
+          "variableTypes": { "leaked_copy": "string" },
+          "config": {
+            "values": {
+              "variables": { "leaked_copy": "api_token" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-composed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Composed Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Authorization: Bearer ' + api_token + ' host=' + host",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-direct",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Secret Direct",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "api_token",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-copy",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Verbatim Copy",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "leaked_copy",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-transform",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 430 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Byte Transform",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'transformed=' + api_token[7:]",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-unmask",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Unmasked Node",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "api_token",
+              "level": "INFO"
+            },
+            "secret_masking": "reveal",
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-map-whole",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 570 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Whole Secret Map",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(cred_map)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-cookie",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 640 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET Cookie Credential",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/cookie'",
+              "method": "GET",
+              "verify_ssl": false,
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {
+              "status_code": "cookie_status",
+              "headers": "resp_headers"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 132, "height": 62 }
+      },
+      {
+        "id": "log-resp-headers",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 710 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Response Headers",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(resp_headers)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start-node", "target": "delay-hold", "type": "default" },
+      { "id": "e1", "source": "delay-hold", "target": "varset-copy", "type": "default" },
+      { "id": "e2", "source": "varset-copy", "target": "log-composed", "type": "default" },
+      { "id": "e3", "source": "log-composed", "target": "log-direct", "type": "default" },
+      { "id": "e4", "source": "log-direct", "target": "log-copy", "type": "default" },
+      { "id": "e5", "source": "log-copy", "target": "log-transform", "type": "default" },
+      { "id": "e6", "source": "log-transform", "target": "log-unmask", "type": "default" },
+      { "id": "e7", "source": "log-unmask", "target": "log-map-whole", "type": "default" },
+      { "id": "e8", "source": "log-map-whole", "target": "http-cookie", "type": "default" },
+      { "id": "e9", "source": "http-cookie", "target": "log-resp-headers", "type": "default" }
+    ]
+  },
+  "variables": {
+    "api_token": {
+      "value": "s3cr3t-Bearer-Tok3n-9917",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "host": {
+      "value": "api.example.local",
+      "type": "string",
+      "scope": "test"
+    },
+    "cred_map": {
+      "value": {
+        "api_key": "map-k3y-v4lue-8842",
+        "db_password": "map-p4ss-v4lue-7731"
+      },
+      "type": "map",
+      "scope": "test",
+      "secret": true
+    },
+    "leaked_copy": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "resp_headers": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "cookie_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

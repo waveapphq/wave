@@ -1,0 +1,144 @@
+{
+  "name": "Float Precision Pipeline E2E",
+  "version": "1.0.0",
+  "description": "REQ-3.1.3.14 functional fixture for the float Decimal pipeline. `price` is a >17-significant-digit float carried as an exact string (-2123.123213123123699999); `total` is an expression deriving from it (price + 0.01) that must stay exact within 28 significant digits; `rate` is a float (19.99) a Variable Setter overwrites mid-run to 21.5892 so the variable_changed WS push (a Decimal rendered as a plain string) updates the watcher. A `gate` Log carries a literal so a breakpoint pauses before any variable is referenced. Reads log price, total, and rate so propagation is provable end-to-end.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "gate",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 100 },
+        "data": {
+          "label": "Gate",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Gate",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'gate'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "set-rate",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 200 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Overwrite Rate",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "variables": { "rate": 21.5892 } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-price",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 300 },
+        "data": {
+          "label": "Read Price",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Price",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'price={price}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-total",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 400 },
+        "data": {
+          "label": "Read Total",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Total",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'total={total}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-rate",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 500 },
+        "data": {
+          "label": "Read Rate",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Rate",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'rate={rate}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "gate", "type": "default" },
+      { "id": "e2", "source": "gate", "target": "set-rate", "type": "default" },
+      { "id": "e3", "source": "set-rate", "target": "read-price", "type": "default" },
+      { "id": "e4", "source": "read-price", "target": "read-total", "type": "default" },
+      { "id": "e5", "source": "read-total", "target": "read-rate", "type": "default" }
+    ]
+  },
+  "variables": {
+    "price": { "value": "-2123.123213123123699999", "type": "float", "scope": "test" },
+    "total": {
+      "value": "price + 0.01",
+      "type": "float",
+      "scope": "test",
+      "isExpression": true
+    },
+    "rate": { "value": "19.99", "type": "float", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-06-18T00:00:00.000000",
+  "updated_at": "2026-06-18T00:00:00.000000"
+}

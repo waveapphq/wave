@@ -1,0 +1,89 @@
+{
+  "name": "V-CANVAS-FN-DRILL-01 fixture",
+  "version": "1.0.0",
+  "description": "A Test carrying a local Function (Function_1) whose inner workflow holds a nested local Function (Helper_1). Used to exercise three-affordance drill-down (glyph / kebab Open / Cmd+Ctrl+Enter), breadcrumb violet segments, and pop-back via parent segment and back arrow.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-outer",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "fn-inner",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 300,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Helper_1",
+                    "elementType": "function",
+                    "nodeType": "function",
+                    "functionLifecycle": "local",
+                    "category": "function",
+                    "version": "1.0.0",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "localDefinition": {
+                      "workflow": {
+                        "nodes": [],
+                        "edges": []
+                      },
+                      "inputs": [],
+                      "outputs": [],
+                      "variables": [],
+                      "name": "Helper_1"
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-start-fn-inner",
+                  "source": "start-node",
+                  "target": "fn-inner"
+                }
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

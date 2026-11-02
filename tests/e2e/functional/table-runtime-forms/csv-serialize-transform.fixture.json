@@ -1,0 +1,213 @@
+{
+  "name": "Table Runtime Forms - CSV Serialize shapes the text",
+  "version": "1.0.0",
+  "description": "Serialize writes a sorted, filtered view of the bound table while the source variable keeps every row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "CSV Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "region,amount\nwest,10\neast,20\nwest,30\neast,5\n"
+            },
+            "outputBindings": {
+              "table": "seed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "serialize-shaped",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "CSV Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "seed",
+              "has_header": true,
+              "delimiter": ",",
+              "sorts": [
+                {
+                  "id": "serialize-shaped-sort-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "amount"
+                  },
+                  "direction": "desc"
+                }
+              ],
+              "filters": [
+                {
+                  "id": "serialize-shaped-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "region"
+                  },
+                  "asType": "string",
+                  "conditions": [
+                    {
+                      "id": "serialize-shaped-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "west",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "csv_content": "shaped_text"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-text",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'csv-shaped=' + shaped_text.replace('\\n', '~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-source",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 480
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'csv-source-rows={len(seed)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "parse-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "parse-seed",
+        "target": "serialize-shaped",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "serialize-shaped",
+        "target": "log-text",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-text",
+        "target": "log-source",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "seed": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "shaped_text": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

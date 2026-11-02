@@ -1,0 +1,60 @@
+{
+  "name": "Console Source Names Drop",
+  "version": "1.0.0",
+  "description": "One SQL block that keeps the type's Name; the spec drops a second one from the palette.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "d745fe95-1d3e-5c8e-986b-da29fded4900",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Holds the type's own Name so the next SQL block takes the next one",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://source-names-drop.db",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "ed23f181-e0d9-5a7b-a12e-db05b422d1e9",
+        "source": "start-node",
+        "target": "d745fe95-1d3e-5c8e-986b-da29fded4900",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

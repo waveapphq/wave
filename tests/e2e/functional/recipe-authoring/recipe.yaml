@@ -1,0 +1,69 @@
+test:
+  name: Recipe E2E Branch Loop Assert
+  description: Recipe-authored functional fixture - branching, loops, parallel rejoin, split assert
+  tags: [e2e, recipe]
+variables:
+  health: {type: integer, value: 200}
+  retries: {type: integer, value: 0}
+flow:
+  - if:
+      when: "health == 200"
+      then:
+        - block: log
+          settings: {message: rcp-branch-healthy}
+      else:
+        - block: log
+          settings: {message: rcp-branch-down}
+  - block: log
+    settings: {message: rcp-after-if-rejoin}
+  - if:
+      when: "health == 404"
+      then:
+        - block: log
+          settings: {message: rcp-if-404}
+      elif:
+        - when: {variable: health, operator: equals, value: 200, value_type: integer}
+          then:
+            - block: log
+              settings: {message: rcp-elif-200}
+      else:
+        - block: log
+          settings: {message: rcp-else-fallback}
+  - for:
+      count: 3
+      body:
+        - block: log
+          settings: {message: rcp-loop-tick}
+  - while:
+      label: retry_loop
+      conditions: "retries < 5"
+      body:
+        - set: {retries: {expr: "retries + 1"}}
+        - if:
+            when: "retries == 2"
+            then:
+              - break: {loop: retry_loop}
+  - parallel:
+      join: all
+      branches:
+        - name: fast
+          steps:
+            - block: log
+              settings: {message: rcp-par-fast}
+        - name: slow
+          steps:
+            - block: log
+              settings: {message: rcp-par-slow}
+  - assert:
+      that:
+        - "retries == 2"
+        - {variable: health, operator: equals, value: 200, value_type: integer}
+      on_pass:
+        - block: log
+          settings: {message: rcp-assert-pass}
+      on_fail:
+        - block: log
+          settings: {message: rcp-assert-fail, level: ERROR}
+        - halt: {scope: test, status: failed, message: recipe assertion failed}
+  - block: log
+    settings: {message: rcp-final-downstream}

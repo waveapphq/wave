@@ -1,0 +1,692 @@
+{
+  "name": "V-NULL-SQL",
+  "version": "1.0.0",
+  "description": "SQL empty text against NULL on PostgreSQL and MariaDB: a parameter given empty text inserts empty text, a parameter given None inserts NULL, the rows read back empty text and null, and a procedure argument given None binds NULL. The Finally path drops the per-run table and procedure on both databases.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "7c5e348b-d3a6-4c4d-90a6-44f5b3beade3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Insert, read back and drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": false,
+              "enable_finally": true
+            },
+            "outputBindings": {
+              "error": "nv_sql_error",
+              "caught": "nv_sql_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "087db318-56e1-4b7e-9292-94b4451c6d04",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "PG script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.null_note"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE nv_pg___TOKEN__ (id INTEGER PRIMARY KEY, note VARCHAR(40));\nINSERT INTO nv_pg___TOKEN__ (id, note) VALUES (1, :empty_note);\nINSERT INTO nv_pg___TOKEN__ (id, note) VALUES (2, :null_note);\nCREATE PROCEDURE nv_pg_kind___TOKEN__(v VARCHAR, OUT kind VARCHAR)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  kind := CASE WHEN v IS NULL THEN 'is-null' WHEN v = '' THEN 'is-empty' ELSE 'is-text' END;\nEND\n$$;\nSELECT id, note, note IS NULL AS note_is_null FROM nv_pg___TOKEN__ ORDER BY id;",
+              "parameters": {
+                "empty_note": "",
+                "null_note": "None"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "pg_ok",
+              "rows": "pg_rows",
+              "rows_changed": "pg_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2ecf7b47-a275-4ab8-b5b3-d4552cfecac7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "PG call with null",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG call with null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.v"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "nv_pg_kind___TOKEN__",
+              "arguments": {
+                "v": "None"
+              },
+              "out_arguments": [
+                {
+                  "value": "kind"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "out_values": "pg_kind_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2862acc5-2b73-413b-8708-c4e91209e0b2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "PG call with empty text",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG call with empty text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "nv_pg_kind___TOKEN__",
+              "arguments": {
+                "v": ""
+              },
+              "out_arguments": [
+                {
+                  "value": "kind"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "out_values": "pg_kind_empty"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d0f98e8b-6d00-40ca-a751-b5376f88ebc8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 430
+        },
+        "data": {
+          "label": "MariaDB script",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB script",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "parameters.null_note"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "CREATE TABLE nv_my___TOKEN__ (id INT PRIMARY KEY, note VARCHAR(40));\nINSERT INTO nv_my___TOKEN__ (id, note) VALUES (1, :empty_note);\nINSERT INTO nv_my___TOKEN__ (id, note) VALUES (2, :null_note);\nCREATE PROCEDURE nv_my_kind___TOKEN__(IN v VARCHAR(40), OUT kind VARCHAR(10)) SET kind = CASE WHEN v IS NULL THEN 'is-null' WHEN v = '' THEN 'is-empty' ELSE 'is-text' END;\nSELECT id, note, note IS NULL AS note_is_null FROM nv_my___TOKEN__ ORDER BY id;",
+              "parameters": {
+                "empty_note": "",
+                "null_note": "None"
+              },
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "my_ok",
+              "rows": "my_rows",
+              "rows_changed": "my_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f23a02e7-65e9-48d1-b923-4fe0bed703a3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 520
+        },
+        "data": {
+          "label": "MariaDB call with null",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB call with null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "arguments.v"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "nv_my_kind___TOKEN__",
+              "arguments": {
+                "v": "None"
+              },
+              "out_arguments": [
+                {
+                  "value": "kind"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "out_values": "my_kind_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1a0f76ae-5c5c-4139-b54e-ae4d0f609691",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 610
+        },
+        "data": {
+          "label": "MariaDB call with empty text",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB call with empty text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "call_procedure",
+              "procedure": "nv_my_kind___TOKEN__",
+              "arguments": {
+                "v": ""
+              },
+              "out_arguments": [
+                {
+                  "value": "kind"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "out_values": "my_kind_empty"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "993def34-1ba4-4180-ae26-b31cd9cd17e8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "PG proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-sql-pg ok={{ pg_ok }} changed={{ pg_changed }} empty=[{{ pg_rows[0]['note'] }}] null=[{{ pg_rows[1]['note'] }}] is_null={{ pg_rows[0]['note_is_null'] }}/{{ pg_rows[1]['note_is_null'] }} call={{ pg_kind_null[0]['kind'] }}/{{ pg_kind_empty[0]['kind'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6fc58bbb-510a-4120-924b-cf6a1eed2ecb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 790
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "MariaDB proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-sql-my ok={{ my_ok }} changed={{ my_changed }} empty=[{{ my_rows[0]['note'] }}] null=[{{ my_rows[1]['note'] }}] is_null={{ my_rows[0]['note_is_null'] }}/{{ my_rows[1]['note_is_null'] }} call={{ my_kind_null[0]['kind'] }}/{{ my_kind_empty[0]['kind'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fd1cccde-e5c8-493b-820d-2bca45f52dea",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 160
+        },
+        "data": {
+          "label": "PG drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "PG drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "postgresql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS nv_pg___TOKEN__;\nDROP PROCEDURE IF EXISTS nv_pg_kind___TOKEN__;\nSELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'nv_pg___TOKEN__') + (SELECT COUNT(*) FROM information_schema.routines WHERE routine_name = 'nv_pg_kind___TOKEN__') AS n;",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "pg_drop_ok",
+              "rows": "pg_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8cf53762-d745-434b-bdbf-2209f3086796",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 250
+        },
+        "data": {
+          "label": "MariaDB drop",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "MariaDB drop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "mysql",
+              "host": "127.0.0.1",
+              "operation": "run_sql",
+              "script_type": "source",
+              "sql": "DROP TABLE IF EXISTS nv_my___TOKEN__;\nDROP PROCEDURE IF EXISTS nv_my_kind___TOKEN__;\nSELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'nv_my___TOKEN__') + (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = DATABASE() AND routine_name = 'nv_my_kind___TOKEN__') AS n;",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "my_drop_ok",
+              "rows": "my_gone"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f81ea157-b902-4e14-9933-abde7f858876",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Cleanup proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-sql-cleanup pg={{ pg_drop_ok }}/{{ pg_gone[0]['n'] }} my={{ my_drop_ok }}/{{ my_gone[0]['n'] }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "03d21bff-09b0-4f2b-9c85-fa1dab884624",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 900
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "nv-sql-done caught={{ nv_sql_caught }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "b6ead084-d6d2-43f1-8feb-b9d7d6a5f4dc",
+        "source": "start-node",
+        "target": "7c5e348b-d3a6-4c4d-90a6-44f5b3beade3",
+        "type": "default"
+      },
+      {
+        "id": "a8fa625e-1cef-4416-99c8-e5d928250121",
+        "source": "7c5e348b-d3a6-4c4d-90a6-44f5b3beade3",
+        "sourceHandle": "try",
+        "target": "087db318-56e1-4b7e-9292-94b4451c6d04",
+        "type": "default"
+      },
+      {
+        "id": "79ca5bc9-3d77-4df6-874b-ab3b93d1ae46",
+        "source": "087db318-56e1-4b7e-9292-94b4451c6d04",
+        "target": "2ecf7b47-a275-4ab8-b5b3-d4552cfecac7",
+        "type": "default"
+      },
+      {
+        "id": "959c08f0-b8b7-47c8-89bb-4c1545545c54",
+        "source": "2ecf7b47-a275-4ab8-b5b3-d4552cfecac7",
+        "target": "2862acc5-2b73-413b-8708-c4e91209e0b2",
+        "type": "default"
+      },
+      {
+        "id": "0576d45e-efa3-4352-93b8-243b7a24e9dc",
+        "source": "2862acc5-2b73-413b-8708-c4e91209e0b2",
+        "target": "d0f98e8b-6d00-40ca-a751-b5376f88ebc8",
+        "type": "default"
+      },
+      {
+        "id": "44fe5fbf-6760-4fd6-b098-ed45788b119a",
+        "source": "d0f98e8b-6d00-40ca-a751-b5376f88ebc8",
+        "target": "f23a02e7-65e9-48d1-b923-4fe0bed703a3",
+        "type": "default"
+      },
+      {
+        "id": "f425b292-4a7f-4e17-a039-d061c27fd103",
+        "source": "f23a02e7-65e9-48d1-b923-4fe0bed703a3",
+        "target": "1a0f76ae-5c5c-4139-b54e-ae4d0f609691",
+        "type": "default"
+      },
+      {
+        "id": "d2e4b8e9-b58c-48a1-a7a7-e13e0128307a",
+        "source": "1a0f76ae-5c5c-4139-b54e-ae4d0f609691",
+        "target": "993def34-1ba4-4180-ae26-b31cd9cd17e8",
+        "type": "default"
+      },
+      {
+        "id": "31a01d90-0ad8-4e3b-ad95-5c2de36fc7d3",
+        "source": "993def34-1ba4-4180-ae26-b31cd9cd17e8",
+        "target": "6fc58bbb-510a-4120-924b-cf6a1eed2ecb",
+        "type": "default"
+      },
+      {
+        "id": "852b4c23-aa17-4d25-ac0b-036bc548db9e",
+        "source": "7c5e348b-d3a6-4c4d-90a6-44f5b3beade3",
+        "sourceHandle": "finally",
+        "target": "fd1cccde-e5c8-493b-820d-2bca45f52dea",
+        "type": "default"
+      },
+      {
+        "id": "a04f77f5-c85c-4a54-ab78-7f64c27d4aaf",
+        "source": "fd1cccde-e5c8-493b-820d-2bca45f52dea",
+        "target": "8cf53762-d745-434b-bdbf-2209f3086796",
+        "type": "default"
+      },
+      {
+        "id": "dc3e4749-fe40-4517-88f0-d8046efeea2a",
+        "source": "8cf53762-d745-434b-bdbf-2209f3086796",
+        "target": "f81ea157-b902-4e14-9933-abde7f858876",
+        "type": "default"
+      },
+      {
+        "id": "21ad9d17-51e1-48d3-b2d5-7ed5d3e0ed6b",
+        "source": "7c5e348b-d3a6-4c4d-90a6-44f5b3beade3",
+        "sourceHandle": "then",
+        "target": "03d21bff-09b0-4f2b-9c85-fa1dab884624",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "nv_sql_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "nv_sql_caught": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pg_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_kind_null": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_kind_empty": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "my_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_kind_null": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_kind_empty": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pg_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "pg_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "my_drop_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "my_gone": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

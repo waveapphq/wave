@@ -1,0 +1,152 @@
+{
+  "name": "Debug Step - Repeat (Try Catch + HTTP timeout)",
+  "version": "1.0.0",
+  "description": "Try-Catch wrapping an HTTP GET against the http-echo service's armed timeout endpoint. The first request times out (HTTP plugin raises TimeoutError, pause-on-errors fires); the second request (after Repeat Step) hits the disarmed endpoint and returns instantly. Catch path logs 'caught', then path logs 'passed'. Final-attempt-wins semantics: after a successful Repeat, Continue routes through 'then' (not 'catch').",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-tc'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "try-catch",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC Wrapper",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "http-flake",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 360 },
+        "data": {
+          "label": "Flaky HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Flaky HTTP",
+          "hasNewerVersion": false,
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/timeout?key={timeout_key}&delay=10'",
+              "method": "GET",
+              "verify_ssl": false,
+              "timeout": 2,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "http_status", "body": "http_body" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 138, "height": 62 }
+      },
+      {
+        "id": "log-catch",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-then",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Then Path",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-passed'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before-tc", "source": "log-before", "target": "try-catch", "type": "default" },
+      { "id": "e-tc-try", "source": "try-catch", "sourceHandle": "try", "target": "http-flake", "type": "default" },
+      { "id": "e-tc-catch", "source": "try-catch", "sourceHandle": "catch", "target": "log-catch", "type": "default" },
+      { "id": "e-tc-then", "source": "try-catch", "sourceHandle": "then", "target": "log-then", "type": "default" }
+    ]
+  },
+  "variables": {
+    "timeout_key": { "type": "string", "value": "default", "scope": "test" },
+    "http_status": { "type": "integer", "value": 0, "scope": "test" },
+    "http_body": { "type": "string", "value": "", "scope": "test" },
+    "tc_error": { "type": "map", "value": {}, "scope": "test" },
+    "tc_caught": { "type": "boolean", "value": false, "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-04-25T00:00:00.000000",
+  "updated_at": "2026-04-25T00:00:00.000000"
+}

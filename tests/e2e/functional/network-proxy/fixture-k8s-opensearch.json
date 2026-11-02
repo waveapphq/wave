@@ -1,0 +1,437 @@
+{
+  "name": "V-NET-PROXY K8s And OpenSearch",
+  "version": "1.0.0",
+  "description": "K8s Connect and K8s Get against the internal kwok cluster inside a Try/Catch, then an OpenSearch search against the node's compose name that records its failure.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "tc-k8s",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "K8s guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "k8s_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "k8s-connect",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Cluster by its compose name",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Cluster by its compose name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://kwok-internal:6443",
+              "namespace": "default",
+              "timeout": 15,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "k8s_session",
+              "cluster_version": "k8s_version"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "k8s-get",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Default namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Default namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "resource_type": "default",
+              "kind": "Namespace",
+              "search_by": "name",
+              "name": "default",
+              "output_format": "map",
+              "on_error": "fail",
+              "timeout": 15
+            },
+            "outputBindings": {
+              "count": "ns_count",
+              "names": "ns_names"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-k8s-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "K8s guard caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'proxy-k8s caught'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-k8s",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "K8s guard outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"proxy-k8s version={k8s_version} count={ns_count} caught={k8s_err['message'] if k8s_err else 'none'}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "os-search",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Search by its compose name",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Search by its compose name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://opensearch:9200",
+              "index": "wave-e2e-__TOKEN__-proxy",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "timeout": 30,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "os_ok",
+              "error": "os_err",
+              "reason": "os_reason",
+              "total_results": "os_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-os",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "OpenSearch outcome",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'proxy-os ok={os_ok} reason={os_reason} total={os_total}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'proxy-k8s-os-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-tc-k8s",
+        "source": "start-node",
+        "target": "tc-k8s",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-k8s-try",
+        "source": "tc-k8s",
+        "target": "k8s-connect",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-k8s-connect-k8s-get",
+        "source": "k8s-connect",
+        "target": "k8s-get",
+        "type": "default"
+      },
+      {
+        "id": "edge-tc-k8s-catch",
+        "source": "tc-k8s",
+        "target": "log-k8s-caught",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-tc-k8s-then",
+        "source": "tc-k8s",
+        "target": "log-k8s",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-log-k8s-os-search",
+        "source": "log-k8s",
+        "target": "os-search",
+        "type": "default"
+      },
+      {
+        "id": "edge-os-search-log-os",
+        "source": "os-search",
+        "target": "log-os",
+        "type": "default"
+      },
+      {
+        "id": "edge-log-os-log-done",
+        "source": "log-os",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_version": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "ns_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ns_names": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "os_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "os_err": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "os_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "os_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,218 @@
+{
+  "name": "Parallel Race No-Exit E2E",
+  "version": "1.0.0",
+  "description": "A first-to-finish Parallel that is the last Block on the canvas: the run must still report passed, and the losing one-Block lane must be left stopped rather than running.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-rn-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'rn-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-rn",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Race join, no exit wired",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "fast"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "slow"
+                }
+              ],
+              "join": "first"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-rn-fast",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Fast lane work",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 400
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-rn-fast",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fast lane tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'rn-fast'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-rn-slow",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Slow lane, one Block, still running at the join",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 8000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-rn-start",
+        "source": "start-node",
+        "target": "log-rn-before",
+        "type": "default"
+      },
+      {
+        "id": "e-rn-before",
+        "source": "log-rn-before",
+        "target": "par-rn",
+        "type": "default"
+      },
+      {
+        "id": "e-rn-b1",
+        "source": "par-rn",
+        "target": "delay-rn-fast",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-rn-fast-tail",
+        "source": "delay-rn-fast",
+        "target": "log-rn-fast",
+        "type": "default"
+      },
+      {
+        "id": "e-rn-b2",
+        "source": "par-rn",
+        "target": "delay-rn-slow",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

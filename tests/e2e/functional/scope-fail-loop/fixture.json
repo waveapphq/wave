@@ -1,0 +1,351 @@
+{
+  "name": "Scope Fail Inside Loop",
+  "version": "1.0.0",
+  "description": "For-each over three hosts where a split fail_current_scope assert fails on the third pass while a plain assert paints warning; its fail branch records the node, later body blocks and the post-loop verdict still execute and the run ends failed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-start",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Gate Start",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'scopefail-start'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "foreach-nodes",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Check Every Node",
+          "hasNewerVersion": false,
+          "expressionFields": ["collection"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "hosts" },
+            "outputBindings": { "item": "fe_item", "index": "fe_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "varset-pin",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 320 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Pin Node Host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["node_host"],
+          "variableTypes": { "node_host": "string" },
+          "config": {
+            "values": { "variables": { "node_host": "fe_item['value']" } },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "assert-warn",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 440 },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Plain Health Check",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                { "type": "expression", "expression": "node_host != 'node-3'", "id": "aw-1" }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-evidence",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 560 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Evidence Line",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "node_host + ' evidence line'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "assert-gate",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 680 },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Node Runs Approved Build",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                { "type": "expression", "expression": "node_host != 'node-3'", "id": "ag-1" },
+                { "type": "operator", "value": "and" },
+                { "type": "expression", "expression": "fe_idx < 5", "id": "ag-2" },
+                { "type": "operator", "value": "and" },
+                { "type": "expression", "expression": "node_host != ''", "id": "ag-3" }
+              ],
+              "mode": "split",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-record",
+        "type": "workflowNode",
+        "position": { "x": 960, "y": 920 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Record Blocking Node",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": ["gate_blocked", "drift_node"],
+          "variableTypes": { "gate_blocked": "string", "drift_node": "string" },
+          "config": {
+            "values": {
+              "variables": { "gate_blocked": "'yes'", "drift_node": "node_host" }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-close",
+        "type": "workflowNode",
+        "position": { "x": 700, "y": 1040 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Close Node Session",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'closed ' + node_host", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1160 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After Loop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'scopefail-after-loop'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "verdict-if",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1280 },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Sign-off Verdict",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if",
+                  "id": "branch_blocked",
+                  "label": "Blocked",
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "gate_blocked",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "yes",
+                      "reference_is_expression": false,
+                      "id": "c-blocked"
+                    }
+                  ]
+                },
+                { "type": "else", "id": "branch_clear", "label": "Clear" }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "log-fatal",
+        "type": "workflowNode",
+        "position": { "x": 260, "y": 1400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Sign-off Blocked",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'SIGN-OFF BLOCKED scopefail-verdict: ' + drift_node",
+              "level": "FATAL"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-clear",
+        "type": "workflowNode",
+        "position": { "x": 560, "y": 1400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Sign-off Cleared",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'SIGN-OFF CLEARED scopefail-verdict'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-start", "type": "default" },
+      { "id": "e-loop", "source": "log-start", "target": "foreach-nodes", "type": "default" },
+      { "id": "e-body", "source": "foreach-nodes", "sourceHandle": "body", "target": "varset-pin", "type": "default" },
+      { "id": "e-b1", "source": "varset-pin", "target": "assert-warn", "type": "default" },
+      { "id": "e-b2", "source": "assert-warn", "target": "log-evidence", "type": "default" },
+      { "id": "e-b3", "source": "log-evidence", "target": "assert-gate", "type": "default" },
+      { "id": "e-fail", "source": "assert-gate", "sourceHandle": "fail", "target": "varset-record", "type": "default" },
+      { "id": "e-pass", "source": "assert-gate", "sourceHandle": "pass", "target": "log-close", "type": "default" },
+      { "id": "e-rejoin", "source": "varset-record", "target": "log-close", "targetHandle": "ingress_1", "type": "default" },
+      { "id": "e-then", "source": "foreach-nodes", "sourceHandle": "then", "target": "log-after", "type": "default" },
+      { "id": "e-verdict", "source": "log-after", "target": "verdict-if", "type": "default" },
+      { "id": "e-blocked", "source": "verdict-if", "sourceHandle": "branch_blocked", "target": "log-fatal", "type": "default" },
+      { "id": "e-clear", "source": "verdict-if", "sourceHandle": "branch_clear", "target": "log-clear", "type": "default" }
+    ]
+  },
+  "variables": {
+    "hosts": { "type": "array", "value": ["node-1", "node-2", "node-3"], "scope": "test" },
+    "fe_item": { "type": "map", "value": {}, "scope": "test" },
+    "fe_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "node_host": { "type": "string", "value": "", "scope": "test" },
+    "gate_blocked": { "type": "string", "value": "", "scope": "test" },
+    "drift_node": { "type": "string", "value": "", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-07-28T00:00:00.000000",
+  "updated_at": "2026-07-28T00:00:00.000000"
+}

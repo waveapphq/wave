@@ -1,0 +1,214 @@
+{
+  "name": "K8s Endpoint Faults Golden",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "connect-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Stub session answering 503 on every resource read",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9461/cfg/status=503",
+              "namespace": "wave-val",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_stub_ca"
+            },
+            "outputBindings": {
+              "session": "sess_golden"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "get-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "K8s Get",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "G-65 list read recording the cluster's own 503 text",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session": "sess_golden",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "list",
+              "output_format": "map",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "g65_ok",
+              "error": "g65_error",
+              "reason": "g65_reason",
+              "count": "g65_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-golden",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Report the bound outputs of the recorded failure",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'R6 G-65 golden ok={g65_ok} reason={g65_reason} count={g65_count} error={g65_error}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker the spec harvests on",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-faults-golden-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-connect-golden",
+        "source": "start-node",
+        "target": "connect-golden"
+      },
+      {
+        "id": "edge-connect-golden-get-golden",
+        "source": "connect-golden",
+        "target": "get-golden"
+      },
+      {
+        "id": "edge-get-golden-log-golden",
+        "source": "get-golden",
+        "target": "log-golden"
+      },
+      {
+        "id": "edge-log-golden-log-done",
+        "source": "log-golden",
+        "target": "log-done"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_stub_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_golden": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "g65_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "g65_error": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "g65_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "g65_count": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

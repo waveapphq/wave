@@ -1,0 +1,1054 @@
+{
+  "name": "Netcat Tunnel E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Netcat through SSH tunnels to the internal-only netcat-target: a TCP Check and a Talk through a tunnel to the echo, a TCP Check through a tunnel to a far port where nothing listens, UDP to tunnel ports refused, and a Check after the tunnel closed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b7e909bb-0ca2-4549-8bc4-3ff5d6f995e7",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Open the SSH session behind both tunnels (secret password)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid",
+              "connected": "sess_conn"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0934eb5f-5240-4bd8-8e87-2f1ee46ade71",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the open session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'nct-session connected={sess_conn}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b8591b7b-41a8-43e4-97bf-6b7f501f487c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 240
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Forward an auto-assigned local port to the internal TCP echo",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "netcat-target",
+              "remote_port": 9470
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_echo",
+              "local_port": "lport_echo"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "57b723de-d35c-43a1-b5bb-de50dc0ac1c5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 310
+        },
+        "data": {
+          "label": "SSH Tunnel Open",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Forward a local port to a far port where nothing listens",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": 0,
+              "remote_host": "netcat-target",
+              "remote_port": 9479
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_far",
+              "local_port": "lport_far"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c1056d2a-e859-4ed8-8fda-db5ecdf15fc2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log both resolved local ports",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'nct-tunnels echo={lport_echo} far={lport_far}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9cfd4790-a34d-458b-82e6-0fe690c42094",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 450
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP Check of the echo tunnel's local port",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": "lport_echo",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 5,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "open_ok",
+              "results": "open_res"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0c6eb842-079e-4e87-aabb-7bc626f9c37c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the tunneled check",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-open success=' + str(open_ok) + ' rows=' + str(len(open_res)) + ' port=' + str(open_res.cell(0, 'port')) + ' protocol=' + open_res.cell(0, 'protocol') + ' state=' + open_res.cell(0, 'state') + ' reason=[' + open_res.cell(0, 'reason') + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "115ebdd4-6f92-4f86-b55b-e5d8c3f8bc69",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 590
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk Text through the echo tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": "lport_echo",
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "text",
+              "text": "netcat through the ssh tunnel",
+              "timeout": 5,
+              "crlf": false,
+              "close_after_send": true,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "talk_ok",
+              "results": "talk_res",
+              "reply": "talk_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "16788c61-f3dc-4f48-99a5-ebd6fe92b7a1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 660
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the reply that came back through the tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-talk success=' + str(talk_ok) + ' state=' + talk_res.cell(0, 'state') + ' reply=[' + talk_reply + '] row-reply=[' + talk_res.cell(0, 'reply') + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "dcb9862d-e3f9-476a-a0fc-87072e642ae5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 730
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP Check of the refused far port (Record and continue)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": "lport_far",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 5,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "far_ok",
+              "results": "far_res",
+              "error": "far_err",
+              "reason": "far_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "35495dcb-747a-4e1a-af64-a7cde77f51ed",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 800
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the refused far port",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-far success=' + str(far_ok) + ' reason=' + far_reason + ' rows=' + str(len(far_res)) + ' state=' + far_res.cell(0, 'state') + ' row-reason=[' + far_res.cell(0, 'reason') + ']' + ' error=[' + far_err + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f54cec19-b8aa-44b7-9e86-f4cf798a7620",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 870
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP Check of a tunnel's local port (Record and continue)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": "lport_echo",
+              "protocol": "udp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "udp_ok",
+              "results": "udp_res",
+              "error": "udp_err",
+              "reason": "udp_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a66f0adb-cb3c-42ae-b463-8fef43bf5eb6",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 940
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the UDP refusal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-udp success=' + str(udp_ok) + ' reason=' + udp_reason + ' rows=' + str(len(udp_res)) + ' error=[' + udp_err + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "742e5cd0-4632-4013-98e1-cc2fd38e796c",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1010
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP Range: a plain port, then the higher and the lower tunnel port (Record)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port_range"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "range",
+              "port_range": "f'9479, {max(lport_far, lport_echo)}, {min(lport_far, lport_echo)}'",
+              "pass_when": "one",
+              "protocol": "udp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "udpr_ok",
+              "results": "udpr_res",
+              "error": "udpr_err",
+              "reason": "udpr_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7e7e4653-6a80-4f11-8080-9abee6acef65",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1080
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the UDP Range refusal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-udp-range success=' + str(udpr_ok) + ' reason=' + udpr_reason + ' rows=' + str(len(udpr_res)) + ' error=[' + udpr_err + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b547c369-233e-41d9-880f-f0e61214c195",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1150
+        },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the echo tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "tunnel_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid_echo"
+            },
+            "outputBindings": {
+              "closed": "closed_echo"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1c2d9b3f-89a6-4471-9b68-74c227352bb7",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1220
+        },
+        "data": {
+          "label": "Netcat",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP Check of the closed tunnel's old local port (Record)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "port"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": "lport_echo",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 5,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "gone_ok",
+              "results": "gone_res",
+              "error": "gone_err",
+              "reason": "gone_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "69b3ac9f-a882-4485-a091-813193de59a1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1290
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the check after the tunnel closed",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nct-gone closed-tunnel=' + str(closed_echo) + ' success=' + str(gone_ok) + ' reason=' + gone_reason + ' state=' + gone_res.cell(0, 'state') + ' error=[' + gone_err + ']'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1f670c8d-3f49-484b-8886-362fe1135d64",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1360
+        },
+        "data": {
+          "label": "SSH Tunnel Close",
+          "elementType": "ssh-tunnel-close",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Close the far-port tunnel",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "tunnel_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "tunnel_id": "tid_far"
+            },
+            "outputBindings": {
+              "closed": "closed_far"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7612487e-2d9e-48e2-9518-d6d64074892e",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1430
+        },
+        "data": {
+          "label": "SSH Session Close",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Close the SSH session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {
+              "closed_session_ids": "closed_ids"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "adfe282e-2091-40ee-9a8b-b1c8a7700799",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend + close results",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'nct-closes far={closed_far} sessions={len(closed_ids)} netcat-tunnel-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "55096f38-97b8-410c-9536-85ed7cb0198e",
+        "source": "start-node",
+        "target": "b7e909bb-0ca2-4549-8bc4-3ff5d6f995e7"
+      },
+      {
+        "id": "cc0cdeee-d712-4aa9-817d-5b8813d82406",
+        "source": "b7e909bb-0ca2-4549-8bc4-3ff5d6f995e7",
+        "target": "0934eb5f-5240-4bd8-8e87-2f1ee46ade71"
+      },
+      {
+        "id": "d9f3045c-94c1-4312-bf29-a180648585f4",
+        "source": "0934eb5f-5240-4bd8-8e87-2f1ee46ade71",
+        "target": "b8591b7b-41a8-43e4-97bf-6b7f501f487c"
+      },
+      {
+        "id": "3c600ef0-a6e1-4f4b-ba12-bb2e47e8680a",
+        "source": "b8591b7b-41a8-43e4-97bf-6b7f501f487c",
+        "target": "57b723de-d35c-43a1-b5bb-de50dc0ac1c5"
+      },
+      {
+        "id": "69a7bac9-19f0-42f3-8ccd-17145c9975ac",
+        "source": "57b723de-d35c-43a1-b5bb-de50dc0ac1c5",
+        "target": "c1056d2a-e859-4ed8-8fda-db5ecdf15fc2"
+      },
+      {
+        "id": "2917999a-0e55-4693-9f4e-d6b9f5059665",
+        "source": "c1056d2a-e859-4ed8-8fda-db5ecdf15fc2",
+        "target": "9cfd4790-a34d-458b-82e6-0fe690c42094"
+      },
+      {
+        "id": "29c6604b-5d1c-4d8f-9fb3-c72862d65700",
+        "source": "9cfd4790-a34d-458b-82e6-0fe690c42094",
+        "target": "0c6eb842-079e-4e87-aabb-7bc626f9c37c"
+      },
+      {
+        "id": "7db3da63-ce2c-4906-964b-e6813ce2a4a2",
+        "source": "0c6eb842-079e-4e87-aabb-7bc626f9c37c",
+        "target": "115ebdd4-6f92-4f86-b55b-e5d8c3f8bc69"
+      },
+      {
+        "id": "4608be80-154a-4bf1-bf25-897c231ce351",
+        "source": "115ebdd4-6f92-4f86-b55b-e5d8c3f8bc69",
+        "target": "16788c61-f3dc-4f48-99a5-ebd6fe92b7a1"
+      },
+      {
+        "id": "f51a610f-d9ae-4e51-86b2-ff399261ff9a",
+        "source": "16788c61-f3dc-4f48-99a5-ebd6fe92b7a1",
+        "target": "dcb9862d-e3f9-476a-a0fc-87072e642ae5"
+      },
+      {
+        "id": "3bec628c-5502-4eb3-8988-aa3ee2fa6b83",
+        "source": "dcb9862d-e3f9-476a-a0fc-87072e642ae5",
+        "target": "35495dcb-747a-4e1a-af64-a7cde77f51ed"
+      },
+      {
+        "id": "cd9685dc-9f1c-4fe4-bb98-e44a1a3fa614",
+        "source": "35495dcb-747a-4e1a-af64-a7cde77f51ed",
+        "target": "f54cec19-b8aa-44b7-9e86-f4cf798a7620"
+      },
+      {
+        "id": "0d0710cd-6c6b-4ba7-b1db-a3fa8a0082bd",
+        "source": "f54cec19-b8aa-44b7-9e86-f4cf798a7620",
+        "target": "a66f0adb-cb3c-42ae-b463-8fef43bf5eb6"
+      },
+      {
+        "id": "e26f91b7-1f4e-4a8c-914d-79d00b485200",
+        "source": "a66f0adb-cb3c-42ae-b463-8fef43bf5eb6",
+        "target": "742e5cd0-4632-4013-98e1-cc2fd38e796c"
+      },
+      {
+        "id": "571db741-8046-43b9-abee-476bb2493aa7",
+        "source": "742e5cd0-4632-4013-98e1-cc2fd38e796c",
+        "target": "7e7e4653-6a80-4f11-8080-9abee6acef65"
+      },
+      {
+        "id": "d89eea0c-f4f1-4147-9cd1-0e4382b9da0d",
+        "source": "7e7e4653-6a80-4f11-8080-9abee6acef65",
+        "target": "b547c369-233e-41d9-880f-f0e61214c195"
+      },
+      {
+        "id": "9904a3df-5c65-4562-a111-d07b5a56d90f",
+        "source": "b547c369-233e-41d9-880f-f0e61214c195",
+        "target": "1c2d9b3f-89a6-4471-9b68-74c227352bb7"
+      },
+      {
+        "id": "16275f55-d454-4892-be46-335b43b39eda",
+        "source": "1c2d9b3f-89a6-4471-9b68-74c227352bb7",
+        "target": "69b3ac9f-a882-4485-a091-813193de59a1"
+      },
+      {
+        "id": "09c7dc45-046a-433c-90e7-383314963017",
+        "source": "69b3ac9f-a882-4485-a091-813193de59a1",
+        "target": "1f670c8d-3f49-484b-8886-362fe1135d64"
+      },
+      {
+        "id": "35829f70-2d47-40c7-8a6d-57a187a796bb",
+        "source": "1f670c8d-3f49-484b-8886-362fe1135d64",
+        "target": "7612487e-2d9e-48e2-9518-d6d64074892e"
+      },
+      {
+        "id": "5fc568dd-cce3-42c7-a1d1-24b9aab0b579",
+        "source": "7612487e-2d9e-48e2-9518-d6d64074892e",
+        "target": "adfe282e-2091-40ee-9a8b-b1c8a7700799"
+      }
+    ]
+  },
+  "variables": {
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "sess_conn": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tid_echo": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_echo": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tid_far": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_far": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "open_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "open_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "talk_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "talk_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "talk_reply": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "far_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "far_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "far_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "far_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "udp_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "udp_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "udp_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "udp_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "udpr_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "udpr_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "udpr_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "udpr_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "gone_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "gone_res": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "gone_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "gone_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "closed_echo": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "closed_far": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "closed_ids": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

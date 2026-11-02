@@ -1,0 +1,18 @@
+{
+  "name": "Profile Drives Database",
+  "type": "database",
+  "description": "Database profile whose ten fields drive a real sql-client run against PostgreSQL over verified TLS with a client certificate",
+  "config": {
+    "host": "",
+    "port": 0,
+    "database": "",
+    "username": "",
+    "password": "",
+    "verify_ssl": true,
+    "ca_cert": "",
+    "client_cert": "",
+    "client_key": "",
+    "driver_options": { "application_name": "wave-e2e-profile-db" }
+  },
+  "tags": ["e2e"]
+}

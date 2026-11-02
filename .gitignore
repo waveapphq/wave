@@ -1,0 +1,67 @@
+# IDE (project-level settings)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test artifacts (project-level)
+artifacts/
+!backend/tests/**/artifacts/
+!backend/wavecore/core/artifacts/
+!frontend/tests/**/artifacts/
+!frontend/src/**/artifacts/
+!tests/e2e/**/artifacts/
+test_results/
+.scannerwork
+
+# Configuration (project-level)
+.env
+.env.local
+config.local.yaml
+backend/config/config.yaml
+secrets.yaml
+*-secret.yaml
+*-secrets.yaml
+
+# Dependencies
+node_modules/
+__pycache__/
+# Remote-host wheel cache, filled from the tracked backend/vendor/wheels.lock
+backend/vendor/wheels/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.temp
+*.bak
+.cache/
+.tmp/
+.superpowers/
+skills-lock.json
+
+# Local Claude Code setup
+CLAUDE.local.md
+.claude/
+
+# Markers the local CI scripts leave between runs
+.ci-be-coverage-ready
+.ci-fe-coverage-ready
+
+# E2E test outputs
+tests/e2e/reports/
+tests/e2e/node_modules/
+tests/e2e/playwright-artifacts/
+tests/e2e/playwright-report/
+tests/e2e/playwright/.cache/
+*.log
+# Canned pod-log fixture the kwok E2E image COPYs at build time
+!tests/e2e/services/kwok/logs/*.log
+
+# Runtime data directories (not fixtures)
+backend/data/
+tests/e2e/**/data/
+test-results/

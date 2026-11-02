@@ -1,0 +1,15 @@
+id: exec-reg-wave
+test_id: wave-25-12
+status: running
+progress: 67
+current_block: block-tls-check
+variables:
+  namespace: Dev-East-NS1
+  tests_selected: 150
+  tests_total: 150
+error: null
+started_at: "2025-12-28T09:47:26Z"
+updated_at: "2025-12-28T10:00:00Z"
+completed_at: null
+artifacts: []
+debug_state: null

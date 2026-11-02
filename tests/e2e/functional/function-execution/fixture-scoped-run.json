@@ -1,0 +1,72 @@
+{
+  "name": "V-CANVAS-FN-RUN-SCOPED-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with one Local Function whose body logs a line. Used to drive the drilled-in Run Scope path: scope_mode='function' + scoped_function_node_id='fn-scoped-1'.",
+  "variables": {
+    "caller_var": { "type": "string", "value": "untouched" }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-scoped-1",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": { "result": "caller_var" },
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Function_1",
+            "description": "Logs a line; surfaces it as `result` output.",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 200 },
+                  "data": {
+                    "label": "Log_inner",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "'scoped run hit'", "level": "INFO" },
+                      "outputBindings": { "line": "result" },
+                      "profileBindings": []
+                    }
+                  }
+                }
+              ],
+              "edges": [
+                { "id": "e-start-inner", "source": "start-node", "target": "inner-log" }
+              ]
+            },
+            "inputs": [],
+            "outputs": [{ "name": "result", "type": "string" }],
+            "variables": []
+          }
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-fn", "source": "start-node", "target": "fn-scoped-1" }
+    ]
+  },
+  "metadata": {}
+}

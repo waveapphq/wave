@@ -1,0 +1,65 @@
+{
+  "name": "SH-16 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Shell Script config sheet: Script Type rows, the argument list, export name rules, the at-least-one pattern rule, Input Variables name rules, a bound export type across a reload, and a binding that follows a variable rename.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "sh-sheet",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Sheet Behavior",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "echo seed"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-16-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-16-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-sheet", "source": "start-node", "target": "sh-sheet" },
+      { "id": "e-sheet-done", "source": "sh-sheet", "target": "sh-16-done" }
+    ]
+  },
+  "variables": {
+    "f3_count": { "value": 0, "type": "integer", "scope": "test" },
+    "STATUS": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

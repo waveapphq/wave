@@ -1,0 +1,130 @@
+{
+  "name": "zz-11541-s3-http-null-header",
+  "version": "1.0.0",
+  "description": "A null header entry from an expression and a stored null header entry are sent with an empty value",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b5928034-b6e7-403a-a10c-440eaec15b46",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Echo Expression Null Header",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "X-Trace entry in expression mode giving None",
+          "hasNewerVersion": false,
+          "expressionFields": ["headers.X-Trace"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "verify_ssl": false,
+              "headers": {
+                "X-Trace": "None",
+                "X-Leg": "expression"
+              }
+            },
+            "outputBindings": {
+              "status_code": "expr_status",
+              "body": "expr_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fd4eff65-7c7e-4e5d-814d-2e275526bb0f",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 210 },
+        "data": {
+          "label": "Echo Stored Null Header",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "X-Trace entry stored as a literal null",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "verify_ssl": false,
+              "headers": {
+                "X-Trace": null,
+                "X-Leg": "stored"
+              }
+            },
+            "outputBindings": {
+              "status_code": "stored_status",
+              "body": "stored_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "ea9d404c-5c15-49b4-b0ea-ebb90dd85bb5",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 320 },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Run end marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'http-null-header-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "cebb5613-c1ef-4c71-a924-7098a193f73c",
+        "source": "start-node",
+        "target": "b5928034-b6e7-403a-a10c-440eaec15b46",
+        "type": "default"
+      },
+      {
+        "id": "d0e92b42-c59e-4543-856c-4fcd8302c3e4",
+        "source": "b5928034-b6e7-403a-a10c-440eaec15b46",
+        "target": "fd4eff65-7c7e-4e5d-814d-2e275526bb0f",
+        "type": "default"
+      },
+      {
+        "id": "e69c1c93-df36-4ace-a382-a05010186f6a",
+        "source": "fd4eff65-7c7e-4e5d-814d-2e275526bb0f",
+        "target": "ea9d404c-5c15-49b4-b0ea-ebb90dd85bb5",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "expr_status": { "type": "integer", "scope": "test" },
+    "expr_body": { "type": "string", "scope": "test" },
+    "stored_status": { "type": "integer", "scope": "test" },
+    "stored_body": { "type": "string", "scope": "test" }
+  },
+  "metadata": {}
+}

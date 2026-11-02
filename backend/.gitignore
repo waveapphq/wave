@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage*
+htmlcov/
+coverage.xml
+coverage.json
+.tox/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Type checking
+.mypy_cache/
+.pytype/
+.pyre/
+
+# Backend-specific logs
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Local development
+.env.local
+*.db
+*.sqlite3

@@ -1,0 +1,110 @@
+{
+  "name": "Table Runtime Forms - For Each collection bound to a table variable",
+  "version": "1.0.0",
+  "description": "A For Each node whose collection is bound (literal variable reference) to a declared table variable, so the configuration form's type selector is exercised.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "foreach-bound",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 160 },
+        "data": {
+          "label": "ForEach",
+          "elementType": "for-each",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "ForEach Bound Table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "collection": "orders_table" },
+            "outputBindings": { "item": "bound_item", "index": "bound_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-bound",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Bound",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'bound-row-{bound_item[\"value\"][\"sku\"]}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "after-log-bound",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After Log Bound",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'bound-loop-done'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "foreach-bound", "type": "default" },
+      {
+        "id": "e2",
+        "source": "foreach-bound",
+        "sourceHandle": "body",
+        "target": "body-log-bound",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "foreach-bound",
+        "sourceHandle": "then",
+        "target": "after-log-bound",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "orders_table": {
+      "value": [
+        { "sku": "A-1", "qty": 3 },
+        { "sku": "B-2", "qty": 7 }
+      ],
+      "type": "table",
+      "scope": "test"
+    },
+    "host_list": { "value": ["alpha", "bravo"], "type": "array", "scope": "test" },
+    "bound_item": { "value": {}, "type": "map", "scope": "test" },
+    "bound_idx": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {}
+}

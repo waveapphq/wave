@@ -1,0 +1,65 @@
+{
+  "id": "ad07e600-0001-0001-0001-000000000001",
+  "name": "Export Import E2E Test",
+  "version": "1.0.0",
+  "description": "Fixture for import/export functional testing",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "start-001",
+        "type": "startNode",
+        "position": { "x": 100, "y": 100 },
+        "data": {
+          "label": "Start",
+          "elementType": "start",
+          "nodeType": "start"
+        }
+      },
+      {
+        "id": "log-001",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 100 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Hello",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "Hello from export/import test",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-001",
+        "source": "start-001",
+        "target": "log-001"
+      }
+    ]
+  },
+  "variables": {
+    "plain_var": {
+      "type": "string",
+      "value": "visible_value",
+      "scope": "test"
+    },
+    "secret_var": {
+      "type": "string",
+      "value": "super_secret_password",
+      "scope": "test",
+      "secret": true
+    }
+  }
+}

@@ -1,0 +1,255 @@
+{
+  "name": "Report Generation E2E Test",
+  "version": "1.0.0",
+  "description": "Tests on-demand report generation: Log blocks at DEBUG/INFO/WARN/ERROR levels plus a For loop body Log for the nested-path timeline row",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-startup",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Startup_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log INFO",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Report run started",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-debug",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Debug_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log DEBUG",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Report debug diagnostics",
+              "level": "DEBUG"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-warn",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 290
+        },
+        "data": {
+          "label": "Warn_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log WARN",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Report warning threshold",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "for-report-loop",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "Report_Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "loop_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-nested",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 460
+        },
+        "data": {
+          "label": "Nested_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Nested",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Nested iteration log",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-error",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "Error_Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log ERROR",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "Report simulated error",
+              "level": "ERROR"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-startup",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "log-startup",
+        "target": "log-debug",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-debug",
+        "target": "log-warn",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-warn",
+        "target": "for-report-loop",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "for-report-loop",
+        "sourceHandle": "body",
+        "target": "log-nested",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "for-report-loop",
+        "sourceHandle": "then",
+        "target": "log-error",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "loop_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

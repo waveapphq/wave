@@ -1,0 +1,146 @@
+{
+  "name": "Table Expression Guards - Read-only names that must keep working",
+  "version": "1.0.0",
+  "description": "The read-only rule matches names, so sorted(), keys(), reversed() and slicing are not mutations: this test must save and must run.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-sorted",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Sorted Names",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Sorted",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-sorted=' + ','.join(sorted(names))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-keys",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Map Keys",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Keys",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-keys=' + ','.join(sorted(counts.keys()))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-slice",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Sliced Names",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Slice",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-slice=' + ','.join(names[1:3])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-reversed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Reversed Names",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Reversed",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-reversed=' + ','.join(reversed(names))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-template-read",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Template Read",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Template Read",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["message"],
+          "config": {
+            "values": {
+              "message": "guard-template={{ ','.join(sorted(names)) }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-sorted", "type": "default" },
+      { "id": "e2", "source": "log-sorted", "target": "log-keys", "type": "default" },
+      { "id": "e3", "source": "log-keys", "target": "log-slice", "type": "default" },
+      { "id": "e4", "source": "log-slice", "target": "log-reversed", "type": "default" },
+      { "id": "e5", "source": "log-reversed", "target": "log-template-read", "type": "default" }
+    ]
+  },
+  "variables": {
+    "names": { "value": ["zoe", "ada", "cy"], "type": "array", "scope": "test" },
+    "counts": { "value": { "b": 2, "a": 1 }, "type": "map", "scope": "test" }
+  },
+  "metadata": {}
+}

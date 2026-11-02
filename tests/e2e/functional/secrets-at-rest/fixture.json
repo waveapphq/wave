@@ -1,0 +1,161 @@
+{
+  "name": "Secrets At Rest E2E",
+  "version": "1.0.0",
+  "description": "Encrypt-at-rest canary: a secret test variable and a profile credential are sealed on disk, the run computes on the real unsealed values, and no canary leaks into any output",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 3000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-a-direct",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Secret Variable Direct",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "canary_a",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-a-proof",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Secret Variable Slice",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'a-proof=' + canary_a[18:]",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-b-proof",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 290 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Profile Credential Slice",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'b-proof=' + creds.auth_key[18:]",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": [
+              {
+                "profileId": "__PROFILE_ID__",
+                "alias": "creds",
+                "profileName": "__PROFILE_NAME__",
+                "profileType": "http"
+              }
+            ]
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-plain",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Plain Sibling",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'plain=' + plain_marker",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start-node", "target": "delay-hold", "type": "default" },
+      { "id": "e1", "source": "delay-hold", "target": "log-a-direct", "type": "default" },
+      { "id": "e2", "source": "log-a-direct", "target": "log-a-proof", "type": "default" },
+      { "id": "e3", "source": "log-a-proof", "target": "log-b-proof", "type": "default" },
+      { "id": "e4", "source": "log-b-proof", "target": "log-plain", "type": "default" }
+    ]
+  },
+  "variables": {
+    "canary_a": {
+      "value": "cnrA-4d1f9b2e77c1-alpha-real-bytes",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "plain_marker": {
+      "value": "plain-sibling-1e6f00d5-cleartext",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

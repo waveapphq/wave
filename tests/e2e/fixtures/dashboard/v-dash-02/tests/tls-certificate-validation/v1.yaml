@@ -1,0 +1,13 @@
+id: tls-certificate-validation
+name: TLS Certificate Validation
+version: 1.0.0
+description: Validates TLS certificates are valid and not expired
+author: wave-system
+tags:
+  - tls
+  - security
+  - validation
+blocks: []
+variables: {}
+created_at: "2025-12-24T08:55:00Z"
+updated_at: "2025-12-24T08:55:00Z"

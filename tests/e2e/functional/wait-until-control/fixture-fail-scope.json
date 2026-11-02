@@ -1,0 +1,196 @@
+{
+  "name": "Wait Until Control E2E - Fail Current Scope",
+  "version": "1.0.0",
+  "description": "One Retry-mode Wait Until with Fail Current Scope on. It runs out of time, marks the scope failed, and the flow still leaves through then. Lives in its own workflow because a failed scope is the whole session's outcome.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 40 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before the wait",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wufs-before'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "wait-fs",
+        "type": "workflowNode",
+        "position": { "x": 120, "y": 160 },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Times out and fails the scope",
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "fs_status",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "200",
+                  "reference_is_expression": false,
+                  "id": "cond-fs"
+                }
+              ],
+              "timeout": 1500,
+              "check_interval": 300,
+              "message": "wufs gave up",
+              "mode": "retry",
+              "fail_current_scope": true
+            },
+            "outputBindings": { "passed": "fs_passed", "elapsed": "fs_elapsed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "http-fs",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 300 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Poll that never succeeds",
+          "expressionFields": ["url"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "f'https://127.0.0.1:9449/retry?key=wu-fs-{run_key}&fail_count=999&fail_status=418'",
+              "method": "GET",
+              "timeout": 10,
+              "verify_ssl": false,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "status_code": "fs_status" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 135, "height": 62 }
+      },
+      {
+        "id": "log-fs-round",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 420 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Round marker",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wufs-round'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-fs-then",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Then lane",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wufs-then'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-fs-after",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 420 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the wait",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'wufs-after'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before-fs", "source": "log-before", "target": "wait-fs", "type": "default" },
+      {
+        "id": "e-fs-retry",
+        "source": "wait-fs",
+        "sourceHandle": "retry",
+        "target": "http-fs",
+        "type": "default"
+      },
+      { "id": "e-fs-poll-log", "source": "http-fs", "target": "log-fs-round", "type": "default" },
+      {
+        "id": "e-fs-then",
+        "source": "wait-fs",
+        "sourceHandle": "then",
+        "target": "log-fs-then",
+        "type": "default"
+      },
+      { "id": "e-fs-after", "source": "log-fs-then", "target": "log-fs-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "run_key": { "value": "local", "type": "string", "scope": "test" },
+    "fs_status": { "value": 0, "type": "integer", "scope": "test" },
+    "fs_passed": { "value": true, "type": "boolean", "scope": "test" },
+    "fs_elapsed": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {}
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Profile Drives OpenSearch",
+  "type": "opensearch",
+  "description": "OpenSearch profile whose cluster URL, Basic login and TLS trust drive a real Search over verified TLS",
+  "config": {
+    "url": "",
+    "username": "",
+    "password": "",
+    "verify_ssl": true,
+    "ca_cert": ""
+  },
+  "tags": ["e2e"]
+}

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-wave-demo-badtest
+  labels:
+    app.kubernetes.io/name: wave-demo-badtest
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: wave-demo-badtest
+    app.kubernetes.io/instance: {{ .Release.Name }}

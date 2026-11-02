@@ -1,0 +1,78 @@
+test:
+  name: Recipe Example - OpenSearch
+  description: Wait until the application logs its final line or an error, branch on which it was, collect every line it logged since the test started, and check that no minute had more than 5 errors
+  tags: [example, opensearch]
+variables:
+  cluster_url: {type: string, value: "https://opensearch.internal:9200"}
+  test_start: {type: string}
+  final: {type: table}
+  found: {type: integer, value: 0}
+  logs: {type: table}
+  errors_per_minute: {type: table}
+flow:
+  - block: python
+    label: Save the start time
+    settings:
+      script_type: source
+      script: |
+        from datetime import datetime, timezone
+
+        test_start = datetime.now(timezone.utc).isoformat()
+      script_variables: [test_start]
+    capture: {test_start: test_start}
+  - wait_until:
+      that: ["found >= 1"]
+      timeout: 600000
+      interval: 5000
+      message: "the application never logged its final line"
+      retry:
+        - block: opensearch
+          label: Look for the final line
+          settings:
+            url: {expr: "cluster_url"}
+            index: "app-logs-*"
+            from: {expr: "test_start"}
+            to: now
+            query_language: dql
+            query: 'log.level: "ERROR" or message: "Batch complete"'
+            mode: search
+            fields: [{value: "@timestamp"}, {value: log.level}, {value: message}]
+            order: asc
+            max_results: 1
+          capture: {results: final, total_results: found}
+  - if:
+      when: "final.cell(0, 'log.level') == 'ERROR'"
+      then:
+        - block: log
+          settings: {message: "The application failed: {{ final.cell(0, 'message') }}"}
+      else:
+        - block: log
+          settings: {message: "The application finished at {{ final.cell(0, '@timestamp') }}"}
+  - delay: 5000
+  - block: opensearch
+    label: Collect the test's log lines
+    settings:
+      url: {expr: "cluster_url"}
+      index: "app-logs-*"
+      from: {expr: "test_start"}
+      to: {expr: "final.cell(0, '@timestamp')"}
+      mode: search
+      fields: [{value: "@timestamp"}, {value: log.level}, {value: message}]
+      order: asc
+      max_results: 0
+    capture: {results: logs}
+  - block: opensearch
+    label: Count the errors per minute
+    settings:
+      url: {expr: "cluster_url"}
+      index: "app-logs-*"
+      from: {expr: "test_start"}
+      to: {expr: "final.cell(0, '@timestamp')"}
+      query: 'log.level: "ERROR"'
+      mode: aggregate
+      group_by_time: 1m
+      stats: [{value: {stat: count}}]
+    capture: {results: errors_per_minute}
+  - assert:
+      that: ["max(errors_per_minute.col('count')) <= 5"]
+      fail_current_scope: true

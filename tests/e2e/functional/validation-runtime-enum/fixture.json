@@ -1,0 +1,237 @@
+{
+  "name": "Validation Runtime Enum E2E",
+  "version": "1.0.0",
+  "description": "Two HTTP nodes whose 'method' expressions give values outside the list, each wrapped in try-catch. Verifies the runtime enum validator's exact error message and that a long value is named by its length only.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-all'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-xyz",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: 3-char invalid method",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "xyz_error", "caught": "xyz_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "http-xyz",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 320 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP method=xyz",
+          "hasNewerVersion": false,
+          "expressionFields": ["method"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "method": "'xyz'",
+              "url": "https://example.com",
+              "timeout": 5,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-xyz",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch xyz",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'xyz-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "tc-long",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 460 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TC: 60-char invalid method",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "long_error", "caught": "long_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "http-long",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 580 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "HTTP method=60 char",
+          "hasNewerVersion": false,
+          "expressionFields": ["method"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "method": "'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
+              "url": "https://example.com",
+              "timeout": 5,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "catch-log-long",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 580 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch long",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'long-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 720 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e2", "source": "log-before", "target": "tc-xyz", "type": "default" },
+      { "id": "e3", "source": "tc-xyz", "target": "http-xyz", "sourceHandle": "try" },
+      { "id": "e4", "source": "tc-xyz", "target": "catch-log-xyz", "sourceHandle": "catch" },
+      { "id": "e5", "source": "tc-xyz", "target": "tc-long", "sourceHandle": "then" },
+      { "id": "e6", "source": "tc-long", "target": "http-long", "sourceHandle": "try" },
+      { "id": "e7", "source": "tc-long", "target": "catch-log-long", "sourceHandle": "catch" },
+      { "id": "e8", "source": "tc-long", "target": "log-after", "sourceHandle": "then" }
+    ]
+  },
+  "variables": {
+    "xyz_error": { "value": "", "type": "map", "scope": "test" },
+    "xyz_caught": { "value": false, "type": "boolean", "scope": "test" },
+    "long_error": { "value": "", "type": "map", "scope": "test" },
+    "long_caught": { "value": false, "type": "boolean", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-04-30T00:00:00.000000",
+  "updated_at": "2026-04-30T00:00:00.000000"
+}

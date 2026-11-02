@@ -1,0 +1,53 @@
+# WAVE E2E OCI registry (test-only): distribution registry over TLS (registry
+# leaf signed by the WAVE Test CA) with htpasswd basic auth, serving one chart,
+# charts/wave-demo 0.1.0. The chart is pushed into the image at BUILD time, so
+# the stack starts with it present and nothing is pushed at run time.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+
+FROM docker.io/library/registry:3.1.2 AS seed
+
+# Helm for the build-time push only. Pinned version + checksum, like the helm
+# baked into scripts/Containerfile.e2e.
+ARG HELM_VERSION=4.2.4
+ARG HELM_SHA256_AMD64=c306b46f719b0a4da32d0f78ee21bf90ce8d602f15b22ab753f0674d1670a7f3
+ARG HELM_SHA256_ARM64=564de2191b881e9f71b5606b25345821ea1682f06ab90499d3ab22b530176da1
+RUN apk add --no-cache curl > /dev/null && \
+    case "$(apk --print-arch)" in \
+        x86_64) arch=amd64; sha="${HELM_SHA256_AMD64}" ;; \
+        aarch64) arch=arm64; sha="${HELM_SHA256_ARM64}" ;; \
+        *) echo "unsupported architecture for helm: $(apk --print-arch)" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSLo /tmp/helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
+    echo "${sha}  /tmp/helm.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/helm.tar.gz -C /tmp "linux-${arch}/helm" && \
+    install -m 0755 "/tmp/linux-${arch}/helm" /usr/local/bin/helm && \
+    rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}" && \
+    helm version --short
+
+COPY services/oci-registry/config.yml /wave/config.yml
+COPY services/oci-registry/htpasswd /wave/htpasswd
+COPY services/tls-lab/certs/registry.crt services/tls-lab/certs/registry.key /wave/certs/
+COPY simulators/https/certs/ca.pem /tmp/ca.pem
+COPY services/tls-lab/charts/wave-demo-0.1.0.tgz /tmp/wave-demo-0.1.0.tgz
+
+# Push through the real listener (TLS + login) so the stored chart is what a client pulls.
+RUN set -e; \
+    registry serve /wave/config.yml > /tmp/registry.log 2>&1 & \
+    pid=$!; \
+    for _ in $(seq 1 50); do nc -z 127.0.0.1 5000 && break; sleep 0.2; done; \
+    helm push /tmp/wave-demo-0.1.0.tgz oci://localhost:5000/charts \
+        --username wave --password oci-secret --ca-file /tmp/ca.pem \
+        || { cat /tmp/registry.log >&2; exit 1; }; \
+    kill "$pid"; \
+    wait "$pid" 2>/dev/null || true
+
+FROM docker.io/library/registry:3.1.2
+
+COPY services/oci-registry/config.yml /wave/config.yml
+COPY services/oci-registry/htpasswd /wave/htpasswd
+COPY services/tls-lab/certs/registry.crt services/tls-lab/certs/registry.key /wave/certs/
+# The storage folder is not a declared volume of the base image, so the chart stays in the image.
+COPY --from=seed /wave/registry /wave/registry
+
+EXPOSE 5000
+CMD ["/wave/config.yml"]

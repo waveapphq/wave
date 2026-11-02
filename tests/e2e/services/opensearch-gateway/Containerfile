@@ -1,0 +1,18 @@
+# WAVE E2E OpenSearch gateway service (test-only): one nginx on plain HTTP :9478
+# proxying /os/ to the opensearch node over verified TLS on the compose network.
+# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+FROM docker.io/library/nginx:stable
+
+# Entrypoint exports NGINX_LOCAL_RESOLVERS from /etc/resolv.conf, then renders the template.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+COPY services/opensearch-gateway/nginx.conf /etc/nginx/templates/default.conf.template
+COPY simulators/https/certs/ca.pem /etc/nginx/ca.pem
+
+# A script, not an inline CMD: podman 3.4.x word-splits healthcheck strings with spaces.
+RUN mkdir -p /wave \
+ && printf '%s\n' '#!/bin/sh' \
+      'exec curl -sf -o /dev/null http://127.0.0.1:9478/healthz' \
+      > /wave/healthcheck.sh \
+ && chmod +x /wave/healthcheck.sh
+
+EXPOSE 9478

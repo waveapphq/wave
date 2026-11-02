@@ -1,0 +1,436 @@
+{
+  "name": "K8s Connect Credential Matrix E2E Test",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-hold",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 100 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS subscribe window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 3000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-admin",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 170 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Admin bearer token + CA verification ON",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "session": "sess_admin",
+              "cluster_version": "ver_admin"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-admin",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 240 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the admin-token leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-admin ver={ver_admin}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-cert",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 310 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Client-certificate pair identity",
+          "hasNewerVersion": false,
+          "expressionFields": ["client_cert", "client_key", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "client_cert": "k8s_client_cert",
+              "client_key": "k8s_client_key"
+            },
+            "outputBindings": {
+              "cluster_version": "ver_cert"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-cert",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 380 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the client-cert leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-cert ver={ver_cert}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-both",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 450 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Token and client certificate together",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "client_cert", "client_key", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "client_cert": "k8s_client_cert",
+              "client_key": "k8s_client_key"
+            },
+            "outputBindings": {
+              "cluster_version": "ver_both"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-both",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 520 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the token+cert leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-both ver={ver_both}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-limited",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 590 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "View-only token",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_limited_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "cluster_version": "ver_limited"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-limited",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 660 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the view-only-token leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-limited ver={ver_limited}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-anon",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 730 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Anonymous - no credential; /version is readable by default",
+          "hasNewerVersion": false,
+          "expressionFields": ["ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca"
+            },
+            "outputBindings": {
+              "cluster_version": "ver_anon"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-anon",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the anonymous leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-anon ver={ver_anon}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "connect-runtoken",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 870 },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Mint a run token for service account wave-tests",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "default",
+              "timeout": 30,
+              "token": "k8s_admin_token",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "acquire_run_token": true,
+              "run_token_service_account": "wave-tests",
+              "run_token_namespace": "default",
+              "run_token_duration": 14400
+            },
+            "outputBindings": {
+              "cluster_version": "ver_rt"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-runtoken",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 940 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log the run-token leg",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'k8sconn-runtoken ver={ver_rt}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": -75, "y": 1010 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend marker",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'k8s-matrix-e2e-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-delay-hold", "source": "start-node", "target": "delay-hold" },
+      { "id": "edge-delay-hold-connect-admin", "source": "delay-hold", "target": "connect-admin" },
+      { "id": "edge-connect-admin-log-admin", "source": "connect-admin", "target": "log-admin" },
+      { "id": "edge-log-admin-connect-cert", "source": "log-admin", "target": "connect-cert" },
+      { "id": "edge-connect-cert-log-cert", "source": "connect-cert", "target": "log-cert" },
+      { "id": "edge-log-cert-connect-both", "source": "log-cert", "target": "connect-both" },
+      { "id": "edge-connect-both-log-both", "source": "connect-both", "target": "log-both" },
+      { "id": "edge-log-both-connect-limited", "source": "log-both", "target": "connect-limited" },
+      { "id": "edge-connect-limited-log-limited", "source": "connect-limited", "target": "log-limited" },
+      { "id": "edge-log-limited-connect-anon", "source": "log-limited", "target": "connect-anon" },
+      { "id": "edge-connect-anon-log-anon", "source": "connect-anon", "target": "log-anon" },
+      { "id": "edge-log-anon-connect-runtoken", "source": "log-anon", "target": "connect-runtoken" },
+      { "id": "edge-connect-runtoken-log-runtoken", "source": "connect-runtoken", "target": "log-runtoken" },
+      { "id": "edge-log-runtoken-log-done", "source": "log-runtoken", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_limited_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_client_cert": { "value": "", "type": "string", "scope": "test" },
+    "k8s_client_key": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "sess_admin": { "value": "", "type": "string", "scope": "test" },
+    "ver_admin": { "value": "", "type": "string", "scope": "test" },
+    "ver_cert": { "value": "", "type": "string", "scope": "test" },
+    "ver_both": { "value": "", "type": "string", "scope": "test" },
+    "ver_limited": { "value": "", "type": "string", "scope": "test" },
+    "ver_anon": { "value": "", "type": "string", "scope": "test" },
+    "ver_rt": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

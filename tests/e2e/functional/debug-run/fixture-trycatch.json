@@ -1,0 +1,162 @@
+{
+  "name": "Debug - Try/Catch Nested",
+  "version": "1.0.0",
+  "description": "Try/Catch fixture used by debug functional tests to verify nested-body pause triggers. Try path: log-in-try then log-fail (raises 1/0). Catch path: log-in-catch. Then: log-after.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "Before",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-before'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Try Block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 200, "height": 62 }
+      },
+      {
+        "id": "log-in-try",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 400 },
+        "data": {
+          "label": "In Try",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "In Try",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-in-try'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-fail",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 550 },
+        "data": {
+          "label": "Fail",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "1/0", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-in-catch",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "In Catch",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "In Catch",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-in-catch'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 700 },
+        "data": {
+          "label": "After",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'tc-after'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e-before-tc", "source": "log-before", "target": "tc-1", "type": "default" },
+      { "id": "e-tc-try", "source": "tc-1", "sourceHandle": "try", "target": "log-in-try", "type": "default" },
+      { "id": "e-try-fail", "source": "log-in-try", "target": "log-fail", "type": "default" },
+      { "id": "e-tc-catch", "source": "tc-1", "sourceHandle": "catch", "target": "log-in-catch", "type": "default" },
+      { "id": "e-tc-then", "source": "tc-1", "sourceHandle": "then", "target": "log-after", "type": "default" }
+    ]
+  },
+  "variables": {
+    "tc_error": { "type": "map", "value": null },
+    "tc_caught": { "type": "boolean", "value": false }
+  },
+  "metadata": {},
+  "created_at": "2026-04-24T00:00:00.000000",
+  "updated_at": "2026-04-24T00:00:00.000000"
+}

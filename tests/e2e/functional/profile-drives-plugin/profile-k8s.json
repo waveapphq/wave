@@ -1,0 +1,16 @@
+{
+  "name": "Profile Drives Kubernetes",
+  "type": "kubernetes",
+  "description": "Kubernetes profile built from the eight explicit fields, driving a real k8s-connect against kwok",
+  "config": {
+    "api_url": "",
+    "token": "",
+    "ca_cert": "",
+    "client_cert": "",
+    "client_key": "",
+    "verify_ssl": true,
+    "tls_server_name": "kwok",
+    "namespace": "default"
+  },
+  "tags": ["e2e"]
+}

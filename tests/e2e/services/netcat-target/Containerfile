@@ -1,0 +1,12 @@
+# WAVE E2E raw TCP/UDP target (test-only): one socat image, two compose
+# services - netcat-target (internal-only) and netcat-echo (published).
+# Listeners: TCP echo 9470, UDP echo 9471, UDP silent sink 9472 (never replies).
+# Build: scripts/e2e-stack.sh build
+FROM docker.io/library/alpine:3
+
+RUN apk add --no-cache socat
+
+EXPOSE 9470/tcp 9471/udp 9472/udp
+
+# null-eof: an empty datagram ends its forked child instead of leaving it reading the shared socket.
+CMD ["sh", "-c", "socat -u UDP4-RECV:9472 /dev/null & socat -b 65536 UDP4-RECVFROM:9471,fork,null-eof PIPE & exec socat TCP4-LISTEN:9470,fork,reuseaddr,backlog=128 PIPE"]

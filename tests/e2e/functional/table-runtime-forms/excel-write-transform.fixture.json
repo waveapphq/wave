@@ -1,0 +1,264 @@
+{
+  "name": "Table Runtime Forms - Excel Write shapes the workbook",
+  "version": "1.0.0",
+  "description": "A parsed table is written to a workbook through a multi-key sort and a filter; reading it back proves the file carries the shaped rows while the source variable still holds every row.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "CSV Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "region,amount\nwest,10\neast,20\nwest,30\neast,5\n"
+            },
+            "outputBindings": {
+              "table": "seed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "write-shaped",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Excel Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://shaped.xlsx",
+              "sheet": "Shaped",
+              "table": "seed",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file",
+              "sorts": [
+                {
+                  "id": "write-shaped-sort-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "region"
+                  },
+                  "direction": "asc"
+                },
+                {
+                  "id": "write-shaped-sort-2",
+                  "column": {
+                    "mode": "name",
+                    "value": "amount"
+                  },
+                  "direction": "desc"
+                }
+              ],
+              "filters": [
+                {
+                  "id": "write-shaped-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "amount"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "write-shaped-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "5",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-back",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Excel Parser",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://shaped.xlsx",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "shaped"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-shaped",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 480
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xlsx-regions=' + ','.join(shaped.col('region')) + ' amounts=' + str(shaped.col('amount'))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-source",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 590
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'xlsx-source-rows={len(seed)}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "parse-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "parse-seed",
+        "target": "write-shaped",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "write-shaped",
+        "target": "read-back",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "read-back",
+        "target": "log-shaped",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-shaped",
+        "target": "log-source",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "seed": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "shaped": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

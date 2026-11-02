@@ -1,0 +1,154 @@
+{
+  "name": "V-PLUGIN-SQL-DRIVER-IDENTITY-TIMEZONE",
+  "version": "1.0.0",
+  "description": "An Oracle session on a WAVE host whose clock is not in UTC: the session's time zone is the database's own, never the host's.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "e2eaed6f-76cc-4e7c-bb90-e119f193fbbe",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 100
+        },
+        "data": {
+          "label": "Host clock offset",
+          "elementType": "shell-exec",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The UTC offset of the WAVE host's own clock",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "command": "date +%z",
+              "shell": "/bin/sh"
+            },
+            "outputBindings": {
+              "stdout": "host_offset"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b800303a-8524-4f55-a804-c878ed50bb08",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 220
+        },
+        "data": {
+          "label": "Oracle time zones",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The session's time zone beside the database's own",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "oracle",
+              "host": "127.0.0.1",
+              "port": 9475,
+              "database": "FREEPDB1",
+              "username": "wave",
+              "password": "",
+              "script_type": "source",
+              "sql": "SELECT SESSIONTIMEZONE, DBTIMEZONE FROM dual",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "rows": "tz_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0847a178-218e-4a2f-8eb6-6e4e9bafb13d",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 340
+        },
+        "data": {
+          "label": "Zones",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The host offset and both Oracle zones on one line",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"sqlid-tz host={host_offset.strip()} session={tz_rows[0]['SESSIONTIMEZONE']} db={tz_rows[0]['DBTIMEZONE']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "72433fd1-2d9e-4a3a-9670-f555a4ab4685",
+        "source": "start-node",
+        "target": "e2eaed6f-76cc-4e7c-bb90-e119f193fbbe",
+        "type": "default"
+      },
+      {
+        "id": "eba2e063-5a2a-4928-9566-196d5e105c2a",
+        "source": "e2eaed6f-76cc-4e7c-bb90-e119f193fbbe",
+        "target": "b800303a-8524-4f55-a804-c878ed50bb08",
+        "type": "default"
+      },
+      {
+        "id": "60a5b01c-2b17-46a0-982b-b3afc9fb5e20",
+        "source": "b800303a-8524-4f55-a804-c878ed50bb08",
+        "target": "0847a178-218e-4a2f-8eb6-6e4e9bafb13d",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "host_offset": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "tz_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

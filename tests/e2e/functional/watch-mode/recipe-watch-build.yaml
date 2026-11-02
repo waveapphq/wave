@@ -1,0 +1,47 @@
+test:
+  name: Watch Build Linear
+  description: Linear log sequence revealed block-by-block by the MCP watch build tool
+  tags: [e2e, watch, mcp]
+variables:
+  built_marker: {type: string, value: watch-built}
+flow:
+  - block: log
+    settings: {message: watch-step-01}
+  - block: log
+    settings: {message: watch-step-02}
+  - block: log
+    settings: {message: watch-step-03}
+  - block: log
+    settings: {message: watch-step-04}
+  - block: log
+    settings: {message: watch-step-05}
+  - block: log
+    settings: {message: watch-step-06}
+  - block: log
+    settings: {message: watch-step-07}
+  - block: log
+    settings: {message: watch-step-08}
+  - block: log
+    settings: {message: watch-step-09}
+  - block: log
+    settings: {message: watch-step-10}
+  - block: log
+    settings: {message: watch-step-11}
+  - block: log
+    settings: {message: watch-step-12}
+  - block: log
+    settings: {message: watch-step-13}
+  - block: log
+    settings: {message: watch-step-14}
+  - block: log
+    settings: {message: watch-step-15}
+  - block: log
+    settings: {message: watch-step-16}
+  - block: log
+    settings: {message: watch-step-17}
+  - block: log
+    settings: {message: watch-step-18}
+  - block: log
+    settings: {message: watch-step-19}
+  - block: log
+    settings: {message: watch-step-20}

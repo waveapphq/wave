@@ -1,0 +1,2739 @@
+{
+  "name": "V-PLUGIN-OPENSEARCH-SEARCH",
+  "version": "1.0.0",
+  "description": "The OpenSearch block in Search mode against the real cluster: wait for live documents and collect them, Max results against Total results, values escaped where they land, Query DSL and expression queries, result shapes, sort, paging past 10,000 and date-math index names.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b1aa5140-68f9-4240-9521-a296229b7a97",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "W2 total",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "W2 total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 1,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "w2_rows",
+              "total_results": "w2_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "8ca74bb2-bb76-477f-b70b-dbf3b5366340",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "W2 total is 6",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "w2_total == 6",
+                  "id": "802fb6dc-ece3-409b-b920-1936967d7975"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d7859238-4c41-4c8e-89b8-81524e3e7da9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "W2 total proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-w2-total total={{ w2_total }} kept={{ w2_rows.row_count() }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fc1eb101-a4f5-467a-ba58-a4736f48974c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 360
+        },
+        "data": {
+          "label": "W2 cell",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "W2 cell",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "trace.id: \"{{ trace }}\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "txn",
+              "total_results": "txn_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "d06c7bcb-81ff-46ef-98f6-7420da966f29",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "W2 cell message",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "txn.cell(0, 'message') == 'Card declined'",
+                  "id": "00221bb9-3f1d-4c4a-a75d-4140b643873c"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "785b62c4-e2d7-430c-8ce5-3395ef650d78",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "W2 cell proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-w2-cell total={{ txn_total }} message={{ txn.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f6df8f7d-fc5e-490a-903b-d848ddb6ddb6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 660
+        },
+        "data": {
+          "label": "Escape word",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Escape word",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "user.name: {{ who }}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "esc_rows",
+              "total_results": "esc_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "f83ad3c0-f5a9-4d00-8365-ebba88fb262a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Escape word proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-esc-word total={{ esc_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "40a4e222-03ae-41de-a905-26cc463ab491",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 860
+        },
+        "data": {
+          "label": "DSL value",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DSL value",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "query"
+          ],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "query_dsl",
+              "query": "{\"range\": {\"latency_ms\": {\"gte\": {{ limit }}}}}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "latency_ms"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "dsl_rows",
+              "total_results": "dsl_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "2a4ae23b-6236-472a-bdbd-2a8fe96a886b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "DSL value proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-dsl-value total={{ dsl_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "324f4420-f018-4c75-aa59-8876c251100a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1060
+        },
+        "data": {
+          "label": "DSL pasted",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "DSL pasted",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "query_dsl",
+              "query": "{\"query\": {\"term\": {\"log.level\": \"WARN\"}}, \"size\": 5, \"sort\": [\"@timestamp\"]}",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "pasted_rows",
+              "total_results": "pasted_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "ce85fb2b-f8a1-4804-ba38-ddf3b8ed4d92",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "DSL pasted proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-dsl-pasted total={{ pasted_total }} message={{ pasted_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9b83433c-69cf-4618-bc1b-bf5bd1554c89",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1260
+        },
+        "data": {
+          "label": "Expression query",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Expression query",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "query"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "'log.level: \"' + lvl + '\"'",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "expr_rows",
+              "total_results": "expr_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "7c4a5869-e300-45c2-aecd-5fab41f05fa6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Expression query proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-expr total={{ expr_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f006bf09-100c-4fdc-bb51-6546c6d21430",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1460
+        },
+        "data": {
+          "label": "By id",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "By id",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "_id: \"__DOC10_ID__\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "_id"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "byid_rows",
+              "total_results": "byid_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "71ba2bf4-5591-43c1-bb99-23cdeaefc969",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "By id proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-by-id total={{ byid_total }} message={{ byid_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0d0475e6-02d6-4784-bd00-f483acfe5c46",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1660
+        },
+        "data": {
+          "label": "Shapes fields",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Shapes fields",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "trace.id: \"t-001\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "user"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "shape_rows",
+              "total_results": "shape_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "c16f3bf8-7ab4-4f78-8dba-df29991f28e4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shapes fields proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-shapes-fields total={{ shape_total }} roles={{ shape_rows.cell(0, 'user.roles') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2c54b6a2-c003-47a7-ace4-8b457f9b5886",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Shapes source",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Shapes source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "trace.id: \"t-001\"",
+              "mode": "search",
+              "fields": [],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "source_rows",
+              "total_results": "source_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "89d39e2b-597e-4d88-9481-4bac1fe3b6ba",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Shapes source proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-shapes-source total={{ source_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5bdd34a1-d26e-4069-abd2-80a662fe5f5d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2060
+        },
+        "data": {
+          "label": "Sort by latency",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Sort by latency",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-app-logs",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:04:59Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "latency_ms"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 1,
+              "sort_by": "latency_ms",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "sort_rows",
+              "total_results": "sort_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "5722b39a-dce1-4732-977a-35920a0ff65f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Sort proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-sort total={{ sort_total }} message={{ sort_rows.cell(0, 'message') }} latency={{ sort_rows.cell(0, 'latency_ms') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8611f6b9-bf6b-4a59-80b2-1da33cff0ae6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2260
+        },
+        "data": {
+          "label": "Page all",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Page all",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-bulk",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:00:05Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "_id"
+                },
+                {
+                  "value": "seq"
+                }
+              ],
+              "max_results": 0,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "page_all_rows",
+              "total_results": "page_all_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "b6556a5e-9b0b-470a-93fd-c338f2d4d5de",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Page all proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-page-all total={{ page_all_total }} kept={{ page_all_rows.row_count() }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "003b8044-ce87-4040-b62d-6836aa8c7d4c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2460
+        },
+        "data": {
+          "label": "Page cut",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Page cut",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-bulk",
+              "from": "2026-09-25T10:00:00Z",
+              "to": "2026-09-25T10:00:05Z",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "_id"
+                },
+                {
+                  "value": "seq"
+                }
+              ],
+              "max_results": 10001,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "page_cut_rows",
+              "total_results": "page_cut_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "c1eb7df7-d0f1-4467-85ae-942c425582cb",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2560
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Page cut proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-page-cut total={{ page_cut_total }} kept={{ page_cut_rows.row_count() }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f93d0f75-0e8e-4bc2-9890-998973026833",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2660
+        },
+        "data": {
+          "label": "Date math today",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Date math today",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "<wave-e2e-__TOKEN__-daily-{now/d}>",
+              "from": "now-3d",
+              "to": "now",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "today_rows",
+              "total_results": "today_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "86c8ad4e-745f-4b74-bb2a-0a668f56f2f3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Date math today proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-date-math-today total={{ today_total }} message={{ today_rows.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e51b8164-b850-4beb-8aaa-b395d3faa368",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2860
+        },
+        "data": {
+          "label": "Date math others",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Date math others",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-daily-*,-wave-e2e-__TOKEN__-daily-__TODAY__",
+              "from": "now-3d",
+              "to": "now",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 10000,
+              "sort_by": "",
+              "order": "desc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "others_rows",
+              "total_results": "others_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "f08b6e0c-3646-4a6c-843b-c06a88683e32",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Date math others proof",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-date-math-others total={{ others_total }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9d21ac1e-f578-4a98-bff2-1d908b3ea591",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3060
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Save test start",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "from datetime import datetime, timezone\ntest_start = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')\n",
+              "script_variables": [
+                "test_start"
+              ]
+            },
+            "outputBindings": {
+              "test_start": "test_start"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e7d9b6d6-6b74-4683-b78b-fb24e8bc1bc8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live waiting",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-waiting test_start={{ test_start }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f3591598-8c5b-446d-9906-a0625b5a301c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3260
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for live A",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "found_a",
+                  "value_type": "integer",
+                  "operator": "greater_or_equal",
+                  "reference_value": "1",
+                  "reference_is_expression": false,
+                  "id": "e0823ae6-38a3-4adf-85f4-7ef98b3c99ce"
+                }
+              ],
+              "timeout": 120000,
+              "check_interval": 2000,
+              "message": "os-live-a gave up",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {
+              "passed": "wait_a_passed",
+              "elapsed": "wait_a_elapsed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "11edfbef-e6ea-4587-b60f-1eed371d1e6e",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3260
+        },
+        "data": {
+          "label": "Live A wait search",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Live A wait search",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "from"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-live-a",
+              "from": "test_start",
+              "to": "now",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\" or message: \"Batch complete\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 1,
+              "sort_by": "",
+              "order": "asc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "final_a",
+              "total_results": "found_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "9b6e78ab-d5d0-4b0c-b1be-92f7001facb0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3360
+        },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Live A branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "if",
+                  "label": "Error",
+                  "conditions": [
+                    {
+                      "type": "expression",
+                      "expression": "final_a.cell(0, 'log.level') == 'ERROR'",
+                      "id": "a79e1742-e329-4566-9b60-8752cb5e7b04"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "else",
+                  "label": "Success"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ae705387-aa26-496e-839c-168aea2d388e",
+        "type": "workflowNode",
+        "position": {
+          "x": 150,
+          "y": 3460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live A error",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-a-branch=error message={{ final_a.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b23a59b6-3c20-4bb4-9eb6-a80a4a0d6676",
+        "type": "workflowNode",
+        "position": {
+          "x": 650,
+          "y": 3460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live A success",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-a-branch=success",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1fc4a1fc-7f76-4c2b-9300-df994fa6d6ac",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3560
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for live B",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "found_b",
+                  "value_type": "integer",
+                  "operator": "greater_or_equal",
+                  "reference_value": "1",
+                  "reference_is_expression": false,
+                  "id": "cbc86dec-de72-422d-b15e-792fcafa35d0"
+                }
+              ],
+              "timeout": 120000,
+              "check_interval": 2000,
+              "message": "os-live-b gave up",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {
+              "passed": "wait_b_passed",
+              "elapsed": "wait_b_elapsed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "86c9dd13-efd1-439d-9014-63cce80efa4b",
+        "type": "workflowNode",
+        "position": {
+          "x": 700,
+          "y": 3560
+        },
+        "data": {
+          "label": "Live B wait search",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Live B wait search",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "from"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-live-b",
+              "from": "test_start",
+              "to": "now",
+              "query_language": "dql",
+              "query": "log.level: \"ERROR\" or message: \"Batch complete\"",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 1,
+              "sort_by": "",
+              "order": "asc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "final_b",
+              "total_results": "found_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "184b6a81-581e-4dc8-a178-915b90a1871b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3660
+        },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Live B branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "if",
+                  "label": "Error",
+                  "conditions": [
+                    {
+                      "type": "expression",
+                      "expression": "final_b.cell(0, 'log.level') == 'ERROR'",
+                      "id": "5b3dd869-34b4-43e5-a18d-66a7c8bf9e9a"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "else",
+                  "label": "Success"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "e444580c-9bd8-4241-a137-5294699eb34e",
+        "type": "workflowNode",
+        "position": {
+          "x": 150,
+          "y": 3760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live B error",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-b-branch=error message={{ final_b.cell(0, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b77964eb-4a01-4460-b940-4d7f58419745",
+        "type": "workflowNode",
+        "position": {
+          "x": 650,
+          "y": 3760
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live B success",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-b-branch=success",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7bda5f33-ec5e-4546-ac49-159b29f2823f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3860
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Let late lines land",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "89b5e61c-69be-4b9d-977d-1ffadfb7c557",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 3960
+        },
+        "data": {
+          "label": "Live B collect",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Live B collect",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "from",
+            "to"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-live-b",
+              "from": "test_start",
+              "to": "final_b.cell(0, '@timestamp')",
+              "query_language": "dql",
+              "query": "",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "log.level"
+                },
+                {
+                  "value": "message"
+                }
+              ],
+              "max_results": 0,
+              "sort_by": "",
+              "order": "asc",
+              "timeout": 60,
+              "username": "wave",
+              "password": "",
+              "api_key": "",
+              "bearer_token": "",
+              "verify_ssl": true,
+              "ca_cert": "",
+              "client_cert": "",
+              "client_key": "",
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "results": "logs_b",
+              "total_results": "logs_total_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 140,
+          "height": 62
+        }
+      },
+      {
+        "id": "759b37c9-07b8-48f8-bdca-17220d1025be",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4060
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Live B total",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "logs_total_b == 4",
+                  "id": "a702c5b4-361e-484e-9fdc-792de4d4cd64"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d6bf0c38-aa3a-41d0-8a10-91d671f45c59",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4160
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Live B first",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "logs_b.cell(0, 'message') == 'Batch started'",
+                  "id": "7277e773-9705-44f4-9968-318ca7d6e8b6"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0a3877b3-63ba-4f06-81bd-5eef7d44f0f0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4260
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Live B last",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "logs_b.cell(3, 'message') == 'Batch complete'",
+                  "id": "699f32fb-52af-4456-9c0b-8676870c042b"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fe2b1a7a-26b0-4c9e-b65b-f0fb042d0163",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Live B collected",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-live-b-collected total={{ logs_total_b }} first={{ logs_b.cell(0, 'message') }} last={{ logs_b.cell(3, 'message') }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "64806ec7-9f2b-4972-8c83-5fbb5c01aacd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 4460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "config": {
+            "values": {
+              "message": "os-search-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "38fc8112-e565-495a-9e5f-5d673a36d98c",
+        "source": "start-node",
+        "target": "b1aa5140-68f9-4240-9521-a296229b7a97",
+        "type": "default"
+      },
+      {
+        "id": "94716518-b125-4730-b7d0-55a3af937a91",
+        "source": "b1aa5140-68f9-4240-9521-a296229b7a97",
+        "target": "8ca74bb2-bb76-477f-b70b-dbf3b5366340",
+        "type": "default"
+      },
+      {
+        "id": "7aa3bacb-5068-4a8e-ba7a-9846579859e4",
+        "source": "8ca74bb2-bb76-477f-b70b-dbf3b5366340",
+        "target": "d7859238-4c41-4c8e-89b8-81524e3e7da9",
+        "type": "default"
+      },
+      {
+        "id": "5e87bbd5-bba6-4163-8152-689cb0da2e97",
+        "source": "d7859238-4c41-4c8e-89b8-81524e3e7da9",
+        "target": "fc1eb101-a4f5-467a-ba58-a4736f48974c",
+        "type": "default"
+      },
+      {
+        "id": "32e9fdc8-8f2e-4c80-a374-94a832bbe30f",
+        "source": "fc1eb101-a4f5-467a-ba58-a4736f48974c",
+        "target": "d06c7bcb-81ff-46ef-98f6-7420da966f29",
+        "type": "default"
+      },
+      {
+        "id": "c70102f4-1b63-4f41-befd-45e582b8219f",
+        "source": "d06c7bcb-81ff-46ef-98f6-7420da966f29",
+        "target": "785b62c4-e2d7-430c-8ce5-3395ef650d78",
+        "type": "default"
+      },
+      {
+        "id": "bced9430-1576-4122-8e78-5c59667c8e94",
+        "source": "785b62c4-e2d7-430c-8ce5-3395ef650d78",
+        "target": "f6df8f7d-fc5e-490a-903b-d848ddb6ddb6",
+        "type": "default"
+      },
+      {
+        "id": "26b19a84-9301-4444-ae4b-dd7a2523641c",
+        "source": "f6df8f7d-fc5e-490a-903b-d848ddb6ddb6",
+        "target": "f83ad3c0-f5a9-4d00-8365-ebba88fb262a",
+        "type": "default"
+      },
+      {
+        "id": "f53190d1-d592-46fe-a7d0-492de22e77a8",
+        "source": "f83ad3c0-f5a9-4d00-8365-ebba88fb262a",
+        "target": "40a4e222-03ae-41de-a905-26cc463ab491",
+        "type": "default"
+      },
+      {
+        "id": "f0d77e8c-d314-43e7-a502-9d29b8faffbc",
+        "source": "40a4e222-03ae-41de-a905-26cc463ab491",
+        "target": "2a4ae23b-6236-472a-bdbd-2a8fe96a886b",
+        "type": "default"
+      },
+      {
+        "id": "4a028e79-4cf5-43bb-807f-5eef86008fa0",
+        "source": "2a4ae23b-6236-472a-bdbd-2a8fe96a886b",
+        "target": "324f4420-f018-4c75-aa59-8876c251100a",
+        "type": "default"
+      },
+      {
+        "id": "0bf01b4f-2c8a-438d-9938-00546fcb7972",
+        "source": "324f4420-f018-4c75-aa59-8876c251100a",
+        "target": "ce85fb2b-f8a1-4804-ba38-ddf3b8ed4d92",
+        "type": "default"
+      },
+      {
+        "id": "4f0f8f7a-59ab-4e3a-8b71-168338c42f22",
+        "source": "ce85fb2b-f8a1-4804-ba38-ddf3b8ed4d92",
+        "target": "9b83433c-69cf-4618-bc1b-bf5bd1554c89",
+        "type": "default"
+      },
+      {
+        "id": "a0653a88-213e-42a7-aa12-a4a9b6cbb598",
+        "source": "9b83433c-69cf-4618-bc1b-bf5bd1554c89",
+        "target": "7c4a5869-e300-45c2-aecd-5fab41f05fa6",
+        "type": "default"
+      },
+      {
+        "id": "1ba22a0d-182b-47ae-95d4-cf961f18edac",
+        "source": "7c4a5869-e300-45c2-aecd-5fab41f05fa6",
+        "target": "f006bf09-100c-4fdc-bb51-6546c6d21430",
+        "type": "default"
+      },
+      {
+        "id": "3d9a3e42-4562-4d31-93ae-06d847d12eac",
+        "source": "f006bf09-100c-4fdc-bb51-6546c6d21430",
+        "target": "71ba2bf4-5591-43c1-bb99-23cdeaefc969",
+        "type": "default"
+      },
+      {
+        "id": "39eb1064-28ac-4b65-a889-483a13acae47",
+        "source": "71ba2bf4-5591-43c1-bb99-23cdeaefc969",
+        "target": "0d0475e6-02d6-4784-bd00-f483acfe5c46",
+        "type": "default"
+      },
+      {
+        "id": "78d0b6a8-e1c9-4bf3-a1ec-3889b88f75cd",
+        "source": "0d0475e6-02d6-4784-bd00-f483acfe5c46",
+        "target": "c16f3bf8-7ab4-4f78-8dba-df29991f28e4",
+        "type": "default"
+      },
+      {
+        "id": "36f323f9-a3d6-499a-a75d-aa9aa653e66c",
+        "source": "c16f3bf8-7ab4-4f78-8dba-df29991f28e4",
+        "target": "2c54b6a2-c003-47a7-ace4-8b457f9b5886",
+        "type": "default"
+      },
+      {
+        "id": "f544babe-5ffe-41a4-96c7-638609de36b5",
+        "source": "2c54b6a2-c003-47a7-ace4-8b457f9b5886",
+        "target": "89d39e2b-597e-4d88-9481-4bac1fe3b6ba",
+        "type": "default"
+      },
+      {
+        "id": "826d15f8-5c84-40ee-90ea-ca2bdabc18b0",
+        "source": "89d39e2b-597e-4d88-9481-4bac1fe3b6ba",
+        "target": "5bdd34a1-d26e-4069-abd2-80a662fe5f5d",
+        "type": "default"
+      },
+      {
+        "id": "08a93db4-406e-423b-a129-4e3a5dbd005f",
+        "source": "5bdd34a1-d26e-4069-abd2-80a662fe5f5d",
+        "target": "5722b39a-dce1-4732-977a-35920a0ff65f",
+        "type": "default"
+      },
+      {
+        "id": "eb52fe3a-c320-4a2d-a99f-de9c60e2a635",
+        "source": "5722b39a-dce1-4732-977a-35920a0ff65f",
+        "target": "8611f6b9-bf6b-4a59-80b2-1da33cff0ae6",
+        "type": "default"
+      },
+      {
+        "id": "b4a875e2-af70-4795-9d87-e5fc51892d67",
+        "source": "8611f6b9-bf6b-4a59-80b2-1da33cff0ae6",
+        "target": "b6556a5e-9b0b-470a-93fd-c338f2d4d5de",
+        "type": "default"
+      },
+      {
+        "id": "eb209183-378f-46b9-8ce0-ff9d10e49bd7",
+        "source": "b6556a5e-9b0b-470a-93fd-c338f2d4d5de",
+        "target": "003b8044-ce87-4040-b62d-6836aa8c7d4c",
+        "type": "default"
+      },
+      {
+        "id": "90a76922-0065-4c8d-97a4-0f986b63c777",
+        "source": "003b8044-ce87-4040-b62d-6836aa8c7d4c",
+        "target": "c1eb7df7-d0f1-4467-85ae-942c425582cb",
+        "type": "default"
+      },
+      {
+        "id": "fbc64530-f290-4c2f-b6f1-fa2eb53fdd9a",
+        "source": "c1eb7df7-d0f1-4467-85ae-942c425582cb",
+        "target": "f93d0f75-0e8e-4bc2-9890-998973026833",
+        "type": "default"
+      },
+      {
+        "id": "101e5f6d-e8f0-47d5-b165-535ed6eb1c1b",
+        "source": "f93d0f75-0e8e-4bc2-9890-998973026833",
+        "target": "86c8ad4e-745f-4b74-bb2a-0a668f56f2f3",
+        "type": "default"
+      },
+      {
+        "id": "9ecf1719-2335-46f0-b5cc-37d3e997fb27",
+        "source": "86c8ad4e-745f-4b74-bb2a-0a668f56f2f3",
+        "target": "e51b8164-b850-4beb-8aaa-b395d3faa368",
+        "type": "default"
+      },
+      {
+        "id": "bf610d38-bf46-45c0-a658-1e92fea21e1f",
+        "source": "e51b8164-b850-4beb-8aaa-b395d3faa368",
+        "target": "f08b6e0c-3646-4a6c-843b-c06a88683e32",
+        "type": "default"
+      },
+      {
+        "id": "dee801eb-b6a0-4911-99d6-c4464fcfc078",
+        "source": "f08b6e0c-3646-4a6c-843b-c06a88683e32",
+        "target": "9d21ac1e-f578-4a98-bff2-1d908b3ea591",
+        "type": "default"
+      },
+      {
+        "id": "278e0d81-1d8f-408c-b503-f2efc6913df0",
+        "source": "9d21ac1e-f578-4a98-bff2-1d908b3ea591",
+        "target": "e7d9b6d6-6b74-4683-b78b-fb24e8bc1bc8",
+        "type": "default"
+      },
+      {
+        "id": "c9d63c1f-cd42-4ea9-8702-8bd22f9ce20b",
+        "source": "e7d9b6d6-6b74-4683-b78b-fb24e8bc1bc8",
+        "target": "f3591598-8c5b-446d-9906-a0625b5a301c",
+        "type": "default"
+      },
+      {
+        "id": "478e4196-373c-47cd-aa86-f6a673d88561",
+        "source": "f3591598-8c5b-446d-9906-a0625b5a301c",
+        "target": "11edfbef-e6ea-4587-b60f-1eed371d1e6e",
+        "type": "default",
+        "sourceHandle": "retry"
+      },
+      {
+        "id": "9d9c473d-1e81-4f2f-8546-461d2a264027",
+        "source": "f3591598-8c5b-446d-9906-a0625b5a301c",
+        "target": "9b6e78ab-d5d0-4b0c-b1be-92f7001facb0",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "d1bc05dd-ce5c-4e33-b393-c08233ab9528",
+        "source": "9b6e78ab-d5d0-4b0c-b1be-92f7001facb0",
+        "target": "ae705387-aa26-496e-839c-168aea2d388e",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "2066e0ed-7603-4781-9340-9637e346aa93",
+        "source": "9b6e78ab-d5d0-4b0c-b1be-92f7001facb0",
+        "target": "b23a59b6-3c20-4bb4-9eb6-a80a4a0d6676",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "6f9ea936-f208-4046-a79f-3515e5d64bb3",
+        "source": "ae705387-aa26-496e-839c-168aea2d388e",
+        "target": "1fc4a1fc-7f76-4c2b-9300-df994fa6d6ac",
+        "type": "default"
+      },
+      {
+        "id": "5d621558-8cc8-480c-a645-3b9097f18c3a",
+        "source": "1fc4a1fc-7f76-4c2b-9300-df994fa6d6ac",
+        "target": "86c9dd13-efd1-439d-9014-63cce80efa4b",
+        "type": "default",
+        "sourceHandle": "retry"
+      },
+      {
+        "id": "48b2e2fa-1f72-4a38-b624-f63b8596abae",
+        "source": "1fc4a1fc-7f76-4c2b-9300-df994fa6d6ac",
+        "target": "184b6a81-581e-4dc8-a178-915b90a1871b",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "6661030d-bde1-4a56-b640-5a05abb06f93",
+        "source": "184b6a81-581e-4dc8-a178-915b90a1871b",
+        "target": "e444580c-9bd8-4241-a137-5294699eb34e",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "ba8d4efc-dddd-4701-9097-ef8790363b4b",
+        "source": "184b6a81-581e-4dc8-a178-915b90a1871b",
+        "target": "b77964eb-4a01-4460-b940-4d7f58419745",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "d9bcd182-0148-4318-86dd-f79f692d89ca",
+        "source": "b77964eb-4a01-4460-b940-4d7f58419745",
+        "target": "7bda5f33-ec5e-4546-ac49-159b29f2823f",
+        "type": "default"
+      },
+      {
+        "id": "fdc29c59-ddf0-4376-b023-a91fc040aac8",
+        "source": "7bda5f33-ec5e-4546-ac49-159b29f2823f",
+        "target": "89b5e61c-69be-4b9d-977d-1ffadfb7c557",
+        "type": "default"
+      },
+      {
+        "id": "971893de-a34a-4b97-a224-d93a8635385e",
+        "source": "89b5e61c-69be-4b9d-977d-1ffadfb7c557",
+        "target": "759b37c9-07b8-48f8-bdca-17220d1025be",
+        "type": "default"
+      },
+      {
+        "id": "616d6b8a-574a-4543-ab62-f18dec3c75bc",
+        "source": "759b37c9-07b8-48f8-bdca-17220d1025be",
+        "target": "d6bf0c38-aa3a-41d0-8a10-91d671f45c59",
+        "type": "default"
+      },
+      {
+        "id": "5476f5e8-8d4e-45ca-94c0-47c5302a4a39",
+        "source": "d6bf0c38-aa3a-41d0-8a10-91d671f45c59",
+        "target": "0a3877b3-63ba-4f06-81bd-5eef7d44f0f0",
+        "type": "default"
+      },
+      {
+        "id": "43ff09ba-db40-4caa-a7a8-3446d332c54f",
+        "source": "0a3877b3-63ba-4f06-81bd-5eef7d44f0f0",
+        "target": "fe2b1a7a-26b0-4c9e-b65b-f0fb042d0163",
+        "type": "default"
+      },
+      {
+        "id": "c0c7a5f5-84c6-4e1d-88ae-6589c5395f35",
+        "source": "fe2b1a7a-26b0-4c9e-b65b-f0fb042d0163",
+        "target": "64806ec7-9f2b-4972-8c83-5fbb5c01aacd",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "w2_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "w2_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "trace": {
+      "value": "a1\"b",
+      "type": "string",
+      "scope": "test"
+    },
+    "txn": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "txn_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "who": {
+      "value": "ann or bob",
+      "type": "string",
+      "scope": "test"
+    },
+    "esc_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "esc_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "limit": {
+      "value": 800,
+      "type": "integer",
+      "scope": "test"
+    },
+    "dsl_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "dsl_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "pasted_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pasted_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "lvl": {
+      "value": "INFO",
+      "type": "string",
+      "scope": "test"
+    },
+    "expr_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "expr_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "byid_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "byid_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "shape_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "shape_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "source_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "source_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "sort_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "sort_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "page_all_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "page_all_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "page_cut_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "page_cut_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "today_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "today_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "others_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "others_total": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "test_start": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "found_a": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "wait_a_passed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "wait_a_elapsed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "final_a": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "found_b": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "wait_b_passed": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "wait_b_elapsed": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "final_b": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "logs_b": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "logs_total_b": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -1,0 +1,311 @@
+{
+  "name": "Parallel Assert-In-Branch E2E",
+  "version": "1.0.0",
+  "description": "One Parallel whose first branch holds a failing Assert with Fail Current Scope on: the branch carries on, the exit lane still runs, and the run ends failed.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-as-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'as-start'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-as",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Assert in a branch",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "checked"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "other"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "assert-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 260
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Failing assert",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "1 == 2",
+                  "id": "assert-fail-a1"
+                }
+              ],
+              "mode": "split",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-as-tail",
+        "type": "workflowNode",
+        "position": {
+          "x": 240,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Checked tail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'as-tail'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-as-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 440,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Other branch",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'as-sibling'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-as-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'as-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-as-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'as-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-as-start",
+        "source": "start-node",
+        "target": "log-as-before",
+        "type": "default"
+      },
+      {
+        "id": "e-as-before",
+        "source": "log-as-before",
+        "target": "par-as",
+        "type": "default"
+      },
+      {
+        "id": "e-as-b1",
+        "source": "par-as",
+        "target": "assert-fail",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-as-tail",
+        "source": "assert-fail",
+        "target": "log-as-tail",
+        "type": "default",
+        "sourceHandle": "fail"
+      },
+      {
+        "id": "e-as-b2",
+        "source": "par-as",
+        "target": "log-as-b",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-as-then",
+        "source": "par-as",
+        "target": "log-as-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-as-after",
+        "source": "log-as-then",
+        "target": "log-as-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-03T00:00:00.000000",
+  "updated_at": "2026-08-03T00:00:00.000000"
+}

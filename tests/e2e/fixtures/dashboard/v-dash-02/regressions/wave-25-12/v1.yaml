@@ -1,0 +1,29 @@
+id: wave-25-12
+name: WAVE 25.12
+version: 1.0.0
+description: WAVE 25.12 release regression test suite
+author: wave-system
+tags:
+  - regression
+  - release
+  - "25.12"
+suites:
+  - suite_id: healthchecks
+    suite_version: 1.0.0
+    order: 1
+    parameters: {}
+  - suite_id: tls-validation
+    suite_version: 1.0.0
+    order: 2
+    parameters: {}
+  - suite_id: gui-smoke-tests
+    suite_version: 1.0.0
+    order: 3
+    parameters: {}
+  - suite_id: api-integration-suite
+    suite_version: 1.0.0
+    order: 4
+    parameters: {}
+variables: {}
+created_at: "2025-12-22T09:55:00Z"
+updated_at: "2025-12-22T09:55:00Z"

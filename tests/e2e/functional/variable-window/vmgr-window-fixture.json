@@ -1,0 +1,644 @@
+{
+  "name": "v-vmgr-window-functional",
+  "version": "1.0.0",
+  "description": "Test variables edited through the one window: a rename read by an expression and a template, a retype, a Set to null, a staged Current value, Mark as secret on and off, an Expression changed to Literal, float / integer / boolean fields, a 64-character name, and a Function local; each reader logs its value.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "1d9f2cf4-5bbb-42f4-800c-fdd8de9a6dbf",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 100
+        },
+        "data": {
+          "label": "Read Item",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the renamed variable in an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"item={item_id}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1bc626ed-9db1-483a-8094-94621d649ae7",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 210
+        },
+        "data": {
+          "label": "Item Template",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the renamed variable in a template",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "message"
+          ],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "tmpl item={{ item_id }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a88a51b6-aca5-4ea6-8b2f-b94d4113e3df",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 320
+        },
+        "data": {
+          "label": "Read Retyped",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the retyped variable",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"retyped={retyped}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6883c291-8b4f-41f2-bfad-b79702a55b72",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 430
+        },
+        "data": {
+          "label": "Print Maybe",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints the variable set to null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "maybe",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ec86af5e-0f22-4b64-bec0-809e31ec10af",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 540
+        },
+        "data": {
+          "label": "Read Staged",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the variable given a Current value",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"staged={staged}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7ecad381-cbc2-4ae9-81d5-4f7985f11ca4",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 650
+        },
+        "data": {
+          "label": "Print Token",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints the variable marked as secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "token",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "52d5d10f-b5a9-4186-b276-81cfe5298245",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 760
+        },
+        "data": {
+          "label": "Read Old Secret",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the variable no longer secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"old_secret=[{old_secret}]\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2e6b2ccb-daa1-4b06-b3e8-210e0c288088",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 870
+        },
+        "data": {
+          "label": "Read Calc",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the variable changed to Literal",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"calc={calc}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "428525c3-06d4-4c5f-b84d-e7013bbbec1f",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 980
+        },
+        "data": {
+          "label": "Read Numbers",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the float and the integer",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"ratio={ratio} big={big_count}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e2044e7d-f16c-4dfa-a5fb-f8458e49b561",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 1090
+        },
+        "data": {
+          "label": "Print Flag",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Prints the boolean",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "flag",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c9277ee8-8f60-4225-bfa1-21eccb3c1283",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 1200
+        },
+        "data": {
+          "label": "Read Long",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Reads the 64-character name",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"long={a_long_variable_name_that_fills_every_one_of_its_sixty_four_char}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f8fa8daf-5b50-4377-97d6-2cf6fba917c4",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 1310
+        },
+        "data": {
+          "label": "Window_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Window_Fn",
+            "description": "Reads its own local",
+            "inputs": [],
+            "outputs": [],
+            "variables": [
+              {
+                "id": "var-fn-count",
+                "name": "fn_count",
+                "type": "integer",
+                "value": 5
+              }
+            ],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "d1fa4c34-886b-4065-8d2b-0de0d56a9526",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 120,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Read Fn Count",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Reads the Function local",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "f\"fn_count={fn_count}\"",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e1",
+                  "source": "start-node",
+                  "target": "d1fa4c34-886b-4065-8d2b-0de0d56a9526",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ec28eef4-98b9-47a7-b2dc-260f755c6e10",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 1420
+        },
+        "data": {
+          "label": "Window Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Closes the run",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "window-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "1d9f2cf4-5bbb-42f4-800c-fdd8de9a6dbf",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "1d9f2cf4-5bbb-42f4-800c-fdd8de9a6dbf",
+        "target": "1bc626ed-9db1-483a-8094-94621d649ae7",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "1bc626ed-9db1-483a-8094-94621d649ae7",
+        "target": "a88a51b6-aca5-4ea6-8b2f-b94d4113e3df",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "a88a51b6-aca5-4ea6-8b2f-b94d4113e3df",
+        "target": "6883c291-8b4f-41f2-bfad-b79702a55b72",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "6883c291-8b4f-41f2-bfad-b79702a55b72",
+        "target": "ec86af5e-0f22-4b64-bec0-809e31ec10af",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "ec86af5e-0f22-4b64-bec0-809e31ec10af",
+        "target": "7ecad381-cbc2-4ae9-81d5-4f7985f11ca4",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "7ecad381-cbc2-4ae9-81d5-4f7985f11ca4",
+        "target": "52d5d10f-b5a9-4186-b276-81cfe5298245",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "52d5d10f-b5a9-4186-b276-81cfe5298245",
+        "target": "2e6b2ccb-daa1-4b06-b3e8-210e0c288088",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "2e6b2ccb-daa1-4b06-b3e8-210e0c288088",
+        "target": "428525c3-06d4-4c5f-b84d-e7013bbbec1f",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "428525c3-06d4-4c5f-b84d-e7013bbbec1f",
+        "target": "e2044e7d-f16c-4dfa-a5fb-f8458e49b561",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "e2044e7d-f16c-4dfa-a5fb-f8458e49b561",
+        "target": "c9277ee8-8f60-4225-bfa1-21eccb3c1283",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "c9277ee8-8f60-4225-bfa1-21eccb3c1283",
+        "target": "f8fa8daf-5b50-4377-97d6-2cf6fba917c4",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "f8fa8daf-5b50-4377-97d6-2cf6fba917c4",
+        "target": "ec28eef4-98b9-47a7-b2dc-260f755c6e10",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "item_id": {
+      "value": 7,
+      "type": "integer",
+      "scope": "test"
+    },
+    "retyped": {
+      "value": "abc",
+      "type": "string",
+      "scope": "test"
+    },
+    "maybe": {
+      "value": "present",
+      "type": "string",
+      "scope": "test"
+    },
+    "staged": {
+      "value": 1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "token": {
+      "value": "tok-canary-71x",
+      "type": "string",
+      "scope": "test"
+    },
+    "old_secret": {
+      "value": "old-canary-93z",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "calc": {
+      "value": "2 + 3",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    },
+    "ratio": {
+      "value": "1.5",
+      "type": "float",
+      "scope": "test"
+    },
+    "big_count": {
+      "value": 3,
+      "type": "integer",
+      "scope": "test"
+    },
+    "flag": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "a_long_variable_name_that_fills_every_one_of_its_sixty_four_char": {
+      "value": 1,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

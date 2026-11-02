@@ -1,0 +1,311 @@
+{
+  "name": "Tracked Stop Settle E2E Test",
+  "version": "1.0.0",
+  "description": "A Parallel section whose first lane holds a 30s Delay and whose second lane holds a For loop with a 30s Delay in its body. Each in-flight Block is preceded by a marker write so a Stop can be pressed only once both nesting sites are genuinely in flight.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-opening",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 40 },
+        "data": {
+          "label": "Opening Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs to completion before the Stop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'stop-settle-open'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "par-stop",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 140 },
+        "data": {
+          "label": "Stop Section",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Two lanes, both in flight at the Stop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                { "id": "branch_1", "name": "lane" },
+                { "id": "branch_2", "name": "loop" }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 224, "height": 62 }
+      },
+      {
+        "id": "vs-lane",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Lane Marker",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Lane readiness marker",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "lane_marker": "in-lane"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-lane",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Lane Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "In flight inside a Parallel lane",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 30000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-stop",
+        "type": "workflowNode",
+        "position": { "x": 760, "y": 260 },
+        "data": {
+          "label": "Stop Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 1,
+              "start": 0,
+              "end": 0
+            },
+            "outputBindings": {
+              "index": "loop_index"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "vs-body",
+        "type": "workflowNode",
+        "position": { "x": 760, "y": 360 },
+        "data": {
+          "label": "Body Marker",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Loop body readiness marker",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "body_marker": "in-body"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-body",
+        "type": "workflowNode",
+        "position": { "x": 760, "y": 460 },
+        "data": {
+          "label": "Body Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "In flight inside a loop body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 30000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after-loop",
+        "type": "workflowNode",
+        "position": { "x": 980, "y": 360 },
+        "data": {
+          "label": "After Loop",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Never reached before the Stop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'stop-settle-after-loop'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": 600, "y": 560 },
+        "data": {
+          "label": "After Section",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Never reached before the Stop",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'stop-settle-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "log-opening", "type": "default" },
+      { "id": "e-open-par", "source": "log-opening", "target": "par-stop", "type": "default" },
+      {
+        "id": "e-par-lane",
+        "source": "par-stop",
+        "target": "vs-lane",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      { "id": "e-lane-delay", "source": "vs-lane", "target": "delay-lane", "type": "default" },
+      {
+        "id": "e-par-loop",
+        "source": "par-stop",
+        "target": "for-stop",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-loop-body",
+        "source": "for-stop",
+        "target": "vs-body",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      { "id": "e-body-delay", "source": "vs-body", "target": "delay-body", "type": "default" },
+      {
+        "id": "e-loop-then",
+        "source": "for-stop",
+        "target": "log-after-loop",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-par-then",
+        "source": "par-stop",
+        "target": "log-after",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "lane_marker": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "body_marker": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "loop_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

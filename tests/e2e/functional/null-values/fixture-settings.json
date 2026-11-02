@@ -1,0 +1,1447 @@
+{
+  "name": "V-NULL-SETTINGS-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "Block settings given null by an expression fail and name the setting (SSH Tunnel Local Port, a K8s Get namespace), each caught by a Try/Catch; an HTTP header entry given null is sent empty; the same settings left blank take their default or fallback. Logs of a null and of boolean variables, and of expressions giving a whole integer, a list holding null and a map, print WAVE's print form.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "0c5ec07f-2cba-492f-878e-20128e07b722",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Print Null Variable",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs a string variable that holds null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "nothing",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3f012fbe-9fea-4bcf-8331-f8f9a308abfa",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 100
+        },
+        "data": {
+          "label": "Print Integer Expression",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs an expression that gives a whole integer",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "40 + 2",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2b5aaa7f-a86e-4728-b3ae-bca56e50ae09",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 100
+        },
+        "data": {
+          "label": "Print List Expression",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs an expression that gives a list holding null",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "[1, None]",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eb075b3c-6c18-44b6-a058-8a152b64039d",
+        "type": "workflowNode",
+        "position": {
+          "x": 860,
+          "y": 100
+        },
+        "data": {
+          "label": "Print Map Expression",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs an expression that gives a map",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "{'host': 'web-1', 'port': None}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0128983d-7dd2-4625-97fa-2ac03632d3f5",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 210
+        },
+        "data": {
+          "label": "Guard True Log",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Keeps the run going if the Log is refused",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "log_true_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "18165d21-cfd6-4c52-9a2c-075cd31ac2b4",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 210
+        },
+        "data": {
+          "label": "Print True Variable",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs a boolean variable that holds true",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "flag_on",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "51958f38-48ac-4dd2-9724-98049ceb006c",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 210
+        },
+        "data": {
+          "label": "True Log Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Log was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'true-log-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "be669769-e03c-4c0c-8332-d4791e9e747e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 320
+        },
+        "data": {
+          "label": "Guard False Log",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Keeps the run going if the Log is refused",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "log_false_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cc39775b-f1cb-445b-a30c-4c9e85ed55cb",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 320
+        },
+        "data": {
+          "label": "Print False Variable",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Logs a boolean variable that holds false",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "flag_off",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5521a9e0-11ec-4565-80ca-ecd74abe1e0d",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 320
+        },
+        "data": {
+          "label": "False Log Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Log was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'false-log-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "82a1324c-5128-4e60-9095-e2685273b76e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 430
+        },
+        "data": {
+          "label": "Open SSH Session",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "SSH session the tunnels ride",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "password"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "ssh_pwd",
+              "host_key_verification": "disabled"
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "49bf8cde-cf19-4296-8626-e0ff8a615c6a",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 540
+        },
+        "data": {
+          "label": "Guard Null Local Port",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the refused Local Port",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "port_null_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "090bdd7e-2a40-47aa-8f40-957e93b6a193",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 540
+        },
+        "data": {
+          "label": "Tunnel Null Local Port",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Local Port given None by an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "local_port"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": "None",
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_port_null",
+              "local_port": "lport_port_null"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4e6f5c45-9d0c-4518-903c-5d1654119a16",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 540
+        },
+        "data": {
+          "label": "Port Null Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Local Port was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'port-null-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9b5e13e8-b2fa-47a6-aa28-c37386d9cc6d",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 650
+        },
+        "data": {
+          "label": "Tunnel Blank Local Port",
+          "elementType": "ssh-tunnel-open",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Local Port expression left blank",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id",
+            "local_port"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "local_port": "",
+              "remote_host": "http-target",
+              "remote_port": 9444
+            },
+            "outputBindings": {
+              "tunnel_id": "tid_blank",
+              "local_port": "lport_blank"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "681fa7ec-e8bf-4d28-bc1c-3c2ff3728a67",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 760
+        },
+        "data": {
+          "label": "Get Through Blank Tunnel",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "GET the health target through the auto-assigned port",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "url"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "f'http://127.0.0.1:{lport_blank}/health'",
+              "method": "GET",
+              "timeout": 10,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "verify_ssl": true
+            },
+            "outputBindings": {
+              "status_code": "status_blank",
+              "body": "body_blank"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "94606637-db48-4f61-9444-7c69b84aac8e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 870
+        },
+        "data": {
+          "label": "Close SSH Session",
+          "elementType": "ssh-session-close",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Closes the session and its tunnels",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "868b9f58-49ac-4db3-a3d3-53ecdae19e05",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 980
+        },
+        "data": {
+          "label": "Guard Null Header",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Would catch a refused header entry; HTTP Request sends a null one empty",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "hdr_null_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "37dbebcf-3d40-467e-9212-ae2fd576936f",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 980
+        },
+        "data": {
+          "label": "Echo Null Header",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Header entry given a variable that holds null is sent empty",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "headers.X-Null"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "verify_ssl": false,
+              "headers": {
+                "X-Null": "hdr_none",
+                "X-Set": "set-value"
+              }
+            },
+            "outputBindings": {
+              "status_code": "hdr_null_status",
+              "body": "hdr_null_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6d82370c-3eb8-4bef-af05-c87bdddbc4ba",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 980
+        },
+        "data": {
+          "label": "Header Null Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only if the header entry were refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'header-null-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3fe1263d-7089-49ed-89d8-d76250e2d2f4",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1090
+        },
+        "data": {
+          "label": "Echo Empty Headers",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Sends an empty header and a header expression giving empty text",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "headers.X-Blank"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "verify_ssl": false,
+              "headers": {
+                "X-Empty": "",
+                "X-Blank": "''",
+                "X-Set": "set-value"
+              }
+            },
+            "outputBindings": {
+              "status_code": "echo_status",
+              "body": "echo_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "68f79073-b29c-453b-a47a-893de2a59f7e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1200
+        },
+        "data": {
+          "label": "Connect Kwok",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session whose namespace is the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NAMESPACE__",
+              "timeout": 30,
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b6856b62-24e0-4b4b-bb61-9daa847c95cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1310
+        },
+        "data": {
+          "label": "Guard Null Namespace",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the refused namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "ns_null_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d8781c48-be0f-4caf-a4b2-e11f56dbb9cc",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 1310
+        },
+        "data": {
+          "label": "Get Pod Null Namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Namespace given None by an expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session",
+            "namespace"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "namespace": "None",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "ns_null_names"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2d10736a-efae-410a-817b-3c3241ffbeb1",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 1310
+        },
+        "data": {
+          "label": "Namespace Null Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the namespace was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'namespace-null-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c0d18036-9672-4270-9716-bf09fc8e88dd",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1420
+        },
+        "data": {
+          "label": "Get Pod Blank Namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Namespace left blank falls back to the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "k8s_session",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "namespace": "",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "ns_blank_names",
+              "count": "ns_blank_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c47d2d97-df44-4a8d-8e47-ac7993cfb84a",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1530
+        },
+        "data": {
+          "label": "Gateway Blank Leg",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Runs its body on the SSH host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "e6f60f4a-4070-4f18-ab61-74250b1ddb4a",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 1530
+        },
+        "data": {
+          "label": "Connect Gateway",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session through the plain-HTTP gateway, run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "token"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "http://k8s-gateway:8080/k8s/clusters/wave",
+              "namespace": "__NAMESPACE__",
+              "timeout": 30,
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "gw_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "1caf2247-17c2-432e-8131-18362a19d092",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 1640
+        },
+        "data": {
+          "label": "Gateway Get Blank Namespace",
+          "elementType": "k8s-get",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Namespace left blank falls back to the session",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "session": "gw_session",
+              "resource_type": "default",
+              "kind": "Pod",
+              "search_by": "name",
+              "name": "wave-pod-labeled",
+              "namespace": "",
+              "output_format": "map"
+            },
+            "outputBindings": {
+              "names": "gw_blank_names",
+              "count": "gw_blank_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fb66bd99-a8c7-40aa-a5c8-96714f183b6d",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1750
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Last block of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-settings-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "98ae30b4-1044-4dda-a328-13282f40d283",
+        "source": "start-node",
+        "target": "0c5ec07f-2cba-492f-878e-20128e07b722",
+        "type": "default"
+      },
+      {
+        "id": "70122b30-16f8-4144-abe0-f187f6d124c7",
+        "source": "0c5ec07f-2cba-492f-878e-20128e07b722",
+        "target": "3f012fbe-9fea-4bcf-8331-f8f9a308abfa",
+        "type": "default"
+      },
+      {
+        "id": "41433938-eebb-4dfb-abbb-75f1e0e65cc2",
+        "source": "3f012fbe-9fea-4bcf-8331-f8f9a308abfa",
+        "target": "2b5aaa7f-a86e-4728-b3ae-bca56e50ae09",
+        "type": "default"
+      },
+      {
+        "id": "649f7e86-1d97-47a8-a810-4462337026e6",
+        "source": "2b5aaa7f-a86e-4728-b3ae-bca56e50ae09",
+        "target": "eb075b3c-6c18-44b6-a058-8a152b64039d",
+        "type": "default"
+      },
+      {
+        "id": "68596f33-d8dc-43be-8b14-f443131f075e",
+        "source": "eb075b3c-6c18-44b6-a058-8a152b64039d",
+        "target": "0128983d-7dd2-4625-97fa-2ac03632d3f5",
+        "type": "default"
+      },
+      {
+        "id": "c9a0a5cf-4c43-493b-9bec-71b75fea98d3",
+        "source": "0128983d-7dd2-4625-97fa-2ac03632d3f5",
+        "target": "18165d21-cfd6-4c52-9a2c-075cd31ac2b4",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "dde2d39b-92f1-4547-a9e8-eb9b87c7c9da",
+        "source": "0128983d-7dd2-4625-97fa-2ac03632d3f5",
+        "target": "51958f38-48ac-4dd2-9724-98049ceb006c",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "c5698c02-c1fa-4e78-9cae-506900a31024",
+        "source": "0128983d-7dd2-4625-97fa-2ac03632d3f5",
+        "target": "be669769-e03c-4c0c-8332-d4791e9e747e",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "ad191eef-30e5-4fc1-a8fd-d48a6c61d90c",
+        "source": "be669769-e03c-4c0c-8332-d4791e9e747e",
+        "target": "cc39775b-f1cb-445b-a30c-4c9e85ed55cb",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "df362e8d-f71a-41b9-92a0-540f95f57676",
+        "source": "be669769-e03c-4c0c-8332-d4791e9e747e",
+        "target": "5521a9e0-11ec-4565-80ca-ecd74abe1e0d",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "5c966d1e-cec8-41b3-a4f5-7ec164697eb0",
+        "source": "be669769-e03c-4c0c-8332-d4791e9e747e",
+        "target": "82a1324c-5128-4e60-9095-e2685273b76e",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "09a6887e-b977-4e46-9e7c-dede7979dd28",
+        "source": "82a1324c-5128-4e60-9095-e2685273b76e",
+        "target": "49bf8cde-cf19-4296-8626-e0ff8a615c6a",
+        "type": "default"
+      },
+      {
+        "id": "bb10e1b2-b1fa-4421-bf93-7dcfb08b22be",
+        "source": "49bf8cde-cf19-4296-8626-e0ff8a615c6a",
+        "target": "090bdd7e-2a40-47aa-8f40-957e93b6a193",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "179fa588-ea1a-4138-aa3b-4ae7b066c928",
+        "source": "49bf8cde-cf19-4296-8626-e0ff8a615c6a",
+        "target": "4e6f5c45-9d0c-4518-903c-5d1654119a16",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "086feeed-1a72-41fc-b965-0a8ebb220df4",
+        "source": "49bf8cde-cf19-4296-8626-e0ff8a615c6a",
+        "target": "9b5e13e8-b2fa-47a6-aa28-c37386d9cc6d",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "defc4dde-d85a-4c17-8891-d499a642bb0e",
+        "source": "9b5e13e8-b2fa-47a6-aa28-c37386d9cc6d",
+        "target": "681fa7ec-e8bf-4d28-bc1c-3c2ff3728a67",
+        "type": "default"
+      },
+      {
+        "id": "747858d8-7ff7-466a-877f-314741ec3821",
+        "source": "681fa7ec-e8bf-4d28-bc1c-3c2ff3728a67",
+        "target": "868b9f58-49ac-4db3-a3d3-53ecdae19e05",
+        "type": "default"
+      },
+      {
+        "id": "a3de2ea8-9c55-4b7c-8efa-2bb1738dfe0f",
+        "source": "868b9f58-49ac-4db3-a3d3-53ecdae19e05",
+        "target": "37dbebcf-3d40-467e-9212-ae2fd576936f",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "d797844d-9b82-458a-8b88-46892ab19170",
+        "source": "868b9f58-49ac-4db3-a3d3-53ecdae19e05",
+        "target": "6d82370c-3eb8-4bef-af05-c87bdddbc4ba",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "9cbbfcbb-cd3e-4ac3-bf24-ed2e4e4e8e17",
+        "source": "868b9f58-49ac-4db3-a3d3-53ecdae19e05",
+        "target": "3fe1263d-7089-49ed-89d8-d76250e2d2f4",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "37166995-9780-49c7-8377-51f9f18f31ce",
+        "source": "3fe1263d-7089-49ed-89d8-d76250e2d2f4",
+        "target": "68f79073-b29c-453b-a47a-893de2a59f7e",
+        "type": "default"
+      },
+      {
+        "id": "4edde112-a20d-48cf-be1e-e7c32de7bd32",
+        "source": "68f79073-b29c-453b-a47a-893de2a59f7e",
+        "target": "b6856b62-24e0-4b4b-bb61-9daa847c95cc",
+        "type": "default"
+      },
+      {
+        "id": "0476e206-eeea-478b-af0e-b35696178552",
+        "source": "b6856b62-24e0-4b4b-bb61-9daa847c95cc",
+        "target": "d8781c48-be0f-4caf-a4b2-e11f56dbb9cc",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e59f9783-a093-497b-8bcc-ae4d3e559adb",
+        "source": "b6856b62-24e0-4b4b-bb61-9daa847c95cc",
+        "target": "2d10736a-efae-410a-817b-3c3241ffbeb1",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "dcb988b2-b95d-46b6-a280-9857166caf21",
+        "source": "b6856b62-24e0-4b4b-bb61-9daa847c95cc",
+        "target": "c0d18036-9672-4270-9716-bf09fc8e88dd",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "6bad6058-61c6-4d1c-a464-c5d1386f63a0",
+        "source": "c0d18036-9672-4270-9716-bf09fc8e88dd",
+        "target": "c47d2d97-df44-4a8d-8e47-ac7993cfb84a",
+        "type": "default"
+      },
+      {
+        "id": "7ccf078a-837d-43c1-9508-1ae67a514f3e",
+        "source": "c47d2d97-df44-4a8d-8e47-ac7993cfb84a",
+        "target": "e6f60f4a-4070-4f18-ab61-74250b1ddb4a",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "4d9cf1d7-1903-43de-b68a-54094e8387b2",
+        "source": "e6f60f4a-4070-4f18-ab61-74250b1ddb4a",
+        "target": "1caf2247-17c2-432e-8131-18362a19d092",
+        "type": "default"
+      },
+      {
+        "id": "89b2f327-03d1-4a48-803c-fe5b85c2212c",
+        "source": "c47d2d97-df44-4a8d-8e47-ac7993cfb84a",
+        "target": "94606637-db48-4f61-9444-7c69b84aac8e",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "ca0ad89f-c653-454d-b55d-caa2c1a787d5",
+        "source": "94606637-db48-4f61-9444-7c69b84aac8e",
+        "target": "fb66bd99-a8c7-40aa-a5c8-96714f183b6d",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "nothing": {
+      "type": "string",
+      "scope": "test"
+    },
+    "flag_on": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "flag_off": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "log_true_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "log_false_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "ssh_pwd": {
+      "value": "wave-secret",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "sid": {
+      "type": "string",
+      "scope": "test"
+    },
+    "tid_port_null": {
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_port_null": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "port_null_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "tid_blank": {
+      "type": "string",
+      "scope": "test"
+    },
+    "lport_blank": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "status_blank": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "body_blank": {
+      "type": "string",
+      "scope": "test"
+    },
+    "hdr_none": {
+      "type": "string",
+      "scope": "test"
+    },
+    "hdr_null_status": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "hdr_null_body": {
+      "type": "string",
+      "scope": "test"
+    },
+    "hdr_null_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "echo_status": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "echo_body": {
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_ca": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "k8s_admin_token": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "k8s_session": {
+      "type": "string",
+      "scope": "test"
+    },
+    "ns_null_names": {
+      "type": "array",
+      "scope": "test"
+    },
+    "ns_null_err": {
+      "type": "map",
+      "scope": "test"
+    },
+    "ns_blank_names": {
+      "type": "array",
+      "scope": "test"
+    },
+    "ns_blank_count": {
+      "type": "integer",
+      "scope": "test"
+    },
+    "gw_session": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "gw_blank_names": {
+      "type": "array",
+      "scope": "test"
+    },
+    "gw_blank_count": {
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

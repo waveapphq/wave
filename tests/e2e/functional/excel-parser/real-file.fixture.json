@@ -1,0 +1,526 @@
+{
+  "name": "Excel Parser - Read a workbook authored outside WAVE",
+  "version": "1.0.0",
+  "description": "Two workbooks produced by LibreOffice Calc are uploaded as this test's own test data, then read: typed columns, ISO dates, a sheet chosen by position with a range and an offset header row, an uncomputed formula reported in errors, and the macro-enabled format.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "read-people",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read People",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "testdata://sample_workbook.xlsx",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "people",
+              "schema": "people_schema",
+              "row_count": "people_rows",
+              "sheets": "book_sheets"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-people-schema",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log People Schema",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-people-schema=' + people_schema[0]['name'] + ':' + people_schema[0]['type'] + ',' + people_schema[1]['name'] + ':' + people_schema[1]['type'] + ',' + people_schema[2]['name'] + ':' + people_schema[2]['type'] + ',' + people_schema[3]['name'] + ':' + people_schema[3]['type'] + ',' + people_schema[4]['name'] + ':' + people_schema[4]['type']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-people-row",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log People Row",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-people-row0=' + str(people.col('name')[0]) + '|' + str(people.col('age')[0]) + '|' + str(people.col('score')[0]) + '|' + str(people.col('active')[0]) + '|' + str(people.col('notes')[0])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-people-book",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 600 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log People Book",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-people-rows=' + str(people_rows) + '-sheets-' + ','.join(book_sheets)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-dates",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 700 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Dates",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "testdata://sample_workbook.xlsx",
+              "sheet": "Dates",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "dates"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-dates",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Dates",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-dates=' + str(dates.col('joined')[0]) + '|' + str(dates.col('last_seen')[1]) + '|' + str(dates.col('shift')[0])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-offset",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 900 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Offset",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "testdata://sample_workbook.xlsx",
+              "sheet": "2",
+              "range": "B3:D6",
+              "has_header": true,
+              "header_row": 3,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "offset"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-offset",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1000 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Offset",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-offset=' + ','.join(offset.col('sku')) + '|qty2=' + str(offset.col('qty')[2]) + '|price0=' + str(offset.col('price')[0]) + '|rows=' + str(len(offset))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-formulas",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1100 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Formulas",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "testdata://sample_workbook.xlsx",
+              "sheet": "Formulas",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "formulas",
+              "errors": "formula_errors",
+              "success": "formula_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-formulas",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Formulas",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-formula-ok=' + str(formula_ok) + '|errors=' + str(len(formula_errors)) + '|at=' + str(formula_errors[0]['column']) + '@' + str(formula_errors[0]['row']) + '|broken=' + str(formulas.col('broken')[0]) + '|doubled0=' + str(formulas.col('doubled')[0])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "read-macro",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Macro Book",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "testdata://macro_book.xlsm",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "parts",
+              "sheets": "macro_sheets"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-macro",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1400 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Macro Book",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-macro=' + ','.join(macro_sheets) + '|' + ','.join(parts.col('part')) + '|' + str(parts.col('count')[1])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e3",
+        "source": "start-node",
+        "target": "read-people",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "read-people",
+        "target": "log-people-schema",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-people-schema",
+        "target": "log-people-row",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "log-people-row",
+        "target": "log-people-book",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-people-book",
+        "target": "read-dates",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "read-dates",
+        "target": "log-dates",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "log-dates",
+        "target": "read-offset",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "read-offset",
+        "target": "log-offset",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "log-offset",
+        "target": "read-formulas",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "read-formulas",
+        "target": "log-formulas",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "log-formulas",
+        "target": "read-macro",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "read-macro",
+        "target": "log-macro",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "people": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "people_schema": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "people_rows": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "book_sheets": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "dates": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "offset": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "formulas": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "formula_errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    },
+    "formula_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "parts": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "macro_sheets": {
+      "value": [],
+      "type": "array",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

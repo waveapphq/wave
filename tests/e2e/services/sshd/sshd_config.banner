@@ -1,0 +1,12 @@
+# WAVE E2E real-service SSH server - stdout banner on every exec channel (test-only).
+# Proves a host whose output carries noise before the command's own output.
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AllowTcpForwarding yes
+PermitRootLogin no
+X11Forwarding no
+PrintMotd no
+ForceCommand /usr/local/bin/wave-banner-shim
+Subsystem sftp /usr/lib/openssh/sftp-server

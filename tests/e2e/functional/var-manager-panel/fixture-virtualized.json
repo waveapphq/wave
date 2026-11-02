@@ -1,0 +1,65 @@
+{
+  "name": "V-VMGR Virtualized Panel",
+  "version": "1.0.0",
+  "description": "Seven declared variables and one HTTP node whose template URL references two of them inside {{ }} and names a third as literal path text, so the panel's Used / Unused verdict is decided by the template markers alone; the spec's loader pads this map to 62 declarations to push the Variable Manager past its virtualization threshold.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "vm1-http",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 120 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Template URL",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["url"],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/vm1_003_literal/{{ vm1_001_owner }}/{{ vm1_002_suffix }}.txt",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": { "final_url": "vm1_007_bound" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [{ "id": "e1", "source": "start-node", "target": "vm1-http", "type": "default" }]
+  },
+  "variables": {
+    "vm1_001_owner": { "value": "ada", "type": "string", "scope": "test" },
+    "vm1_002_suffix": { "value": "notes", "type": "string", "scope": "test" },
+    "vm1_003_literal": { "value": "never-referenced", "type": "string", "scope": "test" },
+    "vm1_004_lonely": { "value": "never-mentioned", "type": "string", "scope": "test" },
+    "vm1_005_secret": {
+      "value": "vm1-secret-value",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "vm1_006_expr": {
+      "value": "41 + 1",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    },
+    "vm1_007_bound": { "value": "unbound", "type": "string", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-09-03T00:00:00.000000",
+  "updated_at": "2026-09-03T00:00:00.000000"
+}

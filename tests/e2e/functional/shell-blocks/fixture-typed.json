@@ -1,0 +1,99 @@
+{
+  "name": "SH-4 __TOKEN__",
+  "version": "1.0.0",
+  "description": "A Shell Script binds typed variable exports (integer, boolean, array, map), marks one export secret and leaves one export unbound.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-typed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Typed exports",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "COUNT=7\nOK=yes\nLIST=(a \"b c\" \"\")\ndeclare -A M=([k1]=v1 [k2]=\"v 2\")\nP=shsec; TOKEN=\"${P}-tok-__TOKEN__\"\nP=spa; SPARE=\"${P}re-__TOKEN__\"",
+              "script_variables": ["COUNT", "OK", "LIST", "M", "TOKEN", "SPARE"]
+            },
+            "outputBindings": {
+              "COUNT": "count_v",
+              "OK": "ok_v",
+              "LIST": "list_v",
+              "M": "map_v",
+              "TOKEN": "token_v"
+            },
+            "outputSecretFields": ["TOKEN"],
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-4-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "ws-hold" },
+      { "id": "e-hold-typed", "source": "ws-hold", "target": "sh-typed" },
+      { "id": "e-typed-done", "source": "sh-typed", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "count_v": { "value": 0, "type": "integer", "scope": "test" },
+    "ok_v": { "value": false, "type": "boolean", "scope": "test" },
+    "list_v": { "value": [], "type": "array", "scope": "test" },
+    "map_v": { "value": {}, "type": "map", "scope": "test" },
+    "token_v": { "value": "", "type": "string", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

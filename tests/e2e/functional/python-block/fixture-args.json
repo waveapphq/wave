@@ -1,0 +1,39 @@
+{
+  "name": "V-PY-RUN-ARGS __TOKEN__",
+  "version": "1.0.0",
+  "description": "Run from the Python editor: the whole unsaved config travels, not the script alone.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "py-args",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 160 },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\nprint('pyarg' + '=' + sys.argv[1])",
+              "arguments": [{ "value": "pyrun-savedarg-__TOKEN__" }],
+              "stream_output": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [{ "id": "e-start", "source": "start-node", "target": "py-args" }]
+  },
+  "variables": {},
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

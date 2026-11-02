@@ -1,0 +1,1497 @@
+{
+  "name": "V-PLUGIN-NETCAT-LOCAL",
+  "version": "1.0.0",
+  "description": "Netcat on the WAVE server: TCP and UDP Check, a Range under both pass rules and with none succeeding, Talk with Text, File and Nothing, Talk over UDP, a capped reply, a Range Talk, a missing payload file, Record and continue, and Fail the block inside a Try/Catch.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "b4eb3357-0aa6-4eb8-b421-1727e33424c2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "TCP check open",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP check open",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 5,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_tcp_open_ok",
+              "results": "nc_tcp_open_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "15608363-1984-4909-9cb3-064c6d94ca27",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TCP open proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-tcp-open ok={nc_tcp_open_ok} rows={len(nc_tcp_open_results)} port={nc_tcp_open_results[0]['port']} state={nc_tcp_open_results[0]['state']} reason=[{nc_tcp_open_results[0]['reason']}]\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3c17523e-fe31-4760-94b4-d1f30952061c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "TCP check closed recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP check closed recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": 9479,
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_tcp_closed_ok",
+              "results": "nc_tcp_closed_results",
+              "error": "nc_tcp_closed_error",
+              "reason": "nc_tcp_closed_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "471e3951-8045-4e46-9e24-d473323d9520",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "TCP closed proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-tcp-closed ok={nc_tcp_closed_ok} reason={nc_tcp_closed_reason} state={nc_tcp_closed_results[0]['state']} error={nc_tcp_closed_error}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a72c88a7-3e90-4ca1-be80-03af3a964186",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Range one succeeds",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Range one succeeds",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "range",
+              "port_range": "9479, 9470",
+              "pass_when": "one",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_range_one_ok",
+              "results": "nc_range_one_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e0fce0a3-9607-4e11-9d17-53f6926a4594",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "Range all succeed recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Range all succeed recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "range",
+              "port_range": "9479, 9470",
+              "pass_when": "all",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_range_all_ok",
+              "results": "nc_range_all_results",
+              "error": "nc_range_all_error",
+              "reason": "nc_range_all_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "86a8dcbb-885a-4c30-842f-9dd3c0af8a02",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Range proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-range one-ok={nc_range_one_ok} all-ok={nc_range_all_ok} all-reason={nc_range_all_reason} ports={nc_range_all_results[0]['port']},{nc_range_all_results[1]['port']} second={nc_range_all_results[1]['state']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9ab90f5b-a6be-4aa4-9a34-bf24f8ce3d37",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "UDP check echo",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP check echo",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9471,
+              "protocol": "udp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_udp_echo_ok",
+              "results": "nc_udp_echo_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f6db6bb3-fe72-47be-b0c5-541fcea57248",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "UDP check silent recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP check silent recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9472,
+              "protocol": "udp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_udp_silent_ok",
+              "results": "nc_udp_silent_results",
+              "error": "nc_udp_silent_error",
+              "reason": "nc_udp_silent_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "116052a1-7985-4f9e-89ff-f680208c22d0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "UDP check closed recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP check closed recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": 9479,
+              "protocol": "udp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_udp_closed_ok",
+              "results": "nc_udp_closed_results",
+              "error": "nc_udp_closed_error",
+              "reason": "nc_udp_closed_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "82c0714b-3b77-4f2f-84b2-af15fe72692e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "UDP proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-udp echo={nc_udp_echo_results[0]['state']} silent={nc_udp_silent_results[0]['state']} silent-ok={nc_udp_silent_ok} silent-reason=[{nc_udp_silent_reason}] closed={nc_udp_closed_results[0]['state']} closed-reason={nc_udp_closed_reason}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f119f93f-65fe-43f6-b7b6-5bd59ece7cc5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "Talk text CRLF",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk text CRLF",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "text",
+              "text": "alpha\nbeta\ngamma\n",
+              "timeout": 2,
+              "crlf": true,
+              "close_after_send": false,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_crlf_ok",
+              "results": "nc_crlf_results",
+              "reply": "nc_crlf_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "20769cfd-0eb8-433a-999f-cb4d0b98b023",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "CRLF reply exact",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "CRLF reply exact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "expression",
+                  "expression": "nc_crlf_reply == 'alpha\\r\\nbeta\\r\\ngamma\\r\\n'",
+                  "id": "ded84fb1-69ef-47e3-b521-2446cedc49d1"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "expression",
+                  "expression": "nc_crlf_reply.count('\\r\\n') == 3 and nc_crlf_reply.count('\\n') == 3",
+                  "id": "c55fc8d7-3b8a-4d40-8059-59ca8ef40fef"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "expression",
+                  "expression": "nc_crlf_results[0]['reply'] == nc_crlf_reply",
+                  "id": "129ac3cc-c506-49f0-9bb0-82ce86e07531"
+                }
+              ],
+              "mode": "single",
+              "fail_current_scope": true
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5011c96e-1bd6-48a4-9a1b-8a586b89c168",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "Talk file",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk file",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "file",
+              "file": "testdata://netcat-payload.txt",
+              "timeout": 5,
+              "crlf": false,
+              "close_after_send": true,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_file_ok",
+              "results": "nc_file_results",
+              "reply": "nc_file_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c3eb600d-82d0-4735-b2f3-804ddf6338fe",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Talk banner",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk banner",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9445,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "nothing",
+              "timeout": 2,
+              "crlf": false,
+              "close_after_send": false,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_banner_ok",
+              "results": "nc_banner_results",
+              "reply": "nc_banner_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c72e87e5-1f32-4d7f-b976-1fa7160ee29d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Talk proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'nc-talk crlf-pairs=' + str(nc_crlf_reply.count('\\r\\n')) + ' crlf-ok=' + str(nc_crlf_ok) + ' file-chars=' + str(len(nc_file_reply)) + ' file-ok=' + str(nc_file_ok) + ' banner-ssh=' + str(nc_banner_reply.startswith('SSH-2.0-')) + ' banner-ok=' + str(nc_banner_ok)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9d77cc93-fd86-425b-9954-5248d2af0f80",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "UDP talk echo",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "UDP talk echo",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9471,
+              "protocol": "udp",
+              "mode": "talk",
+              "send": "text",
+              "text": "nc-udp-talk-ping",
+              "timeout": 2,
+              "crlf": false,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_udp_talk_ok",
+              "results": "nc_udp_talk_results",
+              "reply": "nc_udp_talk_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9e5e1682-45e6-4601-904f-ba6ed2aeafec",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "Talk capped reply",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk capped reply",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "text",
+              "text": "alpha beta gamma delta",
+              "timeout": 5,
+              "crlf": false,
+              "close_after_send": false,
+              "max_reply_bytes": 5,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_cap_ok",
+              "results": "nc_cap_results",
+              "reply": "nc_cap_reply"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "86824d9c-7312-4ebe-8018-bc1f724abcf0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "Range talk",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Range talk",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "range",
+              "port_range": "9470",
+              "pass_when": "one",
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "text",
+              "text": "nc-range-talk-ping",
+              "timeout": 5,
+              "crlf": false,
+              "close_after_send": true,
+              "max_reply_bytes": 16777216,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "nc_rtalk_ok",
+              "results": "nc_rtalk_results"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e99fc808-48bc-4180-a830-6494562c5e45",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Talk extras proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-talk-extras udp-reply={nc_udp_talk_reply} udp-ok={nc_udp_talk_ok} cap-reply={nc_cap_reply} cap-ok={nc_cap_ok} range-rows={len(nc_rtalk_results)} range-reply={nc_rtalk_results[0]['reply']} range-ok={nc_rtalk_ok}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "49bb2bd8-498e-4342-a9c2-332f61d2fbfa",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "Range none succeed recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Range none succeed recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "range",
+              "port_range": "9479",
+              "pass_when": "one",
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_none_ok",
+              "results": "nc_none_results",
+              "error": "nc_none_error",
+              "reason": "nc_none_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c3662152-07a8-4470-8734-f64e13f741a9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1950
+        },
+        "data": {
+          "label": "Talk file missing recorded",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Talk file missing recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "ports": "single",
+              "port": 9470,
+              "protocol": "tcp",
+              "mode": "talk",
+              "send": "file",
+              "file": "testdata://netcat-no-such-payload.txt",
+              "timeout": 2,
+              "crlf": false,
+              "close_after_send": true,
+              "max_reply_bytes": 16777216,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "nc_missing_ok",
+              "results": "nc_missing_results",
+              "reply": "nc_missing_reply",
+              "error": "nc_missing_error",
+              "reason": "nc_missing_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "3838abfd-5044-4069-80fa-e5d403129872",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2040
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Failure extras proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-fail-extras none-ok={nc_none_ok} none-reason={nc_none_reason} none-state={nc_none_results[0]['state']} none-error={nc_none_error} missing-ok={nc_missing_ok} missing-reason={nc_missing_reason} missing-rows={len(nc_missing_results)} missing-reply=[{nc_missing_reply}] missing-error={nc_missing_error}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f53d70ab-d479-466a-9a65-e25c92180c5e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2130
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "nc_fail_error",
+              "caught": "nc_fail_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "5a807bdf-1ee0-4344-a5ef-3eaf46862f0c",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 2230
+        },
+        "data": {
+          "label": "TCP check closed fail",
+          "elementType": "netcat",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "TCP check closed fail",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "localhost",
+              "ports": "single",
+              "port": 9479,
+              "protocol": "tcp",
+              "mode": "check",
+              "timeout": 2,
+              "on_error": "fail"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "819ca4ae-9a72-4dfc-abca-a382551ecf61",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2230
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"nc-fail-caught {nc_fail_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "56e71a12-bdc1-482b-b151-40188f97f4a5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2380
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'netcat-local-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "15585dd7-6ade-4ded-84d2-71109bdee8bf",
+        "source": "start-node",
+        "target": "b4eb3357-0aa6-4eb8-b421-1727e33424c2",
+        "type": "default"
+      },
+      {
+        "id": "bd4dd7b5-e627-4c81-a256-e3ed935528bb",
+        "source": "b4eb3357-0aa6-4eb8-b421-1727e33424c2",
+        "target": "15608363-1984-4909-9cb3-064c6d94ca27",
+        "type": "default"
+      },
+      {
+        "id": "064e11eb-3e9f-45d4-9e1e-fe80ea98dd70",
+        "source": "15608363-1984-4909-9cb3-064c6d94ca27",
+        "target": "3c17523e-fe31-4760-94b4-d1f30952061c",
+        "type": "default"
+      },
+      {
+        "id": "f6dd1a77-de11-4336-858e-adbcfd1a65e7",
+        "source": "3c17523e-fe31-4760-94b4-d1f30952061c",
+        "target": "471e3951-8045-4e46-9e24-d473323d9520",
+        "type": "default"
+      },
+      {
+        "id": "ab650d05-6491-4cfa-85b5-6de4efdb103f",
+        "source": "471e3951-8045-4e46-9e24-d473323d9520",
+        "target": "a72c88a7-3e90-4ca1-be80-03af3a964186",
+        "type": "default"
+      },
+      {
+        "id": "28d4e7dd-fc65-4c3d-a0aa-ba91259b99b9",
+        "source": "a72c88a7-3e90-4ca1-be80-03af3a964186",
+        "target": "e0fce0a3-9607-4e11-9d17-53f6926a4594",
+        "type": "default"
+      },
+      {
+        "id": "af5cf281-2308-4896-bfab-8b3ee73ae63f",
+        "source": "e0fce0a3-9607-4e11-9d17-53f6926a4594",
+        "target": "86a8dcbb-885a-4c30-842f-9dd3c0af8a02",
+        "type": "default"
+      },
+      {
+        "id": "2330d1ab-86e3-4fba-a192-ef515ee0c932",
+        "source": "86a8dcbb-885a-4c30-842f-9dd3c0af8a02",
+        "target": "9ab90f5b-a6be-4aa4-9a34-bf24f8ce3d37",
+        "type": "default"
+      },
+      {
+        "id": "99c1b385-5cb5-4500-889e-ac0dc02cf178",
+        "source": "9ab90f5b-a6be-4aa4-9a34-bf24f8ce3d37",
+        "target": "f6db6bb3-fe72-47be-b0c5-541fcea57248",
+        "type": "default"
+      },
+      {
+        "id": "ec92d522-a465-4347-814b-747647fb9829",
+        "source": "f6db6bb3-fe72-47be-b0c5-541fcea57248",
+        "target": "116052a1-7985-4f9e-89ff-f680208c22d0",
+        "type": "default"
+      },
+      {
+        "id": "a449509a-5ad1-440b-94ad-bd5ba1a33517",
+        "source": "116052a1-7985-4f9e-89ff-f680208c22d0",
+        "target": "82c0714b-3b77-4f2f-84b2-af15fe72692e",
+        "type": "default"
+      },
+      {
+        "id": "4f36548b-7977-4856-9850-1570cbf668c2",
+        "source": "82c0714b-3b77-4f2f-84b2-af15fe72692e",
+        "target": "f119f93f-65fe-43f6-b7b6-5bd59ece7cc5",
+        "type": "default"
+      },
+      {
+        "id": "51239ae2-abba-4247-99e6-7a31ccfe7358",
+        "source": "f119f93f-65fe-43f6-b7b6-5bd59ece7cc5",
+        "target": "20769cfd-0eb8-433a-999f-cb4d0b98b023",
+        "type": "default"
+      },
+      {
+        "id": "a672a03b-a5b0-4a70-a60d-09d4c358e6ec",
+        "source": "20769cfd-0eb8-433a-999f-cb4d0b98b023",
+        "target": "5011c96e-1bd6-48a4-9a1b-8a586b89c168",
+        "type": "default"
+      },
+      {
+        "id": "2e108920-a29f-4f01-9f9c-47264021ef51",
+        "source": "5011c96e-1bd6-48a4-9a1b-8a586b89c168",
+        "target": "c3eb600d-82d0-4735-b2f3-804ddf6338fe",
+        "type": "default"
+      },
+      {
+        "id": "156ba84b-7cfe-4e5c-b5b7-3162e7bd97ce",
+        "source": "c3eb600d-82d0-4735-b2f3-804ddf6338fe",
+        "target": "c72e87e5-1f32-4d7f-b976-1fa7160ee29d",
+        "type": "default"
+      },
+      {
+        "id": "87490215-ae3e-4d66-9f1e-3934fa0ea8e7",
+        "source": "c72e87e5-1f32-4d7f-b976-1fa7160ee29d",
+        "target": "9d77cc93-fd86-425b-9954-5248d2af0f80",
+        "type": "default"
+      },
+      {
+        "id": "b57eaead-aac1-4d61-b64b-8558c0e3c029",
+        "source": "9d77cc93-fd86-425b-9954-5248d2af0f80",
+        "target": "9e5e1682-45e6-4601-904f-ba6ed2aeafec",
+        "type": "default"
+      },
+      {
+        "id": "22781192-08b0-4982-a718-5034895d6114",
+        "source": "9e5e1682-45e6-4601-904f-ba6ed2aeafec",
+        "target": "86824d9c-7312-4ebe-8018-bc1f724abcf0",
+        "type": "default"
+      },
+      {
+        "id": "0ed753df-b39f-41de-bd36-0874916be9b2",
+        "source": "86824d9c-7312-4ebe-8018-bc1f724abcf0",
+        "target": "e99fc808-48bc-4180-a830-6494562c5e45",
+        "type": "default"
+      },
+      {
+        "id": "3d4444ea-9304-4e98-be56-8367285bf97a",
+        "source": "e99fc808-48bc-4180-a830-6494562c5e45",
+        "target": "49bb2bd8-498e-4342-a9c2-332f61d2fbfa",
+        "type": "default"
+      },
+      {
+        "id": "38d9df12-f9f7-49de-aa8b-007bb72fd2ea",
+        "source": "49bb2bd8-498e-4342-a9c2-332f61d2fbfa",
+        "target": "c3662152-07a8-4470-8734-f64e13f741a9",
+        "type": "default"
+      },
+      {
+        "id": "8ab93f14-6951-417f-a223-865189efc0be",
+        "source": "c3662152-07a8-4470-8734-f64e13f741a9",
+        "target": "3838abfd-5044-4069-80fa-e5d403129872",
+        "type": "default"
+      },
+      {
+        "id": "96c01729-d49d-4339-8f19-6208ad816946",
+        "source": "3838abfd-5044-4069-80fa-e5d403129872",
+        "target": "f53d70ab-d479-466a-9a65-e25c92180c5e",
+        "type": "default"
+      },
+      {
+        "id": "013eba40-40a8-460e-9216-6b0a14555a2b",
+        "source": "f53d70ab-d479-466a-9a65-e25c92180c5e",
+        "target": "5a807bdf-1ee0-4344-a5ef-3eaf46862f0c",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "0db76510-99ab-416d-8d0f-91fc42578bcf",
+        "source": "f53d70ab-d479-466a-9a65-e25c92180c5e",
+        "target": "819ca4ae-9a72-4dfc-abca-a382551ecf61",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "5e52620f-ccdb-427f-acfd-91d8ec180449",
+        "source": "f53d70ab-d479-466a-9a65-e25c92180c5e",
+        "target": "56e71a12-bdc1-482b-b151-40188f97f4a5",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "nc_tcp_open_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_tcp_open_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_tcp_closed_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_tcp_closed_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_tcp_closed_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_tcp_closed_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_range_all_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_range_all_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_range_all_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_range_all_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_udp_silent_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_udp_silent_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_udp_silent_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_udp_silent_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_udp_closed_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_udp_closed_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_udp_closed_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_udp_closed_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_range_one_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_range_one_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_udp_echo_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_udp_echo_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_crlf_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_crlf_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_crlf_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_file_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_file_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_file_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_banner_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_banner_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_banner_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_fail_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "nc_fail_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_udp_talk_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_udp_talk_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_udp_talk_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_cap_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_cap_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_cap_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_rtalk_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_rtalk_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_none_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_none_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_none_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_none_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_missing_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "nc_missing_results": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "nc_missing_reply": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_missing_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "nc_missing_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

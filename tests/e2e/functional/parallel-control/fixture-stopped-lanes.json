@@ -1,0 +1,386 @@
+{
+  "name": "Parallel Stopped Lanes E2E",
+  "version": "1.0.0",
+  "description": "Four lanes, two of them a single long-running Block: one lane fails and the two one-Block lanes are abandoned mid-Block, so they must settle stopped while the lane that finished keeps its own result.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-sl-before",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sl-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-sl",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "One lane fails while two one-Block lanes are still working",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "quick"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "doomed"
+                },
+                {
+                  "id": "branch_3",
+                  "name": "adrift"
+                },
+                {
+                  "id": "branch_4",
+                  "name": "marooned"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 400,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sl-quick",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Quick lane, finishes on its own",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sl-quick'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-sl-lead",
+        "type": "workflowNode",
+        "position": {
+          "x": 280,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Doomed lane lead-in",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 400
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sl-boom",
+        "type": "workflowNode",
+        "position": {
+          "x": 280,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Doomed lane BOOM",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "1/0",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-sl-adrift",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Adrift lane, one Block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 8000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-sl-marooned",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Marooned lane, one Block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 8000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sl-then",
+        "type": "workflowNode",
+        "position": {
+          "x": 820,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sl-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-sl-after",
+        "type": "workflowNode",
+        "position": {
+          "x": 820,
+          "y": 360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the section",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'sl-after'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-sl-start",
+        "source": "start-node",
+        "target": "log-sl-before",
+        "type": "default"
+      },
+      {
+        "id": "e-sl-before",
+        "source": "log-sl-before",
+        "target": "par-sl",
+        "type": "default"
+      },
+      {
+        "id": "e-sl-b1",
+        "source": "par-sl",
+        "target": "log-sl-quick",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-sl-b2",
+        "source": "par-sl",
+        "target": "delay-sl-lead",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-sl-boom",
+        "source": "delay-sl-lead",
+        "target": "log-sl-boom",
+        "type": "default"
+      },
+      {
+        "id": "e-sl-b3",
+        "source": "par-sl",
+        "target": "delay-sl-adrift",
+        "type": "default",
+        "sourceHandle": "branch_3"
+      },
+      {
+        "id": "e-sl-b4",
+        "source": "par-sl",
+        "target": "delay-sl-marooned",
+        "type": "default",
+        "sourceHandle": "branch_4"
+      },
+      {
+        "id": "e-sl-then",
+        "source": "par-sl",
+        "target": "log-sl-then",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-sl-after",
+        "source": "log-sl-then",
+        "target": "log-sl-after",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-08-23T00:00:00.000000",
+  "updated_at": "2026-08-23T00:00:00.000000"
+}

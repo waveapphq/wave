@@ -1,0 +1,134 @@
+{
+  "name": "SH-5 __TOKEN__",
+  "version": "1.0.0",
+  "description": "Two Record-and-continue Shell Scripts: one lists an export it never sets, one hands its process to another program so the exit hook never runs.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 60 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 2000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-unset",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 140 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Export never set",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "SET_ONE=1",
+              "script_variables": ["SET_ONE", "NEVER"],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "SET_ONE": "a_one",
+              "NEVER": "a_never",
+              "success": "a_ok",
+              "reason": "a_reason",
+              "error": "a_err"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "sh-hook-gone",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 220 },
+        "data": {
+          "label": "Shell Script",
+          "elementType": "shell-script",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Exit hook never ran",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "SET_TWO=2; exec /bin/true",
+              "script_variables": ["SET_TWO"],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "SET_TWO": "b_two",
+              "success": "b_ok",
+              "exit_code": "b_code"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'SH-5-done-__TOKEN__'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start", "source": "start-node", "target": "ws-hold" },
+      { "id": "e-hold-unset", "source": "ws-hold", "target": "sh-unset" },
+      { "id": "e-unset-gone", "source": "sh-unset", "target": "sh-hook-gone" },
+      { "id": "e-gone-done", "source": "sh-hook-gone", "target": "log-done" }
+    ]
+  },
+  "variables": {
+    "a_one": { "value": 0, "type": "integer", "scope": "test" },
+    "a_never": { "value": "keep-a", "type": "string", "scope": "test" },
+    "a_ok": { "value": false, "type": "boolean", "scope": "test" },
+    "a_reason": { "value": "seed-reason", "type": "string", "scope": "test" },
+    "a_err": { "value": "seed-err", "type": "string", "scope": "test" },
+    "b_two": { "value": 9, "type": "integer", "scope": "test" },
+    "b_ok": { "value": false, "type": "boolean", "scope": "test" },
+    "b_code": { "value": -99, "type": "integer", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

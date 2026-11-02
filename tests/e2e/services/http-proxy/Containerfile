@@ -1,0 +1,13 @@
+# WAVE E2E forward proxy (test-only): one tinyproxy image, two compose
+# services - open (tinyproxy.conf) and BasicAuth (tinyproxy-auth.conf via
+# command override). Build: scripts/e2e-stack.sh build
+FROM docker.io/library/alpine:3
+
+RUN apk add --no-cache tinyproxy
+
+COPY tinyproxy.conf /etc/tinyproxy/tinyproxy.conf
+COPY tinyproxy-auth.conf /etc/tinyproxy/tinyproxy-auth.conf
+
+EXPOSE 8888
+
+CMD ["tinyproxy", "-d", "-c", "/etc/tinyproxy/tinyproxy.conf"]

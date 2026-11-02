@@ -1,0 +1,33 @@
+[default]
+locale = "en-us"
+extend-ignore-re = [
+  # Names set by third-party code; we cannot rename them.
+  "CancelledError",
+  "\\.cancelled\\(\\)",
+  "\\.cancelling\\(\\)",
+  "task\\.cancelled\\b",
+  # Base64 blobs, such as keys.
+  "[A-Za-z0-9+/]{60,}={0,2}",
+]
+
+[default.extend-words]
+# Banned spellings that the en-us word list misses. Format: wrong = right.
+ageing = "aging"
+amongst = "among"
+cancelled = "canceled"
+cancelling = "canceling"
+catalogue = "catalog"
+grey = "gray"
+whilst = "while"
+# Allowed words that look like typos, such as package names. Format: word = word.
+certifi = "certifi"
+gost = "gost"
+nd = "nd"
+
+[files]
+# Third-party text kept as it came.
+extend-exclude = [
+  "LICENSES/",
+  "NOTICE",
+  "backend/wavecore/api/services/opensearch_tools/api-spec-extract.json",
+]

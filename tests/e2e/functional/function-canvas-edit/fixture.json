@@ -1,0 +1,48 @@
+{
+  "name": "V-CANVAS-FN-EDIT-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with a single empty local Function on canvas. The spec drills in, drops a Log plugin inside via the palette, saves the Test, reloads, drills back in, and asserts the dropped node survived.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-1",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 200
+        },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "localDefinition": {
+            "workflow": {
+              "nodes": [],
+              "edges": []
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": [],
+            "name": "Function_1"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

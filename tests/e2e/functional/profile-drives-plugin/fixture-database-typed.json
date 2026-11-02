@@ -1,0 +1,122 @@
+{
+  "name": "Profile Typed Driver Options",
+  "version": "1.0.0",
+  "description": "A SQL block whose connection and Driver options all come from a database profile",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "eeab1055-5ab4-4c8f-9b8c-71a819863630",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Connection and Driver options come from the profile",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "host",
+            "port",
+            "database",
+            "username",
+            "password",
+            "driver_options"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "postgresql",
+              "host": "dbp.host",
+              "port": "dbp.port",
+              "database": "dbp.database",
+              "username": "dbp.username",
+              "password": "dbp.password",
+              "tls": false,
+              "driver_options": "dbp.driver_options",
+              "sql": "SELECT current_setting('application_name') AS app, current_setting('search_path') AS sp"
+            },
+            "outputBindings": {
+              "rows": "profile_rows"
+            },
+            "profileBindings": [
+              {
+                "profileId": "__DB_PROFILE_ID__",
+                "alias": "dbp",
+                "profileName": "__DB_PROFILE_NAME__",
+                "profileType": "database"
+              }
+            ]
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d52fd47d-1288-4715-933e-4db03624932a",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Profile probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"PROFILE app={profile_rows[0]['app']} app_is_text={type(profile_rows[0]['app']) == str} sp={profile_rows[0]['sp']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "eeab1055-5ab4-4c8f-9b8c-71a819863630",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "eeab1055-5ab4-4c8f-9b8c-71a819863630",
+        "target": "d52fd47d-1288-4715-933e-4db03624932a",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "profile_rows": {
+      "type": "table",
+      "value": []
+    }
+  },
+  "metadata": {}
+}

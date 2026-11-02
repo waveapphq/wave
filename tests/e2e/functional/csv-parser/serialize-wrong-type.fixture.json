@@ -1,0 +1,107 @@
+{
+  "name": "CSV Serialize Wrong Type E2E",
+  "version": "1.0.0",
+  "description": "Z7 serialize non-table aborts",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "set-notatable",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set not-a-table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTypes": {
+            "not_a_table": "string"
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "not_a_table": "hello"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z7-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z7",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "not_a_table"
+            },
+            "outputBindings": {
+              "csv_content": "z7_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "set-notatable",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "set-notatable",
+        "target": "z7-serialize",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "not_a_table": {
+      "value": "hello",
+      "type": "string",
+      "scope": "test"
+    },
+    "z7_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

@@ -1,0 +1,93 @@
+{
+  "name": "Session Artifacts Workbench Surface",
+  "version": "1.0.0",
+  "description": "Writes two session artifacts (one nested) via the File I/O artifact:// scheme to drive the workbench Session Artifacts chip, sheet, and warn-on-wipe flows",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-write-report",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Report JSON",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://report.json",
+              "content": "{\"summary\": \"session artifacts run\", \"total\": 2}",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fileio-write-nested",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 250
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Nested Data",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://output/data.json",
+              "content": "{\"rows\": [1, 2, 3]}",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "fileio-write-report",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "fileio-write-report",
+        "target": "fileio-write-nested",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-07-01T00:00:00.000000",
+  "updated_at": "2026-07-01T00:00:00.000000"
+}

@@ -1,0 +1,506 @@
+{
+  "name": "PY-EXC __TOKEN__",
+  "version": "1.0.0",
+  "description": "Python failure outcomes: an uncaught exception under Record and continue and under Fail the block, the sys.exit codes, sys.exit with text, and a script that does not parse.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ws-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "WS Subscribe Window",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 2000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-record",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Uncaught exception, recorded",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "part = \"bo\"\nbefore_out = \"kept-\" + \"__TOKEN__\"\nraise ValueError(part + \"om\")\n",
+              "script_variables": [
+                "before_out"
+              ],
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "before_out": "before_v",
+              "stdout": "rec_stdout",
+              "stderr": "rec_stderr",
+              "exit_code": "rec_code",
+              "success": "rec_ok",
+              "error": "rec_err",
+              "reason": "rec_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-exit-2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 220
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "sys.exit with a non-zero code",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\nsys.exit(1 + 1)\n",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "stderr": "e2_stderr",
+              "exit_code": "e2_code",
+              "success": "e2_ok",
+              "error": "e2_err",
+              "reason": "e2_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-exit-bare",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "sys.exit with no value",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\nsys.exit()\n"
+            },
+            "outputBindings": {
+              "exit_code": "bare_code",
+              "success": "bare_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-exit-zero",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 380
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "sys.exit with zero",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\nsys.exit(0)\n"
+            },
+            "outputBindings": {
+              "exit_code": "zero_code",
+              "success": "zero_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-exit-text",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 460
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "sys.exit with text",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "import sys\n\npart = \"te\"\nsys.exit(part + \"xt-__TOKEN__\")\n",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "stderr": "t_stderr",
+              "exit_code": "t_code",
+              "success": "t_ok",
+              "error": "t_err",
+              "reason": "t_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-syntax",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 540
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "A script that does not parse",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "ok = 1\nx = = 2\n",
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "exit_code": "syn_code",
+              "success": "syn_ok",
+              "error": "syn_err",
+              "reason": "syn_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 620
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'PY-EXC-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "The same exception under Fail the block",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "part = \"bo\"\nraise ValueError(part + \"om\")\n"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "ws-hold"
+      },
+      {
+        "id": "e-hold-record",
+        "source": "ws-hold",
+        "target": "py-record"
+      },
+      {
+        "id": "e-record-exit2",
+        "source": "py-record",
+        "target": "py-exit-2"
+      },
+      {
+        "id": "e-exit2-bare",
+        "source": "py-exit-2",
+        "target": "py-exit-bare"
+      },
+      {
+        "id": "e-bare-zero",
+        "source": "py-exit-bare",
+        "target": "py-exit-zero"
+      },
+      {
+        "id": "e-zero-text",
+        "source": "py-exit-zero",
+        "target": "py-exit-text"
+      },
+      {
+        "id": "e-text-syntax",
+        "source": "py-exit-text",
+        "target": "py-syntax"
+      },
+      {
+        "id": "e-syntax-done",
+        "source": "py-syntax",
+        "target": "log-done"
+      },
+      {
+        "id": "e-done-fail",
+        "source": "log-done",
+        "target": "py-fail"
+      }
+    ]
+  },
+  "variables": {
+    "before_v": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "rec_stdout": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rec_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rec_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "rec_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "rec_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "rec_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e2_stderr": {
+      "value": "seed",
+      "type": "string",
+      "scope": "test"
+    },
+    "e2_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "e2_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "e2_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "e2_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bare_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bare_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "zero_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "zero_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "t_stderr": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "t_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "t_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "t_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "syn_code": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "syn_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "syn_err": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "syn_reason": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

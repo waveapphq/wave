@@ -1,0 +1,81 @@
+{
+  "name": "CSV Transform Unknown Op E2E",
+  "version": "1.0.0",
+  "description": "T9 unknown filter operator aborts",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "t9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "T9 unknown op",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "name,score\nAlice,80\n",
+              "filters": [
+                {
+                  "id": "t9-filter-1",
+                  "column": {
+                    "mode": "name",
+                    "value": "score"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "t9-filter-1-cond-1",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "bogus",
+                      "reference_value": "1",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "t9"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "t9",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "t9": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

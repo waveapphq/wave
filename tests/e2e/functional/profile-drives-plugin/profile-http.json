@@ -1,0 +1,14 @@
+{
+  "name": "Profile Drives HTTP",
+  "type": "http",
+  "description": "HTTP profile whose base_url, timeout, TLS trust and API key drive a real http-client against http-echo",
+  "config": {
+    "base_url": "",
+    "timeout": 30,
+    "verify_ssl": true,
+    "ca_cert": "",
+    "auth_key": "",
+    "auth_header_name": "X-Wave-E2E-Profile-Key"
+  },
+  "tags": ["e2e"]
+}

@@ -1,0 +1,456 @@
+{
+  "name": "Excel Parser - Write/Read round trip",
+  "version": "1.0.0",
+  "description": "A parsed table is written into four sheets of one workbook (default, appended, offset start cell, header-less), then read back by name, by position with a range, by header row and without a header, proving the round trip, sheet accumulation and every selection mode.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "parse-src",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Source",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "sku,qty,price\nA-1,3,9.99\nB-2,7,14.5\nC-3,5,3\n"
+            },
+            "outputBindings": { "table": "src" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Orders",
+              "table": "src",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "replace_file"
+            },
+            "outputBindings": { "file": "written_path" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-summary",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Summary",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Summary",
+              "table": "src",
+              "write_header": true,
+              "start_cell": "A1",
+              "if_exists": "keep_sheets"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-placed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 400 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Placed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Placed",
+              "table": "src",
+              "write_header": true,
+              "start_cell": "C3",
+              "if_exists": "keep_sheets"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "write-bare",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 500 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Write Bare",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Bare",
+              "table": "src",
+              "write_header": false,
+              "start_cell": "A1",
+              "if_exists": "keep_sheets"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-orders",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 600 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Orders",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Orders",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": {
+              "table": "back",
+              "row_count": "back_rows",
+              "schema": "back_schema",
+              "sheets": "book_sheets"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-roundtrip",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 700 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Round Trip",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-roundtrip=' + ','.join(back.col('sku')) + '-qty1-' + str(back.col('qty')[1]) + '-price0-' + str(back.col('price')[0]) + '-rows-' + str(back_rows)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-schema",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 800 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Schema",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-schema=' + back_schema[0]['name'] + ':' + back_schema[0]['type'] + ',' + back_schema[1]['name'] + ':' + back_schema[1]['type'] + ',' + back_schema[2]['name'] + ':' + back_schema[2]['type']",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-sheets",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 900 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Sheets",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-sheets=' + ','.join(book_sheets) + '-file-' + written_path.split('/')[-1]",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-position-range",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1000 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read By Position",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "2",
+              "range": "A1:B2",
+              "has_header": true,
+              "header_row": 1,
+              "column_types": "auto"
+            },
+            "outputBindings": { "table": "rng", "schema": "rng_schema" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-range",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1100 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Range",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-range=' + rng_schema[0]['name'] + ',' + rng_schema[1]['name'] + '-' + str(rng.col('sku')[0]) + '-' + str(rng.col('qty')[0]) + '-rows-' + str(len(rng))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-placed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1200 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Placed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Placed",
+              "has_header": true,
+              "header_row": 3,
+              "column_types": "auto"
+            },
+            "outputBindings": { "table": "placed" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-placed",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1300 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Placed",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-placed=' + ','.join(placed.col('sku')) + '-rows-' + str(len(placed))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-bare",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1400 },
+        "data": {
+          "label": "Excel Parser",
+          "elementType": "excel-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Read Bare",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "workbook": "artifact://roundtrip.xlsx",
+              "sheet": "Bare",
+              "has_header": false,
+              "column_types": "auto"
+            },
+            "outputBindings": { "table": "bare", "schema": "bare_schema" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-bare",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1500 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Bare",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'xl-bare=' + bare_schema[0]['name'] + ',' + bare_schema[1]['name'] + ',' + bare_schema[2]['name'] + '-rows-' + str(len(bare)) + '-first-' + str(bare.col('A')[0])",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "parse-src", "type": "default" },
+      { "id": "e2", "source": "parse-src", "target": "write-orders", "type": "default" },
+      { "id": "e3", "source": "write-orders", "target": "write-summary", "type": "default" },
+      { "id": "e4", "source": "write-summary", "target": "write-placed", "type": "default" },
+      { "id": "e5", "source": "write-placed", "target": "write-bare", "type": "default" },
+      { "id": "e6", "source": "write-bare", "target": "read-orders", "type": "default" },
+      { "id": "e7", "source": "read-orders", "target": "log-roundtrip", "type": "default" },
+      { "id": "e8", "source": "log-roundtrip", "target": "log-schema", "type": "default" },
+      { "id": "e9", "source": "log-schema", "target": "log-sheets", "type": "default" },
+      { "id": "e10", "source": "log-sheets", "target": "read-position-range", "type": "default" },
+      { "id": "e11", "source": "read-position-range", "target": "log-range", "type": "default" },
+      { "id": "e12", "source": "log-range", "target": "read-placed", "type": "default" },
+      { "id": "e13", "source": "read-placed", "target": "log-placed", "type": "default" },
+      { "id": "e14", "source": "log-placed", "target": "read-bare", "type": "default" },
+      { "id": "e15", "source": "read-bare", "target": "log-bare", "type": "default" }
+    ]
+  },
+  "variables": {
+    "src": { "value": [], "type": "table", "scope": "test" },
+    "written_path": { "value": "", "type": "string", "scope": "test" },
+    "back": { "value": [], "type": "table", "scope": "test" },
+    "back_rows": { "value": 0, "type": "integer", "scope": "test" },
+    "back_schema": { "value": [], "type": "array", "scope": "test" },
+    "book_sheets": { "value": [], "type": "array", "scope": "test" },
+    "rng": { "value": [], "type": "table", "scope": "test" },
+    "rng_schema": { "value": [], "type": "array", "scope": "test" },
+    "placed": { "value": [], "type": "table", "scope": "test" },
+    "bare": { "value": [], "type": "table", "scope": "test" },
+    "bare_schema": { "value": [], "type": "array", "scope": "test" }
+  },
+  "metadata": {}
+}

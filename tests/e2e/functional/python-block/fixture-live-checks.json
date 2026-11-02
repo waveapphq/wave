@@ -1,0 +1,226 @@
+{
+  "name": "PYCHK __TOKEN__",
+  "version": "1.0.0",
+  "description": "Python editor live checks: unknown names, typed Input Variable methods and operators, the stand-down for a star import or a dynamic namespace, and a warning inside a Local Function.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "py-names",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "pass\n"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-typed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [
+            "input_vars.label",
+            "input_vars.threshold"
+          ],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "pass\n",
+              "input_vars": {
+                "label": "{{text_var}}",
+                "threshold": "{{ratio_var}}"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "py-dynamic",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Python",
+          "elementType": "python",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "script_type": "source",
+              "script": "pass\n"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fn-local",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 340
+        },
+        "data": {
+          "label": "Scoped Function",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Scoped Function",
+            "description": "Holds one Python block whose script carries a warning.",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "py-inner",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 300,
+                    "y": 200
+                  },
+                  "data": {
+                    "label": "Python",
+                    "elementType": "python",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "config": {
+                      "values": {
+                        "script_type": "source",
+                        "script": "pass\n"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-start-inner",
+                  "source": "start-node",
+                  "target": "py-inner"
+                }
+              ]
+            },
+            "inputs": [],
+            "outputs": [],
+            "variables": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start",
+        "source": "start-node",
+        "target": "py-names"
+      },
+      {
+        "id": "e-names-typed",
+        "source": "py-names",
+        "target": "py-typed"
+      },
+      {
+        "id": "e-typed-dynamic",
+        "source": "py-typed",
+        "target": "py-dynamic"
+      },
+      {
+        "id": "e-dynamic-fn",
+        "source": "py-dynamic",
+        "target": "fn-local"
+      }
+    ]
+  },
+  "variables": {
+    "text_var": {
+      "value": "run-a",
+      "type": "string",
+      "scope": "test"
+    },
+    "ratio_var": {
+      "value": 1.5,
+      "type": "float",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

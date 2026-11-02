@@ -1,0 +1,6 @@
+# Left out of every image build from this folder.
+**/node_modules
+playwright-artifacts
+playwright-report
+reports
+test-results

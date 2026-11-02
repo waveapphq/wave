@@ -1,0 +1,109 @@
+{
+  "name": "V-VMGR-CURRENT-EDIT-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "A typed map read at a breakpoint, overridden, then used downstream",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "8a36497a-9695-4383-8bcc-a31aac4c67f0",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Gate",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'gate'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6beddf58-2627-49e6-9b14-99b6b1ccd4a6",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Map probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"CUR n={m['n'] + 1} f={m['f'] * 2} zip={m['zip'] + '-x'} big={m['big'] + 1}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "8a36497a-9695-4383-8bcc-a31aac4c67f0",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "8a36497a-9695-4383-8bcc-a31aac4c67f0",
+        "target": "6beddf58-2627-49e6-9b14-99b6b1ccd4a6",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "m": {
+      "type": "map",
+      "value": {
+        "n": "16",
+        "f": "1.0",
+        "zip": "02134",
+        "big": "1234567890123456789"
+      },
+      "elementTypes": {
+        "n": "integer",
+        "f": "float",
+        "zip": "string",
+        "big": "integer"
+      }
+    }
+  },
+  "metadata": {}
+}

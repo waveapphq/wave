@@ -1,0 +1,13 @@
+{
+  "name": "V-FN-PALETTE-FUNCTIONAL fixture",
+  "version": "1.0.0",
+  "description": "Empty workflow used as the canvas substrate while we drag a local Function (\"New Function\") onto it. The fixture intentionally contains only the implicit Start node; the drag materializes the local Function node which is then re-fetched via GET /tests/{id}/workflow for shape assertions.",
+  "workflow": {
+    "nodes": [],
+    "edges": []
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-05-15T00:00:00.000000",
+  "updated_at": "2026-05-15T00:00:00.000000"
+}

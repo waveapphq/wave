@@ -1,0 +1,40 @@
+test:
+  name: Recipe Example - Python
+  description: Build a table of rows in a Python script and read it back as a typed table variable, then let a second script raise and record the failure instead of failing the test
+  tags: [example, python]
+variables:
+  region: {type: string, value: eu-west-1}
+  row_count: {type: integer, value: 2}
+  customers: {type: table}
+  parse_ok: {type: boolean}
+  parse_reason: {type: string}
+flow:
+  - block: python
+    label: Build the customer table
+    settings:
+      script_type: source
+      script: |
+        customers = [
+            {"id": index + 1, "region": REGION}
+            for index in range(ROW_COUNT)
+        ]
+      input_vars:
+        REGION: {expr: "region"}
+        ROW_COUNT: {expr: "row_count"}
+      script_variables: [customers]
+    capture: {customers: customers}
+  - assert:
+      that: ["len(customers) == 2"]
+      fail_current_scope: true
+  - block: python
+    label: Parse a malformed payload
+    settings:
+      script_type: source
+      script: |
+        import json
+
+        json.loads("{ not json }")
+      on_error: record
+    capture: {success: parse_ok, reason: parse_reason}
+  - block: log
+    settings: {message: "Built {{ len(customers) }} customer rows in {{ region }}; the parse step recorded {{ parse_reason }}"}

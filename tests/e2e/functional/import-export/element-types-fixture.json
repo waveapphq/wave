@@ -1,0 +1,289 @@
+{
+  "name": "V-EXPORT-ELEMENT-TYPES",
+  "version": "1.0.0",
+  "description": "Every element-type holder in one Test, for export and import",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "80a2e4f0-8431-4ec5-a7d8-f0492ecb4602",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 100
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set a typed map",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "variableTypes": {
+            "sm": "map"
+          },
+          "variableElementTypes": {
+            "sm": {
+              "n": "integer",
+              "zip": "string"
+            }
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "sm": {
+                  "n": "16",
+                  "zip": "02134"
+                }
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "735739d0-24f2-4a77-a750-d2699ecea4fb",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 220
+        },
+        "data": {
+          "label": "SQL",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite typed option",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "script_type": "source",
+              "timeout": 60,
+              "on_error": "fail",
+              "database_type": "sqlite",
+              "file": "artifact://typed-travel-__TOKEN__.db",
+              "sql": "PRAGMA busy_timeout",
+              "driver_options": {
+                "timeout": "7"
+              }
+            },
+            "outputBindings": {
+              "rows": "lite_rows"
+            },
+            "profileBindings": []
+          },
+          "elementTypes": {
+            "driver_options": {
+              "timeout": "integer"
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2e298b4f-eb72-432f-8034-8bceeb16d1ab",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Map probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__MAP_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eaf73e3a-4cdb-4666-b09b-484ab0e67a3b",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 460
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "List probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "__LIST_PROBE__",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8ca3fe20-5c67-406f-8ae2-7b3831b516da",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 580
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Setter and option probe",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"TRAVEL sn={sm['n'] + 1} sz={sm['zip'] + '-x'} lite={lite_rows[0]['timeout']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "80a2e4f0-8431-4ec5-a7d8-f0492ecb4602",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "80a2e4f0-8431-4ec5-a7d8-f0492ecb4602",
+        "target": "735739d0-24f2-4a77-a750-d2699ecea4fb",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "735739d0-24f2-4a77-a750-d2699ecea4fb",
+        "target": "2e298b4f-eb72-432f-8034-8bceeb16d1ab",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "2e298b4f-eb72-432f-8034-8bceeb16d1ab",
+        "target": "eaf73e3a-4cdb-4666-b09b-484ab0e67a3b",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "eaf73e3a-4cdb-4666-b09b-484ab0e67a3b",
+        "target": "8ca3fe20-5c67-406f-8ae2-7b3831b516da",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "m": {
+      "type": "map",
+      "value": {
+        "n": "16",
+        "big": "1234567890123456789",
+        "f": "1.0",
+        "hp": "0.1000000000000000000000000001",
+        "b": false,
+        "zip": "02134",
+        "ver": "1.10",
+        "txt": "[1, 2]",
+        "nested": "{\"k\": 5, \"s\": \"07\"}",
+        "lst": "[1.5, 2]"
+      },
+      "elementTypes": {
+        "n": "integer",
+        "big": "integer",
+        "f": "float",
+        "hp": "float",
+        "b": "boolean",
+        "zip": "string",
+        "ver": "string",
+        "txt": "string",
+        "nested": "map",
+        "lst": "array"
+      }
+    },
+    "a": {
+      "type": "array",
+      "value": [
+        "16",
+        "1.0",
+        "02134",
+        true,
+        "[3, \"4\"]"
+      ],
+      "elementTypes": [
+        "integer",
+        "float",
+        "string",
+        "boolean",
+        "array"
+      ]
+    },
+    "sm": {
+      "type": "map",
+      "value": {}
+    },
+    "lite_rows": {
+      "type": "table",
+      "value": []
+    }
+  },
+  "metadata": {}
+}

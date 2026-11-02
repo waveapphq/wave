@@ -1,0 +1,518 @@
+{
+  "name": "Console Table Render - pretty-printed capped table in the run console",
+  "version": "1.0.0",
+  "description": "Five CSV parses feed five Logs so the run console carries a real rendered table per leg: aligned columns, each of the five caps, and a registered secret masked before the column widths are measured.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "csv-align",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Align",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "align_resource,align_replicas,align_ratio\nkubernetes-dashboard-metrics,3,0.5\nweb,12,10.25\n"
+            },
+            "outputBindings": {
+              "table": "align_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-align",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Align",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(align_table)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-rowcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 370
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Row Cap",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "rowcap_idx\nrowcap-r01\nrowcap-r02\nrowcap-r03\nrowcap-r04\nrowcap-r05\nrowcap-r06\nrowcap-r07\nrowcap-r08\nrowcap-r09\nrowcap-r10\nrowcap-r11\nrowcap-r12\n"
+            },
+            "outputBindings": {
+              "table": "rowcap_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-rowcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 480
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Row Cap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(rowcap_table)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-colcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 590
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Column Cap",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "colcap_c01,colcap_c02,colcap_c03,colcap_c04,colcap_c05,colcap_c06,colcap_c07,colcap_c08,colcap_c09,colcap_c10,colcap_c11,colcap_c12,colcap_c13,colcap_c14\ncolcap_v01,colcap_v02,colcap_v03,colcap_v04,colcap_v05,colcap_v06,colcap_v07,colcap_v08,colcap_v09,colcap_v10,colcap_v11,colcap_v12,colcap_v13,colcap_v14\n"
+            },
+            "outputBindings": {
+              "table": "colcap_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-colcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 700
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Column Cap",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(colcap_table)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-cutcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 810
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Cut Caps",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "cutcap_wide,cutcap_huge\ncutcap-width-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww,cutcap-huge-hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n"
+            },
+            "outputBindings": {
+              "table": "cutcap_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-cutcap",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 920
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Cut Caps",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(cutcap_table)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "csv-secret",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1030
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Parse Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "csv_content"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "'lbl,tok,prt\\nsecret-leg-prod,' + console_table_secret + ',8080'"
+            },
+            "outputBindings": {
+              "table": "secret_table"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-secret",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Secret",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "str(secret_table)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-backstop",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1250
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Backstop",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "backstop_text",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1360
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "CONSOLE-TABLE-RENDER-DONE",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "csv-align",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "csv-align",
+        "target": "log-align",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "log-align",
+        "target": "csv-rowcap",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "csv-rowcap",
+        "target": "log-rowcap",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "log-rowcap",
+        "target": "csv-colcap",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "csv-colcap",
+        "target": "log-colcap",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-colcap",
+        "target": "csv-cutcap",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "csv-cutcap",
+        "target": "log-cutcap",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "log-cutcap",
+        "target": "csv-secret",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "csv-secret",
+        "target": "log-secret",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "log-secret",
+        "target": "log-backstop",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "log-backstop",
+        "target": "log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "align_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "rowcap_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "colcap_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "cutcap_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "secret_table": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "console_table_secret": {
+      "value": "SEKRET-console-table-4f7a91b3c5",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "backstop_text": {
+      "value": "CAPMSG-PLACEHOLDER",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

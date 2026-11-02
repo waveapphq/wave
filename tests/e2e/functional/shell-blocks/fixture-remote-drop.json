@@ -1,0 +1,526 @@
+{
+  "name": "SH-18 __TOKEN__",
+  "version": "1.0.0",
+  "description": "One Parallel lane runs a Remote Execution body that records this connection's own worker pid on the host and holds an HTTP request open; the other lane waits 5 s and, over a second SSH session, kills that worker's parent sshd process.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "open-worker",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Worker session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "sid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "open-killer",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 200
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Killer session",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": 9445,
+              "username": "wave",
+              "password": "wave-secret",
+              "host_key_verification": "disabled",
+              "connect_timeout": 30
+            },
+            "outputBindings": {
+              "session_id": "kid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "par-drop",
+        "type": "workflowNode",
+        "position": {
+          "x": 380,
+          "y": 300
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Worker lane and killer lane",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "worker"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "killer"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "tc-worker",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 400
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Keeps the section alive when the drop ends the body",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "container",
+        "type": "workflowNode",
+        "position": {
+          "x": 140,
+          "y": 500
+        },
+        "data": {
+          "label": "Remote Execution",
+          "elementType": "remote-execution",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Run the body on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fio-read",
+        "type": "workflowNode",
+        "position": {
+          "x": 60,
+          "y": 600
+        },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Host read that brings the worker up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "read",
+              "path": "/etc/os-release"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "probe-record",
+        "type": "workflowNode",
+        "position": {
+          "x": 60,
+          "y": 700
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Record this connection's own worker pid",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "sid",
+              "command": "s=$$; while [ \"$s\" -gt 1 ] && [ \"$(cat /proc/$s/comm)\" != sshd ]; do s=$(cut -d' ' -f4 /proc/$s/stat); done; o=; for d in /proc/[0-9]*; do tr '\\0' ' ' < \"$d/cmdline\" 2>/dev/null | grep -q \"wave[-]worker\" || continue; [ \"$(cut -d' ' -f4 \"$d/stat\" 2>/dev/null)\" = \"$s\" ] && o=\"$o${o:+ }${d#/proc/}\"; done; printf '%s' \"$o\" > /tmp/sh-18-__TOKEN__.pid; printf '%s' \"$o\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "probe_during"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-hold",
+        "type": "workflowNode",
+        "position": {
+          "x": 60,
+          "y": 800
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Request held open for 60 s on the host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://http-target:9443/delay/60",
+              "method": "GET",
+              "timeout": 120,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-caught",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch marker",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-18-caught-__TOKEN__'",
+              "level": "WARN"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "delay-kill",
+        "type": "workflowNode",
+        "position": {
+          "x": 660,
+          "y": 400
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Let the worker lane arm",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "killer-exec",
+        "type": "workflowNode",
+        "position": {
+          "x": 660,
+          "y": 500
+        },
+        "data": {
+          "label": "SSH Session Exec",
+          "elementType": "ssh-session-exec",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Kill the worker's parent sshd",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "session_id"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "session_id": "kid",
+              "command": "pid=$(cat /tmp/sh-18-__TOKEN__.pid); ppid=$(cut -d' ' -f4 /proc/$pid/stat); kill -9 \"$ppid\"; printf 'dropped %s %s' \"$pid\" \"$ppid\"",
+              "timeout": 30
+            },
+            "outputBindings": {
+              "stdout": "killed_pid"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 900
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'SH-18-done-__TOKEN__'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-worker",
+        "source": "start-node",
+        "target": "open-worker"
+      },
+      {
+        "id": "e-worker-killer",
+        "source": "open-worker",
+        "target": "open-killer"
+      },
+      {
+        "id": "e-killer-par",
+        "source": "open-killer",
+        "target": "par-drop"
+      },
+      {
+        "id": "e-par-worker",
+        "source": "par-drop",
+        "target": "tc-worker",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-tc-try",
+        "source": "tc-worker",
+        "target": "container",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-body",
+        "source": "container",
+        "target": "fio-read",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-read-record",
+        "source": "fio-read",
+        "target": "probe-record"
+      },
+      {
+        "id": "e-record-http",
+        "source": "probe-record",
+        "target": "http-hold"
+      },
+      {
+        "id": "e-tc-catch",
+        "source": "tc-worker",
+        "target": "log-caught",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-par-killer",
+        "source": "par-drop",
+        "target": "delay-kill",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-delay-kill",
+        "source": "delay-kill",
+        "target": "killer-exec"
+      },
+      {
+        "id": "e-par-then",
+        "source": "par-drop",
+        "target": "log-done",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "sid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "kid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "probe_during": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "killed_pid": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

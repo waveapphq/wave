@@ -1,0 +1,96 @@
+{
+  "name": "Var Current Edit E2E",
+  "version": "1.0.0",
+  "description": "Runtime variable override functional fixture: a scalar integer (count), a second scalar (factor), and a scalar integer expression (derived = count * factor). A gate Log carries a literal message so a breakpoint on it pauses BEFORE any variable is referenced; downstream read-count logs count and read-derived references derived (triggering its lazy re-eval). Overriding count to 7 and re-arming derived's source to 'count + factor' yields derived=17 (7+10), unambiguously distinct from the no-override 30, the count-only 70, and the source-only 13 - so one run proves both the literal and the expression override propagated downstream.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "gate",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 140 },
+        "data": {
+          "label": "Gate",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Gate",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'gate'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-count",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 260 },
+        "data": {
+          "label": "Read Count",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'count={count}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "read-derived",
+        "type": "workflowNode",
+        "position": { "x": 320, "y": 380 },
+        "data": {
+          "label": "Read Derived",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Read Derived",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'derived={derived}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "gate", "type": "default" },
+      { "id": "e2", "source": "gate", "target": "read-count", "type": "default" },
+      { "id": "e3", "source": "read-count", "target": "read-derived", "type": "default" }
+    ]
+  },
+  "variables": {
+    "count": { "value": 3, "type": "integer", "scope": "test" },
+    "factor": { "value": 10, "type": "integer", "scope": "test" },
+    "derived": {
+      "value": "count * factor",
+      "type": "integer",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-06-17T00:00:00.000000",
+  "updated_at": "2026-06-17T00:00:00.000000"
+}

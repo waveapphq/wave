@@ -1,0 +1,29 @@
+{
+  "name": "Variable Self-Reference E2E",
+  "version": "1.0.0",
+  "description": "Test variables for the window's cycle check: `a` reads itself (`a + 1`); `b` (`c + 1`) and `c` (`2`) are expressions with no loop until the spec makes `c` read `b`. Imports successfully (POST /tests does not check variable cycles); the window's cycle check runs when the expression field is left.",
+  "workflow": {
+    "nodes": [],
+    "edges": []
+  },
+  "variables": {
+    "a": {
+      "value": "a + 1",
+      "type": "integer",
+      "isExpression": true
+    },
+    "b": {
+      "value": "c + 1",
+      "type": "integer",
+      "isExpression": true
+    },
+    "c": {
+      "value": "2",
+      "type": "integer",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-05-06T00:00:00.000000",
+  "updated_at": "2026-05-06T00:00:00.000000"
+}

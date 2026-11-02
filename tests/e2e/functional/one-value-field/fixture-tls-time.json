@@ -1,0 +1,382 @@
+{
+  "name": "zz-11541-s10-tls-time",
+  "version": "1.0.0",
+  "description": "Cipher Suites, Parts and the time picker (FIELD-9, FIELD-10)",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "05e19af4-4dd9-40c1-813a-cf69686fe840",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 100
+        },
+        "data": {
+          "label": "Unset ciphers",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Cipher Suites not set, TLS 1.2 only, against the client-preference listener",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "verify_ssl": false,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2"
+            },
+            "outputBindings": {
+              "status_code": "unset_status",
+              "body": "unset_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e024efc1-b78d-4070-800c-115973afe4af",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 170
+        },
+        "data": {
+          "label": "Log unset",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log unset",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'unset status={unset_status} body={unset_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e9f8390a-b528-43be-8ebe-cdd5e3414ee7",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 240
+        },
+        "data": {
+          "label": "Parts",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Multipart body built in the Parts editor",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9449/echo",
+              "method": "POST",
+              "verify_ssl": false,
+              "body_mode": "multipart"
+            },
+            "outputBindings": {
+              "status_code": "parts_status",
+              "body": "parts_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "eca797f3-f9c7-4a7a-8af5-ceecdc50cc16",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 310
+        },
+        "data": {
+          "label": "Log parts",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log parts",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'parts status={parts_status} body={parts_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "118ed3fc-e213-45f7-8525-7f68a711bf70",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 380
+        },
+        "data": {
+          "label": "Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "tls-time-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d7a6cccf-b26c-4782-991c-f2cca8a39077",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 100
+        },
+        "data": {
+          "label": "Set ciphers",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Cipher Suites set to one suite",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "verify_ssl": false,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.3",
+              "cipher_suites": [
+                "ECDHE-RSA-AES128-GCM-SHA256"
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "88410d81-19d0-494a-b15a-9eed5d556068",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "IANA ciphers",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Cipher Suites holding an IANA name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9457/",
+              "method": "GET",
+              "verify_ssl": false,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.3",
+              "cipher_suites": [
+                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                "ECDHE-RSA-AES256-GCM-SHA384"
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f0419de7-24bc-45de-8636-717c07c5d79a",
+        "type": "workflowNode",
+        "position": {
+          "x": 800,
+          "y": 100
+        },
+        "data": {
+          "label": "K8s Connect",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Cipher Suites not set on K8s Connect",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "verify_ssl": false,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.3"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c1abf04a-3153-4968-a78d-d3f1ff680a23",
+        "type": "workflowNode",
+        "position": {
+          "x": 800,
+          "y": 240
+        },
+        "data": {
+          "label": "OpenSearch",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "From and To not set",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "logs-*"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "8230b6f4-47c9-432d-b75d-db036c8db102",
+        "source": "start-node",
+        "target": "05e19af4-4dd9-40c1-813a-cf69686fe840",
+        "type": "default"
+      },
+      {
+        "id": "16dbd8ed-3e0f-4c5b-93f6-9517041156cb",
+        "source": "05e19af4-4dd9-40c1-813a-cf69686fe840",
+        "target": "e024efc1-b78d-4070-800c-115973afe4af",
+        "type": "default"
+      },
+      {
+        "id": "0b36cb2f-10a6-4227-b9f4-f397014c82f8",
+        "source": "e024efc1-b78d-4070-800c-115973afe4af",
+        "target": "e9f8390a-b528-43be-8ebe-cdd5e3414ee7",
+        "type": "default"
+      },
+      {
+        "id": "5c202f6f-4eaa-45a0-a98a-585ff545562e",
+        "source": "e9f8390a-b528-43be-8ebe-cdd5e3414ee7",
+        "target": "eca797f3-f9c7-4a7a-8af5-ceecdc50cc16",
+        "type": "default"
+      },
+      {
+        "id": "33f0f20f-7558-4ced-941c-a299cdf7dc94",
+        "source": "eca797f3-f9c7-4a7a-8af5-ceecdc50cc16",
+        "target": "118ed3fc-e213-45f7-8525-7f68a711bf70",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "unset_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "unset_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "parts_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "parts_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "trace_token": {
+      "value": "trace-abc",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

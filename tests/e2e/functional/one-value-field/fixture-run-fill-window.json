@@ -1,0 +1,54 @@
+{
+  "name": "zz-11541-s3-run-fill-window",
+  "version": "1.0.0",
+  "description": "A K8s Connect the window-built Blocks are dropped under",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fad7eb61-6ad7-48c7-ba46-bdcd9e0bb6a0",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 100 },
+        "data": {
+          "label": "Connect Kwok",
+          "elementType": "k8s-connect",
+          "nodeType": "plugin",
+          "category": "kubernetes",
+          "version": "1.0.0",
+          "description": "Session whose namespace is the run namespace",
+          "hasNewerVersion": false,
+          "expressionFields": ["token", "ca_cert"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "api_url": "https://127.0.0.1:9460",
+              "namespace": "__NAMESPACE__",
+              "verify_ssl": true,
+              "ca_cert": "k8s_ca",
+              "token": "k8s_admin_token"
+            },
+            "outputBindings": {
+              "session": "k8s_session"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "077427b9-61de-4073-9f28-459bd46dd167",
+        "source": "start-node",
+        "target": "fad7eb61-6ad7-48c7-ba46-bdcd9e0bb6a0",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "k8s_ca": { "value": "", "type": "string", "scope": "test" },
+    "k8s_admin_token": { "value": "", "type": "string", "scope": "test", "secret": true },
+    "k8s_session": { "type": "string", "scope": "test" }
+  },
+  "metadata": {}
+}

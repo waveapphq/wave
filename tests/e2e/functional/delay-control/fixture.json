@@ -1,0 +1,319 @@
+{
+  "name": "Delay Control E2E Execution Test",
+  "version": "1.0.0",
+  "description": "Tests Delay control execution with literal and expression durations, output bindings, sequential delays, and timing verification",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "delay-basic",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Basic Delay 200ms",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 200
+            },
+            "outputBindings": {
+              "planned_duration_ms": "basic_planned",
+              "actual_duration_ms": "basic_actual"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-basic-planned",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Basic Planned",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'planned=' + str(basic_planned)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-basic-actual",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Basic Actual",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'actual=' + str(round(basic_actual))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "varset-delay-duration",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 420 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set Duration Variable",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "variables": {
+                "dynamic_duration": 150
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-expression",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 520 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Delay From Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["duration"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": "dynamic_duration"
+            },
+            "outputBindings": {
+              "planned_duration_ms": "expr_planned",
+              "actual_duration_ms": "expr_actual"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-expr-planned",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 620 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Expr Planned",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'expr_planned=' + str(expr_planned)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-short-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 720 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Sequential Delay A",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 100
+            },
+            "outputBindings": {
+              "actual_duration_ms": "seq_actual_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-short-2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 790 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Sequential Delay B",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 100
+            },
+            "outputBindings": {
+              "actual_duration_ms": "seq_actual_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-seq-proof",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 860 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Sequential Proof",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'seq_total=' + str(round(seq_actual_a + seq_actual_b))",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "delay-minimal",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 930 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Minimal Delay 1ms",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 1
+            },
+            "outputBindings": {
+              "planned_duration_ms": "min_planned"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-min-planned",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 1000 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Minimal Planned",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'min_planned=' + str(min_planned)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "delay-basic", "type": "default" },
+      { "id": "e2", "source": "delay-basic", "target": "log-basic-planned", "type": "default" },
+      { "id": "e3", "source": "log-basic-planned", "target": "log-basic-actual", "type": "default" },
+      { "id": "e4", "source": "log-basic-actual", "target": "varset-delay-duration", "type": "default" },
+      { "id": "e5", "source": "varset-delay-duration", "target": "delay-expression", "type": "default" },
+      { "id": "e6", "source": "delay-expression", "target": "log-expr-planned", "type": "default" },
+      { "id": "e7", "source": "log-expr-planned", "target": "delay-short-1", "type": "default" },
+      { "id": "e8", "source": "delay-short-1", "target": "delay-short-2", "type": "default" },
+      { "id": "e9", "source": "delay-short-2", "target": "log-seq-proof", "type": "default" },
+      { "id": "e10", "source": "log-seq-proof", "target": "delay-minimal", "type": "default" },
+      { "id": "e11", "source": "delay-minimal", "target": "log-min-planned", "type": "default" }
+    ]
+  },
+  "variables": {
+    "basic_planned": { "value": 0, "type": "integer", "scope": "test" },
+    "basic_actual": { "value": 0.0, "type": "float", "scope": "test" },
+    "dynamic_duration": { "value": 0, "type": "integer", "scope": "test" },
+    "expr_planned": { "value": 0, "type": "integer", "scope": "test" },
+    "expr_actual": { "value": 0.0, "type": "float", "scope": "test" },
+    "seq_actual_a": { "value": 0.0, "type": "float", "scope": "test" },
+    "seq_actual_b": { "value": 0.0, "type": "float", "scope": "test" },
+    "min_planned": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

@@ -1,0 +1,72 @@
+{
+  "name": "V-CANVAS-FN-EXEC-01 fixture",
+  "version": "1.0.0",
+  "description": "Test: start -> Function_1(start -> Log_inner) -> Log_after. Function declares output `result` of type string; inner Log binds `line` to `result`; the outer Function instance binds `result` -> caller-scope variable `caller_var`. End-to-end run should: surface inner Log message line, mark Function as passed, propagate `caller_var = 'function ran'`.",
+  "variables": {
+    "caller_var": { "type": "string", "value": "" }
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fn-exec-1",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Function_1",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {},
+            "outputBindings": { "result": "caller_var" },
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Function_1",
+            "description": "Logs a line and surfaces it as the result output.",
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "inner-log",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 200 },
+                  "data": {
+                    "label": "Log_inner",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": { "message": "'function ran'", "level": "INFO" },
+                      "outputBindings": { "line": "result" },
+                      "profileBindings": []
+                    }
+                  }
+                }
+              ],
+              "edges": [
+                { "id": "e-start-inner", "source": "start-node", "target": "inner-log" }
+              ]
+            },
+            "inputs": [],
+            "outputs": [{ "name": "result", "type": "string" }],
+            "variables": []
+          }
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-fn", "source": "start-node", "target": "fn-exec-1" }
+    ]
+  },
+  "metadata": {}
+}

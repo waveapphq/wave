@@ -1,0 +1,28 @@
+test:
+  name: Recipe Example - Functions
+  description: Define an inline local Function and run a published library Function by version
+  tags: [example, functions]
+variables:
+  base_url: {type: string, value: "http://localhost:8000"}
+functions:
+  - name: check_endpoint
+    inputs:
+      - {name: url, type: string, required: true}
+    outputs:
+      - {name: status, type: integer}
+    flow:
+      - block: http-client
+        settings: {url: {expr: "url"}, method: GET}
+        capture: {status_code: status}
+      - block: log
+        settings: {message: Endpoint checked}
+flow:
+  - function: check_endpoint
+    settings: {url: {expr: "base_url + '/health'"}}
+    capture: {status: health_status}
+  - function: format_report
+    version: "1.0.0"
+    settings: {summary: "health check complete"}
+    capture: {report: report_text}
+  - block: log
+    settings: {message: "{{ report_text }}"}

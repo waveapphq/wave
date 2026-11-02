@@ -1,0 +1,39 @@
+{
+  "name": "V-CANVAS-FN-UNRESOLVED-REF-DIALOG-01 fixture",
+  "version": "1.0.0",
+  "description": "Test with a Log node whose `message` expression reads `test1`, plus a single declared variable `test1`. The spec deletes `test1` in the Variable Manager and exercises the Save / Run / Debug validation-error dialog flows (Cancel pulses the alert; Fix All restores the variable). Verifies the BE contract too: GET /tests/{id}/validate returns UNDECLARED_VARIABLE while the reference is unresolved; POST /tests/{id}/fix restores the variable.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-1",
+        "type": "workflowNode",
+        "position": { "x": 300, "y": 200 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "RefLog",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "test1", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": []
+  },
+  "variables": {
+    "test1": { "type": "string", "value": "hello" }
+  },
+  "metadata": {},
+  "created_at": "2026-05-19T00:00:00.000000",
+  "updated_at": "2026-05-19T00:00:00.000000"
+}

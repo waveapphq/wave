@@ -1,0 +1,907 @@
+{
+  "name": "CSV Serialize E2E",
+  "version": "1.0.0",
+  "description": "Serialize matrix (table produced by a prior Parse)",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "z1-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z1 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n2,Bob\n"
+            },
+            "outputBindings": {
+              "table": "z_z1_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z1-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z1",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z1_tab"
+            },
+            "outputBindings": {
+              "csv_content": "z_z1_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z1=' + z_z1_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z2-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z2 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n2,Bob\n"
+            },
+            "outputBindings": {
+              "table": "z_z2_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z2-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z2_tab",
+              "has_header": false
+            },
+            "outputBindings": {
+              "csv_content": "z_z2_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z2=' + z_z2_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z3-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z3 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,\n"
+            },
+            "outputBindings": {
+              "table": "z_z3_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z3-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z3_tab"
+            },
+            "outputBindings": {
+              "csv_content": "z_z3_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z3",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z3",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z3=' + z_z3_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z4-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z4 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n"
+            },
+            "outputBindings": {
+              "table": "z_z4_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z4-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z4",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z4_tab",
+              "delimiter": "\t"
+            },
+            "outputBindings": {
+              "csv_content": "z_z4_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z4",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z4",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z4=' + z_z4_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z5-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z5 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "active\ntrue\nfalse\n"
+            },
+            "outputBindings": {
+              "table": "z_z5_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z5-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z5",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z5_tab"
+            },
+            "outputBindings": {
+              "csv_content": "z_z5_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z5",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z5=' + z_z5_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z6-seed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z6 Seed",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "price\n19.99\n"
+            },
+            "outputBindings": {
+              "table": "z_z6_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z6-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Serialize Z6",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z_z6_tab"
+            },
+            "outputBindings": {
+              "csv_content": "z_z6_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z6",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z6",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z6=' + z_z6_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z8-parse",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1860
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z8 Parse",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,Alice\n2,Bob\n"
+            },
+            "outputBindings": {
+              "table": "z8_tab"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "z8-serialize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1950
+        },
+        "data": {
+          "label": "CSV Parser",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Z8 Serialize",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "serialize",
+              "table": "z8_tab"
+            },
+            "outputBindings": {
+              "csv_content": "z8_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-z8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 2040
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Z8",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'Z8=' + z8_out.replace('\\n','~')",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "z1-seed",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "z1-seed",
+        "target": "z1-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "z1-serialize",
+        "target": "log-z1",
+        "type": "default"
+      },
+      {
+        "id": "e4",
+        "source": "log-z1",
+        "target": "z2-seed",
+        "type": "default"
+      },
+      {
+        "id": "e5",
+        "source": "z2-seed",
+        "target": "z2-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e6",
+        "source": "z2-serialize",
+        "target": "log-z2",
+        "type": "default"
+      },
+      {
+        "id": "e7",
+        "source": "log-z2",
+        "target": "z3-seed",
+        "type": "default"
+      },
+      {
+        "id": "e8",
+        "source": "z3-seed",
+        "target": "z3-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e9",
+        "source": "z3-serialize",
+        "target": "log-z3",
+        "type": "default"
+      },
+      {
+        "id": "e10",
+        "source": "log-z3",
+        "target": "z4-seed",
+        "type": "default"
+      },
+      {
+        "id": "e11",
+        "source": "z4-seed",
+        "target": "z4-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e12",
+        "source": "z4-serialize",
+        "target": "log-z4",
+        "type": "default"
+      },
+      {
+        "id": "e13",
+        "source": "log-z4",
+        "target": "z5-seed",
+        "type": "default"
+      },
+      {
+        "id": "e14",
+        "source": "z5-seed",
+        "target": "z5-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e15",
+        "source": "z5-serialize",
+        "target": "log-z5",
+        "type": "default"
+      },
+      {
+        "id": "e16",
+        "source": "log-z5",
+        "target": "z6-seed",
+        "type": "default"
+      },
+      {
+        "id": "e17",
+        "source": "z6-seed",
+        "target": "z6-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e18",
+        "source": "z6-serialize",
+        "target": "log-z6",
+        "type": "default"
+      },
+      {
+        "id": "e19",
+        "source": "log-z6",
+        "target": "z8-parse",
+        "type": "default"
+      },
+      {
+        "id": "e20",
+        "source": "z8-parse",
+        "target": "z8-serialize",
+        "type": "default"
+      },
+      {
+        "id": "e21",
+        "source": "z8-serialize",
+        "target": "log-z8",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "z_z1_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z1_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_z2_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z2_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_z3_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z3_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_z4_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z4_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_z5_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z5_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z_z6_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z_z6_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "z8_tab": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "z8_out": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-01-01T00:00:00.000000",
+  "updated_at": "2026-01-01T00:00:00.000000"
+}

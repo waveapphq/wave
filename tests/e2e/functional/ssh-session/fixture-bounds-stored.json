@@ -1,0 +1,57 @@
+{
+  "name": "V-PLUGIN-SSH-BOUNDS-FUNCTIONAL stored __RUN_UUID__",
+  "version": "1.0.0",
+  "description": "One SSH Session Open whose stored Connect Timeout 0 is outside its bound.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9dea0b30-308a-4597-aa0c-42d53bbff8e5",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 100
+        },
+        "data": {
+          "label": "SSH Session Open",
+          "elementType": "ssh-session-open",
+          "nodeType": "plugin",
+          "category": "remote",
+          "version": "1.0.0",
+          "description": "Connect Timeout 0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "port": "__SSH_PORT__",
+              "username": "__SSH_USER__",
+              "password": "__SSH_PASSWORD__",
+              "host_key_verification": "disabled",
+              "connect_timeout": 0
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "835b4336-1cc8-4541-904e-815239f7cebf",
+        "source": "start-node",
+        "target": "9dea0b30-308a-4597-aa0c-42d53bbff8e5"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

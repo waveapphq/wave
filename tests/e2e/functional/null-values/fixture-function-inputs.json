@@ -1,0 +1,937 @@
+{
+  "name": "V-NULL-FUNCTION-INPUTS-FUNCTIONAL",
+  "version": "1.0.0",
+  "description": "Five Function Blocks running Local Functions with a required, a defaulted and an optional input: null given to the required or the defaulted input and an input expression that fails are refused before the Function flow starts (each caught by a Try/Catch); null given to the optional input reaches the Function flow; a blank expression takes the default.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "21269e0f-e82c-4f3d-8f8a-bfb14d325b96",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Guard Required Null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the refused required input",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "err_a"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9824c1a1-0e31-4c5e-8dc6-8e970a4e2c33",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 100
+        },
+        "data": {
+          "label": "Required_Gets_Null",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "req_in"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "req_in": "None"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Required_Gets_Null",
+            "description": "A required input given None",
+            "inputs": [
+              {
+                "name": "req_in",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "def_in",
+                "type": "string",
+                "required": false,
+                "default": "def-value"
+              },
+              {
+                "name": "opt_in",
+                "type": "string",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "546e05e1-0137-4fce-af48-e07c37aab6e2",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "A Body",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Must never run",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-a-body-ran'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "60083c92-78d0-4df5-86b0-db9fc6aa9335",
+                  "source": "start-node",
+                  "target": "546e05e1-0137-4fce-af48-e07c37aab6e2",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "8a63033a-8602-49b2-8123-d5cff0abf263",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 100
+        },
+        "data": {
+          "label": "A Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Function Block was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'fn-a-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0507c984-6362-47a9-8a1b-9c9ea641a328",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 210
+        },
+        "data": {
+          "label": "Guard Defaulted Null",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the refused defaulted input",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "err_b"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b753f18d-84b8-4327-9359-11472ae3c428",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 210
+        },
+        "data": {
+          "label": "Defaulted_Gets_Null",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "req_in",
+            "def_in"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "req_in": "'r-b'",
+              "def_in": "None"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Defaulted_Gets_Null",
+            "description": "A defaulted input given None",
+            "inputs": [
+              {
+                "name": "req_in",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "def_in",
+                "type": "string",
+                "required": false,
+                "default": "def-value"
+              },
+              {
+                "name": "opt_in",
+                "type": "string",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "7e692925-a22b-427a-93f9-9d9bc0a5e685",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "B Body",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Must never run",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-b-body-ran'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "0a674d81-27f8-46cc-9d14-fdfc285f009f",
+                  "source": "start-node",
+                  "target": "7e692925-a22b-427a-93f9-9d9bc0a5e685",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "63517aa3-582c-4e77-8a53-952caac09b1d",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 210
+        },
+        "data": {
+          "label": "B Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Function Block was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'fn-b-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a5fb2ff9-a80d-48d4-a004-fa761bacfe5d",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 320
+        },
+        "data": {
+          "label": "Optional_Gets_Null",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "req_in",
+            "opt_in"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "req_in": "'r-c'",
+              "opt_in": "None"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Optional_Gets_Null",
+            "description": "An optional input with no default given None",
+            "inputs": [
+              {
+                "name": "req_in",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "def_in",
+                "type": "string",
+                "required": false,
+                "default": "def-value"
+              },
+              {
+                "name": "opt_in",
+                "type": "string",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "def71b61-c1d0-4d7e-9238-2d948e0623e1",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "C Opt",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the optional input",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "opt_in",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "4d3b02e3-2244-44ba-8a13-1e376104fa78",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 270
+                  },
+                  "data": {
+                    "label": "C Def",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the defaulted input",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "def_in",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "2c9675c9-89eb-426c-8dc4-91d9384af68a",
+                  "source": "start-node",
+                  "target": "def71b61-c1d0-4d7e-9238-2d948e0623e1",
+                  "type": "default"
+                },
+                {
+                  "id": "f20f988a-df94-4d56-b99f-9422c2592415",
+                  "source": "def71b61-c1d0-4d7e-9238-2d948e0623e1",
+                  "target": "4d3b02e3-2244-44ba-8a13-1e376104fa78",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4432a2c0-beab-47dd-a439-7b1efb0bdb3a",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 430
+        },
+        "data": {
+          "label": "Guard Failing Expression",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Catches the input expression that fails",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "err_d"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e9adbbf3-3383-4112-9cf3-101d4c3de43e",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 430
+        },
+        "data": {
+          "label": "Binding_Fails",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "req_in"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "req_in": "1 / 0"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Binding_Fails",
+            "description": "A required input whose expression fails",
+            "inputs": [
+              {
+                "name": "req_in",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "def_in",
+                "type": "string",
+                "required": false,
+                "default": "def-value"
+              },
+              {
+                "name": "opt_in",
+                "type": "string",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "fb5ebc05-4e43-497f-873c-8de98538f915",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "D Body",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Must never run",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "'fn-d-body-ran'",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "6e526abb-8b42-4b4b-aa04-ca92c59942d5",
+                  "source": "start-node",
+                  "target": "fb5ebc05-4e43-497f-873c-8de98538f915",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2ac206b3-d445-4a64-9860-504ef11a2f6d",
+        "type": "workflowNode",
+        "position": {
+          "x": 640,
+          "y": 430
+        },
+        "data": {
+          "label": "D Caught",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Runs only when the Function Block was refused",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'fn-d-caught'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c8ad54e8-ed29-4eb7-9d5a-c0a262ecff1e",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 540
+        },
+        "data": {
+          "label": "Blank_Uses_Default",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "req_in",
+            "def_in"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "req_in": "'r-e'",
+              "def_in": ""
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Blank_Uses_Default",
+            "description": "The defaulted input expression left blank",
+            "inputs": [
+              {
+                "name": "req_in",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "def_in",
+                "type": "string",
+                "required": false,
+                "default": "def-value"
+              },
+              {
+                "name": "opt_in",
+                "type": "string",
+                "required": false
+              }
+            ],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "8eb3d5de-608c-42a5-94c0-69eeae36eb8f",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 160
+                  },
+                  "data": {
+                    "label": "E Def",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the defaulted input",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "def_in",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                },
+                {
+                  "id": "a25ad85b-3b5a-4ffb-a7fe-c96e76d67753",
+                  "type": "workflowNode",
+                  "position": {
+                    "x": 200,
+                    "y": 270
+                  },
+                  "data": {
+                    "label": "E Opt",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "Logs the optional input",
+                    "hasNewerVersion": false,
+                    "expressionFields": [
+                      "message"
+                    ],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "opt_in",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": {
+                    "width": 120,
+                    "height": 62
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0396c1e-8b98-4c87-b3ca-7eea7d4ced2b",
+                  "source": "start-node",
+                  "target": "8eb3d5de-608c-42a5-94c0-69eeae36eb8f",
+                  "type": "default"
+                },
+                {
+                  "id": "669e68e5-183d-4b25-9558-b7ee9732cef3",
+                  "source": "8eb3d5de-608c-42a5-94c0-69eeae36eb8f",
+                  "target": "a25ad85b-3b5a-4ffb-a7fe-c96e76d67753",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "941b9a8b-e099-4935-adea-bcb705e87890",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 650
+        },
+        "data": {
+          "label": "Bookend",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Last block of the run",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "'null-function-inputs-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e692cf83-e670-44a7-b467-4b774d12fc70",
+        "source": "start-node",
+        "target": "21269e0f-e82c-4f3d-8f8a-bfb14d325b96",
+        "type": "default"
+      },
+      {
+        "id": "329b5053-2cdb-44ca-800c-4b6d211d313d",
+        "source": "21269e0f-e82c-4f3d-8f8a-bfb14d325b96",
+        "target": "9824c1a1-0e31-4c5e-8dc6-8e970a4e2c33",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "9bef0961-a911-443c-93f8-85e982853aa1",
+        "source": "21269e0f-e82c-4f3d-8f8a-bfb14d325b96",
+        "target": "8a63033a-8602-49b2-8123-d5cff0abf263",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "564fc5fb-3939-4008-b2cc-02f7b019d04f",
+        "source": "21269e0f-e82c-4f3d-8f8a-bfb14d325b96",
+        "target": "0507c984-6362-47a9-8a1b-9c9ea641a328",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "f5d189b3-360d-4fd3-84ac-fcf25c8b7f1a",
+        "source": "0507c984-6362-47a9-8a1b-9c9ea641a328",
+        "target": "b753f18d-84b8-4327-9359-11472ae3c428",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "570733f5-3ee4-43bf-aeb1-0d8716b1c7e1",
+        "source": "0507c984-6362-47a9-8a1b-9c9ea641a328",
+        "target": "63517aa3-582c-4e77-8a53-952caac09b1d",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "35b02349-ab9e-48bc-b55c-96fed17eb0c6",
+        "source": "0507c984-6362-47a9-8a1b-9c9ea641a328",
+        "target": "a5fb2ff9-a80d-48d4-a004-fa761bacfe5d",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "b821313f-7acc-46e0-a570-cbb48a040746",
+        "source": "a5fb2ff9-a80d-48d4-a004-fa761bacfe5d",
+        "target": "4432a2c0-beab-47dd-a439-7b1efb0bdb3a",
+        "type": "default"
+      },
+      {
+        "id": "b8e3cdd3-1c04-4e1c-ad1d-914a9545400e",
+        "source": "4432a2c0-beab-47dd-a439-7b1efb0bdb3a",
+        "target": "e9adbbf3-3383-4112-9cf3-101d4c3de43e",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "8b55472e-d299-40a9-9af2-1d5f5bf54cca",
+        "source": "4432a2c0-beab-47dd-a439-7b1efb0bdb3a",
+        "target": "2ac206b3-d445-4a64-9860-504ef11a2f6d",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "5586375b-99eb-46c4-89a9-aaf1c77073d1",
+        "source": "4432a2c0-beab-47dd-a439-7b1efb0bdb3a",
+        "target": "c8ad54e8-ed29-4eb7-9d5a-c0a262ecff1e",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "182d88f0-463d-41ea-a68b-514fbec93a3e",
+        "source": "c8ad54e8-ed29-4eb7-9d5a-c0a262ecff1e",
+        "target": "941b9a8b-e099-4935-adea-bcb705e87890",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "err_a": {
+      "type": "map",
+      "scope": "test"
+    },
+    "err_b": {
+      "type": "map",
+      "scope": "test"
+    },
+    "err_d": {
+      "type": "map",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

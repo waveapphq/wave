@@ -1,0 +1,12 @@
+# Standing instance of the custom resource, so a custom-kind read finds an object
+# without any seeding. Lives in the read-only namespace; tests that need one inside
+# their own run namespace create it there.
+apiVersion: wave.e2e/v1
+kind: WaveGadget
+metadata:
+  name: wave-gadget-0
+  namespace: restricted
+  labels:
+    wave-e2e: read
+spec:
+  size: large

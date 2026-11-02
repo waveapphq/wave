@@ -1,0 +1,127 @@
+{
+  "name": "zz-11541-s6b-lists",
+  "version": "1.0.0",
+  "description": "A plain Block list field and a typed Function Block list input, for per-item {x}",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9a07501b-2e65-4f23-9eb8-352081afc175",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 160 },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Health request",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "http://127.0.0.1:9450/health?who=s6b-lists",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": ["502", "503", "504"],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "2a847914-8b14-40da-bc74-eed54a034db6",
+        "type": "workflowNode",
+        "position": { "x": 200, "y": 280 },
+        "data": {
+          "label": "List_Fn",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "elementTypes": { "codes": ["integer", "array"] },
+          "config": {
+            "values": { "codes": ["7", ["1", "2"]] },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "List_Fn",
+            "description": "Logs its typed list input",
+            "inputs": [{ "name": "codes", "type": "array", "required": false }],
+            "outputs": [],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "57e3cd27-b5e9-416f-9d55-772c724e0d4c",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "Log",
+                    "elementType": "log",
+                    "nodeType": "plugin",
+                    "category": "system",
+                    "version": "1.0.0",
+                    "description": "List probe",
+                    "hasNewerVersion": false,
+                    "expressionFields": ["message"],
+                    "templateFields": [],
+                    "variableExpressionKeys": [],
+                    "config": {
+                      "values": {
+                        "message": "f\"F9 item0={codes[0] + 1} item1={str(codes[1]) + '-tail'} text1={type(codes[1]) == str} len1={len(codes[1])}\"",
+                        "level": "INFO"
+                      },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "abe35347-99c3-4ad3-a841-7467eb7eb50f",
+                  "source": "start-node",
+                  "target": "57e3cd27-b5e9-416f-9d55-772c724e0d4c",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      {
+        "id": "45abd87e-aca9-4700-a6b0-7197fe56c6be",
+        "source": "start-node",
+        "target": "9a07501b-2e65-4f23-9eb8-352081afc175",
+        "type": "default"
+      },
+      {
+        "id": "39e844e3-a1d7-45d9-9603-f26110f280e8",
+        "source": "9a07501b-2e65-4f23-9eb8-352081afc175",
+        "target": "2a847914-8b14-40da-bc74-eed54a034db6",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

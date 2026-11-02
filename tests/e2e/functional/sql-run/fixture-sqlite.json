@@ -1,0 +1,1196 @@
+{
+  "name": "V-PLUGIN-SQL-SQLITE",
+  "version": "1.0.0",
+  "description": "SQLite on WAVE's bundled build: the Connect timeout as the busy timeout, the script's own BEGIN / ROLLBACK, Max rows, Timeout on an endless query, a File in a folder that is not there, placeholders with no value, CREATE VIRTUAL TABLE, a Driver option SQLite does not take, and a read-only Test Data database.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "a0645c31-4366-5cf3-bda4-3c8066b279d0",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Seed items",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Creates the items table with five rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nINSERT INTO items (id, name) VALUES (1, 'one'), (2, 'two'), (3, 'three'), (4, 'four'), (5, 'five');\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "seed_ok",
+              "rows_changed": "seed_rows_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6374916e-6742-596a-a31a-a0df6bed6cf9",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Busy timeout 30",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Connect timeout 30 and no Driver options",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "PRAGMA busy_timeout;\n",
+              "connect_timeout": 30,
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "bt30_ok",
+              "rows": "bt30_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b85c0b2c-ec93-5426-a30a-7e68057182f8",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Busy timeout 12",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Connect timeout 12 and no Driver options",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "PRAGMA busy_timeout;\n",
+              "connect_timeout": 12,
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "bt12_ok",
+              "rows": "bt12_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "694f030a-3896-500d-a84e-242821e49c77",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Script transaction",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "The script's own BEGIN and ROLLBACK",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "BEGIN;\nINSERT INTO items (id, name) VALUES (6, 'rolled back');\nROLLBACK;\nSELECT count(*) AS n FROM items;\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "tx_ok",
+              "rows": "tx_rows",
+              "row_count": "tx_row_count",
+              "rows_changed": "tx_rows_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d066d1a8-550e-56b9-ba4c-d5a38d25425c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Max rows",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Max rows 2 on five rows, then a DELETE on the same table",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM items ORDER BY id;\nDELETE FROM items WHERE id = 5;\n",
+              "max_rows": 2,
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "mr_ok",
+              "rows": "mr_rows",
+              "row_count": "mr_row_count",
+              "rows_changed": "mr_rows_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "64681fe6-681b-54f5-88d0-97fc760f3242",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "Before timeout",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Marks the moment the Timeout block starts",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlite-before-timeout'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fcb7c636-0f03-5330-af04-50346cc2a9c5",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Timeout",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Timeout 3 on an endless recursive query",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "WITH RECURSIVE endless(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM endless)\nSELECT count(*) AS n FROM endless;\n",
+              "timeout": 3,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "to_ok",
+              "error": "to_error",
+              "reason": "to_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b1784c0f-7067-5841-84e6-90d876c1c60e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "After timeout",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Reads the same file right after the Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM items;\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "after_ok",
+              "rows": "after_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f291d34d-e7a6-531f-975c-c56bf33a730b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Missing folder",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A File in a folder that does not exist",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-absent-__TOKEN__/sqlite.db",
+              "script_type": "source",
+              "sql": "SELECT 1 AS one;\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "mf_ok",
+              "error": "mf_error",
+              "reason": "mf_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c45b48bb-7fb9-5c3c-a27c-0051e1041702",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "Placeholder at name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "An @name marker beside a bound name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT :bound AS bound, @at_name AS missing;\n",
+              "parameters": {
+                "bound": "kept"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ph_at_ok",
+              "error": "ph_at_error",
+              "reason": "ph_at_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "9ea1f168-637a-582c-a3c6-fd9034cc400a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Placeholder dollar name",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A $name marker beside a bound name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT :bound AS bound, $dollar_name AS missing;\n",
+              "parameters": {
+                "bound": "kept"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ph_dollar_ok",
+              "error": "ph_dollar_error",
+              "reason": "ph_dollar_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c6dd2f06-1ec4-56a5-9d5a-d1713642247d",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1050
+        },
+        "data": {
+          "label": "Placeholder question number",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A ?1 marker beside a bound name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT ?1 AS missing, :bound AS bound;\n",
+              "parameters": {
+                "bound": "kept"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ph_qnum_ok",
+              "error": "ph_qnum_error",
+              "reason": "ph_qnum_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "125bb848-0059-5cde-b3a5-c640ee0e1f63",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1140
+        },
+        "data": {
+          "label": "Placeholder colon number",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A :1 marker beside a bound name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT :1 AS missing, :bound AS bound;\n",
+              "parameters": {
+                "bound": "kept"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ph_cnum_ok",
+              "error": "ph_cnum_error",
+              "reason": "ph_cnum_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7c4dc69b-67ea-589c-891c-76c094d616a2",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1230
+        },
+        "data": {
+          "label": "Placeholder question mark",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A ? marker beside a bound name",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "SELECT :bound AS bound, ? AS missing;\n",
+              "parameters": {
+                "bound": "kept"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ph_q_ok",
+              "error": "ph_q_error",
+              "reason": "ph_q_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d66101ad-a238-5e3d-bf9d-e029e0d0a2f1",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1320
+        },
+        "data": {
+          "label": "Virtual table",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "CREATE VIRTUAL TABLE changes no rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "CREATE VIRTUAL TABLE docs USING fts5(body);\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "vt_ok",
+              "rows_changed": "vt_rows_changed"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b0793a05-e7ec-593d-8761-1f857bb1bbde",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1410
+        },
+        "data": {
+          "label": "Refused option",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "A Driver option SQLite does not take",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "artifact://sqlite-refused-__TOKEN__.db",
+              "script_type": "source",
+              "sql": "CREATE TABLE never_made (id INTEGER);\n",
+              "driver_options": {
+                "isolation_level": "DEFERRED"
+              },
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "m3_ok",
+              "error": "m3_error",
+              "reason": "m3_reason"
+            },
+            "profileBindings": []
+          },
+          "elementTypes": {
+            "driver_options": {
+              "isolation_level": "string"
+            }
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "93762995-6f50-5d3c-a294-ad20d3d3c4bd",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1500
+        },
+        "data": {
+          "label": "Read-only select",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Reads a Test Data database",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqlite-readonly.db",
+              "script_type": "source",
+              "sql": "SELECT id, name FROM readonly_items ORDER BY id;\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ro_ok",
+              "rows": "ro_rows",
+              "row_count": "ro_row_count"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0455d726-ee58-586b-8634-f1a4ccd98a0c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1590
+        },
+        "data": {
+          "label": "Read-only insert",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Writes to a Test Data database",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqlite-readonly.db",
+              "script_type": "source",
+              "sql": "INSERT INTO readonly_items (id, name) VALUES (9, 'refused');\n",
+              "timeout": 60,
+              "on_error": "record"
+            },
+            "outputBindings": {
+              "success": "ro_ins_ok",
+              "error": "ro_ins_error",
+              "reason": "ro_ins_reason"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "36623b1f-f64b-5c34-9810-e78bc442b70c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1680
+        },
+        "data": {
+          "label": "Read-only read back",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Counts the Test Data rows after the refused write",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "run_sql",
+              "database_type": "sqlite",
+              "file": "testdata://sqlite-readonly.db",
+              "script_type": "source",
+              "sql": "SELECT count(*) AS n FROM readonly_items;\n",
+              "timeout": 60,
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "success": "ro_back_ok",
+              "rows": "ro_back_rows"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cb1f4c1c-daef-5eb8-b4ed-25b78aef3036",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 1770
+        },
+        "data": {
+          "label": "Done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sqlite-functional-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "f24dc691-9e1c-505d-97e6-09a8831c4623",
+        "source": "start-node",
+        "target": "a0645c31-4366-5cf3-bda4-3c8066b279d0",
+        "type": "default"
+      },
+      {
+        "id": "e64ad181-9b96-5c7d-bf6a-078d44300c51",
+        "source": "a0645c31-4366-5cf3-bda4-3c8066b279d0",
+        "target": "6374916e-6742-596a-a31a-a0df6bed6cf9",
+        "type": "default"
+      },
+      {
+        "id": "0947ebb5-756b-50bb-a9ff-af9d82d36c62",
+        "source": "6374916e-6742-596a-a31a-a0df6bed6cf9",
+        "target": "b85c0b2c-ec93-5426-a30a-7e68057182f8",
+        "type": "default"
+      },
+      {
+        "id": "1733ee79-7028-5504-863a-bc4be1d3bad5",
+        "source": "b85c0b2c-ec93-5426-a30a-7e68057182f8",
+        "target": "694f030a-3896-500d-a84e-242821e49c77",
+        "type": "default"
+      },
+      {
+        "id": "0013d254-f232-5e94-b7ab-0f479a0b51d8",
+        "source": "694f030a-3896-500d-a84e-242821e49c77",
+        "target": "d066d1a8-550e-56b9-ba4c-d5a38d25425c",
+        "type": "default"
+      },
+      {
+        "id": "9cde7d3e-1954-5a83-819f-1465ac66b0d9",
+        "source": "d066d1a8-550e-56b9-ba4c-d5a38d25425c",
+        "target": "64681fe6-681b-54f5-88d0-97fc760f3242",
+        "type": "default"
+      },
+      {
+        "id": "ef4c7c7e-9191-59d6-871c-5c98ecd7b7c0",
+        "source": "64681fe6-681b-54f5-88d0-97fc760f3242",
+        "target": "fcb7c636-0f03-5330-af04-50346cc2a9c5",
+        "type": "default"
+      },
+      {
+        "id": "b187cee1-af9a-50b0-8293-ac9f2d25a5ec",
+        "source": "fcb7c636-0f03-5330-af04-50346cc2a9c5",
+        "target": "b1784c0f-7067-5841-84e6-90d876c1c60e",
+        "type": "default"
+      },
+      {
+        "id": "595833cb-3790-501b-b5c6-bd0a7815b79d",
+        "source": "b1784c0f-7067-5841-84e6-90d876c1c60e",
+        "target": "f291d34d-e7a6-531f-975c-c56bf33a730b",
+        "type": "default"
+      },
+      {
+        "id": "2ba6d2be-0521-585f-be4f-d8c242cba114",
+        "source": "f291d34d-e7a6-531f-975c-c56bf33a730b",
+        "target": "c45b48bb-7fb9-5c3c-a27c-0051e1041702",
+        "type": "default"
+      },
+      {
+        "id": "f53c2be1-6bd1-5590-aae0-8d06cc5c9080",
+        "source": "c45b48bb-7fb9-5c3c-a27c-0051e1041702",
+        "target": "9ea1f168-637a-582c-a3c6-fd9034cc400a",
+        "type": "default"
+      },
+      {
+        "id": "67625244-69be-576e-a6d6-bdb543538e70",
+        "source": "9ea1f168-637a-582c-a3c6-fd9034cc400a",
+        "target": "c6dd2f06-1ec4-56a5-9d5a-d1713642247d",
+        "type": "default"
+      },
+      {
+        "id": "8c86aa63-bd2d-5549-b493-86b57efed80e",
+        "source": "c6dd2f06-1ec4-56a5-9d5a-d1713642247d",
+        "target": "125bb848-0059-5cde-b3a5-c640ee0e1f63",
+        "type": "default"
+      },
+      {
+        "id": "f4b13bd9-dd92-5b99-83c5-e3b4a7942e24",
+        "source": "125bb848-0059-5cde-b3a5-c640ee0e1f63",
+        "target": "7c4dc69b-67ea-589c-891c-76c094d616a2",
+        "type": "default"
+      },
+      {
+        "id": "23f644b5-f333-5ee2-9b82-9eda80070d37",
+        "source": "7c4dc69b-67ea-589c-891c-76c094d616a2",
+        "target": "d66101ad-a238-5e3d-bf9d-e029e0d0a2f1",
+        "type": "default"
+      },
+      {
+        "id": "036755b2-6485-5889-aafa-9bee111a04db",
+        "source": "d66101ad-a238-5e3d-bf9d-e029e0d0a2f1",
+        "target": "b0793a05-e7ec-593d-8761-1f857bb1bbde",
+        "type": "default"
+      },
+      {
+        "id": "e7ff4401-e769-5e38-9c2c-211a2c2fd231",
+        "source": "b0793a05-e7ec-593d-8761-1f857bb1bbde",
+        "target": "93762995-6f50-5d3c-a294-ad20d3d3c4bd",
+        "type": "default"
+      },
+      {
+        "id": "261eac14-6b83-58af-bedb-fa7024e7a1a7",
+        "source": "93762995-6f50-5d3c-a294-ad20d3d3c4bd",
+        "target": "0455d726-ee58-586b-8634-f1a4ccd98a0c",
+        "type": "default"
+      },
+      {
+        "id": "54bd9f8a-89a0-5d80-b297-94a60f4b5b44",
+        "source": "0455d726-ee58-586b-8634-f1a4ccd98a0c",
+        "target": "36623b1f-f64b-5c34-9810-e78bc442b70c",
+        "type": "default"
+      },
+      {
+        "id": "bd23e02d-01a4-5e5a-991b-f15e3062c727",
+        "source": "36623b1f-f64b-5c34-9810-e78bc442b70c",
+        "target": "cb1f4c1c-daef-5eb8-b4ed-25b78aef3036",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "seed_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "seed_rows_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "bt30_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "bt30_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "bt12_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "bt12_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "tx_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "tx_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "tx_row_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "tx_rows_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "mr_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mr_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "mr_row_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "mr_rows_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "to_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "to_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "to_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "after_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "after_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "mf_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "mf_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "mf_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_at_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ph_at_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_at_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_dollar_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ph_dollar_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_dollar_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_qnum_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ph_qnum_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_qnum_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_cnum_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ph_cnum_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_cnum_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_q_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ph_q_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ph_q_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "vt_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "vt_rows_changed": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m3_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "m3_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "m3_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ro_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ro_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "ro_row_count": {
+      "value": -1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ro_ins_ok": {
+      "value": true,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ro_ins_error": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ro_ins_reason": {
+      "value": "unset",
+      "type": "string",
+      "scope": "test"
+    },
+    "ro_back_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ro_back_rows": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

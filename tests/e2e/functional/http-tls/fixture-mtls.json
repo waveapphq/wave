@@ -1,0 +1,639 @@
+{
+  "name": "HTTP mTLS Client Identity E2E",
+  "version": "1.0.0",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "http-m1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 0
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "mTLS 1.2 PEM client cert, verify via CA (PERM-1)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "client_cert",
+            "client_key",
+            "ca_cert"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": true,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2",
+              "client_cert": "client_cert_pem",
+              "client_key": "client_key_pem",
+              "ca_cert": "ca_pem"
+            },
+            "outputBindings": {
+              "status_code": "m1_status",
+              "body": "m1_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-m1",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 70
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log m1",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'm1 status={m1_status} body={m1_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-m2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 140
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "mTLS max 1.3 -> negotiates 1.3 (PERM-2)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "client_cert",
+            "client_key"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.3",
+              "client_cert": "client_cert_pem",
+              "client_key": "client_key_pem"
+            },
+            "outputBindings": {
+              "status_code": "m2_status",
+              "body": "m2_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-m2",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 210
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log m2",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'm2 status={m2_status} body={m2_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-m3a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 280
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "mTLS pinned 1.0 (PERM-3)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "client_cert",
+            "client_key"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.0",
+              "tls_max_version": "1.0",
+              "client_cert": "client_cert_pem",
+              "client_key": "client_key_pem"
+            },
+            "outputBindings": {
+              "status_code": "m3a_status",
+              "body": "m3a_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-m3a",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 350
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log m3a",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'm3a status={m3a_status} body={m3a_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-m3b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 420
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "mTLS pinned 1.1 (PERM-3)",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "client_cert",
+            "client_key"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.1",
+              "tls_max_version": "1.1",
+              "client_cert": "client_cert_pem",
+              "client_key": "client_key_pem"
+            },
+            "outputBindings": {
+              "status_code": "m3b_status",
+              "body": "m3b_body"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-m3b",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 490
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log m3b",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'm3b status={m3b_status} body={m3b_body}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "http-noident",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 980
+        },
+        "data": {
+          "label": "HTTP",
+          "elementType": "http-client",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "No client cert to mTLS listener",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9451/",
+              "method": "GET",
+              "timeout": 30,
+              "retry_count": 0,
+              "retry_delay": 1,
+              "retry_backoff_factor": 2,
+              "retryable_status_codes": [
+                "502",
+                "503",
+                "504"
+              ],
+              "verify_ssl": false,
+              "allow_redirects": true,
+              "max_redirects": 10,
+              "tls_min_version": "1.2",
+              "tls_max_version": "1.2"
+            },
+            "outputBindings": {
+              "status_code": "ni_status"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-noident",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1050
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log noident caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'noident status={ni_status}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-book",
+        "type": "workflowNode",
+        "position": {
+          "x": -75,
+          "y": 1120
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Bookend",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f'http-tls-mtls-done bp={bp_caught} ni={ni_caught}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-m1",
+        "source": "start-node",
+        "target": "http-m1",
+        "type": "default"
+      },
+      {
+        "id": "e-m1-log",
+        "source": "http-m1",
+        "target": "log-m1",
+        "type": "default"
+      },
+      {
+        "id": "e-m2",
+        "source": "log-m1",
+        "target": "http-m2",
+        "type": "default"
+      },
+      {
+        "id": "e-m2-log",
+        "source": "http-m2",
+        "target": "log-m2",
+        "type": "default"
+      },
+      {
+        "id": "e-m3a",
+        "source": "log-m2",
+        "target": "http-m3a",
+        "type": "default"
+      },
+      {
+        "id": "e-m3a-log",
+        "source": "http-m3a",
+        "target": "log-m3a",
+        "type": "default"
+      },
+      {
+        "id": "e-m3b",
+        "source": "log-m3a",
+        "target": "http-m3b",
+        "type": "default"
+      },
+      {
+        "id": "e-m3b-log",
+        "source": "http-m3b",
+        "target": "log-m3b",
+        "type": "default"
+      },
+      {
+        "id": "e-m3b-noident",
+        "source": "log-m3b",
+        "target": "http-noident",
+        "type": "default"
+      },
+      {
+        "id": "e-noident-log",
+        "source": "http-noident",
+        "target": "log-noident",
+        "type": "default"
+      },
+      {
+        "id": "e-noident-book",
+        "source": "log-noident",
+        "target": "log-book",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "client_cert_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "client_key_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test",
+      "secret": true
+    },
+    "ca_pem": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "m1_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m1_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "m2_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m2_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "m3a_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m3a_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "m3b_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m3b_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "m4_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "m4_body": {
+      "value": "",
+      "type": "string",
+      "scope": "test"
+    },
+    "bp_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "bp_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "bp_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ni_err": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "ni_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "ni_status": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

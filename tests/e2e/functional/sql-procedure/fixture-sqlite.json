@@ -1,0 +1,209 @@
+{
+  "name": "V-PLUGIN-SQL-PROCEDURE-SQLITE",
+  "version": "1.0.0",
+  "description": "SQL Call procedure on SQLite, which has no procedures: the Block refuses the operation before it opens the file.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "d1e4fe5f-2be5-5200-ac47-5403605626ca",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "SQLite refusal",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "pr_lite_error",
+              "caught": "pr_lite_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "29e3d058-89e9-5281-b061-c70b423793d6",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 160
+        },
+        "data": {
+          "label": "SQLite call",
+          "elementType": "sql-client",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "SQLite call",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "database_type": "sqlite",
+              "file": "artifact://wave-pr-__TOKEN__.db",
+              "operation": "call_procedure",
+              "procedure": "__SEED_PROCEDURE__",
+              "arguments": {
+                "a": "2",
+                "b": "3"
+              },
+              "out_arguments": [
+                {
+                  "value": "total"
+                },
+                {
+                  "value": "label"
+                }
+              ],
+              "on_error": "fail"
+            },
+            "outputBindings": {
+              "out_values": "pr_lite_out"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0a67667b-2202-5d58-91f5-9b04dd63b204",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "SQLite refusal caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"pr-lite-caught {pr_lite_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "4a4708ec-67df-5a42-9699-2e314f629ced",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 300
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'sql-procedure-sqlite-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "9e478c1c-ea8c-5ec7-a2b7-688be9e9fadd",
+        "source": "start-node",
+        "target": "d1e4fe5f-2be5-5200-ac47-5403605626ca",
+        "type": "default"
+      },
+      {
+        "id": "64ddadf4-872a-5694-9bcc-1e788e492e87",
+        "source": "d1e4fe5f-2be5-5200-ac47-5403605626ca",
+        "sourceHandle": "try",
+        "target": "29e3d058-89e9-5281-b061-c70b423793d6",
+        "type": "default"
+      },
+      {
+        "id": "a18102fc-457d-5af6-ae6c-c9bab9894597",
+        "source": "d1e4fe5f-2be5-5200-ac47-5403605626ca",
+        "sourceHandle": "catch",
+        "target": "0a67667b-2202-5d58-91f5-9b04dd63b204",
+        "type": "default"
+      },
+      {
+        "id": "05c59fd6-86c1-5790-8265-8e84dd0ed86d",
+        "source": "d1e4fe5f-2be5-5200-ac47-5403605626ca",
+        "sourceHandle": "then",
+        "target": "4a4708ec-67df-5a42-9699-2e314f629ced",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "pr_lite_out": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "pr_lite_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "pr_lite_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

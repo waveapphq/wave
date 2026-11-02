@@ -1,0 +1,73 @@
+# kwokctl configuration for the WAVE E2E kwok service (test-only).
+# Injects static-token auth and pins the client CA to the checked-in PKI via
+# kube-apiserver component patches. The ClusterLogs doc serves log files (CRI
+# format) to every pod the kwok controller manages, keyed by container name:
+# current + previous-instance files for `app` and `sidecar`, the generated
+# `recent` file, the multi-byte `unicode` file, and the canned
+# kwok-log-line-1..3 default for any other container. The ClusterExec doc grants
+# exec to the named exec-fixture pods only, keyed by container name.
+apiVersion: config.kwok.x-k8s.io/v1alpha1
+kind: KwokctlConfiguration
+componentsPatches:
+- name: kube-apiserver
+  extraArgs:
+  - key: token-auth-file
+    value: /wave/tokens.csv
+  - key: client-ca-file
+    value: /root/.kwok/clusters/kwok/pki/ca.crt
+    override: true
+---
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: ClusterLogs
+metadata:
+  name: wave-pod-logs
+spec:
+  logs:
+  - containers:
+    - app
+    logsFile: /wave/logs/app.log
+    previousLogsFile: /wave/logs/app-previous.log
+  - containers:
+    - sidecar
+    logsFile: /wave/logs/sidecar.log
+    previousLogsFile: /wave/logs/sidecar-previous.log
+  - containers:
+    - recent
+    logsFile: /wave/logs/recent.log
+  - containers:
+    - unicode
+    logsFile: /wave/logs/unicode.log
+  - logsFile: /wave/logs/pod.log
+    previousLogsFile: /wave/logs/pod-previous.log
+---
+apiVersion: kwok.x-k8s.io/v1alpha1
+kind: ClusterExec
+metadata:
+  name: wave-pod-exec
+spec:
+  # No matchNamespaces: functional tests run in per-run wave-e2e-<suffix>
+  # namespaces and the selector matches names literally, never by pattern.
+  selector:
+    matchNames:
+    - wave-pod-exec
+    - wave-pod-exec-b
+  execs:
+  - containers:
+    - app
+    local:
+      workDir: /wave/exec/app
+      envs:
+      - name: WAVE_EXEC_TARGET
+        value: app-container
+  - containers:
+    - sidecar
+    local:
+      workDir: /wave/exec/sidecar
+      envs:
+      - name: WAVE_EXEC_TARGET
+        value: sidecar-container
+  - local:
+      workDir: /wave/exec
+      envs:
+      - name: WAVE_EXEC_TARGET
+        value: default-fallback

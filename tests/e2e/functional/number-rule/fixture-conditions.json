@@ -1,0 +1,633 @@
+{
+  "name": "zz-11541-s9-conditions",
+  "version": "1.0.0",
+  "description": "Assert, If/Else, Switch, While, Wait Until and CSV filters comparing integer, float and string values",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "5ed2ad3a-1d9a-4af4-b0d5-3d1cfca03491",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 80
+        },
+        "data": {
+          "label": "Check n f s",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Check n f s",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "type": "literal",
+                  "variable": "n",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "5",
+                  "reference_is_expression": false,
+                  "id": "cond-assert-n"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "f",
+                  "value_type": "float",
+                  "operator": "equals",
+                  "reference_value": 1e-07,
+                  "reference_is_expression": false,
+                  "id": "cond-assert-f"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "type": "literal",
+                  "variable": "s",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "1e5",
+                  "reference_is_expression": false,
+                  "id": "cond-assert-s"
+                }
+              ],
+              "mode": "single"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c75a6c58-6b90-4fb9-a86f-552eddf0087a",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 180
+        },
+        "data": {
+          "label": "Branch on n",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Branch on n",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "type": "if",
+                  "id": "branch_big",
+                  "label": "big",
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "n",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "4",
+                      "reference_is_expression": false,
+                      "id": "cond-if-n"
+                    }
+                  ]
+                },
+                {
+                  "type": "else",
+                  "id": "branch_small",
+                  "label": "small"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "d3bb26f0-527c-4b8c-8c33-55f38a62171a",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 280
+        },
+        "data": {
+          "label": "Log big",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log big",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'if-big'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "c7d60253-4eb7-42ab-b891-bab54bec4110",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 280
+        },
+        "data": {
+          "label": "Log small",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log small",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'if-small'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "60912e40-d75c-4ee1-bef0-a6d7a9f64bae",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 380
+        },
+        "data": {
+          "label": "Pick n",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Pick n",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "five",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "type": "literal",
+                      "variable": "n",
+                      "value_type": "integer",
+                      "operator": "equals",
+                      "reference_value": "5",
+                      "reference_is_expression": false,
+                      "id": "cond-case-n"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "9f5ab27b-0a11-46ef-b17e-7b2e305a592c",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 480
+        },
+        "data": {
+          "label": "Log five",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log five",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'case-five'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "093563e5-179e-4fc7-b340-4899635919ce",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 480
+        },
+        "data": {
+          "label": "Count to 3",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Count to 3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "i",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3",
+                  "reference_is_expression": false,
+                  "id": "cond-while-i"
+                }
+              ]
+            },
+            "outputBindings": {
+              "index": "w_index"
+            },
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "75d0ee77-1792-4b13-bb6a-51786ec998da",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 580
+        },
+        "data": {
+          "label": "Step i",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Step i",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "variables": {
+                "i": "i + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": [
+            "i"
+          ],
+          "variableTypes": {
+            "i": "integer"
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e8a81b55-f297-4388-9f0b-dcccfe5eef7b",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 580
+        },
+        "data": {
+          "label": "Wait for n",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for n",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "n",
+                  "value_type": "integer",
+                  "operator": "equals",
+                  "reference_value": "5",
+                  "reference_is_expression": false,
+                  "id": "cond-wait-n"
+                }
+              ],
+              "timeout": 5000,
+              "check_interval": 100,
+              "message": "n never reached 5",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "variableExpressionKeys": []
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "74b19258-e98c-4179-bb98-92854437fe69",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 680
+        },
+        "data": {
+          "label": "Filter rows",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Filter rows",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,ratio\n1,0.5\n2,1.5\n3,1.9\n4,2.5\n",
+              "filters": [
+                {
+                  "id": "filter-id",
+                  "column": {
+                    "mode": "name",
+                    "value": "id"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "filter-id-cond",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "1",
+                      "reference_is_expression": false
+                    }
+                  ]
+                },
+                {
+                  "id": "filter-ratio",
+                  "column": {
+                    "mode": "name",
+                    "value": "ratio"
+                  },
+                  "asType": "float",
+                  "conditions": [
+                    {
+                      "id": "filter-ratio-cond",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "float",
+                      "operator": "less_than",
+                      "reference_value": "2.0",
+                      "reference_is_expression": false
+                    }
+                  ]
+                }
+              ],
+              "sorts": [
+                {
+                  "id": "sort-ratio",
+                  "column": {
+                    "mode": "index",
+                    "value": "1"
+                  },
+                  "direction": "desc"
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "kept"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "92b85c2e-7e1d-4e75-a99a-cca92011cbc4",
+        "type": "workflowNode",
+        "position": {
+          "x": 520,
+          "y": 780
+        },
+        "data": {
+          "label": "Log done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'conditions-done i=' + str(i)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-cond-0",
+        "source": "start-node",
+        "target": "5ed2ad3a-1d9a-4af4-b0d5-3d1cfca03491",
+        "type": "default"
+      },
+      {
+        "id": "e-cond-1",
+        "source": "5ed2ad3a-1d9a-4af4-b0d5-3d1cfca03491",
+        "target": "c75a6c58-6b90-4fb9-a86f-552eddf0087a",
+        "type": "default"
+      },
+      {
+        "id": "e-cond-2",
+        "source": "c75a6c58-6b90-4fb9-a86f-552eddf0087a",
+        "target": "d3bb26f0-527c-4b8c-8c33-55f38a62171a",
+        "type": "default",
+        "sourceHandle": "branch_big"
+      },
+      {
+        "id": "e-cond-3",
+        "source": "c75a6c58-6b90-4fb9-a86f-552eddf0087a",
+        "target": "c7d60253-4eb7-42ab-b891-bab54bec4110",
+        "type": "default",
+        "sourceHandle": "branch_small"
+      },
+      {
+        "id": "e-cond-4",
+        "source": "d3bb26f0-527c-4b8c-8c33-55f38a62171a",
+        "target": "60912e40-d75c-4ee1-bef0-a6d7a9f64bae",
+        "type": "default"
+      },
+      {
+        "id": "e-cond-5",
+        "source": "60912e40-d75c-4ee1-bef0-a6d7a9f64bae",
+        "target": "9f5ab27b-0a11-46ef-b17e-7b2e305a592c",
+        "type": "default",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "e-cond-6",
+        "source": "60912e40-d75c-4ee1-bef0-a6d7a9f64bae",
+        "target": "093563e5-179e-4fc7-b340-4899635919ce",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-cond-7",
+        "source": "093563e5-179e-4fc7-b340-4899635919ce",
+        "target": "75d0ee77-1792-4b13-bb6a-51786ec998da",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-cond-8",
+        "source": "093563e5-179e-4fc7-b340-4899635919ce",
+        "target": "e8a81b55-f297-4388-9f0b-dcccfe5eef7b",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-cond-9",
+        "source": "e8a81b55-f297-4388-9f0b-dcccfe5eef7b",
+        "target": "74b19258-e98c-4179-bb98-92854437fe69",
+        "type": "default"
+      },
+      {
+        "id": "e-cond-10",
+        "source": "74b19258-e98c-4179-bb98-92854437fe69",
+        "target": "92b85c2e-7e1d-4e75-a99a-cca92011cbc4",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "n": {
+      "value": 5,
+      "type": "integer",
+      "scope": "test"
+    },
+    "f": {
+      "value": "0.0000001",
+      "type": "float",
+      "scope": "test"
+    },
+    "s": {
+      "value": "1e5",
+      "type": "string",
+      "scope": "test"
+    },
+    "i": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "w_index": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "kept": {
+      "value": null,
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

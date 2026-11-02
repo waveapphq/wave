@@ -1,0 +1,436 @@
+{
+  "name": "For Loop Control E2E",
+  "version": "1.0.0",
+  "description": "Six For Loops chained: count=3, count=0 (empty), range 0..10 step=2, count via expression (4), range via expression (10..14), count=100 with timeout+delay body wrapped in try-catch.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-before",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 80 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Before",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'before-loop'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-count3",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 200 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=3",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
+            "outputBindings": { "index": "i" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-1",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 330 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'count-iter-{i}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-count0",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 450 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=0",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 0, "start": 0, "end": 0 },
+            "outputBindings": { "index": "j" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "halt-trap",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 520 },
+        "data": {
+          "label": "Halt",
+          "elementType": "halt",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TRAP - should never run",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "scope": "test", "status": "failed", "message": "count=0 body executed - BUG" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-range",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 600 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Range 0..10 step=2",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "range", "count": 0, "start": 0, "end": 10, "step": 2 },
+            "outputBindings": { "index": "k" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-2",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 730 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Range",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'range-iter-{k}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-expr-count",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 730 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count via Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["count"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": "loop_count", "start": 0, "end": 0 },
+            "outputBindings": { "index": "m" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-expr-count",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 850 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Expr Count",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'expr-count-iter-{m}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-expr-range",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 930 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Range via Expression",
+          "hasNewerVersion": false,
+          "expressionFields": ["start", "end", "step"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "range", "count": 0, "start": "range_start", "end": "range_end", "step": "range_step" },
+            "outputBindings": { "index": "n" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-log-expr-range",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1060 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Expr Range",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'expr-range-iter-{n}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-after",
+        "type": "workflowNode",
+        "position": { "x": -60, "y": 1180 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log After",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'after-all-loops'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "tc-timeout",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 1300 },
+        "data": {
+          "label": "Try Catch Finally",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "TryCatch Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "enable_catch": true, "enable_finally": false },
+            "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "catch-log-timeout",
+        "type": "workflowNode",
+        "position": { "x": 100, "y": 1430 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch Log Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'timeout-caught'", "level": "WARN" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "for-timeout",
+        "type": "workflowNode",
+        "position": { "x": -80, "y": 1430 },
+        "data": {
+          "label": "For Loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "For Count=100 Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "mode": "count", "count": 100, "start": 0, "end": 0, "timeout": 1.0 },
+            "outputBindings": { "index": "t_idx" },
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 160, "height": 62 }
+      },
+      {
+        "id": "body-delay-timeout",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1560 },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Delay 200ms",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "duration": 200 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "body-log-timeout",
+        "type": "workflowNode",
+        "position": { "x": -200, "y": 1690 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Body Log Timeout",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "f'timeout-iter-{t_idx}'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-before", "type": "default" },
+      { "id": "e2", "source": "log-before", "target": "for-count3", "type": "default" },
+      { "id": "e3", "source": "for-count3", "sourceHandle": "body", "target": "body-log-1", "type": "default" },
+      { "id": "e4", "source": "for-count3", "sourceHandle": "then", "target": "for-count0", "type": "default" },
+      { "id": "e5a", "source": "for-count0", "sourceHandle": "body", "target": "halt-trap", "type": "default" },
+      { "id": "e5", "source": "for-count0", "sourceHandle": "then", "target": "for-range", "type": "default" },
+      { "id": "e6", "source": "for-range", "sourceHandle": "body", "target": "body-log-2", "type": "default" },
+      { "id": "e7", "source": "for-range", "sourceHandle": "then", "target": "for-expr-count", "type": "default" },
+      { "id": "e7a", "source": "for-expr-count", "sourceHandle": "body", "target": "body-log-expr-count", "type": "default" },
+      { "id": "e7b", "source": "for-expr-count", "sourceHandle": "then", "target": "for-expr-range", "type": "default" },
+      { "id": "e7c", "source": "for-expr-range", "sourceHandle": "body", "target": "body-log-expr-range", "type": "default" },
+      { "id": "e7d", "source": "for-expr-range", "sourceHandle": "then", "target": "log-after", "type": "default" },
+      { "id": "e8", "source": "log-after", "target": "tc-timeout", "type": "default" },
+      { "id": "e8a", "source": "tc-timeout", "sourceHandle": "try", "target": "for-timeout", "type": "default" },
+      { "id": "e8b", "source": "tc-timeout", "sourceHandle": "catch", "target": "catch-log-timeout", "type": "default" },
+      { "id": "e9", "source": "for-timeout", "sourceHandle": "body", "target": "body-delay-timeout", "type": "default" },
+      { "id": "e10", "source": "body-delay-timeout", "target": "body-log-timeout", "type": "default" }
+    ]
+  },
+  "variables": {
+    "i": { "type": "integer", "value": 0, "scope": "test" },
+    "j": { "type": "integer", "value": 0, "scope": "test" },
+    "k": { "type": "integer", "value": 0, "scope": "test" },
+    "m": { "type": "integer", "value": 0, "scope": "test" },
+    "n": { "type": "integer", "value": 0, "scope": "test" },
+    "loop_count": { "type": "integer", "value": 4, "scope": "test" },
+    "range_start": { "type": "integer", "value": 10, "scope": "test" },
+    "range_end": { "type": "integer", "value": 15, "scope": "test" },
+    "range_step": { "type": "integer", "value": 1, "scope": "test" },
+    "t_idx": { "type": "integer", "value": 0, "scope": "test" },
+    "tc_error": { "type": "map", "value": {}, "scope": "test" },
+    "tc_caught": { "type": "boolean", "value": false, "scope": "test" }
+  },
+  "metadata": {},
+  "created_at": "2026-03-28T00:00:00.000000",
+  "updated_at": "2026-03-28T00:00:00.000000"
+}

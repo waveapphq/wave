@@ -1,0 +1,181 @@
+{
+  "name": "Run Ad-Hoc E2E",
+  "version": "1.0.0",
+  "description": "Six chained Log plugins exercise Run Current / Run from Here / Debug from Here on a mid-graph target. Standalone Note covers the disabled-menu visual gate (Note nodes do not render the four ad-hoc items).",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-pre",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 80 },
+        "data": {
+          "label": "Log Pre",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Pre",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-pre'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-step1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 200 },
+        "data": {
+          "label": "Log Step1",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Step1",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-step1'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-target",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 320 },
+        "data": {
+          "label": "Log Target",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Target",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-target'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-step3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 440 },
+        "data": {
+          "label": "Log Step3",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Step3",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-step3'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-step4",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 560 },
+        "data": {
+          "label": "Log Step4",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Step4",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-step4'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "log-post",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 680 },
+        "data": {
+          "label": "Log Post",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Post",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": { "message": "'adhoc-post'", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "annotation-note",
+        "type": "noteNode",
+        "position": { "x": 700, "y": 320 },
+        "data": {
+          "label": "Note",
+          "elementType": "note",
+          "nodeType": "control",
+          "category": "annotation",
+          "version": "1.0.0",
+          "description": "Adhoc Annotation",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "text": "Run Current target is the middle Log",
+            "color": "slate"
+          }
+        },
+        "measured": { "width": 200, "height": 80 }
+      }
+    ],
+    "edges": [
+      { "id": "e-start-pre",   "source": "start-node", "target": "log-pre",   "type": "default" },
+      { "id": "e-pre-step1",   "source": "log-pre",   "target": "log-step1", "type": "default" },
+      { "id": "e-step1-tgt",   "source": "log-step1", "target": "log-target", "type": "default" },
+      { "id": "e-tgt-step3",   "source": "log-target", "target": "log-step3", "type": "default" },
+      { "id": "e-step3-step4", "source": "log-step3", "target": "log-step4", "type": "default" },
+      { "id": "e-step4-post",  "source": "log-step4", "target": "log-post",  "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-04-27T00:00:00.000000",
+  "updated_at": "2026-04-27T00:00:00.000000"
+}

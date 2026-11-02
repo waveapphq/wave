@@ -1,0 +1,251 @@
+WAVE
+Copyright (c) 2026 TrueByte LLC
+
+WAVE is released under the MIT License (see LICENSE). It includes the
+third-party work listed below, each part under its own license. The full texts
+of those licenses are in the LICENSES folder:
+
+  Apache-2.0          LICENSES/Apache-2.0.txt
+  BSD-2-Clause        LICENSES/BSD-2-Clause.txt
+  BSD-3-Clause        LICENSES/BSD-3-Clause.txt
+  GCC-exception-3.1   LICENSES/GCC-exception-3.1.txt
+  GPL-3.0-or-later    LICENSES/GPL-3.0-or-later.txt
+  LGPL-2.1-only       LICENSES/LGPL-2.1-only.txt
+  LGPL-3.0-or-later   LICENSES/LGPL-3.0-or-later.txt
+  MIT                 LICENSES/MIT.txt
+  MIT-0               LICENSES/MIT-0.txt
+  MPL-2.0             LICENSES/MPL-2.0.txt
+  PSF-2.0             LICENSES/PSF-2.0.txt
+  UPL-1.0             LICENSES/UPL-1.0.txt
+  Zlib                LICENSES/Zlib.txt
+
+-------------------------------------------------------------------------------
+OpenSearch Dashboards: the DQL (Dashboards Query Language) parser and translator
+-------------------------------------------------------------------------------
+
+backend/wavecore/connectivity/opensearch/dql/ is a Python port of
+src/plugins/data/common/opensearch_query/kuery/ in
+https://github.com/opensearch-project/OpenSearch-Dashboards at tag 3.8.0
+(commit aa72a9818a045ad4e290a5eb9be59e025b90634d).
+Modified: rewritten from TypeScript and the PEG.js grammar to Python; each ported
+file names its upstream file.
+
+backend/tests/connectivity/opensearch/dql/test_parser.py carries test cases from
+kuery_syntax_error.test.ts and ast/ast.test.ts in the same upstream folder and
+tag: the syntax error inputs with their messages, and the number literal inputs.
+Modified: rewritten from Jest tests to pytest cases.
+
+  OpenSearch (https://opensearch.org/)
+  Copyright OpenSearch Contributors
+
+  This product includes software, including Kibana source code,
+  developed by Elasticsearch (http://www.elastic.co).
+  Copyright 2009-2021 Elasticsearch B.V.
+
+License: Apache-2.0 (LICENSES/Apache-2.0.txt)
+
+-------------------------------------------------------------------------------
+OpenSearch API Specification: the Query DSL and aggregation vocabulary
+-------------------------------------------------------------------------------
+
+backend/wavecore/api/services/opensearch_tools/api-spec-extract.json is a trimmed
+extract of spec/schemas/_common.query_dsl.yaml and
+spec/schemas/_common.aggregations.yaml in
+https://github.com/opensearch-project/opensearch-api-specification at commit
+81c7ccfd8101698a2ac4ee060ef7740158e3ff69, made by
+scripts/opensearch-api-spec-extract.mjs.
+Modified: reduced to the query and aggregation types, their parameters, value
+kinds, enum values, descriptions and versions.
+
+  OpenSearch (https://opensearch.org/)
+  Copyright OpenSearch Contributors
+
+License: Apache-2.0 (LICENSES/Apache-2.0.txt)
+
+-------------------------------------------------------------------------------
+kwok: Stage files, the cluster entrypoint and a controller patch (tests only)
+-------------------------------------------------------------------------------
+
+tests/e2e/services/kwok/ builds the Kubernetes cluster the E2E tests run
+against, from https://github.com/kubernetes-sigs/kwok at tag v0.7.0
+(commit c04392afe3cc6929cd3cc79f61d8bdcd83a8ba5d). Each file below names its
+upstream file.
+- stages/node-initialize.yaml, stages/node-heartbeat-with-lease.yaml,
+  stages/pod-complete.yaml and stages/pod-delete.yaml are copies of the Stages
+  in kustomize/stage/node/fast/, kustomize/stage/node/heartbeat-with-lease/
+  and kustomize/stage/pod/fast/.
+- stages/pod-ready.yaml is kustomize/stage/pod/fast/pod-ready.yaml with a
+  delay, read from a pod annotation, added.
+- stages/pod-job-fail.yaml, stages/pod-helm-test-complete.yaml and
+  stages/pod-helm-test-fail.yaml are adapted from
+  kustomize/stage/pod/fast/pod-complete.yaml; stages/pod-crash-loop.yaml and
+  stages/pod-container-creating.yaml are adapted from
+  kustomize/stage/pod/fast/pod-ready.yaml.
+- entrypoint.sh is adapted from images/cluster/entrypoint.sh.
+- kwok-exec-fidelity.patch changes pkg/utils/exec/exec.go; the test image
+  applies it when it builds kwok from source.
+
+  Copyright 2022 The Kubernetes Authors. (images/cluster/entrypoint.sh)
+  Copyright 2023 The Kubernetes Authors. (pkg/utils/exec/exec.go and the
+  kustomize/stage folders)
+
+License: Apache-2.0 (LICENSES/Apache-2.0.txt)
+
+-------------------------------------------------------------------------------
+shadcn/ui: base UI components
+-------------------------------------------------------------------------------
+
+The components in frontend/src/components/ui/ that carry a shadcn/ui
+component's name (such as button, dialog, select, sheet, sidebar and tooltip)
+started from https://github.com/shadcn-ui/ui and have been changed for WAVE.
+
+  Copyright (c) 2023 shadcn
+
+License: MIT (LICENSES/MIT.txt)
+
+-------------------------------------------------------------------------------
+Python documentation: descriptions of Python builtins
+-------------------------------------------------------------------------------
+
+frontend/src/features/workbench/lib/python-builtins/ holds one-line
+descriptions of Python builtin functions and methods for expression
+autocomplete; many are taken from https://docs.python.org/3/.
+
+  Copyright (c) 2001 Python Software Foundation
+
+License: PSF-2.0 (LICENSES/PSF-2.0.txt)
+
+===============================================================================
+Carried to remote hosts
+===============================================================================
+
+When a Block runs on a remote host, WAVE starts a worker program there
+(backend/wavecore/core/remote_exec/bundle.py). The worker carries the source
+of the Python libraries below, unchanged, at the versions backend/poetry.lock
+pins, and WAVE's built-in list of public certificate authorities. It also
+carries WAVE's own code, including the DQL port listed above.
+
+tlslite-ng (https://github.com/tlsfuzzer/tlslite-ng)
+  Copyright (c) 2008, The Chromium Authors
+  Copyright (c) 2021 by Sidney Markowitz.
+  Copyright (c) 2014, Hubert Kario, Red Hat Inc.
+  License: LGPL-2.1-only (LICENSES/LGPL-2.1-only.txt) for the code by Hubert
+  Kario; BSD-3-Clause (LICENSES/BSD-3-Clause.txt) for the code by Google; MIT
+  (LICENSES/MIT.txt) for the code by Sidney Markowitz; the rest is in the
+  public domain. WAVE carries it as unchanged source.
+
+ecdsa (https://github.com/tlsfuzzer/python-ecdsa)
+  "python-ecdsa" Copyright (c) 2010 Brian Warner
+  Portions written in 2005 by Peter Pearson and placed in the public domain.
+  License: MIT (LICENSES/MIT.txt)
+
+six (https://github.com/benjaminp/six)
+  Copyright (c) 2010-2024 Benjamin Peterson
+  License: MIT (LICENSES/MIT.txt)
+
+pg8000 (https://codeberg.org/tlocke/pg8000)
+  Copyright Mathieu Fenniak and Contributors to pg8000.
+  License: BSD-3-Clause (LICENSES/BSD-3-Clause.txt)
+
+scramp (https://codeberg.org/tlocke/scramp)
+  Copyright The Contributors
+  License: MIT-0 (LICENSES/MIT-0.txt)
+
+asn1crypto (https://github.com/wbond/asn1crypto)
+  Copyright (c) 2015-2022 Will Bond <will@wbond.net>
+  License: MIT (LICENSES/MIT.txt)
+
+python-dateutil (https://github.com/dateutil/dateutil)
+  Copyright 2017- Paul Ganssle <paul@ganssle.io>
+  Copyright 2017- dateutil contributors (see AUTHORS file)
+  Copyright (c) 2003-2011 - Gustavo Niemeyer <gustavo@niemeyer.net>
+  Copyright (c) 2012-2014 - Tomi Pieviläinen <tomi.pievilainen@iki.fi>
+  Copyright (c) 2014-2016 - Yaron de Leeuw <me@jarondl.net>
+  Copyright (c) 2015-     - Paul Ganssle <paul@ganssle.io>
+  Copyright (c) 2015-     - dateutil contributors (see AUTHORS file)
+  License: Apache-2.0 (LICENSES/Apache-2.0.txt) and BSD-3-Clause
+  (LICENSES/BSD-3-Clause.txt)
+
+PyMySQL (https://github.com/PyMySQL/PyMySQL)
+  Copyright (c) 2010, 2013 PyMySQL contributors
+  License: MIT (LICENSES/MIT.txt)
+
+python-tds (https://github.com/denisenkom/pytds)
+  Copyright (c) 2014 Mikhail Denisenko
+  License: MIT (LICENSES/MIT.txt), except pytds/lcid.py
+  pytds/lcid.py holds Locale ID constants from LibForensics:
+  Copyright 2010 Michael Murr
+  License: LGPL-3.0-or-later (LICENSES/LGPL-3.0-or-later.txt, which adds
+  permissions to LICENSES/GPL-3.0-or-later.txt)
+
+certifi (https://github.com/certifi/python-certifi): the list of public
+certificate authorities, taken from Mozilla's root certificates
+  Its license file has no copyright line.
+  License: MPL-2.0 (LICENSES/MPL-2.0.txt)
+
+A SQL Block on a remote host also gets prebuilt wheels, sent unchanged at the
+versions and builds backend/vendor/wheels.lock pins: oracledb, cryptography,
+cffi and typing_extensions for Oracle; pyOpenSSL, cryptography, cffi and
+typing_extensions for SQL Server over TLS; apsw for SQLite.
+scripts/fetch-remote-wheels.sh downloads them from PyPI; this repository does
+not hold them. Each wheel also carries its own license files.
+
+Two wheel builds also bundle a system library that has no license file in
+the wheel:
+- apsw for Python 3.10 on glibc: libxcrypt (apsw.libs/libcrypt-*.so.1.1.0,
+  https://github.com/besser82/libxcrypt)
+  Copyright Thorsten Kukuk, Björn Esser, Zack Weinberg
+  Copyright Free Software Foundation, Inc.
+  Copyright David Burren et al.
+  Copyright Michael Bretterklieber, Björn Esser et al.
+  Copyright Juniper Networks, Inc.
+  License: LGPL-2.1-or-later (LICENSES/LGPL-2.1-only.txt holds the 2.1 text);
+  some parts are under BSD-3-Clause (LICENSES/BSD-3-Clause.txt) or
+  BSD-2-Clause (LICENSES/BSD-2-Clause.txt) or in the public domain, as the
+  LICENSING file in its source lists.
+- cryptography on musl: the GCC runtime library
+  (cryptography.libs/libgcc_s-*.so.1, https://gcc.gnu.org/)
+  Copyright (C) Free Software Foundation, Inc.
+  License: GPL-3.0-or-later WITH GCC-exception-3.1
+  (LICENSES/GPL-3.0-or-later.txt, LICENSES/GCC-exception-3.1.txt)
+
+apsw (https://github.com/rogerbinns/apsw)
+  Copyright (c) 2004-2026 Roger Binns <rogerb@rogerbinns.com>
+  License: Zlib (LICENSES/Zlib.txt); its license also allows any OSI-approved
+  license. The apsw wheels build in SQLite, which is in the public domain.
+
+cffi (https://github.com/python-cffi/cffi)
+  Its license file has no copyright line.
+  License: MIT-0 (LICENSES/MIT-0.txt)
+  The cffi wheels build in libffi 3.4.6 (https://github.com/libffi/libffi):
+  libffi - Copyright (c) 1996-2024  Anthony Green, Red Hat, Inc and others.
+  License: MIT (LICENSES/MIT.txt)
+
+cryptography (https://github.com/pyca/cryptography)
+  Copyright (c) Individual contributors.
+  License: Apache-2.0 (LICENSES/Apache-2.0.txt) or BSD-3-Clause
+  (LICENSES/BSD-3-Clause.txt)
+  The cryptography wheels build in OpenSSL (https://github.com/openssl/openssl):
+  Copyright (c) 1998-2025 The OpenSSL Project Authors
+  Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
+  License: Apache-2.0 (LICENSES/Apache-2.0.txt)
+  The cryptography wheels also build in the Rust crates that cryptography's
+  Cargo.lock pins at this version (such as asn1, base64, once_cell, openssl,
+  openssl-sys, pem and pyo3), each available under MIT, Apache-2.0 or
+  BSD-3-Clause (LICENSES/MIT.txt, LICENSES/Apache-2.0.txt,
+  LICENSES/BSD-3-Clause.txt).
+
+oracledb (https://github.com/oracle/python-oracledb)
+  Copyright (c) 2016, 2026 Oracle and/or its affiliates.
+  License: UPL-1.0 (LICENSES/UPL-1.0.txt) or Apache-2.0
+  (LICENSES/Apache-2.0.txt)
+
+pyOpenSSL (https://github.com/pyca/pyopenssl)
+  Its license file has no copyright line.
+  License: Apache-2.0 (LICENSES/Apache-2.0.txt)
+
+typing_extensions (https://github.com/python/typing_extensions)
+  Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+  2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023
+  Python Software Foundation; All Rights Reserved
+  License: PSF-2.0 (LICENSES/PSF-2.0.txt)

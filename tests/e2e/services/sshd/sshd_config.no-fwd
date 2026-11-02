@@ -1,0 +1,11 @@
+# WAVE E2E real-service SSH server - TCP forwarding disabled (test-only).
+# Proves SSH Tunnel / multi-hop negative cases (forwarding refused).
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AllowTcpForwarding no
+PermitRootLogin no
+X11Forwarding no
+PrintMotd no
+Subsystem sftp /usr/lib/openssh/sftp-server

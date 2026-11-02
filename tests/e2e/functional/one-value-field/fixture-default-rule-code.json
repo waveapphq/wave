@@ -1,0 +1,123 @@
+{
+  "name": "zz-11541-s4-default-rule-code",
+  "version": "1.0.0",
+  "description": "An OpenSearch search whose Query is not set: the run sends no filter.",
+  "variables": {
+    "os_total": {
+      "value": null,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "64bc9d38-2803-4fa5-9770-eb6290732861",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 100
+        },
+        "data": {
+          "label": "Query Default",
+          "elementType": "opensearch",
+          "nodeType": "plugin",
+          "category": "database",
+          "version": "1.0.0",
+          "description": "Query Default",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "url": "https://127.0.0.1:9477",
+              "index": "wave-e2e-__TOKEN__-defaults",
+              "from": "2026-10-01T11:59:00Z",
+              "to": "2026-10-01T12:01:00Z",
+              "query_language": "dql",
+              "mode": "search",
+              "fields": [
+                {
+                  "value": "@timestamp"
+                },
+                {
+                  "value": "msg"
+                }
+              ],
+              "max_results": 10000,
+              "order": "desc",
+              "timeout": 60,
+              "verify_ssl": true,
+              "on_error": "fail",
+              "username": "wave",
+              "password": "",
+              "ca_cert": ""
+            },
+            "outputBindings": {
+              "total_results": "os_total"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2eb952c8-3c57-42e4-9b73-f8b45143d90d",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 200
+        },
+        "data": {
+          "label": "Search Report",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "How many documents came back",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f\"os total={os_total}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "5df9bb74-07a6-4fb6-b3ba-5c3210959270",
+        "source": "start-node",
+        "target": "64bc9d38-2803-4fa5-9770-eb6290732861",
+        "type": "default"
+      },
+      {
+        "id": "3024118c-45fb-433f-8fd9-1715614da7c3",
+        "source": "64bc9d38-2803-4fa5-9770-eb6290732861",
+        "target": "2eb952c8-3c57-42e4-9b73-f8b45143d90d",
+        "type": "default"
+      }
+    ]
+  }
+}

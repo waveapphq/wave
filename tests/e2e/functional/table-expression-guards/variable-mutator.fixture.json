@@ -1,0 +1,47 @@
+{
+  "name": "Table Expression Guards - An expression variable may not change data",
+  "version": "1.0.0",
+  "description": "A Variable Manager entry declared as an expression calls a mutating method; the read-only rule must refuse the test when it is saved, naming the variable.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-grown",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Read Grown",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Grown List",
+          "hasNewerVersion": false,
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'guard-grown=' + str(grown_list)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "log-grown", "type": "default" }
+    ]
+  },
+  "variables": {
+    "my_list": { "value": [], "type": "array", "scope": "test" },
+    "grown_list": {
+      "value": "my_list.append(1)",
+      "type": "array",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {}
+}

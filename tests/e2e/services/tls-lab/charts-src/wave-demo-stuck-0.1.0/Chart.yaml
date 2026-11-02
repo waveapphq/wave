@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wave-demo-stuck
+description: WAVE E2E fixture chart (test-only) - a Deployment whose pod never becomes ready.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

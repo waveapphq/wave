@@ -1,0 +1,113 @@
+{
+  "name": "Edits Between Runs Expressions",
+  "version": "1.0.0",
+  "description": "A literal string (name) and two expressions that read it (greeting, farewell), each printed by its own Log. A full run evaluates both, so the panel holds two results; a Run Current on Log Greeting alone leaves greeting as the only result.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-greeting",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 140
+        },
+        "data": {
+          "label": "Log Greeting",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Greeting",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'greeting={greeting}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "log-farewell",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 260
+        },
+        "data": {
+          "label": "Log Farewell",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log Farewell",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "variableExpressionKeys": [],
+          "config": {
+            "values": {
+              "message": "f'farewell={farewell}'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "start-node",
+        "target": "log-greeting",
+        "type": "default"
+      },
+      {
+        "id": "e2",
+        "source": "log-greeting",
+        "target": "log-farewell",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "name": {
+      "value": "Ada",
+      "type": "string",
+      "scope": "test"
+    },
+    "greeting": {
+      "value": "'hello ' + name",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    },
+    "farewell": {
+      "value": "'bye ' + name",
+      "type": "string",
+      "scope": "test",
+      "isExpression": true
+    }
+  },
+  "metadata": {},
+  "created_at": "2026-10-07T00:00:00.000000",
+  "updated_at": "2026-10-07T00:00:00.000000"
+}
