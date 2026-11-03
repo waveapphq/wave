@@ -6,8 +6,9 @@ import React from 'react'
 // Extend the default waitFor/findBy timeout. Under high vitest parallelism
 // (many workers on many-core machines) CPU contention can stretch async
 // renders past the 1s default, producing flaky timeouts in otherwise-correct
-// tests. 5s is still well below any real bug threshold.
-configure({ asyncUtilTimeout: 5000 })
+// tests. 5s is still well below any real bug threshold. GitHub runners are
+// CPU-starved, so lazy route pages can take 10s to appear there.
+configure({ asyncUtilTimeout: process.env.GITHUB_ACTIONS === 'true' ? 20000 : 5000 })
 
 // Import tree-sitter initialization for expression validation tests
 // This is needed because expression validation uses tree-sitter WASM

@@ -377,7 +377,6 @@ describe('ExecutionDetailPage', () => {
       () => {
         expect(vi.mocked(fetchExecution).mock.calls.length).toBeGreaterThan(callsAtStart)
       },
-      { timeout: 3000 },
     )
   })
 
@@ -510,9 +509,7 @@ describe('ExecutionDetailPage', () => {
     await screen.findByText('Nightly Regression')
     // Next poll throws; the page keeps its data and reports the failed tick.
     vi.mocked(fetchExecution).mockRejectedValue(new Error('transient'))
-    const notice = await screen.findByTestId('execution-detail-refresh-error', undefined, {
-      timeout: 3000,
-    })
+    const notice = await screen.findByTestId('execution-detail-refresh-error')
     expect(notice).toHaveTextContent('transient')
     expect(notice).toHaveTextContent('(showing the last known state)')
     expect(screen.getByText('Nightly Regression')).toBeInTheDocument()
@@ -526,9 +523,7 @@ describe('ExecutionDetailPage', () => {
     renderAt()
     await screen.findByText('Nightly Regression')
     vi.mocked(fetchExecution).mockRejectedValue('nope')
-    const notice = await screen.findByTestId('execution-detail-refresh-error', undefined, {
-      timeout: 3000,
-    })
+    const notice = await screen.findByTestId('execution-detail-refresh-error')
     expect(notice).toHaveTextContent('Could not refresh the execution')
   })
 
@@ -540,7 +535,7 @@ describe('ExecutionDetailPage', () => {
     renderAt()
     await screen.findByText('Nightly Regression')
     vi.mocked(fetchExecution).mockRejectedValueOnce(new Error('transient'))
-    await screen.findByTestId('execution-detail-refresh-error', undefined, { timeout: 3000 })
+    await screen.findByTestId('execution-detail-refresh-error')
 
     vi.mocked(fetchExecution).mockResolvedValue({
       success: true,
@@ -552,7 +547,6 @@ describe('ExecutionDetailPage', () => {
           screen.queryByTestId('execution-detail-refresh-error'),
         ).not.toBeInTheDocument()
       },
-      { timeout: 3000 },
     )
   })
 
@@ -719,7 +713,6 @@ describe('ExecutionDetailPage', () => {
       () => {
         expect(vi.mocked(fetchExecution).mock.calls.length).toBeGreaterThan(callsAtStart)
       },
-      { timeout: 3000 },
     )
     unmount()
     resolvePoll?.({ success: true, data: buildExecution({ status: 'passed' }) as never })
@@ -746,7 +739,6 @@ describe('ExecutionDetailPage', () => {
       () => {
         expect(vi.mocked(fetchExecution).mock.calls.length).toBeGreaterThan(callsAtStart)
       },
-      { timeout: 3000 },
     )
     unmount()
     rejectPoll?.(new Error('too late'))

@@ -308,7 +308,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
     // Wait for lazy-loaded page to render first
     await waitFor(() => {
       expect(screen.getByTestId('regression-detail-page')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Breadcrumb provides navigation role on detail pages
     const navElements = screen.getAllByRole('navigation')
@@ -338,7 +338,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
     // Wait for lazy-loaded page to render first
     await waitFor(() => {
       expect(screen.getByTestId('regression-detail-page')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Breadcrumb provides navigation role on detail pages
     const navElements = screen.getAllByRole('navigation')
@@ -609,8 +609,7 @@ describe('Sidebar navigation links', () => {
     await waitFor(
       () => {
         expect(screen.getByTestId('tests-page')).toBeInTheDocument()
-      },
-      { timeout: 5000 }
+      }
     )
   })
 })

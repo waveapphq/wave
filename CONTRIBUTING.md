@@ -209,7 +209,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    ```sh
    git fetch origin
-   git switch -c <branch> origin/release/<version>
+   git switch -c <branch> --no-track origin/release/<version>
    ```
 
 4. Install the packages that the release branch pins:
@@ -228,7 +228,12 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 5. Make the change, with its tests and docs. Follow [Code rules](#code-rules) and [Write docs](#write-docs). You can also make small fixes in the code that the change already touches. List each of them in the description of the pull request. Open a new issue for anything else, and leave it out of the branch.
 
-   If the change needs a docs change, make it in the docs repo. Make a branch there with the same name as your WAVE branch, such as `feature/1.0.0-csv-export`.
+   If the change needs a docs change, make it in the docs repo. In your clone of the docs repo, make a branch with the same name as your WAVE branch, such as `feature/1.0.0-csv-export`, from the release branch of the same version:
+
+   ```sh
+   git fetch origin
+   git switch -c <branch> --no-track origin/release/<version>
+   ```
 
 6. Run the three suites, one at a time:
 
@@ -252,7 +257,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 8. Open `https://github.com/waveapphq/wave/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. The page fills the description from a template. In it, link the issue of the change, such as with `Closes #123`.
 
-9. If the change needs a docs change, push the docs branch and open its pull request in the docs repo. Link that pull request in the description of your WAVE pull request. Use the full link, as the template shows. If the change needs no docs change, tick the box "No docs change needed" in the description.
+9. If the change needs a docs change, push the docs branch with `git push -u origin <branch>`. Open `https://github.com/waveapphq/wave-docs/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. Link that pull request in the description of your WAVE pull request. Use the full link, as the template shows. If the change needs no docs change, tick the box "No docs change needed" in the description.
 
 A check fails each pull request that neither ticks "No docs change needed" nor links a merged pull request of the docs repo with the same branch name. The docs pull request must be merged first. Then re-run the check, or edit the description of your pull request.
 

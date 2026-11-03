@@ -190,8 +190,9 @@ afterEach(() => {
 // route renders past the previous 3s waitFor ceiling (notably the Executions
 // list, which has deep transitive imports). Test timeout is 10s, so an 8s
 // asyncUtilTimeout still bails before the test itself times out but gives
-// every lazy chunk realistic room to resolve under contention.
-configure({ asyncUtilTimeout: 8000 })
+// every lazy chunk realistic room to resolve under contention. The longer
+// global limit on GitHub runners still holds here.
+configure((config) => ({ asyncUtilTimeout: Math.max(config.asyncUtilTimeout, 8000) }))
 
 describe('Router Configuration', () => {
   describe('Route Configuration Array', () => {
@@ -400,7 +401,7 @@ describe('Route Rendering', () => {
       // Wait for error to be displayed
       await waitFor(() => {
         expect(screen.getByText('Network error')).toBeInTheDocument()
-      }, { timeout: 10000 })
+      })
 
       global.fetch = originalFetch
     })
@@ -437,7 +438,7 @@ describe('Route Rendering', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('tests-page')).toBeInTheDocument()
-      }, { timeout: 10000 })
+      })
     })
 
     it('shows 404 for /tests/:testId (no detail page)', async () => {
@@ -1174,7 +1175,7 @@ describe('TestsListPage Integration', () => {
     // Wait for error state to appear (after API failure)
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Try Again/i })).toBeInTheDocument()
-    }, { timeout: 10000 })
+    })
 
     // Verify we're in error state
     expect(screen.getByTestId('error-state-icon')).toBeInTheDocument()
@@ -1186,8 +1187,8 @@ describe('TestsListPage Integration', () => {
     await waitFor(() => {
       // Should have test rows now
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 10000 })
-  }, 15000)
+    })
+  })
 
   it('handles selection mode entry and exit', async () => {
     // Mock fetch to succeed
@@ -1217,7 +1218,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and Mass Action button to appear
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click Mass Action to enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -1264,7 +1265,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -1320,7 +1321,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -1388,7 +1389,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('pagination')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click next page button (should trigger handlePageChange)
     const nextButton = screen.getByRole('button', { name: /next/i })
@@ -1432,7 +1433,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load - this confirms the filters were parsed and passed to API
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles filter change via search input', async () => {
@@ -1462,7 +1463,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/Search tests/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Type in search input (triggers handleFilterChange via debounce)
     const searchInput = screen.getByPlaceholderText(/Search tests/i)
@@ -1471,7 +1472,7 @@ describe('TestsListPage Integration', () => {
     // Wait for debounced filter change - URL should be updated and API called
     await waitFor(() => {
       expect(router.state.location.search).toContain('search=login')
-    }, { timeout: 2000 })
+    })
 
     // Also verify API was called with search param
     const fetchCalls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
@@ -1518,7 +1519,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -1593,7 +1594,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1616,7 +1617,7 @@ describe('TestsListPage Integration', () => {
     // The reason is named in a titled toast, not only in the console.
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Internal Server Error', 'Duplicate Failed')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -1655,7 +1656,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1678,7 +1679,7 @@ describe('TestsListPage Integration', () => {
     // A string rejection reaches the toast verbatim.
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('network failure', 'Duplicate Failed')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -1711,7 +1712,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1764,7 +1765,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1824,7 +1825,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1896,7 +1897,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1924,7 +1925,7 @@ describe('TestsListPage Integration', () => {
     // Wait for error to be logged
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk delete:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -1963,7 +1964,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a test
@@ -1991,7 +1992,7 @@ describe('TestsListPage Integration', () => {
     // Wait for error to be logged with non-Error fallback message
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk delete:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -2023,7 +2024,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Find the Run button for the first test (it's a separate button, not in the dropdown)
     const runButton = screen.getByRole('button', { name: /^Run Test One$/i })
@@ -2068,7 +2069,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click Run button to open the RunDialog
     const runButton = screen.getByRole('button', { name: /^Run Test One$/i })
@@ -2077,7 +2078,7 @@ describe('TestsListPage Integration', () => {
     // Wait for dialog to open
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click Cancel button
     const cancelButton = screen.getByRole('button', { name: /cancel/i })
@@ -2086,7 +2087,7 @@ describe('TestsListPage Integration', () => {
     // Verify dialog is closed
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles run test from dialog with environment selected', async () => {
@@ -2127,7 +2128,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click Run button to open the RunDialog
     const runButton = screen.getByRole('button', { name: /^Run Test One$/i })
@@ -2137,13 +2138,13 @@ describe('TestsListPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(screen.getByTestId('all-environments')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Wait for environments to populate (they load asynchronously from mock)
     await waitFor(() => {
       const allEnvsSection = screen.getByTestId('all-environments')
       expect(within(allEnvsSection).getByText('Production')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Select an environment (find by name within all-environments section)
     const allEnvsSection = screen.getByTestId('all-environments')
@@ -2160,7 +2161,7 @@ describe('TestsListPage Integration', () => {
         expect.stringMatching(/\/executions$/),
         expect.objectContaining({ method: 'POST' }),
       )
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles delete test from row actions', async () => {
@@ -2198,7 +2199,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Open the row actions dropdown
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
@@ -2262,7 +2263,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Open the row actions dropdown
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
@@ -2319,7 +2320,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
     await user.click(moreActionsButton)
@@ -2331,7 +2332,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to duplicate test:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -2369,7 +2370,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
     await user.click(moreActionsButton)
@@ -2381,7 +2382,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to duplicate test:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -2422,7 +2423,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
     await user.click(moreActionsButton)
@@ -2440,7 +2441,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to delete test:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -2478,7 +2479,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
     await user.click(moreActionsButton)
@@ -2496,7 +2497,7 @@ describe('TestsListPage Integration', () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to delete test:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -2528,7 +2529,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Open the row actions dropdown
     const moreActionsButton = screen.getByRole('button', { name: /More actions for Test One/i })
@@ -2583,7 +2584,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click on the test name (which has the row click handler)
     const testName = screen.getByTestId('test-name')
@@ -2628,7 +2629,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the "New Test" button - opens the create-test dialog rather
     // than navigating. The dialog then routes to /workbench when the user
@@ -2677,7 +2678,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles fetch error when error is not an Error instance', async () => {
@@ -2693,7 +2694,7 @@ describe('TestsListPage Integration', () => {
     // Wait for error message to appear
     await waitFor(() => {
       expect(screen.getByText(/Failed to load tests/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles filter change with status parameter', async () => {
@@ -2722,7 +2723,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Verify URL params are preserved
     expect(router.state.location.search).toContain('status=passed')
@@ -2755,7 +2756,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Initial state: Name column is sorted ascending (as per router.tsx default)
     const nameHeader = screen.getByRole('columnheader', { name: /Name/i })
@@ -2765,7 +2766,7 @@ describe('TestsListPage Integration', () => {
     await user.click(nameHeader)
     await waitFor(() => {
       expect(nameHeader.getAttribute('aria-sort')).toBe('descending')
-    }, { timeout: 3000 })
+    })
   })
 
   it('handles sort toggle - clicking a different column starts fresh ascending', async () => {
@@ -2795,7 +2796,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Initial state: Name column is sorted ascending
     const nameHeader = screen.getByRole('columnheader', { name: /Name/i })
@@ -2809,7 +2810,7 @@ describe('TestsListPage Integration', () => {
       expect(suiteHeader.getAttribute('aria-sort')).toBe('ascending')
       // Name column should now be none since we're sorting by Suite
       expect(nameHeader.getAttribute('aria-sort')).toBe('none')
-    }, { timeout: 3000 })
+    })
   })
 
   it('handles sort toggle - third click clears sort (desc to none)', async () => {
@@ -2839,7 +2840,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Initial state: Name column is sorted ascending
     const nameHeader = screen.getByRole('columnheader', { name: /Name/i })
@@ -2849,7 +2850,7 @@ describe('TestsListPage Integration', () => {
     await user.click(nameHeader)
     await waitFor(() => {
       expect(nameHeader.getAttribute('aria-sort')).toBe('descending')
-    }, { timeout: 3000 })
+    })
 
     // Re-query the header since component may have re-rendered
     const updatedNameHeader = screen.getByRole('columnheader', { name: /Name/i })
@@ -2860,7 +2861,7 @@ describe('TestsListPage Integration', () => {
     await waitFor(() => {
       const finalNameHeader = screen.getByRole('columnheader', { name: /Name/i })
       expect(finalNameHeader.getAttribute('aria-sort')).toBe('none')
-    }, { timeout: 3000 })
+    })
   })
 
   // Note: handleBulkMoveToSuite (lines 659-676) in router.tsx
@@ -2895,7 +2896,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Suite column should be visible initially
     expect(screen.getByRole('columnheader', { name: /Suite/i })).toBeInTheDocument()
@@ -2942,7 +2943,7 @@ describe('TestsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Open Columns dropdown
     await user.click(screen.getByRole('button', { name: /Columns/i }))
@@ -3029,7 +3030,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the overflow menu for the first suite
     const menuButtons = screen.getAllByTestId('row-actions-menu')
@@ -3082,7 +3083,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Status column should be visible by default
     expect(screen.getByRole('columnheader', { name: /Status/i })).toBeInTheDocument()
@@ -3125,7 +3126,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Tags column is hidden by default per design
     expect(screen.queryByRole('columnheader', { name: /Tags/i })).not.toBeInTheDocument()
@@ -3168,7 +3169,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -3216,7 +3217,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -3285,7 +3286,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Suite 1')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Find and click the "Next" or page 2 button
     const nextButton = screen.getByRole('button', { name: /next page|page 2/i })
@@ -3318,7 +3319,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Get the Name column header (it's a <th> with tabIndex, not a button)
     let nameHeader = screen.getByRole('columnheader', { name: /Name/i })
@@ -3372,7 +3373,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Get the Status column header (it's a <th> with tabIndex, not a button)
     const statusHeader = screen.getByRole('columnheader', { name: /Status/i })
@@ -3422,7 +3423,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error state to appear
     await waitFor(() => {
       expect(screen.getByText(/Unable to load suites/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click Try Again button to trigger retry
     await user.click(screen.getByRole('button', { name: /Try Again/i }))
@@ -3430,7 +3431,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for successful data load after retry
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('exercises sort clear path: click descending column to clear', async () => {
@@ -3456,7 +3457,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Get the Tests column header - use a different column than previous tests
     let testsHeader = screen.getByRole('columnheader', { name: /Tests/i })
@@ -3510,7 +3511,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/Search suites/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Type in search input (triggers handleFilterChange via debounce)
     const searchInput = screen.getByPlaceholderText(/Search suites/i)
@@ -3519,7 +3520,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for debounced filter change - URL should be updated
     await waitFor(() => {
       expect(router.state.location.search).toContain('search=test')
-    }, { timeout: 2000 })
+    })
 
     // Verify API was called with search param
     const fetchCalls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
@@ -3559,7 +3560,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite using testid (suites use different checkbox pattern)
@@ -3583,7 +3584,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk duplicate:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -3616,7 +3617,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -3641,7 +3642,7 @@ describe('SuitesListPage Integration', () => {
     await waitFor(() => {
       // After successful clone, selection mode should exit and data reloaded
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles bulk export', async () => {
@@ -3667,7 +3668,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -3691,7 +3692,7 @@ describe('SuitesListPage Integration', () => {
     // Bulk export now opens the export dialog instead of logging
     await waitFor(() => {
       expect(screen.getByText(/Export Suite/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -3717,7 +3718,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -3742,7 +3743,7 @@ describe('SuitesListPage Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/executions/new')
       expect(router.state.location.search).toContain('suites=suite-1')
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles confirm bulk delete with finally block', async () => {
@@ -3772,7 +3773,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -3805,7 +3806,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for selection mode to be exited (delete succeeded)
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles confirm bulk delete error', async () => {
@@ -3837,7 +3838,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -3869,7 +3870,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk delete:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -3908,7 +3909,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button (it's a separate button, not in the dropdown menu)
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -3920,7 +3921,7 @@ describe('SuitesListPage Integration', () => {
       // Title is "Run Suite", suite name appears in subtitle
       expect(screen.getByTestId('run-dialog-title-visible')).toHaveTextContent('Run Suite')
       expect(screen.getByTestId('run-dialog-subtitle')).toHaveTextContent('Test Suite One')
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles select all tests in suite run dialog', async () => {
@@ -3957,7 +3958,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button to open the dialog
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -3966,7 +3967,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for RunDialog to open
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Find and click the Select All checkbox
     const selectAllCheckbox = screen.getByLabelText('Select All')
@@ -4010,7 +4011,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button to open the dialog
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -4020,7 +4021,7 @@ describe('SuitesListPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(screen.getByTestId('suite-tests-list')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Find the test list container and click an individual test checkbox
     // This triggers handleSuiteTestSelectionChange callback
@@ -4069,7 +4070,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button to open the dialog
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -4078,7 +4079,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for RunDialog to open
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Cancel button
     const cancelButton = screen.getByRole('button', { name: /cancel/i })
@@ -4087,7 +4088,7 @@ describe('SuitesListPage Integration', () => {
     // Verify dialog is closed
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles run suite from dialog with environment selected', async () => {
@@ -4133,7 +4134,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button to open the dialog
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -4143,13 +4144,13 @@ describe('SuitesListPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(screen.getByTestId('all-environments')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Wait for environments to populate (they load asynchronously from mock)
     await waitFor(() => {
       const allEnvsSection = screen.getByTestId('all-environments')
       expect(within(allEnvsSection).getByText('Production')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Select an environment (find by name within all-environments section)
     const allEnvsSection = screen.getByTestId('all-environments')
@@ -4163,7 +4164,7 @@ describe('SuitesListPage Integration', () => {
     // Verify the execution was started and navigation occurred
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/executions/exec-new-suite')
-    }, { timeout: 5000 })
+    })
   })
 
   it('does not open the Run dialog when the suite tests read fails', async () => {
@@ -4193,7 +4194,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button to open the dialog (should handle error)
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -4201,7 +4202,7 @@ describe('SuitesListPage Integration', () => {
 
     await waitFor(() => {
       expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/tests'))).toBe(true)
-    }, { timeout: 5000 })
+    })
 
     // A failed read never opens a dialog listing nothing - that reads as
     // "this suite has no tests". The reason goes to a toast, which this
@@ -4238,7 +4239,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the row actions menu for the first suite
     const rowActionsMenus = screen.getAllByTestId('row-actions-menu')
@@ -4256,7 +4257,7 @@ describe('SuitesListPage Integration', () => {
         expect.stringContaining('/clone'),
         expect.objectContaining({ method: 'POST' })
       )
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles duplicate suite error from row actions', async () => {
@@ -4288,7 +4289,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the row actions menu for the first suite
     const rowActionsMenus = screen.getAllByTestId('row-actions-menu')
@@ -4303,7 +4304,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to duplicate suite:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4335,7 +4336,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the row actions menu for the first suite
     const rowActionsMenus = screen.getAllByTestId('row-actions-menu')
@@ -4358,7 +4359,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for dialog to close (finally block executed)
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles delete suite error', async () => {
@@ -4390,7 +4391,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the row actions menu for the first suite
     const rowActionsMenus = screen.getAllByTestId('row-actions-menu')
@@ -4413,7 +4414,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to delete suite:', expect.any(Error))
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4439,7 +4440,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the row actions menu for the first suite
     const rowActionsMenus = screen.getAllByTestId('row-actions-menu')
@@ -4454,7 +4455,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for navigation to suite detail page (edit uses same route)
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/suites/suite-1')
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles new suite button click', async () => {
@@ -4478,7 +4479,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and New Suite button to be available
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /New Suite/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the New Suite button - opens modal instead of navigating
     await user.click(screen.getByRole('button', { name: /New Suite/i }))
@@ -4486,7 +4487,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for create modal to appear
     await waitFor(() => {
       expect(screen.getByTestId('suite-create-modal')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 
   it('handles deselecting an individual suite', async () => {
@@ -4510,7 +4511,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Enter selection mode
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
@@ -4565,7 +4566,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -4597,7 +4598,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged with non-Error fallback message
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk delete:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4629,7 +4630,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load and enter selection mode
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mass Action/i })).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
     await user.click(screen.getByRole('button', { name: /Mass Action/i }))
 
     // Select a suite
@@ -4653,7 +4654,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged with non-Error fallback message
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to bulk duplicate:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4678,7 +4679,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Verify the fetch was called with status param
     await waitFor(() => {
@@ -4704,7 +4705,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error state to be displayed
     await waitFor(() => {
       expect(screen.getByTestId('error-state')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Verify fallback error message is shown
     expect(screen.getByText(/Failed to load suites/i)).toBeInTheDocument()
@@ -4737,7 +4738,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the overflow menu for the first suite
     const menuButtons = screen.getAllByTestId('row-actions-menu')
@@ -4758,7 +4759,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged with non-Error fallback message
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to delete suite:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4790,7 +4791,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('Test Suite One')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the overflow menu for the first suite
     const menuButtons = screen.getAllByTestId('row-actions-menu')
@@ -4805,7 +4806,7 @@ describe('SuitesListPage Integration', () => {
     // Wait for error to be logged with non-Error fallback message
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith('Failed to duplicate suite:', 'network failure')
-    }, { timeout: 5000 })
+    })
 
     consoleSpy.mockRestore()
   })
@@ -4864,7 +4865,7 @@ describe('DashboardPageWrapper Integration', () => {
     // Wait for dashboard to load
     await waitFor(() => {
       expect(screen.getByTestId('metric-card-tests')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Tests metric card
     await user.click(screen.getByTestId('metric-card-tests'))
@@ -4891,7 +4892,7 @@ describe('DashboardPageWrapper Integration', () => {
     // Wait for dashboard to load
     await waitFor(() => {
       expect(screen.getByTestId('metric-card-suites')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Suites metric card
     await user.click(screen.getByTestId('metric-card-suites'))
@@ -4918,7 +4919,7 @@ describe('DashboardPageWrapper Integration', () => {
     // Wait for dashboard to load
     await waitFor(() => {
       expect(screen.getByTestId('metric-card-regressions')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Regressions metric card
     await user.click(screen.getByTestId('metric-card-regressions'))
@@ -4945,7 +4946,7 @@ describe('DashboardPageWrapper Integration', () => {
     // Wait for dashboard to load
     await waitFor(() => {
       expect(screen.getByTestId('metric-card-executions')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Executions metric card
     await user.click(screen.getByTestId('metric-card-executions'))
@@ -4968,7 +4969,7 @@ describe('DashboardPageWrapper Integration', () => {
     // Wait for error message to appear
     await waitFor(() => {
       expect(screen.getByText(/Failed to load dashboard/i)).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 })
 
@@ -5054,7 +5055,7 @@ describe('RegressionsListPage Integration', () => {
     // Wait for data to load
     await waitFor(() => {
       expect(screen.getByText('WAVE 25.12')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
 
     // Click the Run button for the first regression
     const runButtons = screen.getAllByTestId('row-action-run')
@@ -5066,12 +5067,12 @@ describe('RegressionsListPage Integration', () => {
       // Title is "Run Regression", regression name appears in subtitle
       expect(screen.getByTestId('run-dialog-title-visible')).toHaveTextContent('Run Regression')
       expect(screen.getByTestId('run-dialog-subtitle')).toHaveTextContent('WAVE 25.12')
-    }, { timeout: 5000 })
+    })
 
     // Verify suites are displayed in the dialog
     await waitFor(() => {
       expect(screen.getByText('Auth Suite')).toBeInTheDocument()
       expect(screen.getByText('API Suite')).toBeInTheDocument()
-    }, { timeout: 5000 })
+    })
   })
 })
