@@ -255,7 +255,7 @@ describe('ProfilesPage', () => {
       const { waitFor } = await import('@testing-library/react')
       await waitFor(() => {
         expect(handleFilterChange).toHaveBeenCalled()
-      }, { timeout: 500 })
+      })
     })
   })
 

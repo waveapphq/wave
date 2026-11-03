@@ -98,6 +98,12 @@ storage:
 
 A relative path starts at the config file's folder, so this is `backend/data`. WAVE does not start without this setting. `WAVE_STORAGE_BASE_PATH` overrides it and must be an absolute path.
 
+Create the folder before the first start. The start command in step 3 stops with an error when `backend/data` does not exist. From the repository root, run:
+
+```bash
+mkdir -p backend/data
+```
+
 ### 3. Start development servers
 
 ```bash

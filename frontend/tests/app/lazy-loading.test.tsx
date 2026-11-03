@@ -817,10 +817,10 @@ describe('Route-Based Lazy Loading', () => {
 
       render(<RouterProvider router={router} />)
 
-      // Wait for lazy-loaded component to render (longer timeout for CI containers)
+      // Wait for lazy-loaded component to render
       await waitFor(() => {
         expect(screen.getByTestId('tests-page')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      })
     })
 
     it('suites page is a separate chunk', async () => {
@@ -832,10 +832,10 @@ describe('Route-Based Lazy Loading', () => {
 
       render(<RouterProvider router={router} />)
 
-      // Wait for lazy-loaded component to render (longer timeout for CI containers)
+      // Wait for lazy-loaded component to render
       await waitFor(() => {
         expect(screen.getByTestId('suites-page')).toBeInTheDocument()
-      }, { timeout: 5000 })
+      })
     })
 
     it('executions page is a separate chunk', async () => {

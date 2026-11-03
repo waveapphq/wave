@@ -204,6 +204,10 @@ function renderWorkbenchPageWithParams(searchParams: string) {
         </ToastProvider>
       ),
     },
+    {
+      path: '/tests',
+      element: <div data-testid="tests-list">Tests List</div>,
+    },
   ]
   const router = createMemoryRouter(routes, { initialEntries: [`/workbench${searchParams}`] })
   return {
@@ -751,8 +755,7 @@ describe('WorkbenchPage', () => {
       await waitFor(
         function waitForSaveComplete() {
           expect(screen.queryByText('New Test')).not.toBeInTheDocument()
-        },
-        { timeout: 2000 }
+        }
       )
     })
 
@@ -809,8 +812,7 @@ describe('WorkbenchPage', () => {
           expect(screen.queryByPlaceholderText('Enter test name…')).not.toBeInTheDocument()
           // Close button should be disabled after successful save-and-close
           expect(screen.getByTestId('toolbar-close-button')).toBeDisabled()
-        },
-        { timeout: 3000 }
+        }
       )
 
       // Verify workflow store was reset after save-and-close
@@ -877,8 +879,7 @@ describe('WorkbenchPage', () => {
       await waitFor(
         function waitForWarn() {
           expect(warnSpy).toHaveBeenCalledWith('Direct save failed:', expect.any(Error))
-        },
-        { timeout: 3000 }
+        }
       )
 
       warnSpy.mockRestore()
@@ -928,8 +929,7 @@ describe('WorkbenchPage', () => {
       await waitFor(
         function waitForSwitchDialog() {
           expect(screen.getByRole('button', { name: /Save & Open New/i })).toBeInTheDocument()
-        },
-        { timeout: 3000 }
+        }
       )
 
       // Click "Save & Open New" which triggers direct save + load pending test
@@ -940,8 +940,7 @@ describe('WorkbenchPage', () => {
       await waitFor(
         function waitForSwitchComplete() {
           expect(screen.queryByRole('button', { name: /Save & Open New/i })).not.toBeInTheDocument()
-        },
-        { timeout: 3000 }
+        }
       )
     })
 
@@ -1015,8 +1014,7 @@ describe('WorkbenchPage', () => {
         function waitForReset() {
           // Canvas should be reset (close button should be disabled)
           expect(screen.getByTestId('toolbar-close-button')).toBeDisabled()
-        },
-        { timeout: 2000 }
+        }
       )
     })
   })
@@ -1201,8 +1199,7 @@ describe('WorkbenchPage', () => {
       await waitFor(
         function waitForDialogClosed() {
           expect(screen.queryByText('Edit Test Info')).not.toBeInTheDocument()
-        },
-        { timeout: 3000 }
+        }
       )
     })
 
@@ -1267,10 +1264,10 @@ describe('WorkbenchPage', () => {
         expect(screen.getByTestId('workbench-page')).toBeInTheDocument()
       })
 
-      // Wait for the fetch mock to be invoked (longer timeout for CI)
+      // Wait for the fetch mock to be invoked
       await waitFor(function waitForMock() {
         expect(resolveFetch).not.toBeNull()
-      }, { timeout: 5000 })
+      })
 
       // Resolve the fetch to complete loading
       await act(async () => {
@@ -1804,6 +1801,175 @@ describe('WorkbenchPage', () => {
         expect(stateAfter.editingTestId).toBeNull()
         expect(stateAfter.editingTestName).toBeNull()
       })
+    })
+
+    it('starts a blank canvas instead of bringing the saved draft back', async function testNewTestStartsBlank() {
+      const draftKey = 'wave-workbench-draft'
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          nodes: [{ id: 'draft-node', type: 'workflowNode', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+          testId: null,
+          testName: null,
+          isDirty: true,
+          variables: [{ id: 'draft-var', name: 'draftVar', value: 'draft', type: 'string' }],
+        })
+      )
+
+      renderWorkbenchPageWithParams('?newTest=true')
+      await screen.findByTestId('workbench-page')
+
+      const state = useWorkflowStore.getState()
+      expect(state.nodes).toHaveLength(0)
+      expect(state.variables).toHaveLength(0)
+      expect(state.isDirty).toBe(false)
+
+      // Past the draft auto-save delay, nothing has written the old draft back.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 600))
+      })
+      expect(localStorage.getItem(draftKey)).toBeNull()
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0)
+    })
+
+    it('does not reopen the test that was open before the page load', async function testNewTestKeepsOldTestClosed() {
+      const { fetchTest } = await import('@/features/tests/api/crud')
+      vi.mocked(fetchTest).mockClear()
+      act(() => {
+        useWorkflowStore.getState().setEditingTest('old-test-id', 'My Existing Test')
+      })
+
+      const { router } = renderWorkbenchPageWithParams('?newTest=true')
+      await screen.findByTestId('workbench-page')
+      await waitFor(function verifyRequestUsedUp() {
+        expect(router.state.location.search).toBe('')
+      })
+
+      expect(fetchTest).not.toHaveBeenCalled()
+      expect(useWorkflowStore.getState().editingTestId).toBeNull()
+      expect(useWorkflowStore.getState().editingTestName).toBeNull()
+    })
+
+    it('drops a test that is still loading when New Test opens', async function testNewTestDropsLoadInFlight() {
+      const { fetchTest } = await import('@/features/tests/api/crud')
+      vi.mocked(fetchTest).mockClear()
+      let releaseTest: (details: Awaited<ReturnType<typeof fetchTest>>) => void = () => {}
+      vi.mocked(fetchTest).mockImplementationOnce(
+        () => new Promise((resolve) => { releaseTest = resolve })
+      )
+
+      const { router } = renderWorkbenchPageWithParams('?editTest=test-123')
+      await waitFor(function waitForLoadStart() {
+        expect(fetchTest).toHaveBeenCalledWith('test-123')
+      })
+
+      await act(async () => {
+        await router.navigate('/workbench?newTest=true')
+      })
+      await waitFor(function verifyRequestUsedUp() {
+        expect(router.state.location.search).toBe('')
+      })
+      // The closed test no longer shows as loading, although its read is still out.
+      expect(screen.queryByText('Loading test…')).not.toBeInTheDocument()
+
+      await act(async () => {
+        releaseTest({
+          id: 'test-123',
+          name: 'My Existing Test',
+          description: '',
+          tags: [],
+          suite: null,
+          workflow: { nodes: [], edges: [] },
+        } as unknown as Awaited<ReturnType<typeof fetchTest>>)
+        // The other reads of the old load have settled, so a short pause lets it run to its end.
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+
+      const state = useWorkflowStore.getState()
+      expect(state.editingTestId).toBeNull()
+      expect(state.editingTestName).toBeNull()
+      expect(state.nodes).toHaveLength(0)
+    })
+  })
+
+  describe('Leaving the Workbench while a test loads', () => {
+    interface TestRead {
+      resolve(details: unknown): void
+      reject(reason: unknown): void
+    }
+
+    /** Test Z is open; the user opens test A and goes to the Tests list before A's read comes back. */
+    async function leaveWhileTestLoads() {
+      const { fetchTest } = await import('@/features/tests/api/crud')
+      vi.mocked(fetchTest).mockClear()
+      let read: TestRead = { resolve: () => {}, reject: () => {} }
+      vi.mocked(fetchTest).mockImplementationOnce(
+        () => new Promise((resolve, reject) => { read = { resolve, reject } })
+      )
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setEditingTest('test-z', 'Test Z')
+        store.setNodes(
+          [{ id: 'z-node', type: 'workflowNode', position: { x: 0, y: 0 }, data: { nodeType: 'plugin', label: 'Z Block', version: '1.0.0' } }],
+          { skipDirty: true },
+        )
+        store.setCanvasReady(true)
+      })
+
+      const { router } = renderWorkbenchPageWithParams('?editTest=test-a')
+      await waitFor(function waitForLoadStart() {
+        expect(fetchTest).toHaveBeenCalledWith('test-a')
+      })
+
+      await act(async () => {
+        await router.navigate('/tests')
+      })
+      expect(screen.getByTestId('tests-list')).toBeInTheDocument()
+      return { router, read }
+    }
+
+    async function settleAndComeBack(router: ReturnType<typeof createMemoryRouter>, settle: () => void) {
+      await act(async () => {
+        settle()
+        // The other reads of the load have settled, so a short pause lets it run to its end.
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+      await act(async () => {
+        await router.navigate('/workbench')
+      })
+      await screen.findByTestId('workbench-page')
+    }
+
+    it('shows the open test again when the read came back after the user left', async function testLateReadShowsCanvas() {
+      const { router, read } = await leaveWhileTestLoads()
+
+      await settleAndComeBack(router, () => read.resolve({
+        id: 'test-a',
+        name: 'Test A',
+        description: '',
+        tags: [],
+        suite: null,
+        workflow: { nodes: [], edges: [] },
+      }))
+
+      await waitFor(function verifyCanvasShown() {
+        expect(useWorkflowStore.getState().isCanvasReady).toBe(true)
+      })
+      expect(useWorkflowStore.getState().editingTestId).toBe('test-z')
+    })
+
+    it('shows the open test again when the read failed after the user left', async function testLateFailureShowsCanvas() {
+      const { router, read } = await leaveWhileTestLoads()
+
+      await settleAndComeBack(router, () => read.reject(Object.assign(new Error('Server error'), { status: 500 })))
+
+      await waitFor(function verifyCanvasShown() {
+        expect(useWorkflowStore.getState().isCanvasReady).toBe(true)
+      })
+      expect(useWorkflowStore.getState().editingTestId).toBe('test-z')
+      expect(screen.queryByText('Could not load test')).not.toBeInTheDocument()
     })
   })
 

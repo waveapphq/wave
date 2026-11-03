@@ -157,8 +157,7 @@ describe('ExecutionsFilters', () => {
       await waitFor(
         () => {
           expect(handleFilterChange).toHaveBeenCalled()
-        },
-        { timeout: 500 }
+        }
       )
 
       const lastCall = handleFilterChange.mock.calls[handleFilterChange.mock.calls.length - 1]

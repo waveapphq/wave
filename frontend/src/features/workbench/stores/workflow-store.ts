@@ -389,6 +389,8 @@ interface WorkflowState {
   // Lets subscribers (e.g. the toast hook) detect a repeat operation even
   // when lastAnnouncement is the same string as before.
   announcementSeq: number
+  /** Bumped by every reset(): a test load started before it opens a test that is closed. */
+  canvasGeneration: number
 
   // Canvas readiness (loading experience)
   isCanvasReady: boolean
@@ -1744,6 +1746,7 @@ function buildInitializer(
     lastError: null,
     lastAnnouncement: '',
     announcementSeq: 0,
+    canvasGeneration: 0,
     isCanvasReady: false,
     fitViewRequested: false,
     fitViewOptions: null,
@@ -3341,6 +3344,7 @@ function buildInitializer(
         lastError: null,
         lastAnnouncement: '',
         announcementSeq: 0,
+        canvasGeneration: get().canvasGeneration + 1,
         isCanvasReady: false,
         fitViewRequested: false,
         fitViewOptions: null,

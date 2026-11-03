@@ -2978,6 +2978,17 @@ describe('Workflow Store', () => {
       expect(state.selectedNodeIds).toEqual([])
       expect(state.isDirty).toBe(false)
     })
+
+    it('starts a new canvas generation on every reset, so a test load in flight sees its test closed', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      const before = useWorkflowStore.getState().canvasGeneration
+      expect(before).toEqual(expect.any(Number))
+
+      useWorkflowStore.getState().reset()
+      useWorkflowStore.getState().reset()
+
+      expect(useWorkflowStore.getState().canvasGeneration).toBe(before + 2)
+    })
   })
 
   describe('setEdges', () => {

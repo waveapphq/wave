@@ -86,7 +86,9 @@ The server is the FastAPI app `wavecore.api.app:app`. It serves the REST API, th
 ```bash
 # Development mode (config/config.yaml, copied from config/config.example.yaml, enables CORS for
 # localhost:3000). The excludes stop a Python block's script file under data/ or a test edit from
-# restarting the server, which would end a Workbench run.
+# restarting the server, which would end a Workbench run. The server stops with an error at start
+# when data/ does not exist, so a fresh clone creates it first.
+mkdir -p data
 WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reload-exclude "$PWD/data" --reload-exclude "$PWD/tests" --port 8000
 
 # Production mode (a config file of your own with your CORS origins, data folder and secret key)

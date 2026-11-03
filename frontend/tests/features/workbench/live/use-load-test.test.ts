@@ -1487,6 +1487,388 @@ describe('useLoadTest', () => {
     })
   })
 
+  // --- A test closed or replaced while it loads ---
+
+  describe('loadTest - a closed test stays closed', () => {
+    function serverError(message: string) {
+      return Object.assign(new Error(message), { status: 500 })
+    }
+
+    // Like the real store, every reset starts a new canvas generation.
+    function setupClosableStore(overrides: Record<string, unknown> = {}) {
+      const actions = setupStore({ canvasGeneration: 0, ...overrides }) as ReturnType<typeof setupStore> & {
+        canvasGeneration: number
+      }
+      actions.reset.mockImplementation(() => {
+        actions.canvasGeneration += 1
+      })
+      return actions
+    }
+
+    function renderLoader() {
+      const cbs = defaultCallbackParams()
+      const view = renderHook(() =>
+        useLoadTest(cbs.clearDraft, cbs.setValidationErrors, cbs.setValidationFatal, cbs.setValidationMode, cbs.setShowValidationErrorDialog)
+      )
+      return { ...view, cbs }
+    }
+
+    /** fetchTest answers each id from its own promise, settled by the test. */
+    function deferTestReads() {
+      const settle = new Map<string, { resolve: (value: unknown) => void; reject: (reason: unknown) => void }>()
+      mockFetchTest.mockImplementation(
+        (testId: string) =>
+          new Promise((resolve, reject) => {
+            settle.set(testId, { resolve, reject })
+          })
+      )
+      return settle
+    }
+
+    it('does not open a test that was closed while it was loading', async () => {
+      setupSuccessfulApiMocks()
+      let releaseValidation: ((value: unknown) => void) | null = null
+      mockValidateTest.mockImplementation(
+        () => new Promise((resolve) => { releaseValidation = resolve })
+      )
+      const actions = setupClosableStore()
+      const { result, cbs } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockValidateTest)
+      })
+      act(() => actions.reset())
+
+      await act(async () => {
+        releaseValidation!({ fatal: false, errors: [], warnings: [] })
+        await pending
+      })
+
+      expect(actions.reset).toHaveBeenCalledOnce()
+      expect(actions.setEditingTest).not.toHaveBeenCalled()
+      expect(actions.setNodes).not.toHaveBeenCalled()
+      expect(actions.markSaved).not.toHaveBeenCalled()
+      expect(cbs.clearDraft).not.toHaveBeenCalled()
+      expect(result.current.isLoadingTest).toBe(false)
+    })
+
+    it('raises no card for a test that was closed before its read failed', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const actions = setupClosableStore()
+      const { result } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      act(() => actions.reset())
+
+      await act(async () => {
+        reads.get('test-1')!.reject(serverError('Server error'))
+        await pending
+      })
+
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(actions.setNodes).not.toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it('raises no deleted-test dialog for a test that was closed before its read came back', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore({ editingTestName: 'My Test' })
+      const { result } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      act(() => actions.reset())
+
+      await act(async () => {
+        reads.get('test-1')!.reject(Object.assign(new Error('Not found'), { status: 404 }))
+        await pending
+      })
+
+      expect(deletedTestRaise).not.toHaveBeenCalled()
+      expect(actions.setCanvasReady).not.toHaveBeenCalledWith(true)
+    })
+
+    it('opens a test the user asks for after the close', async () => {
+      setupSuccessfulApiMocks()
+      const actions = setupClosableStore()
+      const { result, cbs } = renderLoader()
+
+      act(() => actions.reset())
+      await act(async () => {
+        await result.current.loadTest('test-1')
+      })
+
+      expect(actions.setEditingTest).toHaveBeenCalledWith('test-1', 'My Test')
+      expect(actions.markSaved).toHaveBeenCalled()
+      expect(cbs.clearDraft).toHaveBeenCalled()
+    })
+
+    it('opens only the newer test when the user switches while the first one loads', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore()
+      const { result } = renderLoader()
+
+      let first: Promise<void> = Promise.resolve()
+      let second: Promise<void> = Promise.resolve()
+      await act(async () => {
+        first = result.current.loadTest('test-a')
+        second = result.current.loadTest('test-b')
+        await waitForCall(mockFetchTest)
+      })
+
+      await act(async () => {
+        reads.get('test-a')!.resolve(makeTestDetails({ id: 'test-a', name: 'Test A' }))
+        await first
+      })
+      expect(actions.setEditingTest).not.toHaveBeenCalled()
+      expect(result.current.isLoadingTest).toBe(true)
+
+      await act(async () => {
+        reads.get('test-b')!.resolve(makeTestDetails({ id: 'test-b', name: 'Test B' }))
+        await second
+      })
+      expect(actions.setEditingTest.mock.calls).toEqual([['test-b', 'Test B']])
+      expect(actions.markSaved).toHaveBeenCalledOnce()
+      expect(result.current.isLoadingTest).toBe(false)
+    })
+
+    it('leaves the card of the newer test alone when the replaced load finishes', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const actions = setupClosableStore()
+      const { result } = renderLoader()
+
+      let first: Promise<void> = Promise.resolve()
+      let second: Promise<void> = Promise.resolve()
+      await act(async () => {
+        first = result.current.loadTest('test-a')
+        second = result.current.loadTest('test-b')
+        await waitForCall(mockFetchTest)
+      })
+      await act(async () => {
+        reads.get('test-b')!.reject(serverError('Server error'))
+        await second
+      })
+      expect(usePageBlockStore.getState().block?.title).toBe('Could not load test')
+
+      await act(async () => {
+        reads.get('test-a')!.resolve(makeTestDetails({ id: 'test-a', name: 'Test A' }))
+        await first
+      })
+
+      expect(usePageBlockStore.getState().block?.title).toBe('Could not load test')
+      expect(actions.setEditingTest).not.toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it('opens the test when the retry on the card succeeds', async () => {
+      setupSuccessfulApiMocks()
+      mockValidateTest
+        .mockRejectedValueOnce(new Error('Validation API down'))
+        .mockResolvedValue({ fatal: false, errors: [], warnings: [] })
+      const actions = setupClosableStore()
+      const { result } = renderLoader()
+
+      await act(async () => {
+        await result.current.loadTest('test-1')
+      })
+      expect(usePageBlockStore.getState().block).not.toBeNull()
+
+      await act(async () => {
+        await usePageBlockStore.getState().block!.retry()
+      })
+
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(actions.setEditingTest).toHaveBeenCalledWith('test-1', 'My Test')
+      expect(actions.markSaved).toHaveBeenCalled()
+    })
+
+    it('still reports its Function versions after the reset that opens the test', async () => {
+      setupSuccessfulApiMocks()
+      mockListFunctionVersions.mockRejectedValue(new Error('Library down'))
+      const actions = setupClosableStore({
+        nodes: [{ id: 'fn-1', data: { functionLifecycle: 'shared', functionId: 'lib-1', functionVersion: '1.0.0' } }],
+      })
+      const { result } = renderLoader()
+
+      await act(async () => {
+        await result.current.loadTest('test-1')
+      })
+
+      expect(actions.reset).toHaveBeenCalledOnce()
+      expect(usePageBlockStore.getState().block?.title).toBe('Could not load Function versions')
+      expect(actions.markSaved).toHaveBeenCalled()
+    })
+
+    it('does not mark a canvas saved that was closed during its Function version reads', async () => {
+      setupSuccessfulApiMocks()
+      let releaseVersions: ((value: unknown) => void) | null = null
+      mockListFunctionVersions.mockImplementation(
+        () => new Promise((resolve) => { releaseVersions = resolve })
+      )
+      const actions = setupClosableStore({
+        nodes: [{ id: 'fn-1', data: { functionLifecycle: 'shared', functionId: 'lib-1', functionVersion: '1.0.0' } }],
+      })
+      const { result, cbs } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockListFunctionVersions)
+      })
+      act(() => actions.reset())
+
+      await act(async () => {
+        releaseVersions!({ versions: [{ version: '1.0.0' }] })
+        await pending
+      })
+
+      expect(actions.markSaved).not.toHaveBeenCalled()
+      expect(cbs.clearDraft).not.toHaveBeenCalled()
+      expect(actions.requestFitView).not.toHaveBeenCalled()
+    })
+
+    it('stops showing the test as loading once it is closed', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore()
+      const { result, rerender } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      expect(result.current.isLoadingTest).toBe(true)
+
+      act(() => actions.reset())
+      rerender()
+      expect(result.current.isLoadingTest).toBe(false)
+
+      await act(async () => {
+        reads.get('test-1')!.resolve(makeTestDetails())
+        await pending
+      })
+      expect(result.current.isLoadingTest).toBe(false)
+      expect(actions.setEditingTest).not.toHaveBeenCalled()
+    })
+
+    it('asks the next visit to show the canvas when the Workbench left before the test read came back', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore()
+      const { result, unmount } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      unmount()
+
+      await act(async () => {
+        reads.get('test-1')!.resolve(makeTestDetails())
+        await pending
+      })
+
+      expect(actions.setEditingTest).not.toHaveBeenCalled()
+      expect(actions.requestFitView).toHaveBeenCalledWith({ padding: 0.2, duration: 0 })
+    })
+
+    it('asks the next visit to show the canvas when the test read failed after the Workbench left', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const actions = setupClosableStore()
+      const { result, unmount } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      unmount()
+
+      await act(async () => {
+        reads.get('test-1')!.reject(serverError('Server error'))
+        await pending
+      })
+
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(actions.requestFitView).toHaveBeenCalledWith({ padding: 0.2, duration: 0 })
+      consoleSpy.mockRestore()
+    })
+
+    it('asks for no fit when the canvas already shows again after the Workbench left', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore({ isCanvasReady: true })
+      const { result, unmount } = renderLoader()
+
+      let pending: Promise<void> = Promise.resolve()
+      await act(async () => {
+        pending = result.current.loadTest('test-1')
+        await waitForCall(mockFetchTest)
+      })
+      unmount()
+
+      await act(async () => {
+        reads.get('test-1')!.resolve(makeTestDetails())
+        await pending
+      })
+
+      expect(actions.requestFitView).not.toHaveBeenCalled()
+    })
+
+    it('leaves the canvas to the load the next visit started', async () => {
+      setupSuccessfulApiMocks()
+      const reads = deferTestReads()
+      const actions = setupClosableStore()
+      const firstVisit = renderLoader()
+
+      let firstLoad: Promise<void> = Promise.resolve()
+      await act(async () => {
+        firstLoad = firstVisit.result.current.loadTest('test-a')
+        await waitForCall(mockFetchTest)
+      })
+      firstVisit.unmount()
+
+      const secondVisit = renderLoader()
+      let secondLoad: Promise<void> = Promise.resolve()
+      await act(async () => {
+        secondLoad = secondVisit.result.current.loadTest('test-b')
+      })
+
+      await act(async () => {
+        reads.get('test-a')!.resolve(makeTestDetails({ id: 'test-a', name: 'Test A' }))
+        await firstLoad
+      })
+      expect(actions.requestFitView).not.toHaveBeenCalled()
+      expect(secondVisit.result.current.isLoadingTest).toBe(true)
+
+      await act(async () => {
+        reads.get('test-b')!.resolve(makeTestDetails({ id: 'test-b', name: 'Test B' }))
+        await secondLoad
+      })
+      expect(actions.setEditingTest.mock.calls).toEqual([['test-b', 'Test B']])
+      expect(actions.requestFitView).toHaveBeenCalledOnce()
+    })
+  })
+
   // --- Function version reads ---
 
   describe('loadTest - Function versions', () => {
