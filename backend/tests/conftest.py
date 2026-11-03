@@ -29,9 +29,20 @@ os.environ["WAVE_CONFIG_FILE"] = str(_SESSION_CONFIG_FILE)
 EXAMPLE_CONFIG_FILE = Path(__file__).resolve().parents[1] / "config" / "config.example.yaml"
 
 
+@pytest.fixture(scope="session")
+def fresh_folder(tmp_path_factory: pytest.TempPathFactory) -> Callable[[str], Path]:
+    """Make a new empty folder per call in constant time, unlike a numbered ``mktemp``."""
+    parent = tmp_path_factory.mktemp("wave-fixtures")
+
+    def _make(prefix: str) -> Path:
+        return Path(tempfile.mkdtemp(prefix=f"{prefix}-", dir=parent))
+
+    return _make
+
+
 @pytest.fixture(autouse=True)
 def config_file(
-    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+    fresh_folder: Callable[[str], Path], monkeypatch: pytest.MonkeyPatch
 ) -> Generator[Path, None, None]:
     """Give every test its own config file and its own running config (REQ-4.7.16).
 
@@ -40,7 +51,7 @@ def config_file(
     """
     from wavecore.api.config import loader
 
-    path = tmp_path_factory.mktemp("wave-config") / "config.yaml"
+    path = fresh_folder("wave-config") / "config.yaml"
     path.write_text("{}\n", encoding="utf-8")
     monkeypatch.setenv("WAVE_CONFIG_FILE", str(path))
     original = loader._config_instance
@@ -128,7 +139,7 @@ def non_utf8_child_env() -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-def temp_storage_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Path, None, None]:
+def temp_storage_path(fresh_folder: Callable[[str], Path]) -> Generator[Path, None, None]:
     """Set up a temporary storage path for all API service tests.
 
     This fixture runs automatically for all tests and ensures that
@@ -142,7 +153,7 @@ def temp_storage_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Pat
     from wavecore.api.services.tests.service import _clear_in_memory_cache
 
     # Reset and set the storage path to temp directory
-    base_path = tmp_path_factory.mktemp("wave-data")
+    base_path = fresh_folder("wave-data")
     storage_paths.reset_path_cache()
     storage_paths.set_base_path(str(base_path))
     # Clear test cache so it reloads from the new temp path
@@ -156,11 +167,11 @@ def temp_storage_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Pat
 
 
 @pytest.fixture(autouse=True)
-def server_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+def server_home(fresh_folder: Callable[[str], Path], monkeypatch: pytest.MonkeyPatch) -> Path:
     """Where a relative WAVE-side path starts: a temp folder, never the real home folder."""
     from wavecore.plugins import _file_paths
 
-    home = tmp_path_factory.mktemp("server-home")
+    home = fresh_folder("server-home")
     monkeypatch.setattr(_file_paths, "home_folder", lambda: home)
     return home
 

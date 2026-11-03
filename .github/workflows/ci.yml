@@ -37,8 +37,8 @@ jobs:
       - name: Fetch remote-host wheels
         run: ./scripts/fetch-remote-wheels.sh
 
-      - name: Run tests with coverage (suite-based execution)
-        run: ./scripts/run-coverage-backend.sh --clean -n auto
+      - name: Run tests with coverage
+        run: ./scripts/run-coverage-backend.sh --clean -n logical
 
       - name: Type check with mypy
         working-directory: ./backend

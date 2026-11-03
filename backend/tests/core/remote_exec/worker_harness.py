@@ -358,7 +358,8 @@ def is_gone(pid: int) -> bool:
     try:
         with open(f"/proc/{pid}/stat", encoding="utf-8") as handle:
             state = handle.read().rsplit(")", 1)[1].split()[0]
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # A process reaped between the open and the read reports ESRCH instead of ENOENT.
         return True
     return state == "Z"
 

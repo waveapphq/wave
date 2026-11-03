@@ -19,7 +19,6 @@ import os
 import shutil
 import tempfile
 import threading
-import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -436,27 +435,25 @@ class TestRetryMechanism:
             parameters=[],
         )
 
-        attempt_times = []
+        attempts = []
 
-        def fail_with_timing(fd, operation):
-            # Only track lock acquisition attempts (LOCK_EX), not releases (LOCK_UN)
+        def fail_three_times(fd, operation):
+            # Only count lock acquisition attempts (LOCK_EX), not releases (LOCK_UN)
             if operation & fcntl.LOCK_EX:
-                attempt_times.append(time.time())
-                if len(attempt_times) < 4:
+                attempts.append(operation)
+                if len(attempts) < 4:
                     raise BlockingIOError("Resource temporarily unavailable")
 
-        with patch("fcntl.flock", side_effect=fail_with_timing):
+        with (
+            patch("fcntl.flock", side_effect=fail_three_times),
+            patch("time.sleep") as sleep,
+        ):
             storage.save_plugin(plugin, format="yaml")
 
-        # Calculate delays between attempts
-        delays = [attempt_times[i] - attempt_times[i - 1] for i in range(1, len(attempt_times))]
-
-        # Verify exponential growth - each delay must be strictly larger than the previous one.
-        # Ratio bounds fail under container CPU contention, which adds slack to any `sleep`.
-        for i in range(1, len(delays)):
-            assert (
-                delays[i] > delays[i - 1]
-            ), f"Delay not strictly increasing (exponential backoff invariant): {delays}"
+        # The waits the code asks for, not wall clock time, so CPU load cannot change them.
+        waits = [call.args[0] for call in sleep.call_args_list]
+        assert len(attempts) == 4, f"Expected 4 lock attempts, got {len(attempts)}"
+        assert waits == [0.1, 0.2, 0.4], f"Backoff does not double from 0.1s: {waits}"
 
     def test_max_retry_attempts_limit(self, storage):
         """Test that retry has a maximum attempt limit."""
