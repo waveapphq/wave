@@ -323,7 +323,7 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
     # across its test methods). The previous suite-by-suite approach
     # incidentally preserved this ordering; the single-invocation fast path
     # would break it under the default --dist=load mode.
-    FAST_PYTEST_ARGS=(tests/ --cov=wavecore --cov-report= --tb=short -q -n "$PARALLEL_WORKERS" --dist=loadfile)
+    FAST_PYTEST_ARGS=(tests/ --cov=wavecore --cov-report= --tb=short -q -n "$PARALLEL_WORKERS" --dist=loadfile --durations=20)
     if [ "$FAIL_FAST" = true ]; then
         FAST_PYTEST_ARGS+=(-x)
     fi
@@ -344,24 +344,34 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
     TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
     TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
 
+    # Marks the lines of pytest's slowest-durations block.
+    DURATIONS_BLOCK='/ slowest [0-9]+ durations / {in_block = 1} /^=/ && !/ slowest / {in_block = 0}'
+
     if [ $EXIT_CODE -eq 0 ]; then
         PASSED_SUITES=$TOTAL_SUITES
         echo "  ✅ Passed ($TOTAL_PASSED tests, ${FAST_DURATION}s)"
+        # The worker count and the slowest tests show where the time goes.
+        echo "$OUTPUT" | grep -E "^[0-9]+ workers? \[" | sed 's/^/  /' || true
+        echo "$OUTPUT" | awk "$DURATIONS_BLOCK in_block" | sed 's/^/  /'
     else
+        FAILURE_TEXT=$(echo "$OUTPUT" | awk "$DURATIONS_BLOCK !in_block")
         # Record as a single aggregate "suite failure" so the existing
         # reporting code can render failure output.
         FAILED_RUNS+=("(fast-path aggregate)")
-        FAILED_OUTPUT["(fast-path aggregate)"]="$OUTPUT"
+        FAILED_OUTPUT["(fast-path aggregate)"]="$FAILURE_TEXT"
         echo "  ❌ Failed ($FAILED tests failed, ${FAST_DURATION}s)"
         if [ "$FAIL_FAST" = true ]; then
             echo ""
             echo "❌ FAIL FAST: pytest stopped on first failure"
             echo ""
-            FAILURE_SECTION=$(echo "$OUTPUT" | sed -n '/=* short test summary/,$p' | head -50)
-            if [ -z "$FAILURE_SECTION" ]; then
-                FAILURE_SECTION=$(echo "$OUTPUT" | tail -30)
+            # The traceback keeps the assertion message that the summary line cuts off.
+            TRACEBACK=$(echo "$FAILURE_TEXT" | awk '/^=+ (ERRORS|FAILURES) =+$/ {on = 1} on && /^=+ (warnings summary|short test summary)/ {on = 0} on' | head -60)
+            SUMMARY=$(echo "$FAILURE_TEXT" | sed -n '/=* short test summary/,$p' | head -50)
+            if [ -n "$TRACEBACK$SUMMARY" ]; then
+                printf '%s\n%s\n' "$TRACEBACK" "$SUMMARY"
+            else
+                echo "$FAILURE_TEXT" | tail -30
             fi
-            echo "$FAILURE_SECTION"
             exit 1
         fi
     fi
