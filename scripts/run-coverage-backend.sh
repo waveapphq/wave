@@ -286,6 +286,23 @@ get_coverage_targets() {
     fi
 }
 
+# pytest's ERRORS or FAILURES sections, without the warnings, then its short summary.
+print_failure_report() {
+    local report
+    # awk reads all of its input, so no reader exits early and breaks the pipe.
+    report=$(printf '%s\n' "$1" | awk '
+        /^=+ (ERRORS|FAILURES) =+$/ {on = 1}
+        on && /^=+ (warnings summary|short test summary)/ {on = 0}
+        on && traced++ < 60
+        /^=+ short test summary/ {summary = 1}
+        summary && summed++ < 50')
+    if [ -n "$report" ]; then
+        printf '%s\n' "$report"
+    else
+        printf '%s\n' "$1" | tail -30
+    fi
+}
+
 # Initialize aggregate counters used by both fast-path and suite-loop paths
 FAILED_RUNS=()
 declare -A FAILED_OUTPUT  # Store error output for failed suites
@@ -364,14 +381,7 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
             echo ""
             echo "❌ FAIL FAST: pytest stopped on first failure"
             echo ""
-            # The traceback keeps the assertion message that the summary line cuts off.
-            TRACEBACK=$(echo "$FAILURE_TEXT" | awk '/^=+ (ERRORS|FAILURES) =+$/ {on = 1} on && /^=+ (warnings summary|short test summary)/ {on = 0} on' | head -60)
-            SUMMARY=$(echo "$FAILURE_TEXT" | sed -n '/=* short test summary/,$p' | head -50)
-            if [ -n "$TRACEBACK$SUMMARY" ]; then
-                printf '%s\n%s\n' "$TRACEBACK" "$SUMMARY"
-            else
-                echo "$FAILURE_TEXT" | tail -30
-            fi
+            print_failure_report "$FAILURE_TEXT"
             exit 1
         fi
     fi
@@ -458,12 +468,7 @@ for i in "${!TEST_SUITES[@]}"; do
             echo ""
             echo "❌ FAIL FAST: Stopping after first failure in suite: $SUITE_DIR"
             echo ""
-            # Show failure details immediately
-            FAILURE_SECTION=$(echo "$OUTPUT" | sed -n '/=* short test summary/,$p' | head -50)
-            if [ -z "$FAILURE_SECTION" ]; then
-                FAILURE_SECTION=$(echo "$OUTPUT" | tail -30)
-            fi
-            echo "$FAILURE_SECTION"
+            print_failure_report "$OUTPUT"
             exit 1
         fi
     fi
@@ -543,18 +548,7 @@ if [ ${#FAILED_RUNS[@]} -gt 0 ]; then
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "📁 $failed"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        # Extract and display just the failures section from pytest output
-        # Look for FAILURES section or short test summary
-        FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | sed -n '/=* FAILURES =*/,/=* short test summary/p' | head -100)
-        if [ -z "$FAILURE_SECTION" ]; then
-            # Try extracting from short test summary to end
-            FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | sed -n '/=* short test summary/,$p' | head -50)
-        fi
-        if [ -z "$FAILURE_SECTION" ]; then
-            # Fallback: show last 30 lines of output
-            FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | tail -30)
-        fi
-        echo "$FAILURE_SECTION"
+        print_failure_report "${FAILED_OUTPUT[$failed]}"
     done
     echo ""
     echo "════════════════════════════════════════════"
