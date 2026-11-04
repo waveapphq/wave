@@ -347,10 +347,10 @@ class TestTermRunsTheCapture:
     def test_a_terminated_script_leaves_a_complete_capture(
         self, shell: str, tmp_path: Path
     ) -> None:
+        # The running command writes the ready file, so the one TERM always reaches it.
         script = """COUNT=1
 STATUS=running
-: > "$1"
-sleep 30
+/bin/sh -c ': > "$1"; exec sleep 30' sh "$1"
 """
 
         run = terminate_hook(shell, script, ["COUNT", "STATUS"], tmp_path)
