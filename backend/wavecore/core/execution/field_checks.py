@@ -306,6 +306,9 @@ def _required_finding(
     unset = value is None or (is_expression and is_blank_expression(value))
     if unset and get_param_attr(field, "default") is not None:
         return None
+    if value is None and name in values and get_param_attr(field, "secret"):
+        # An owed secret: the Block names the null when it runs (REQ-3.1.3.21, REQ-4.5.19).
+        return None
     if value is None:
         return FieldFinding(
             "REQUIRED_PARAM_MISSING", f"Required parameter '{name}' is missing", None, name

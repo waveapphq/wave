@@ -2685,6 +2685,13 @@ class TestHalfFilledHttpAndSshOpenBlocks:
 
         assert test_service._validate_test_data(data, context="run")["errors"] == []
 
+    @pytest.mark.parametrize("context", ["save", "run"])
+    def test_a_secret_held_as_null_is_owed_and_left_to_the_block(self, context: str) -> None:
+        values = {**_ON, "auth_mode": "basic", "auth_username": "alice", "auth_password": None}
+        data = _half_filled_test("http-client", "HTTP Request", values)
+
+        assert test_service._validate_test_data(data, context=context)["errors"] == []
+
 
 # ---------------------------------------------------------------------------
 # Read-only fields are refused at save, not only at run

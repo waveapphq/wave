@@ -143,6 +143,16 @@ class TestRequiredFields:
     def test_a_required_field_holding_null_is_missing(self) -> None:
         assert _check([_URL], {"url": None}) == [_missing("url")]
 
+    def test_a_required_secret_holding_null_is_owed_not_missing(self) -> None:
+        field = {"name": "password", "type": "string", "required": True, "secret": True}
+
+        assert _check([field], {"password": None}) == []
+
+    def test_a_required_secret_left_out_is_missing(self) -> None:
+        field = {"name": "password", "type": "string", "required": True, "secret": True}
+
+        assert _check([field], {}) == [_missing("password")]
+
     def test_a_declared_default_fills_a_required_field_left_out(self) -> None:
         field = {**_URL, "default": "http://example.com"}
 
