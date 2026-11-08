@@ -2465,6 +2465,8 @@ class TestExecutionTerminalBridge:
         ``_yaml_safe`` boundary, the terminal callback must log and
         continue so the status update and variable persistence still land.
         """
+        # Load the driver first so its by-name import binds the real function, not the mock.
+        from wavecore.api.services.executions import _sequential  # noqa: F401
         from wavecore.api.services.executions import _storage as _exec_storage
         from wavecore.api.services.executions import service as execution_service
 
