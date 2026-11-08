@@ -10,12 +10,13 @@ shares lives in _local_process_runtime.
 
 import os
 import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 from typing import Any
 
 from wavecore.api.services.storage_paths import get_local_process_storage_path
 from wavecore.connectivity.k8s.verbs._outputs import block_failure
+from wavecore.core.execution.field_checks import name_rule_refusals
 from wavecore.core.expressions.errors import NullValueError, null_failure_message
 from wavecore.core.table import Table
 from wavecore.core.table_values import as_table
@@ -47,6 +48,7 @@ _SERVER_LOCUS = "on the WAVE server"
 REMOTE_LOCUS = "on the remote host"
 _OWN_INTERPRETER = "WAVE's own interpreter"
 RESERVED_OUTPUTS = frozenset({"stdout", "stderr", "exit_code", "success", "error", "reason"})
+_BAD_EXPORT_NAME = "Invalid script variable name: '{name}'"
 HOOK_NEVER_RAN = "Variable exports were not read: the script replaced WAVE's exit handler"
 HOOK_NOT_REACHED = "Variable exports were not read: the script did not end after the pattern match"
 _PROGRAM_DESCRIPTIONS = {
@@ -231,24 +233,25 @@ def check_on_error(params: dict[str, Any]) -> None:
 
 def bad_script_variable_name(name: Any) -> ValueError:
     """The refusal for a row that cannot be an export name."""
-    return ValueError(f"Invalid script variable name: '{name}'")
+    return ValueError(_BAD_EXPORT_NAME.replace("{name}", str(name)))
 
 
-def check_script_variables(
-    names: list[str],
-    valid_name: Callable[[str], bool],
-    reserved: frozenset[str] = RESERVED_OUTPUTS,
-) -> None:
-    """Each export fits the block's name rule, is not a block output, and is listed once."""
-    seen: set[str] = set()
-    for name in names:
-        if not valid_name(name):
-            raise bad_script_variable_name(name)
-        if name in reserved:
-            raise ValueError(f"Script variable '{name}' has the name of a block output")
-        if name in seen:
-            raise ValueError(f"Script variable '{name}' is listed more than once")
-        seen.add(name)
+def export_name_rule(pattern: str) -> dict[str, Any]:
+    """The Variable Exports name rule the save and the run share (SHRUN-6, PYRUN-6)."""
+    return {
+        "pattern": pattern,
+        "message": _BAD_EXPORT_NAME,
+        "reserved_names": sorted(RESERVED_OUTPUTS),
+        "reserved_message": "Script variable '{name}' has the name of a block output",
+        "repeated_message": "Script variable '{name}' is listed more than once",
+    }
+
+
+def check_script_variables(names: Iterable[Any], rule: Mapping[str, Any]) -> None:
+    """The first export the rule refuses fails validation with the message the save reports."""
+    refusal = next(name_rule_refusals(rule, names), None)
+    if refusal is not None:
+        raise ValueError(refusal)
 
 
 def build_environment(

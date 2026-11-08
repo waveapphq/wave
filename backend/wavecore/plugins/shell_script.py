@@ -19,6 +19,7 @@ from wavecore.plugins._local_process_common import (
     check_on_error,
     check_script_variables,
     execution_parameters,
+    export_name_rule,
     fail_or_record,
     failure_parameter,
     local_output_core,
@@ -61,6 +62,7 @@ from wavecore.plugins.base import PluginBase
 NOUN = "Script"
 DEFAULT_SHELL = "/bin/bash"
 _REASONS = "NonZeroExit, Timeout, FailPattern, StartFailed or OutputVariable"
+_EXPORT_NAME_RULE = export_name_rule(NAME_PATTERN.pattern)
 
 
 def _list_rows(params: Mapping[str, Any], name: str) -> list[Any]:
@@ -81,11 +83,6 @@ def _check_shapes(params: Mapping[str, Any]) -> None:
     for name in _list_rows(params, "script_variables"):
         if not isinstance(name, str):
             raise bad_script_variable_name(name)
-
-
-def _is_shell_name(name: str) -> bool:
-    """A shell variable name stays ASCII, unlike a Python one."""
-    return NAME_PATTERN.fullmatch(name) is not None
 
 
 def _make_private_dir() -> Path:
@@ -218,10 +215,7 @@ class ShellScriptPlugin(PluginBase):
                     "required": False,
                     "default": [],
                     "declares_outputs": True,
-                    "name_rule": {
-                        "pattern": NAME_PATTERN.pattern,
-                        "message": "Invalid script variable name: '{name}'",
-                    },
+                    "name_rule": _EXPORT_NAME_RULE,
                     "description": (
                         "Shell variables the script sets, each bound to one WAVE variable "
                         "and read as that variable's type."
@@ -248,7 +242,7 @@ class ShellScriptPlugin(PluginBase):
         check_shell(params)
         require_positive(params, "timeout")
         check_environment_names(params, "input_vars")
-        check_script_variables(setting(params, "script_variables", []), _is_shell_name)
+        check_script_variables(setting(params, "script_variables", []), _EXPORT_NAME_RULE)
         compile_patterns(params)
 
     async def execute(self, context: dict[str, Any]) -> dict[str, Any]:

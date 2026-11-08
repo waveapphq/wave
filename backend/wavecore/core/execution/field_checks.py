@@ -381,13 +381,32 @@ def _is_literal(
 
 
 def name_rule_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
-    """The rule's message for a name, or None: the pattern in full as ASCII, then the prefixes."""
+    """The rule's message for a name, or None: the pattern in full as ASCII, the prefixes, then
+    the reserved names."""
     if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
         message = rule["message"]
     else:
         blocked = rule.get("blocked_prefixes", ())
         message = next((b["message"] for b in blocked if item.startswith(b["prefix"])), None)
+        if message is None and item in rule.get("reserved_names", ()):
+            message = rule["reserved_message"]
     return None if message is None else message.replace("{name}", str(item))
+
+
+def name_rule_refusals(rule: Mapping[str, Any], items: Iterable[Any]) -> Iterator[str]:
+    """Each refusal of the rule over the names in order, once each; a rule with a repeated
+    message also refuses a name listed again."""
+    seen: set[str] = set()
+    reported: set[str] = set()
+    for item in items:
+        message = name_rule_refusal(rule, item)
+        if message is None:
+            if item in seen and "repeated_message" in rule:
+                message = rule["repeated_message"].replace("{name}", item)
+            seen.add(item)
+        if message is not None and message not in reported:
+            reported.add(message)
+            yield message
 
 
 def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
@@ -395,10 +414,8 @@ def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
     rule = get_param_attr(field, "name_rule")
     if rule is None or not isinstance(value, dict | list):
         return
-    for item in value:
-        message = name_rule_refusal(rule, item)
-        if message is not None:
-            yield FieldFinding("INVALID_NAME", message, None, name)
+    for message in name_rule_refusals(rule, value):
+        yield FieldFinding("INVALID_NAME", message, None, name)
 
 
 def check_block_fields(

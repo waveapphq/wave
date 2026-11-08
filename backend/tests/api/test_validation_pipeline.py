@@ -599,6 +599,38 @@ class TestBlockNameRulesAtSave:
             )
         ]
 
+    def _create_python(self, script_variables: list[str]) -> list[tuple[str, str, str]]:
+        values = {"script": "print('hi')", "script_variables": script_variables}
+        node = _make_workflow_node(
+            "node-1", "python", "plugin", "Python", config={"values": values}
+        )
+        data = {
+            "name": "Python Exports",
+            "workflow": {"nodes": [node], "edges": []},
+            "variables": {},
+        }
+        with pytest.raises(SaveValidationError) as excinfo:
+            test_service.create_test(data)
+        return [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors]
+
+    def test_create_test_refuses_a_python_export_that_takes_a_block_output_name(self) -> None:
+        assert self._create_python(["exit_code"]) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'exit_code' has the name of a block output",
+                "nodes[0].data.config.values.script_variables",
+            )
+        ]
+
+    def test_create_test_refuses_a_python_export_listed_more_than_once(self) -> None:
+        assert self._create_python(["total", "total"]) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'total' is listed more than once",
+                "nodes[0].data.config.values.script_variables",
+            )
+        ]
+
 
 class TestShellNameRulesAtSave:
     """Shell Script's name rules are the save's: a name its run refuses is never stored."""
@@ -637,6 +669,24 @@ class TestShellNameRulesAtSave:
             (
                 "INVALID_NAME",
                 "Invalid script variable name: '1X'",
+                "nodes[0].data.config.values.script_variables",
+            )
+        ]
+
+    def test_create_test_refuses_an_export_that_takes_a_block_output_name(self) -> None:
+        assert self._create({"script": "echo hi", "script_variables": ["stdout"]}) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'stdout' has the name of a block output",
+                "nodes[0].data.config.values.script_variables",
+            )
+        ]
+
+    def test_create_test_refuses_an_export_listed_more_than_once(self) -> None:
+        assert self._create({"script": "echo hi", "script_variables": ["X", "X"]}) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'X' is listed more than once",
                 "nodes[0].data.config.values.script_variables",
             )
         ]

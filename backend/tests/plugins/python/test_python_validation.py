@@ -257,6 +257,59 @@ class TestNamesAtSave:
     def test_a_name_the_run_takes_is_saved(self, name: str) -> None:
         assert saved(input_vars={name: 1}, script_variables=[name]) == []
 
+    @pytest.mark.parametrize("name", RESERVED_OUTPUTS)
+    async def test_an_export_that_takes_a_block_output_name(self, name: str) -> None:
+        message = f"Script variable '{name}' has the name of a block output"
+
+        assert saved(script_variables=[name]) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        await refuses(message, script_variables=[name])
+
+    @pytest.mark.parametrize("names", [["a", "a"], ["a", "b", "a"], ["b", "a", "a"]])
+    async def test_an_export_listed_more_than_once(self, names: list[str]) -> None:
+        message = "Script variable 'a' is listed more than once"
+
+        assert saved(script_variables=names) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        await refuses(message, script_variables=names)
+
+    def test_an_export_listed_three_times_is_reported_once(self) -> None:
+        assert saved(script_variables=["a", "a", "a"]) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'a' is listed more than once",
+                None,
+                "script_variables",
+            )
+        ]
+
+    def test_exports_that_differ_from_an_output_or_each_other_in_case_are_saved(self) -> None:
+        assert saved(script_variables=["STDOUT", "Stdout", "exit_code_2", "A", "a"]) == []
+
+    async def test_every_refused_export_is_reported_in_order_and_the_run_refuses_the_first(
+        self,
+    ) -> None:
+        names = ["__y", "reason", "a", "a"]
+
+        assert saved(script_variables=names) == [
+            ("INVALID_NAME", "Invalid script variable name: '__y'", None, "script_variables"),
+            (
+                "INVALID_NAME",
+                "Script variable 'reason' has the name of a block output",
+                None,
+                "script_variables",
+            ),
+            (
+                "INVALID_NAME",
+                "Script variable 'a' is listed more than once",
+                None,
+                "script_variables",
+            ),
+        ]
+        await refuses("Invalid script variable name: '__y'", script_variables=names)
+
     def test_every_refused_name_is_reported_in_order(self) -> None:
         assert saved(input_vars={"x": 1, "café": 2, "__y": 3}) == [
             ("INVALID_NAME", "Invalid variable name: 'café'", None, "input_vars"),

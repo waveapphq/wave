@@ -29,6 +29,7 @@ from wavecore.plugins._local_process_common import (
     coerce_typed,
     environment_parameter,
     execution_parameters,
+    export_name_rule,
     fail_or_record,
     failure_parameter,
     local_output_core,
@@ -69,6 +70,7 @@ _REASONS = "NonZeroExit, Exception, Timeout, FailPattern, StartFailed or OutputV
 CHANNEL_POLL = 0.05
 # Shell Script's ASCII name that does not start with a double underscore (PYRUN-6).
 PYTHON_NAME = re.compile(rf"(?!__){NAME_PATTERN.pattern}", re.ASCII)
+_EXPORT_NAME_RULE = export_name_rule(PYTHON_NAME.pattern)
 INPUT_NAME_RULE = {
     "pattern": NAME_PATTERN.pattern,
     "message": "Invalid variable name: '{name}'",
@@ -83,11 +85,6 @@ _LOG_METHODS = {
     "ERROR": "error",
     "CRITICAL": "error",
 }
-
-
-def _is_python_name(name: Any) -> bool:
-    """A global the script can read and the form can edit."""
-    return isinstance(name, str) and PYTHON_NAME.fullmatch(name) is not None
 
 
 def _check_input_names(params: Mapping[str, Any]) -> None:
@@ -432,10 +429,7 @@ class PythonPlugin(PluginBase):
                     "required": False,
                     "default": [],
                     "declares_outputs": True,
-                    "name_rule": {
-                        "pattern": PYTHON_NAME.pattern,
-                        "message": "Invalid script variable name: '{name}'",
-                    },
+                    "name_rule": _EXPORT_NAME_RULE,
                     "description": (
                         "Globals the script sets, each bound to one WAVE variable and read "
                         "as that variable's type. They are read even when the script raises."
@@ -460,7 +454,7 @@ class PythonPlugin(PluginBase):
         require_positive(params, "timeout")
         compile_patterns(params)
         _check_input_names(params)
-        check_script_variables(setting(params, "script_variables", []), _is_python_name)
+        check_script_variables(setting(params, "script_variables", []), _EXPORT_NAME_RULE)
 
     async def execute(self, context: dict[str, Any]) -> dict[str, Any]:
         params = context["parameters"]

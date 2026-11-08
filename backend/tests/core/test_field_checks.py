@@ -889,6 +889,91 @@ class TestBlockedNamePrefixes:
         assert found == []
 
 
+class TestReservedAndRepeatedNames:
+    """A name that passes the pattern and the prefixes is refused when it is reserved, then when
+    it is listed again, each with the rule's own message; each refusal is reported once."""
+
+    _RULE = {
+        "pattern": "[A-Za-z_]+",
+        "message": "Bad name: '{name}'",
+        "blocked_prefixes": [{"prefix": "SYS_", "message": "No SYS_: '{name}'"}],
+        "reserved_names": ["out", "SYS_OUT", "OUT1"],
+        "reserved_message": "Name '{name}' is taken",
+        "repeated_message": "Name '{name}' is listed again",
+    }
+    _LISTED = {"name": "listed", "type": "array", "name_rule": _RULE}
+
+    def test_a_reserved_name_is_refused(self) -> None:
+        found = _check([self._LISTED], {"listed": ["ok", "out"]})
+
+        assert found == [("INVALID_NAME", "Name 'out' is taken", None, "listed")]
+
+    def test_a_reserved_map_key_is_refused(self) -> None:
+        field = {"name": "names", "type": "map", "name_rule": self._RULE}
+
+        found = _check([field], {"names": {"out": 1}})
+
+        assert found == [("INVALID_NAME", "Name 'out' is taken", None, "names")]
+
+    def test_a_reserved_name_matches_exactly(self) -> None:
+        found = _check([self._LISTED], {"listed": ["OUT", "outs", "ou"]})
+
+        assert found == []
+
+    def test_the_pattern_is_checked_before_the_reserved_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["OUT1"]})
+
+        assert found == [("INVALID_NAME", "Bad name: 'OUT1'", None, "listed")]
+
+    def test_the_prefixes_are_checked_before_the_reserved_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["SYS_OUT"]})
+
+        assert found == [("INVALID_NAME", "No SYS_: 'SYS_OUT'", None, "listed")]
+
+    @pytest.mark.parametrize("listed", [["a", "a"], ["a", "b", "a"], ["b", "a", "a"]])
+    def test_a_name_listed_again_is_refused(self, listed: list[str]) -> None:
+        found = _check([self._LISTED], {"listed": listed})
+
+        assert found == [("INVALID_NAME", "Name 'a' is listed again", None, "listed")]
+
+    def test_names_that_differ_in_case_are_two_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["a", "A"]})
+
+        assert found == []
+
+    @pytest.mark.parametrize(
+        ("listed", "message"),
+        [
+            (["a", "a", "a"], "Name 'a' is listed again"),
+            (["out", "out"], "Name 'out' is taken"),
+            (["1", "1"], "Bad name: '1'"),
+            ([[], []], "Bad name: '[]'"),
+        ],
+    )
+    def test_a_refusal_is_reported_once(self, listed: list[Any], message: str) -> None:
+        found = _check([self._LISTED], {"listed": listed})
+
+        assert found == [("INVALID_NAME", message, None, "listed")]
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        found = _check([self._LISTED], {"listed": ["b", "b", "1", "out", "a", "a"]})
+
+        assert found == [
+            ("INVALID_NAME", "Name 'b' is listed again", None, "listed"),
+            ("INVALID_NAME", "Bad name: '1'", None, "listed"),
+            ("INVALID_NAME", "Name 'out' is taken", None, "listed"),
+            ("INVALID_NAME", "Name 'a' is listed again", None, "listed"),
+        ]
+
+    def test_a_rule_without_a_repeated_message_takes_a_name_listed_again(self) -> None:
+        rule = {"pattern": "[a-z]+", "message": "Bad name: '{name}'"}
+        field = {"name": "listed", "type": "array", "name_rule": rule}
+
+        found = _check([field], {"listed": ["a", "a"]})
+
+        assert found == []
+
+
 class TestStoredBlockValues:
     """Each literal number of a declared number field is stored in its wire form."""
 
