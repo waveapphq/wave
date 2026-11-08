@@ -18,7 +18,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, BinaryIO, overload
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
 from wavecore.core.functions.declarations import declaration_numbers, value_problems
 from wavecore.core.secrets import masking_settings
 from wavecore.core.secrets.cipher import SecretDecryptionError, is_secret_envelope
@@ -606,6 +606,33 @@ def resolve_entities_by_ids(
         if entity:
             results.append({"id": entity["id"], "name": entity.get("name", "")})
     return results
+
+
+def refuse_unknown_members(
+    proposed: Iterable[Any],
+    held: Collection[str],
+    kind: str,
+    exists: Callable[[str], bool],
+) -> None:
+    """Refuse the first member a save adds that matches nothing; a held member is not re-checked."""
+    for member_id in proposed:
+        if not isinstance(member_id, str) or (member_id not in held and not exists(member_id)):
+            raise ValidationException(f"{kind} with ID '{member_id}' not found")
+
+
+def batch_delete(ids: Sequence[str], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
+    """Delete each ID in turn; a missing or refused one goes to ``failed`` by its index."""
+    deleted: list[str] = []
+    failed: list[dict[str, Any]] = []
+    for idx, item_id in enumerate(ids):
+        try:
+            if delete(item_id):
+                deleted.append(item_id)
+            else:
+                failed.append({"index": idx, "error": f"{kind} with ID '{item_id}' not found"})
+        except (ValueError, WaveException) as e:
+            failed.append({"index": idx, "error": str(e)})
+    return {"deleted": deleted, "failed": failed}
 
 
 ZipContent = str | bytes | Path

@@ -27,6 +27,9 @@ SUITE_NAME_CONVENTION = (
     "Suite name '{name}' violates naming convention: must contain only "
     "alphanumeric characters, spaces, hyphens, and underscores"
 )
+SUITE_TYPE_COLLISION = (
+    "Variable type collision: variable 'env' is 'string' here but 'integer' in suite 'Typed Suite'"
+)
 # Membership resolves an id or a unique name, so the message names the reference.
 ATTACHED_TEST_MISSING = "Test '{test_id}' not found"
 
@@ -222,6 +225,20 @@ def _has_problem(findings: list[dict[str, Any]], problem: str) -> bool:
     return any(item.get("problem") == problem for item in findings)
 
 
+def _integer_var(value: int) -> dict[str, Any]:
+    return {"type": "integer", "value": value}
+
+
+def _validation(problem: str) -> dict[str, Any]:
+    return {
+        "step": "input",
+        "code": "VALIDATION",
+        "severity": "error",
+        "problem": problem,
+        "fix": None,
+    }
+
+
 def _var(value: str) -> dict[str, Any]:
     return {"type": "string", "value": value}
 
@@ -273,6 +290,34 @@ class TestCreateSuite:
         result = organize().create_suite("Suite With Vars", variables={"env": _var("prod")})
         assert result["created"] is True
         assert "env" in _get_suite(result["suite_id"])["variables"]
+
+    def test_a_name_conflict_keeps_its_own_code(self) -> None:
+        _make_suite("Taken Suite")
+
+        result = organize().create_suite("Taken Suite")
+
+        assert result == {
+            "created": False,
+            "findings": [
+                {
+                    "step": "input",
+                    "code": "NAME_CONFLICT",
+                    "severity": "error",
+                    "problem": SUITE_NAME_CONFLICT.format(name="Taken Suite"),
+                    "fix": None,
+                }
+            ],
+        }
+
+    def test_a_variable_type_collision_is_a_validation_finding(self) -> None:
+        shared = create_test_entity("Typed Member")
+        _make_suite("Typed Suite", tests=[shared["id"]], variables={"env": _integer_var(1)})
+
+        result = organize().create_suite(
+            "Clashing Suite", tests=[shared["id"]], variables={"env": _var("dev")}
+        )
+
+        assert result == {"created": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
 
 
 class TestUpdateSuite:
@@ -342,6 +387,17 @@ class TestUpdateSuite:
         result = organize().update_suite(suite["id"], name="Existing Suite")
         assert result["updated"] is False
         assert _has_problem(result["findings"], SUITE_NAME_CONFLICT.format(name="Existing Suite"))
+
+    def test_a_variable_type_collision_is_a_validation_finding(self) -> None:
+        shared = create_test_entity("Typed Member")
+        _make_suite("Typed Suite", tests=[shared["id"]], variables={"env": _integer_var(1)})
+        suite = _make_suite("Clashing Suite")
+
+        result = organize().update_suite(
+            suite["id"], add_tests=[shared["id"]], set_variables={"env": _var("dev")}
+        )
+
+        assert result == {"updated": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
 
 
 # ---------------------------------------------------------------------------

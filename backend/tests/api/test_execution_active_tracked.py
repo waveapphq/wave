@@ -1,12 +1,11 @@
 """Unit tests for the active-execution lookups.
 
-``get_active_tracked_executions`` is the single source of truth used by the
-three entity-delete guards (tests, suites, regressions) to decide whether a
-delete is blocked by an in-flight tracked execution.
+``get_active_tracked_executions`` is used by the Suite and Regression delete
+guards to decide whether a delete is blocked by an in-flight tracked execution.
 ``get_active_executions_holding_test`` widens that to suite and regression
-records whose runs carry the test. Both return the blocking execution
-identifiers (not just a boolean) so the route layer can surface them in the
-409 response payload.
+records whose runs carry the test, for the Test delete and test data guards.
+Both return the blocking execution identifiers (not just a boolean) so the
+route layer can surface them in the 409 response payload.
 """
 
 from __future__ import annotations

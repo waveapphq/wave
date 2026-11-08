@@ -977,6 +977,17 @@ def get_test(test_id: str) -> dict[str, Any] | None:
     return result
 
 
+def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> None:
+    """Raise when the update renames the test onto a name another test holds."""
+    if "name" not in data or data["name"] == test.get("name"):
+        return
+    if any(
+        existing.get("name") == data["name"] and existing.get("id") != test.get("id")
+        for existing in _list_all_tests()
+    ):
+        raise ConflictException(f"Test with name '{data['name']}' already exists")
+
+
 def update_test(
     test_id: str, data: dict[str, Any], etag: str | None = None
 ) -> dict[str, Any] | None:
@@ -991,7 +1002,7 @@ def update_test(
         Updated test or None if not found
 
     Raises:
-        ValueError: If ETag mismatch
+        ConflictException: If ETag mismatch or the new name is taken
     """
     test = _load_test(test_id)
     if test is None:
@@ -1002,6 +1013,8 @@ def update_test(
         current_etag = _generate_etag(test)
         if etag != current_etag:
             raise ConflictException("Precondition failed: resource has been modified")
+
+    _refuse_taken_rename(test, data)
 
     # Increment version (minor bump)
     current_version = test.get("version", "1.0.0")
@@ -1099,11 +1112,7 @@ def update_test_metadata(
         if etag != current_etag:
             raise ConflictException("Precondition failed: resource has been modified")
 
-    # Check for name uniqueness if updating name
-    if "name" in data and data["name"] != test.get("name"):
-        for existing in _list_all_tests():
-            if existing.get("name") == data["name"] and existing.get("id") != test_id:
-                raise ConflictException(f"Test with name '{data['name']}' already exists")
+    _refuse_taken_rename(test, data)
 
     now = datetime.now(UTC).isoformat()
 
@@ -1132,9 +1141,10 @@ def update_test_metadata(
 def delete_test(test_id: str) -> bool:
     """Delete test.
 
-    Rejects with ``ConflictException`` when a tracked test execution is still
-    in ``running`` or ``paused`` state. The exception carries the blocking
-    execution IDs so the route layer can surface them in the 409 response.
+    Rejects with ``ConflictException`` while a tracked execution of the test,
+    a Suite or Regression execution running it, or a workbench session on it
+    is ``running`` or ``paused``. The exception carries the blocking IDs so
+    the route layer can surface them in the 409 response.
 
     Args:
         test_id: Test UUID
@@ -1143,7 +1153,6 @@ def delete_test(test_id: str) -> bool:
         True if deleted, False if not found
     """
     from wavecore.api.exceptions import ConflictException
-    from wavecore.api.services.executions import _storage as _exec_storage
     from wavecore.api.services.relations import service as relation_service
     from wavecore.api.services.suites import version_service as suite_version_service
 
@@ -1151,7 +1160,7 @@ def delete_test(test_id: str) -> bool:
     if test is None:
         return False
 
-    blocking = _exec_storage.get_active_tracked_executions("test", test_id)
+    blocking = testdata_service.running_holders(test_id)
     if blocking:
         raise ConflictException(
             f"Cannot delete test '{test_id}': execution is running or paused",
@@ -1188,6 +1197,8 @@ def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
         try:
             test = create_test(test_data)
             created.append(test["id"])
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
         except (WaveException, ValueError) as e:
             failed.append({"index": idx, "error": str(e)})
 
@@ -1221,6 +1232,8 @@ def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
                 failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
             else:
                 updated.append(test_id)
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
         except Exception as e:
             failed.append({"index": idx, "error": str(e)})
 
@@ -1236,19 +1249,7 @@ def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-
-    for idx, test_id in enumerate(test_ids):
-        try:
-            if delete_test(test_id):
-                deleted.append(test_id)
-            else:
-                failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
-        except (WaveException, ValueError) as e:
-            failed.append({"index": idx, "error": str(e)})
-
-    return {"deleted": deleted, "failed": failed}
+    return shared.batch_delete(test_ids, delete_test, "Test")
 
 
 def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | None:

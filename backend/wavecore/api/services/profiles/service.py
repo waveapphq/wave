@@ -184,6 +184,12 @@ def persist_profile_document(profile_data: dict[str, Any]) -> None:
     _profile_common._profile_storage[profile_data["id"]] = profile_data
 
 
+def _refuse_taken_name(name: str) -> None:
+    """Raise when a cached profile holds this name; the caller reconciles the cache first."""
+    if any(existing["name"] == name for existing in _profile_common._profile_storage.values()):
+        raise ConflictException(f"Profile with name '{name}' already exists")
+
+
 def create_profile(
     name: str,
     profile_type: str,
@@ -201,9 +207,7 @@ def create_profile(
             f"{', '.join(VALID_PROFILE_TYPES)}"
         )
 
-    for existing in _profile_common._profile_storage.values():
-        if existing["name"] == name:
-            raise ConflictException(f"Profile with name '{name}' already exists")
+    _refuse_taken_name(name)
 
     env_values = environment_values if environment_values is not None else {}
 
@@ -313,9 +317,11 @@ def update_profile(
     etag: str | None = None,
 ) -> dict[str, Any] | None:
     """Update an existing profile."""
-    profile = _cached_profile(profile_id)
-    if profile is None:
+    cached = _cached_profile(profile_id)
+    if cached is None:
         return None
+    # A refused update must leave the cached profile as stored.
+    profile = copy.deepcopy(cached)
 
     if etag:
         current_etag = _generate_etag(profile)
@@ -324,6 +330,10 @@ def update_profile(
             exc.status_code = 412
             exc.error_code = "PRECONDITION_FAILED"
             raise exc
+
+    if name is not None and name != profile["name"]:
+        _reconcile_cache()
+        _refuse_taken_name(name)
 
     usage = get_profile_usage(profile_id)
     _ensure_no_structural_change(profile, config, environment_values, usage)
@@ -361,7 +371,7 @@ def update_profile(
 
     profile["updated_at"] = _now_iso()
 
-    _save_profile(profile)
+    persist_profile_document(profile)
 
     return _prepare_profile_response(profile)
 
@@ -447,9 +457,7 @@ def duplicate_profile(profile_id: str, new_name: str) -> dict[str, Any] | None:
     if source_profile is None:
         return None
 
-    for existing in _profile_common._profile_storage.values():
-        if existing["name"] == new_name:
-            raise ConflictException(f"Profile with name '{new_name}' already exists")
+    _refuse_taken_name(new_name)
 
     new_profile_id = str(uuid.uuid4())
     now = _now_iso()

@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.api.suite_test_helpers import make_test_ids
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
 # Valid execution states
@@ -2041,7 +2042,7 @@ class TestGetEntityServiceWiring:
         suite_data = {
             "name": "Executable Suite",
             "description": "A suite that can be executed",
-            "tests": [str(uuid.uuid4())],
+            "tests": make_test_ids(1),
         }
         created_suite = suite_service.create_suite(suite_data)
         suite_id = created_suite["id"]
@@ -2068,7 +2069,7 @@ class TestGetEntityServiceWiring:
         # Create a real regression over a real suite (membership is existence-checked)
         clear_regression_storage()
         member_suite = suite_service.create_suite(
-            {"name": "Regression Member Suite", "tests": [str(uuid.uuid4())]}
+            {"name": "Regression Member Suite", "tests": make_test_ids(1)}
         )
         regression_data = {
             "name": "Executable Regression",

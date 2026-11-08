@@ -1077,6 +1077,40 @@ class TestUpdateTest:
         with pytest.raises(ConflictException, match="Precondition failed"):
             test_service.update_test(created["id"], {"name": "Updated"}, etag='"wrong-etag"')
 
+    def test_update_test_refuses_a_name_another_test_holds(self) -> None:
+        """Renaming onto another Test's name is refused and nothing is saved."""
+        test_service.create_test({"name": "Taken Name"})
+        created = test_service.create_test({"name": "Own Name"})
+
+        with pytest.raises(
+            ConflictException, match=r"^Test with name 'Taken Name' already exists$"
+        ):
+            test_service.update_test(created["id"], {"name": "Taken Name", "description": "New"})
+
+        stored = test_service._load_test(created["id"])
+        assert stored is not None
+        assert (stored["name"], stored["description"], stored["version"]) == (
+            "Own Name",
+            "",
+            "1.0.0",
+        )
+        assert [v["version"] for v in test_service._load_versions(created["id"])] == ["1.0.0"]
+
+    def test_update_test_keeps_a_name_it_already_shares(self) -> None:
+        """A save that keeps the current name passes even when another Test shares it."""
+        test_service.create_test({"name": "Shared Name"})
+        twin = test_service.create_test({"name": "Twin Name"})
+        stored_twin = test_service._load_test(twin["id"])
+        assert stored_twin is not None
+        test_service._save_test({**stored_twin, "name": "Shared Name"})
+
+        result = test_service.update_test(
+            twin["id"], {"name": "Shared Name", "description": "Kept"}
+        )
+
+        assert result is not None
+        assert (result["name"], result["description"]) == ("Shared Name", "Kept")
+
     def test_update_test_adds_version_history(self) -> None:
         """Test that update adds to version history."""
         created = test_service.create_test({"name": "History Test"})
@@ -1439,6 +1473,60 @@ class TestDeleteTestPreservesTrackedExecutions:
         assert test_service.delete_test(test_id) is True
         assert test_service.get_test(test_id) is None
 
+    @pytest.mark.parametrize("entity_type", ["suite", "regression"])
+    def test_delete_test_raises_conflict_when_a_suite_or_regression_run_carries_it(
+        self, entity_type: str
+    ) -> None:
+        """A running Suite or Regression execution that dispatched the test blocks delete."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+
+        created = test_service.create_test({"name": f"carried-by-{entity_type}"})
+        test_id = created["id"]
+
+        execution_id = str(uuid.uuid4())
+        _exec_storage._execution_storage[execution_id] = {
+            "id": execution_id,
+            "entity_type": entity_type,
+            "entity_id": str(uuid.uuid4()),
+            "status": "running",
+        }
+        _exec_storage._record_run_dispatched(execution_id, "run-1", test_id, None)
+
+        with pytest.raises(
+            ConflictException,
+            match=rf"^Cannot delete test '{test_id}': execution is running or paused$",
+        ) as exc_info:
+            test_service.delete_test(test_id)
+
+        assert exc_info.value.details == {"execution_ids": [execution_id]}
+        assert test_service.get_test(test_id) is not None
+
+    @pytest.mark.parametrize("status", ["running", "paused"])
+    def test_delete_test_raises_conflict_when_a_workbench_session_runs_it(
+        self, status: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A workbench session running or paused on the test blocks delete."""
+        from wavecore.api.services.workbench import _common as workbench_common
+
+        created = test_service.create_test({"name": f"workbench-{status}"})
+        test_id = created["id"]
+
+        session_id = str(uuid.uuid4())
+        monkeypatch.setitem(
+            workbench_common._workbench_sessions,
+            session_id,
+            {"session_id": session_id, "test_id": test_id, "status": status},
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=rf"^Cannot delete test '{test_id}': execution is running or paused$",
+        ) as exc_info:
+            test_service.delete_test(test_id)
+
+        assert exc_info.value.details == {"execution_ids": [session_id]}
+        assert test_service.get_test(test_id) is not None
+
 
 class TestDeleteTestRemovesTestData:
     """The test's own files are removed with the test (REQ-3.4.3.2)."""
@@ -1531,6 +1619,18 @@ class TestDeleteTestRemovesTestData:
         assert document_gone == [True]
 
 
+_CHANGING_VARIABLES = {
+    "rows": {"type": "array", "value": [1]},
+    "first": {"type": "string", "value": "rows.append(9)", "isExpression": True},
+    "second": {"type": "string", "value": "rows.pop()", "isExpression": True},
+}
+_FIRST_CHANGING_FINDING = (
+    "The append method changes data. An expression can only read data, "
+    "not change it. To change a variable, add a Variable Setter Block. "
+    "Variable: first."
+)
+
+
 class TestBatchOperations:
     """Test suite for batch service functions."""
 
@@ -1563,6 +1663,33 @@ class TestBatchOperations:
         assert len(result["created"]) == 1
         assert len(result["failed"]) == 1
         assert "already exists" in result["failed"][0]["error"]
+
+    def test_batch_create_tests_reports_a_refused_save_by_its_first_finding(self) -> None:
+        tests = [
+            {"name": "Clean Test"},
+            {"name": "Changing Test", "variables": _CHANGING_VARIABLES},
+        ]
+
+        result = test_service.batch_create_tests(tests)
+
+        assert result["failed"] == [{"index": 1, "error": _FIRST_CHANGING_FINDING}]
+        assert [t["name"] for t in test_service._list_all_tests()] == ["Clean Test"]
+        assert result["created"] == [test_service._list_all_tests()[0]["id"]]
+
+    def test_batch_update_tests_reports_a_refused_save_by_its_first_finding(self) -> None:
+        created = test_service.create_test({"name": "Clean Test"})
+
+        result = test_service.batch_update_tests(
+            [{"id": created["id"], "update": {"variables": _CHANGING_VARIABLES}}]
+        )
+
+        assert result == {
+            "updated": [],
+            "failed": [{"index": 0, "error": _FIRST_CHANGING_FINDING}],
+        }
+        reloaded = test_service.get_test(created["id"])
+        assert reloaded is not None
+        assert reloaded["variables"] == {}
 
     def test_batch_update_tests_updates_multiple(self) -> None:
         """Test batch updating multiple tests."""

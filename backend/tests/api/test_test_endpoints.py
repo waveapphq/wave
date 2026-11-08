@@ -631,6 +631,30 @@ class TestBatchCreateTestsEndpoint:
             assert len(data["failed"]) == 1
             assert data["failed"][0]["index"] == 1
 
+    def test_a_refused_save_is_reported_in_failed(self, client: TestClient) -> None:
+        changing = {
+            "rows": {"type": "array", "value": [1]},
+            "sneaky": {"type": "string", "value": "rows.append(9)", "isExpression": True},
+        }
+
+        response = client.post(
+            "/tests/batch",
+            json=[{"name": "Changing Test", "variables": changing}],
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {
+            "created": [],
+            "failed": [
+                {
+                    "index": 0,
+                    "error": "The append method changes data. An expression can only read "
+                    "data, not change it. To change a variable, add a Variable Setter Block. "
+                    "Variable: sneaky.",
+                }
+            ],
+        }
+
 
 class TestBatchUpdateTestsEndpoint:
     """Test suite for PATCH /tests/batch endpoint (batch update tests)."""
@@ -965,6 +989,22 @@ class TestUpdateTestEndpoint:
             assert data["error"]["code"] == "VALIDATION_ERROR"
             assert len(data["error"]["details"]) == 1
             assert data["error"]["details"][0]["code"] == "UNDECLARED_VARIABLE"
+
+    def test_update_test_returns_409_for_a_name_another_test_holds(
+        self, client: TestClient
+    ) -> None:
+        """PUT /tests/{test_id} refuses a rename onto another Test's name."""
+        client.post("/tests", json={"name": "Taken Name"})
+        own_id = client.post("/tests", json={"name": "Own Name"}).json()["data"]["id"]
+
+        response = client.put(f"/tests/{own_id}", json={"name": "Taken Name"})
+
+        assert response.status_code == 409
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Test with name 'Taken Name' already exists", "code": "CONFLICT"},
+        }
+        assert client.get(f"/tests/{own_id}").json()["data"]["name"] == "Own Name"
 
 
 class TestUpdateTestMetadataEndpoint:

@@ -293,7 +293,7 @@ def iter_files(test_id: str) -> Iterator[tuple[str, Path]]:
 # ---------------------------------------------------------------------------
 
 
-def _running_holders(test_id: str) -> list[str]:
+def running_holders(test_id: str) -> list[str]:
     """Ids of the tracked executions and workbench sessions that hold the test."""
     # Local import: workbench.service imports tests.service, which cascades into this module.
     from wavecore.api.services.workbench import service as workbench_service
@@ -310,7 +310,7 @@ def _running_holders(test_id: str) -> list[str]:
 
 def is_running(test_id: str) -> bool:
     """True while any tracked execution or workbench session holds the test."""
-    return bool(_running_holders(test_id))
+    return bool(running_holders(test_id))
 
 
 def assert_not_running(test_id: str) -> None:
@@ -319,7 +319,7 @@ def assert_not_running(test_id: str) -> None:
     if is_running(test_id):
         raise ConflictException(
             f"Test '{test['name']}' is running; test data cannot be changed until it finishes",
-            details={"execution_ids": _running_holders(test_id)},
+            details={"execution_ids": running_holders(test_id)},
         )
 
 

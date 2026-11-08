@@ -933,8 +933,8 @@ def get_active_tracked_executions(entity_type: str, entity_id: str) -> list[str]
 
     An execution "holds" the entity when its ``entity_type`` and ``entity_id``
     match and its ``status`` is non-terminal (``running`` or ``paused``). The
-    three entity delete services call this to decide whether to reject the
-    delete with a ``409 Conflict`` and surface the blocking IDs to the caller.
+    Suite and Regression delete services call this to decide whether to reject
+    the delete with a ``409 Conflict`` and surface the blocking IDs to the caller.
     """
     _ensure_cache_loaded()
     return [

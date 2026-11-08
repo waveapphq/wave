@@ -1036,6 +1036,94 @@ class TestUpdateProfile:
             assert result is not None
             assert result["description"] == "New description for database"
 
+    def test_update_profile_refuses_a_name_another_profile_holds(self) -> None:
+        """Renaming onto another Profile's name is refused and nothing is saved."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        taken_id = str(uuid.uuid4())
+        own_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {
+                taken_id: {"id": taken_id, "name": "Taken DB", "type": "database", "config": {}},
+                own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}},
+            },
+        ):
+            with pytest.raises(
+                ConflictException, match=r"^Profile with name 'Taken DB' already exists$"
+            ):
+                profile_service.update_profile(own_id, name="Taken DB", description="New")
+
+            stored = yaml.safe_load(
+                (get_profiles_storage_path() / own_id / "profile.yaml").read_text()
+            )
+            cached = _profile_common._profile_storage[own_id]
+            assert (stored["name"], cached["name"]) == ("Own DB", "Own DB")
+            assert "description" not in stored and "description" not in cached
+
+    def test_update_profile_refuses_a_name_only_the_storage_directory_holds(self) -> None:
+        """A Profile on disk but not yet in the cache still holds its name."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        own_id = str(uuid.uuid4())
+        disk_only_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}}},
+        ):
+            disk_only_dir = get_profiles_storage_path() / disk_only_id
+            disk_only_dir.mkdir(parents=True)
+            (disk_only_dir / "profile.yaml").write_text(
+                yaml.safe_dump(
+                    {"id": disk_only_id, "name": "Disk DB", "type": "database", "config": {}}
+                )
+            )
+            try:
+                with pytest.raises(
+                    ConflictException, match=r"^Profile with name 'Disk DB' already exists$"
+                ):
+                    profile_service.update_profile(own_id, name="Disk DB")
+            finally:
+                shutil.rmtree(disk_only_dir, ignore_errors=True)
+
+    def test_update_profile_keeps_a_name_it_already_shares(self) -> None:
+        """A save that keeps the current name passes even when another Profile shares it."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        first_id = str(uuid.uuid4())
+        twin_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {
+                first_id: {"id": first_id, "name": "Shared DB", "type": "database", "config": {}},
+                twin_id: {"id": twin_id, "name": "Shared DB", "type": "database", "config": {}},
+            },
+        ):
+            result = profile_service.update_profile(twin_id, name="Shared DB", description="Kept")
+
+            assert result is not None
+            assert (result["name"], result["description"]) == ("Shared DB", "Kept")
+
+    def test_a_refused_update_changes_nothing_a_later_read_sees(self) -> None:
+        """A save the config check refuses leaves the cached Profile as stored."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        own_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}}},
+        ):
+            with pytest.raises(
+                ValidationException, match=_refusal("port", "must be between 1 and 65535")
+            ):
+                profile_service.update_profile(
+                    own_id, name="Renamed DB", config={"port": 70000}, description="New"
+                )
+
+            reread = profile_service.get_profile(own_id)
+            assert reread is not None
+            assert (reread["name"], "description" in reread) == ("Own DB", False)
+
 
 class TestDeleteProfile:
     """Test suite for delete_profile function."""

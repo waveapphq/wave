@@ -28,6 +28,8 @@ from tests.api.suite_test_helpers import (
     get_suite_dir,
     load_suite_file,
     load_versions_file,
+    make_test_ids,
+    save_suite_file,
     set_version_attribute,
 )
 
@@ -163,10 +165,25 @@ class TestCreateSuiteService:
 
         clear_suite_storage()
 
-        test_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+        test_ids = make_test_ids(2)
         result = suite_service.create_suite({"name": "My Suite", "tests": test_ids})
 
         assert result["tests"] == test_ids
+
+    def test_create_suite_refuses_an_unknown_test(self) -> None:
+        """A Test ID that matches no Test refuses the create and saves nothing."""
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        clear_suite_storage()
+        member = test_service.create_test({"name": "Member"})
+        unknown_id = str(uuid.uuid4())
+
+        with pytest.raises(ValidationException, match=rf"^Test with ID '{unknown_id}' not found$"):
+            suite_service.create_suite({"name": "My Suite", "tests": [member["id"], unknown_id]})
+
+        assert suite_service.list_suite_names() == []
 
     def test_create_suite_stores_variables(self) -> None:
         """Test that create_suite stores variable declarations."""
@@ -219,6 +236,18 @@ class TestCreateSuiteService:
         versions = _suite_version_svc.list_suite_versions(result["id"])
 
         assert versions == ["1.0.0"]
+
+    def test_create_suite_refuses_a_test_id_that_is_not_text(self) -> None:
+        """A Test ID that is not text matches no Test."""
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.suites import service as suite_service
+
+        clear_suite_storage()
+
+        with pytest.raises(ValidationException, match=r"^Test with ID '42' not found$"):
+            suite_service.create_suite({"name": "My Suite", "tests": [42]})
+
+        assert suite_service.list_suite_names() == []
 
 
 class TestGetSuiteService:
@@ -334,6 +363,44 @@ class TestUpdateSuiteService:
         assert "1.0.0" in versions
         assert "1.1.0" in versions
         assert "1.2.0" in versions
+
+    def test_update_suite_refuses_an_unknown_test(self) -> None:
+        """Adding a Test ID that matches no Test refuses the update and changes nothing."""
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        clear_suite_storage()
+        member = test_service.create_test({"name": "Member"})
+        created = suite_service.create_suite({"name": "Test Suite", "tests": [member["id"]]})
+        unknown_id = str(uuid.uuid4())
+
+        with pytest.raises(ValidationException, match=rf"^Test with ID '{unknown_id}' not found$"):
+            suite_service.update_suite(created["id"], {"tests": [member["id"], unknown_id]})
+
+        stored = load_suite_file(created["id"])
+        assert stored is not None
+        assert stored["tests"] == [member["id"]]
+        assert stored["version"] == "1.0.0"
+
+    def test_update_suite_keeps_a_held_test_that_no_longer_exists(self) -> None:
+        """Only added Tests are checked, so a Test the Suite already holds never blocks a save."""
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        clear_suite_storage()
+        member = test_service.create_test({"name": "Member"})
+        created = suite_service.create_suite({"name": "Test Suite"})
+        gone_id = str(uuid.uuid4())
+        stored = load_suite_file(created["id"])
+        assert stored is not None
+        stored["tests"] = [gone_id]
+        save_suite_file(stored)
+
+        result = suite_service.update_suite(created["id"], {"tests": [gone_id, member["id"]]})
+
+        assert result is not None
+        assert result["tests"] == [gone_id, member["id"]]
 
 
 class TestDeleteSuiteService:
@@ -899,8 +966,7 @@ class TestAddTestToSuiteService:
 
         clear_suite_storage()
 
-        test1_id = str(uuid.uuid4())
-        test2_id = str(uuid.uuid4())
+        test1_id, test2_id = make_test_ids(2)
         test3_id = str(uuid.uuid4())
 
         suite = suite_service.create_suite({"name": "Test Suite", "tests": [test1_id, test2_id]})
@@ -952,7 +1018,7 @@ class TestRemoveTestFromSuiteService:
 
         clear_suite_storage()
 
-        test_id = str(uuid.uuid4())
+        [test_id] = make_test_ids(1)
         suite = suite_service.create_suite({"name": "Test Suite", "tests": [test_id]})
 
         result = _suite_version_svc.remove_test_from_suite(suite["id"], test_id)
@@ -967,9 +1033,7 @@ class TestRemoveTestFromSuiteService:
 
         clear_suite_storage()
 
-        test1_id = str(uuid.uuid4())
-        test2_id = str(uuid.uuid4())
-        test3_id = str(uuid.uuid4())
+        test1_id, test2_id, test3_id = make_test_ids(3)
 
         suite = suite_service.create_suite(
             {"name": "Test Suite", "tests": [test1_id, test2_id, test3_id]}
@@ -991,7 +1055,7 @@ class TestCloneSuiteService:
 
         clear_suite_storage()
 
-        test_id = str(uuid.uuid4())
+        [test_id] = make_test_ids(1)
         original = suite_service.create_suite(
             {
                 "name": "Original Suite",
@@ -1303,7 +1367,7 @@ class TestSuiteServiceEdgeCases:
         clear_suite_storage()
 
         suite = suite_service.create_suite({"name": "Test Suite"})
-        test_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+        test_ids = make_test_ids(2)
 
         result = suite_service.update_suite(suite["id"], {"tests": test_ids})
 
@@ -1989,6 +2053,144 @@ class TestUpdateSuiteCollision:
 
         assert result is not None
         assert tid in result.get("tests", [])
+
+    def test_update_suite_checks_added_tests_against_the_new_variables(self) -> None:
+        """Tests and variables changed in one update are checked together."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        tid = test_service.create_test({"name": "Shared"})["id"]
+        suite_service.create_suite(
+            {"name": "S1", "tests": [tid], "variables": {"env": {"type": "integer", "value": 1}}}
+        )
+        s2 = suite_service.create_suite({"name": "S2"})
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' here but 'integer' "
+            r"in suite 'S1'$",
+        ) as exc_info:
+            suite_service.update_suite(
+                s2["id"],
+                {"tests": [tid], "variables": {"env": {"type": "string", "value": "dev"}}},
+            )
+
+        assert exc_info.value.details is not None
+        assert exc_info.value.details["conflicting_test_ids"] == [tid]
+        stored = load_suite_file(s2["id"])
+        assert stored is not None
+        assert stored["tests"] == []
+        assert stored["variables"] == {}
+
+    def test_update_suite_retypes_a_variable_while_removing_the_shared_test(self) -> None:
+        """A variable is checked against the Tests the Suite keeps, not the Tests it drops."""
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        tid = test_service.create_test({"name": "Shared"})["id"]
+        integer_env = {"env": {"type": "integer", "value": 1}}
+        suite_service.create_suite({"name": "S1", "tests": [tid], "variables": integer_env})
+        s2 = suite_service.create_suite({"name": "S2", "tests": [tid], "variables": integer_env})
+
+        result = suite_service.update_suite(
+            s2["id"], {"tests": [], "variables": {"env": {"type": "string", "value": "dev"}}}
+        )
+
+        assert result is not None
+        assert result["tests"] == []
+        assert result["variables"] == {"env": {"type": "string", "value": "dev"}}
+
+    def test_update_suite_retypes_a_variable_against_a_kept_test(self) -> None:
+        """Dropping one Test still checks a retyped variable against the Tests the Suite keeps."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        kept = test_service.create_test({"name": "Kept"})["id"]
+        dropped = test_service.create_test({"name": "Dropped"})["id"]
+        integer_env = {"env": {"type": "integer", "value": 1}}
+        suite_service.create_suite({"name": "S1", "tests": [kept], "variables": integer_env})
+        s2 = suite_service.create_suite(
+            {"name": "S2", "tests": [kept, dropped], "variables": integer_env}
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' here but 'integer' "
+            r"in suite 'S1'$",
+        ) as exc_info:
+            suite_service.update_suite(
+                s2["id"],
+                {"tests": [kept], "variables": {"env": {"type": "string", "value": "dev"}}},
+            )
+
+        assert exc_info.value.details is not None
+        assert exc_info.value.details["collisions"][0]["other_suite"] == "S1"
+        stored = load_suite_file(s2["id"])
+        assert stored is not None
+        assert stored["tests"] == [kept, dropped]
+        assert stored["variables"] == integer_env
+
+
+class TestCreateSuiteCollision:
+    """A new Suite runs the same variable type check as an update."""
+
+    def setup_method(self) -> None:
+        """Reset storage before each test."""
+        from wavecore.api.services.relations import service as relation_service
+        from wavecore.api.services.tests import service as test_service
+
+        clear_suite_storage()
+        test_service._clear_storage()
+        relation_service._test_to_suites.clear()
+        relation_service._initialized = False
+
+    def test_create_suite_refuses_a_type_collision_through_a_shared_test(self) -> None:
+        """A Test shared with a Suite that types the variable differently refuses the create."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.relations import service as relation_service
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        tid = test_service.create_test({"name": "Shared"})["id"]
+        s1 = suite_service.create_suite(
+            {"name": "S1", "tests": [tid], "variables": {"env": {"type": "integer", "value": 1}}}
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' here but 'integer' "
+            r"in suite 'S1'$",
+        ) as exc_info:
+            suite_service.create_suite(
+                {
+                    "name": "S2",
+                    "tests": [tid],
+                    "variables": {"env": {"type": "string", "value": "dev"}},
+                }
+            )
+
+        assert exc_info.value.details is not None
+        assert exc_info.value.details["conflicting_test_ids"] == [tid]
+        assert suite_service.list_suite_names() == [{"id": s1["id"], "name": "S1"}]
+        assert [entry["id"] for entry in relation_service.get_suites_for_test(tid)] == [s1["id"]]
+
+    def test_create_suite_with_matching_types_succeeds(self) -> None:
+        """The same variable type in both Suites is no collision."""
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.tests import service as test_service
+
+        tid = test_service.create_test({"name": "Shared"})["id"]
+        suite_service.create_suite(
+            {"name": "S1", "tests": [tid], "variables": {"env": {"type": "string", "value": "a"}}}
+        )
+
+        result = suite_service.create_suite(
+            {"name": "S2", "tests": [tid], "variables": {"env": {"type": "string", "value": "b"}}}
+        )
+
+        assert result["tests"] == [tid]
 
 
 _SUITE_HISTORY: list[dict[str, Any]] = [

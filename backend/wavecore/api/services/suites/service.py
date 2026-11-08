@@ -9,9 +9,11 @@ from typing import Any
 
 from wavecore.api.exceptions import ConflictException, WaveException
 from wavecore.api.services.shared import (
+    batch_delete,
     bump_version_and_record,
     mask_secret_variables,
     read_secret_variables,
+    refuse_unknown_members,
     restore_masked_secrets,
 )
 from wavecore.api.services.suites import _storage
@@ -29,6 +31,7 @@ from wavecore.api.services.suites._storage import (
     _paginate_suites,
     _save_suite,
     _save_versions,
+    _test_exists,
     _validate_suite_update,
 )
 from wavecore.api.services.variable_service import refuse_value_problems
@@ -80,15 +83,18 @@ def create_suite(data: dict[str, Any]) -> dict[str, Any]:
     suite_id = str(uuid.uuid4())
     now = datetime.now(UTC).isoformat()
 
+    tests = data.get("tests", [])
+    refuse_unknown_members(tests, (), "Test", _test_exists)
     variables = data.get("variables", {})
     refuse_value_problems(variables)
+    _check_test_membership_collisions(suite_id, variables, tests)
 
     suite = {
         "id": suite_id,
         "name": name,
         "version": "1.0.0",
         "description": data.get("description", ""),
-        "tests": data.get("tests", []),
+        "tests": tests,
         "tags": data.get("tags", []),
         "variables": variables,
         "metadata": data.get("metadata", {}),
@@ -170,39 +176,40 @@ def _raise_collision(
     )
 
 
-def _check_variable_collisions(suite: dict[str, Any], suite_id: str, data: dict[str, Any]) -> None:
-    """Check for collisions when variable types change."""
+def _check_variable_collisions(
+    suite: dict[str, Any], suite_id: str, proposed_vars: dict[str, Any], kept_test_ids: list[str]
+) -> None:
+    """Check the variables whose type changes against the other Suites of the kept Tests."""
     from wavecore.api.services.suites.variable_validation import (
-        check_variable_type_collisions,
+        check_variable_collisions_for_tests,
         compute_variable_delta,
     )
 
-    current_vars = suite.get("variables", {})
-    proposed_vars = data["variables"]
-    delta = compute_variable_delta(current_vars, proposed_vars)
-    if delta:
-        collisions = check_variable_type_collisions(suite_id, delta, proposed_vars)
-        if collisions:
-            _raise_collision(collisions)
+    delta = compute_variable_delta(suite.get("variables", {}), proposed_vars)
+    collisions = check_variable_collisions_for_tests(
+        exclude_suite_id=suite_id,
+        test_ids=kept_test_ids,
+        proposed_variables={name: proposed_vars[name] for name in delta},
+    )
+    if collisions:
+        _raise_collision(collisions)
 
 
 def _check_test_membership_collisions(
-    suite: dict[str, Any], suite_id: str, data: dict[str, Any], old_tests: set[str]
+    suite_id: str, suite_vars: dict[str, Any], new_test_ids: list[str]
 ) -> None:
-    """Check for collisions when test membership changes."""
+    """Check the Suite's variables against the other Suites of the Tests it gains."""
     from wavecore.api.services.relations import service as relation_service
     from wavecore.api.services.suites.variable_validation import (
         check_variable_collisions_for_tests,
     )
 
-    new_test_ids = set(data["tests"]) - old_tests
-    suite_vars = suite.get("variables", {})
     if not new_test_ids or not suite_vars:
         return
 
     collisions = check_variable_collisions_for_tests(
         exclude_suite_id=suite_id,
-        test_ids=list(new_test_ids),
+        test_ids=new_test_ids,
         proposed_variables=suite_vars,
     )
     if not collisions:
@@ -224,11 +231,20 @@ def _check_update_collisions(
     data: dict[str, Any],
     old_tests: set[str],
 ) -> None:
-    """Check for variable type collisions before applying an update."""
-    if "variables" in data:
-        _check_variable_collisions(suite, suite_id, data)
-    if "tests" in data:
-        _check_test_membership_collisions(suite, suite_id, data, old_tests)
+    """Check the proposed Tests and variables for type collisions before an update is applied."""
+    proposed_tests = data.get("tests", suite.get("tests", []))
+    proposed_vars = data.get("variables", suite.get("variables", {}))
+    _check_variable_collisions(
+        suite,
+        suite_id,
+        proposed_vars,
+        [test_id for test_id in proposed_tests if test_id in old_tests],
+    )
+    _check_test_membership_collisions(
+        suite_id,
+        proposed_vars,
+        [test_id for test_id in proposed_tests if test_id not in old_tests],
+    )
 
 
 def update_suite(
@@ -252,6 +268,8 @@ def update_suite(
         }
 
     _validate_suite_update(suite, suite_id, data, etag)
+    if "tests" in data:
+        refuse_unknown_members(data["tests"], old_tests, "Test", _test_exists)
     if "variables" in data:
         refuse_value_problems(data["variables"])
     _check_update_collisions(suite, suite_id, data, old_tests)
@@ -325,17 +343,7 @@ def delete_suite(suite_id: str) -> bool:
 
 def batch_delete_suites(suite_ids: list[str]) -> dict[str, Any]:
     """Delete multiple suites in a batch."""
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-    for idx, suite_id in enumerate(suite_ids):
-        try:
-            if delete_suite(suite_id):
-                deleted.append(suite_id)
-            else:
-                failed.append({"index": idx, "error": f"Suite with ID '{suite_id}' not found"})
-        except (ValueError, WaveException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"deleted": deleted, "failed": failed}
+    return batch_delete(suite_ids, delete_suite, "Suite")
 
 
 def batch_clone_suites(suite_ids: list[str]) -> dict[str, Any]:

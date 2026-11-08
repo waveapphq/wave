@@ -841,6 +841,25 @@ class TestUpdateProfileEndpoint:
             call_kwargs = mock_update.call_args[1]
             assert "description" not in call_kwargs
 
+    def test_update_profile_returns_409_for_a_name_another_profile_holds(
+        self, client: TestClient
+    ) -> None:
+        """PUT /profiles/{profile_id} refuses a rename onto another Profile's name."""
+        client.post("/profiles", json={"name": "Taken DB", "type": "database", "config": {}})
+        own_id = client.post(
+            "/profiles", json={"name": "Own DB", "type": "database", "config": {}}
+        ).json()["data"]["id"]
+
+        response = client.put(f"/profiles/{own_id}", json={"name": "Taken DB"})
+
+        assert response.status_code == 409
+        error = response.json()["error"]
+        assert (error["code"], error["message"]) == (
+            "CONFLICT",
+            "Profile with name 'Taken DB' already exists",
+        )
+        assert client.get(f"/profiles/{own_id}").json()["data"]["name"] == "Own DB"
+
 
 class TestDeleteProfileEndpoint:
     """Test suite for DELETE /profiles/{profile_id} endpoint."""

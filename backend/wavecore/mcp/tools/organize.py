@@ -204,7 +204,7 @@ def create_suite(
     try:
         suite = suite_service.create_suite(payload)
     except ConflictException as exc:
-        return {"created": False, "findings": [_finding("NAME_CONFLICT", exc.message)]}
+        return {"created": False, "findings": [_suite_conflict_finding(exc)]}
     return {
         "created": True,
         "suite_id": suite["id"],
@@ -212,6 +212,13 @@ def create_suite(
         "version": suite["version"],
         "action_items": _no_value_variable_items(variables),
     }
+
+
+def _suite_conflict_finding(exc: ConflictException) -> dict[str, Any]:
+    """A clash of variable types is a validation finding, not a name conflict."""
+    if exc.details and "collisions" in exc.details:
+        return _service_finding(exc)
+    return _finding("NAME_CONFLICT", exc.message)
 
 
 def _member_change_findings(
@@ -284,7 +291,7 @@ def update_suite(
     try:
         updated = suite_service.update_suite(suite_id, payload)
     except ConflictException as exc:
-        return {"updated": False, "findings": [_finding("NAME_CONFLICT", exc.message)]}
+        return {"updated": False, "findings": [_suite_conflict_finding(exc)]}
     result = updated or suite
     return {
         "updated": True,

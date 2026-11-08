@@ -15,6 +15,7 @@ Test Coverage:
 - The export file name rule every export shares (REQ-4.6.9)
 - The first free numbered name and the match and target of an incoming item (REQ-5.2.4.9.5)
 - Variables as a save stores them: typed numbers in wire form (REQ-3.1.3.14)
+- One batch delete pass for Suites, Regressions and Tests
 """
 
 import dataclasses
@@ -27,7 +28,7 @@ from typing import Any
 
 import pytest
 
-from wavecore.api.exceptions import ValidationException
+from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import shared
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import service as execution_service
@@ -776,4 +777,41 @@ class TestStoredVariableValues:
             "half": {"type": "float", "value": 2.5},
             "count": {"type": "integer", "value": 30},
             "loose": 1e-07,
+        }
+
+
+class TestBatchDelete:
+    """shared.batch_delete: one pass over the IDs, each refusal kept by its index."""
+
+    def test_deletes_each_id_in_order(self) -> None:
+        seen: list[str] = []
+
+        def delete(item_id: str) -> bool:
+            seen.append(item_id)
+            return True
+
+        assert shared.batch_delete(["a", "b"], delete, "Suite") == {
+            "deleted": ["a", "b"],
+            "failed": [],
+        }
+        assert seen == ["a", "b"]
+
+    def test_names_a_missing_id_by_kind_and_index(self) -> None:
+        result = shared.batch_delete(["here", "gone"], lambda item_id: item_id == "here", "Test")
+
+        assert result == {
+            "deleted": ["here"],
+            "failed": [{"index": 1, "error": "Test with ID 'gone' not found"}],
+        }
+
+    @pytest.mark.parametrize("error", [ConflictException("Busy"), ValueError("Busy")])
+    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+        def delete(item_id: str) -> bool:
+            if item_id == "busy":
+                raise error
+            return True
+
+        assert shared.batch_delete(["busy", "free"], delete, "Regression") == {
+            "deleted": ["free"],
+            "failed": [{"index": 0, "error": "Busy"}],
         }
