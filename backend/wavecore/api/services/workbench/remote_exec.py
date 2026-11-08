@@ -252,9 +252,9 @@ async def _registered_worker(
     """Open a worker on the session's remote host; on exit the registry stops it, then it closes."""
     registry = _get_remote_worker_registry(session)
     remote_session_id = uuid.uuid4().hex
-    worker = await open_worker(record["connection"])
     # A session opened on a tunnel's Local Port is named by its far host, not the loopback.
     host = record["host_identity"]
+    worker = await open_worker(record["connection"], host)
     registry.register(remote_session_id, worker, session_ref, host)
     try:
         yield remote_session_id, BodyWorker(worker=worker, host=host)

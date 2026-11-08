@@ -47,6 +47,7 @@ from wavecore.core.remote_exec.runner import (
 )
 
 NO_INTERPRETER_MSG = "Remote Execution: no compatible Python interpreter on the host"
+HOST = "prod-host"
 
 # A host whose exec channel greets every command: the version is not the whole of stdout.
 BANNER = "Authorized use only: this system is monitored"
@@ -216,13 +217,13 @@ class TestOpenWorkerInterpreterValidation:
         conn = _fake_connection(exit_status=127, stdout="")
 
         with pytest.raises(RuntimeError, match=f"^{NO_INTERPRETER_MSG}$"):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_probe_runs_over_the_connection(self) -> None:
         conn = _fake_connection()
 
-        await open_worker(conn)
+        await open_worker(conn, HOST)
 
         conn.run.assert_awaited()
 
@@ -231,7 +232,7 @@ class TestOpenWorkerInterpreterValidation:
         """The host must state its version: --version alone cannot tell 3.9 from 3.12."""
         conn = _fake_connection()
 
-        await open_worker(conn)
+        await open_worker(conn, HOST)
 
         assert conn.run.await_args.args[0] == f"python3 {runner._PROBE}"
 
@@ -239,7 +240,7 @@ class TestOpenWorkerInterpreterValidation:
     async def test_probe_runs_under_the_requested_interpreter(self) -> None:
         conn = _fake_connection()
 
-        await open_worker(conn, interpreter="/usr/bin/python3.12")
+        await open_worker(conn, HOST, interpreter="/usr/bin/python3.12")
 
         assert conn.run.await_args.args[0] == f"/usr/bin/python3.12 {runner._PROBE}"
 
@@ -253,7 +254,7 @@ class TestOpenWorkerInterpreterValidation:
         """Ubuntu 22.04 ships 3.10: the floor is inclusive or every LTS host fails."""
         conn = _fake_connection(stdout=probe_line("3.10"))
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -261,7 +262,7 @@ class TestOpenWorkerInterpreterValidation:
     async def test_a_patch_release_of_the_floor_is_accepted(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.10.12"))
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -269,7 +270,7 @@ class TestOpenWorkerInterpreterValidation:
     async def test_a_newer_interpreter_is_accepted(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.12.13"))
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -278,14 +279,14 @@ class TestOpenWorkerInterpreterValidation:
         conn = _fake_connection(stdout=probe_line("3.9"))
 
         with pytest.raises(RuntimeError, match=f"^{re.escape(_floor_message('python3', '3.9'))}$"):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_the_refusal_names_only_the_major_and_minor(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.9.18"))
 
         with pytest.raises(RuntimeError, match=f"^{re.escape(_floor_message('python3', '3.9'))}$"):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_the_refusal_names_the_requested_interpreter_verbatim(self) -> None:
@@ -295,21 +296,21 @@ class TestOpenWorkerInterpreterValidation:
             RuntimeError,
             match=f"^{re.escape(_floor_message('/usr/bin/python3.8', '3.8'))}$",
         ):
-            await open_worker(conn, interpreter="/usr/bin/python3.8")
+            await open_worker(conn, HOST, interpreter="/usr/bin/python3.8")
 
     @pytest.mark.asyncio
     async def test_a_python_2_interpreter_is_refused(self) -> None:
         conn = _fake_connection(stdout=probe_line("2.7"))
 
         with pytest.raises(RuntimeError, match=f"^{re.escape(_floor_message('python2', '2.7'))}$"):
-            await open_worker(conn, interpreter="python2")
+            await open_worker(conn, HOST, interpreter="python2")
 
     @pytest.mark.asyncio
     async def test_a_refused_interpreter_never_starts_a_worker(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.9"))
 
         with pytest.raises(RuntimeError):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
         conn.create_process.assert_not_awaited()
 
@@ -320,35 +321,35 @@ class TestOpenWorkerInterpreterValidation:
         conn = _fake_connection(stdout="Python was here")
 
         with pytest.raises(RuntimeError, match=_exact(_unreadable_message("python3"))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_empty_version_output_names_the_unreadable_answer(self) -> None:
         conn = _fake_connection(stdout="")
 
         with pytest.raises(RuntimeError, match=_exact(_unreadable_message("python3"))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_a_single_segment_version_names_the_unreadable_answer(self) -> None:
         conn = _fake_connection(stdout=probe_line("3"))
 
         with pytest.raises(RuntimeError, match=_exact(_unreadable_message("python3"))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_the_unreadable_refusal_names_the_requested_interpreter(self) -> None:
         conn = _fake_connection(stdout="Python was here")
 
         with pytest.raises(RuntimeError, match=_exact(_unreadable_message("/usr/bin/python3.12"))):
-            await open_worker(conn, interpreter="/usr/bin/python3.12")
+            await open_worker(conn, HOST, interpreter="/usr/bin/python3.12")
 
     @pytest.mark.asyncio
     async def test_an_unreadable_answer_never_starts_a_worker(self) -> None:
         conn = _fake_connection(stdout="Python was here")
 
         with pytest.raises(RuntimeError):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
         conn.create_process.assert_not_awaited()
 
@@ -357,7 +358,7 @@ class TestOpenWorkerInterpreterValidation:
         """A shell that greets every exec channel still has the interpreter it names."""
         conn = _fake_connection(stdout=f"{BANNER}\n{probe_line('3.12')}\n")
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -365,7 +366,7 @@ class TestOpenWorkerInterpreterValidation:
     async def test_a_banner_host_is_never_told_it_has_no_interpreter(self) -> None:
         conn = _fake_connection(stdout=f"{BANNER}\n{probe_line('3.12')}\n")
 
-        await open_worker(conn)
+        await open_worker(conn, HOST)
 
         conn.create_process.assert_awaited()
 
@@ -374,7 +375,7 @@ class TestOpenWorkerInterpreterValidation:
         noise = f"{BANNER}\nLast login: Tue Sep  2 10:00:00 2026\n"
         conn = _fake_connection(stdout=f"{noise}{probe_line('3.10')}\n")
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -383,13 +384,13 @@ class TestOpenWorkerInterpreterValidation:
         conn = _fake_connection(stdout=f"{BANNER}\n{probe_line('3.9.18')}\n")
 
         with pytest.raises(RuntimeError, match=_exact(_floor_message("python3", "3.9"))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_blank_lines_around_the_version_are_ignored(self) -> None:
         conn = _fake_connection(stdout=f"\n{probe_line('3.11.5')}\n\n")
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
 
@@ -402,7 +403,7 @@ class TestOpenWorkerHappyPath:
         proc = _fake_process()
         conn = _fake_connection(process=proc)
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert isinstance(worker, WorkerHandle)
         assert worker.process is proc
@@ -411,7 +412,7 @@ class TestOpenWorkerHappyPath:
     async def test_starts_the_worker_via_create_process(self) -> None:
         conn = _fake_connection()
 
-        await open_worker(conn)
+        await open_worker(conn, HOST)
 
         conn.create_process.assert_awaited()
 
@@ -419,7 +420,7 @@ class TestOpenWorkerHappyPath:
     async def test_worker_runs_under_the_requested_interpreter(self) -> None:
         conn = _fake_connection()
 
-        await open_worker(conn, interpreter="python3.11")
+        await open_worker(conn, HOST, interpreter="python3.11")
 
         assert "python3.11" in str(conn.create_process.call_args)
 
@@ -427,7 +428,7 @@ class TestOpenWorkerHappyPath:
     async def test_the_worker_interpreter_starts_in_utf8_mode(self) -> None:
         conn = _fake_connection()
 
-        await open_worker(conn, interpreter="python3.11")
+        await open_worker(conn, HOST, interpreter="python3.11")
 
         command = conn.create_process.call_args.args[0]
         assert shlex.split(command) == ["python3.11", "-X", "utf8", "-c", worker_bootstrap()]
@@ -535,14 +536,23 @@ class TestTheHandleKeepsTheProbe:
     async def test_open_worker_keeps_the_probe_on_the_handle(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.13.1", "aarch64", "musl"))
 
-        worker = await open_worker(conn)
+        worker = await open_worker(conn, HOST)
 
         assert worker.probe == _probed((3, 13), "aarch64", "musl")
 
     async def test_a_new_worker_holds_no_wheels(self) -> None:
-        worker = await open_worker(_fake_connection())
+        worker = await open_worker(_fake_connection(), HOST)
 
         assert worker.wheels == set()
+
+    async def test_the_handle_goes_by_the_host_name_its_caller_gives(self) -> None:
+        """A session on a tunnel's Local Port connects to the loopback but names its far host."""
+        conn = _fake_connection()
+        conn.get_extra_info.return_value = "127.0.0.1"
+
+        worker = await open_worker(conn, "node-2.internal")
+
+        assert worker.host == "node-2.internal"
 
     def test_a_handle_built_without_a_probe_has_none(self) -> None:
         worker = WorkerHandle(process=_fake_process(), host="h", interpreter="python3")
@@ -569,7 +579,7 @@ class TestOpenWorkerWhenThePushFails:
         conn = _fake_connection(process=proc)
 
         with pytest.raises(RuntimeError, match=_exact(_stopped_message(_STARTUP_TRACEBACK))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_a_broken_pipe_on_write_raises_what_the_host_printed(self) -> None:
@@ -578,7 +588,7 @@ class TestOpenWorkerWhenThePushFails:
         conn = _fake_connection(process=proc)
 
         with pytest.raises(RuntimeError, match=_exact(_stopped_message(_STARTUP_TRACEBACK))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_a_silent_host_still_gets_a_reason(self) -> None:
@@ -587,7 +597,7 @@ class TestOpenWorkerWhenThePushFails:
         conn = _fake_connection(process=proc)
 
         with pytest.raises(RuntimeError, match=_exact(_stopped_message(_SILENT_DETAIL))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_a_dropped_channel_raises_what_the_host_printed(self) -> None:
@@ -596,7 +606,7 @@ class TestOpenWorkerWhenThePushFails:
         conn = _fake_connection(process=proc)
 
         with pytest.raises(RuntimeError, match=_exact(_stopped_message(_STARTUP_TRACEBACK))):
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
     @pytest.mark.asyncio
     async def test_the_failure_is_never_reported_with_an_empty_message(self) -> None:
@@ -605,7 +615,7 @@ class TestOpenWorkerWhenThePushFails:
         conn = _fake_connection(process=proc)
 
         with pytest.raises(RuntimeError) as caught:
-            await open_worker(conn)
+            await open_worker(conn, HOST)
 
         assert str(caught.value).strip() != ""
 

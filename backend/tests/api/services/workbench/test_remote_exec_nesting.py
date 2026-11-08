@@ -159,7 +159,7 @@ class _NestedContainerContract:
         outcome = await self._run()
 
         opened = [call.args for call in outcome.open_worker.await_args_list]
-        assert opened == [(outcome.connection,)] * self.runs, outcome.messages
+        assert opened == [(outcome.connection, HOST)] * self.runs, outcome.messages
         assert outcome.close_worker.await_count == self.runs, outcome.messages
 
     async def test_the_body_block_runs_on_the_worker_once_per_container_run(self) -> None:

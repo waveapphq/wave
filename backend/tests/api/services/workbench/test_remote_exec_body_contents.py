@@ -134,7 +134,7 @@ async def _run(graph: Graph, run: _Run | None = None) -> _Outcome:
         workers[host] = worker
     by_connection = {id(connections[host]): workers[host] for host in workers}
 
-    async def _open(connection: Any) -> Any:
+    async def _open(connection: Any, _host: str) -> Any:
         worker = by_connection[id(connection)]
         events.append(f"open:{worker.host}")
         return worker
