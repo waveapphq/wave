@@ -10,7 +10,6 @@ This test module verifies:
 - Read-only and controlled write access patterns
 - Environment variable integration (WAVE_* prefix)
 - Runtime management via API endpoints
-- Configuration reload without service restart
 """
 
 import json
@@ -718,98 +717,6 @@ class TestConfigurationCategories:
         assert hasattr(config.security, "encryption_params"), "security must have encryption_params"
 
 
-class TestRuntimeConfigurationManagement:
-    """Test suite for runtime configuration reload and change notification."""
-
-    def test_config_reload_without_restart(self) -> None:
-        """Test that non-critical settings can be reloaded without service restart."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Change a non-critical setting
-        _original_level = config.logging.level
-        config.set("logging.level", "DEBUG")
-
-        # Reload configuration
-        config.reload()
-
-        # Changed value should persist after reload if set programmatically
-        assert config.logging.level is not None, "logging.level must be set after reload"
-
-    def test_config_reload_from_file(self) -> None:
-        """Test that configuration can be reloaded from file."""
-        from wavecore.api.config import Config
-
-        # Create initial config file
-        config_data = {"server": {"port": 7000}}
-
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-        ) as f:
-            yaml.dump(config_data, f)
-            config_file = f.name
-
-        try:
-            config = Config(config_file=config_file)
-            assert config.server.port == 7000, "initial port must be 7000"
-
-            # Update file
-            config_data["server"]["port"] = 7001
-            with open(config_file, "w", encoding="utf-8") as f:
-                yaml.dump(config_data, f)
-
-            # Reload configuration
-            config.reload()
-
-            assert config.server.port == 7001, "port must be updated after reload from file"
-        finally:
-            os.unlink(config_file)
-
-    def test_config_change_notification(self) -> None:
-        """Test that configuration changes trigger notifications to dependent components."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Register a change listener
-        notifications: list[tuple[str, Any]] = []
-
-        def listener(key: str, value: Any) -> None:
-            notifications.append((key, value))
-
-        config.add_change_listener(listener)
-
-        # Change configuration value
-        config.set("logging.level", "WARNING")
-
-        # Listener should be notified
-        assert len(notifications) > 0, "change listener must be notified"
-        assert notifications[-1][0] == "logging.level", "must notify correct key"
-        assert notifications[-1][1] == "WARNING", "must notify correct value"
-
-    def test_config_remove_change_listener(self) -> None:
-        """Test that change listeners can be removed."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        notifications: list[tuple[str, Any]] = []
-
-        def listener(key: str, value: Any) -> None:
-            notifications.append((key, value))
-
-        # Add and then remove listener
-        config.add_change_listener(listener)
-        config.remove_change_listener(listener)
-
-        # Change configuration
-        config.set("logging.level", "ERROR")
-
-        # Listener should not be notified after removal
-        assert len(notifications) == 0, "removed listener must not be notified"
-
-
 class TestConfigurationToDict:
     """Test suite for configuration serialization."""
 
@@ -929,142 +836,6 @@ class TestConfigurationEdgeCases:
 
         # No errors should occur
         assert len(errors) == 0, f"concurrent access must be thread-safe: {errors}"
-
-
-class TestConfigurationAuditTrail:
-    """Test suite for configuration change audit trail."""
-
-    def test_config_change_records_audit_entry(self) -> None:
-        """Test that configuration changes are recorded in audit trail."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Make a change
-        config.set("server.port", 9000, user="test_user")
-
-        # Get audit trail
-        audit_trail = config.get_audit_trail()
-
-        assert len(audit_trail) > 0, "audit trail must have at least one entry"
-        latest_entry = audit_trail[-1]
-        assert latest_entry["key"] == "server.port", "audit entry must record key"
-        assert latest_entry["new_value"] == 9000, "audit entry must record new value"
-
-    def test_audit_entry_contains_who_changed(self) -> None:
-        """Test that audit entries record who made the change."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Make change with user identifier
-        config.set("logging.level", "ERROR", user="admin_user")
-
-        audit_trail = config.get_audit_trail()
-        latest_entry = audit_trail[-1]
-
-        assert "user" in latest_entry, "audit entry must contain user field"
-        assert latest_entry["user"] == "admin_user", "audit entry must record correct user"
-
-    def test_audit_entry_contains_timestamp(self) -> None:
-        """Test that audit entries contain timestamp of when change occurred."""
-        from datetime import UTC, datetime, timedelta
-
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        before_change = datetime.now(UTC)
-        config.set("server.worker_count", 8, user="test_user")
-        after_change = datetime.now(UTC)
-
-        audit_trail = config.get_audit_trail()
-        latest_entry = audit_trail[-1]
-
-        assert "timestamp" in latest_entry, "audit entry must contain timestamp"
-
-        # Timestamp should be ISO format string or datetime object
-        timestamp = latest_entry["timestamp"]
-        if isinstance(timestamp, str):
-            timestamp = datetime.fromisoformat(timestamp)
-
-        assert timestamp.tzinfo is not None, "timestamp must be timezone-aware"
-        assert timestamp.utcoffset() == timedelta(0), "timestamp must be in UTC"
-        assert before_change <= timestamp <= after_change, "timestamp must be within change window"
-
-    def test_audit_entry_contains_old_and_new_value(self) -> None:
-        """Test that audit entries record both old and new values."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Get current value
-        original_value = config.server.port
-
-        # Change value
-        config.set("server.port", 7777, user="test_user")
-
-        # Check audit entry
-        audit_trail = config.get_audit_trail()
-        latest_entry = audit_trail[-1]
-
-        assert "old_value" in latest_entry, "audit entry must contain old_value"
-        assert "new_value" in latest_entry, "audit entry must contain new_value"
-        assert latest_entry["old_value"] == original_value, "must record original value"
-        assert latest_entry["new_value"] == 7777, "must record new value"
-
-    def test_get_audit_trail_for_specific_key(self) -> None:
-        """Test retrieving audit history for a specific configuration key."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Make multiple changes to different keys
-        config.set("server.port", 8001, user="user1")
-        config.set("logging.level", "DEBUG", user="user2")
-        config.set("server.port", 8002, user="user1")
-
-        # Get audit trail for specific key
-        port_audit = config.get_audit_trail(key="server.port")
-
-        assert len(port_audit) >= 2, "must have at least 2 port changes"
-        assert all(
-            entry["key"] == "server.port" for entry in port_audit
-        ), "all entries must be for server.port"
-
-    def test_audit_trail_preserves_order(self) -> None:
-        """Test that audit trail maintains chronological order."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Make sequential changes
-        config.set("server.port", 8001, user="user1")
-        config.set("server.port", 8002, user="user1")
-        config.set("server.port", 8003, user="user1")
-
-        audit_trail = config.get_audit_trail(key="server.port")
-
-        # Check order
-        values = [entry["new_value"] for entry in audit_trail]
-        assert values[-3:] == [8001, 8002, 8003], "audit trail must preserve order"
-
-    def test_audit_trail_read_only_no_user_returns_none(self) -> None:
-        """Test that read-only access (get operations) does not create audit entries."""
-        from wavecore.api.config import get_config
-
-        config = get_config()
-
-        # Clear any existing audit trail
-        initial_count = len(config.get_audit_trail())
-
-        # Read operations should not create audit entries
-        _ = config.server.port
-        _ = config.get("server.host")
-
-        # Audit trail should not have new entries
-        final_count = len(config.get_audit_trail())
-        assert final_count == initial_count, "read operations must not create audit entries"
 
 
 class TestConfigurationAPIEndpoints:
@@ -1450,16 +1221,6 @@ class TestConfigurationInternalBehavior:
         with pytest.raises(AttributeError, match="Configuration section has no attribute"):
             _ = section.nonexistent_attribute
 
-    def test_config_section_hasattr_method(self) -> None:
-        """Test __hasattr__ method on ConfigSection."""
-        from wavecore.api.config import ConfigSection
-
-        section = ConfigSection({"key": "value"})
-
-        # __hasattr__ is implemented but we can test the underlying logic
-        assert "key" in section._data, "key must exist in _data"
-        assert "nonexistent" not in section._data, "nonexistent key must not exist"
-
     def test_server_config_with_data_update(self) -> None:
         """Test ServerConfig updates defaults with provided data."""
         from wavecore.api.config import ServerConfig
@@ -1632,10 +1393,7 @@ class TestConfigurationInternalBehavior:
         # Set a completely new key
         config.set("server.brand_new_key", "value", validate=False)
 
-        # Check audit trail recorded None as old value
-        trail = config.get_audit_trail("server.brand_new_key")
-        assert len(trail) > 0, "audit trail must record the change"
-        assert trail[-1]["old_value"] is None, "old value must be None for new keys"
+        assert config.get("server.brand_new_key") == "value", "new key must be set"
 
     def test_config_set_uses_setattr_for_non_dict_parent(self) -> None:
         """Test config.set() using setattr when parent is neither ConfigSection nor dict."""
@@ -1649,16 +1407,6 @@ class TestConfigurationInternalBehavior:
         assert (
             config.get("server.new_attribute") == "test_value"
         ), "must use setattr for config sections"
-
-    def test_config_get_computed_unknown_key(self) -> None:
-        """Test get_computed() falls back to regular get() for unknown keys."""
-        from wavecore.api.config import Config
-
-        config = Config()
-
-        # Get a regular (non-computed) value
-        value = config.get_computed("server.port")
-        assert value == config.server.port, "unknown computed key must fall back to get()"
 
     def test_config_section_to_dict_with_nested_config_section(self) -> None:
         """Test _section_to_dict() with nested ConfigSection objects."""
@@ -1759,19 +1507,6 @@ class TestConfigurationInternalBehavior:
         data_dict = section._data
         assert data_dict == {"key": "value"}, "private attr access must work"
 
-    def test_config_section_hasattr_implementation(self) -> None:
-        """Test ConfigSection __hasattr__ method returns correct boolean."""
-        from wavecore.api.config import ConfigSection
-
-        section = ConfigSection({"exists": "value"})
-
-        # __hasattr__ method exists and works
-        result = section.__hasattr__("exists")
-        assert result is True, "__hasattr__ must return True for existing keys"
-
-        result = section.__hasattr__("nonexistent")
-        assert result is False, "__hasattr__ must return False for missing keys"
-
     def test_config_get_navigates_through_dict_with_missing_key(self) -> None:
         """Test config.get() fails correctly when navigating dict and key not present."""
         from wavecore.api.config import Config, ConfigKeyError
@@ -1809,10 +1544,7 @@ class TestConfigurationInternalBehavior:
         # Update it - this will exercise the getattr path for old_value retrieval
         config.set("server.custom", "updated", validate=False)
 
-        # Check audit trail has the old value
-        trail = config.get_audit_trail("server.custom")
-        assert trail[-1]["old_value"] == "initial", "audit trail must record old value"
-        assert trail[-1]["new_value"] == "updated", "audit trail must record new value"
+        assert config.get("server.custom") == "updated", "existing key must be replaced"
 
     def test_config_set_uses_setattr_for_final_assignment(self) -> None:
         """Test config.set() uses setattr when parent is not dict or ConfigSection."""
@@ -2027,9 +1759,9 @@ class TestConfigSetCoverage:
         # Update the value
         config.set("integration.test_dict.key", "new_value", validate=False)
 
-        # Check audit trail
-        trail = config.get_audit_trail("integration.test_dict.key")
-        assert trail[-1]["old_value"] == "old_value", "audit must record old value from dict"
+        assert config.integration._data["test_dict"] == {
+            "key": "new_value"
+        }, "dict value must be replaced"
 
     def test_config_set_uses_setattr_when_parent_not_dict_or_config_section(self) -> None:
         """Test config.set() uses setattr for final assignment when parent is neither dict nor

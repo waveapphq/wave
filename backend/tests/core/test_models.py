@@ -1590,24 +1590,6 @@ class TestTestModel:
         assert test.variables[0].name == "namespace"
         assert test.variables[1].secret is True
 
-    def test_test_execution_config(self):
-        """Test test execution configuration."""
-        from wavecore.models.entities import Test
-        from wavecore.models.workflow import ExecutionConfig
-
-        test = Test(
-            id="test",
-            name="Test",
-            version="1.0.0",
-            blocks=[],
-            execution_config=ExecutionConfig(
-                continue_on_error=False, retry_count=3, retry_delay=5, timeout=300
-            ),
-        )
-
-        assert test.execution_config.retry_count == 3
-        assert test.execution_config.timeout == 300
-
     def test_test_metadata(self):
         """Test test metadata (REQ-6.1.3)."""
         from wavecore.models.entities import Test

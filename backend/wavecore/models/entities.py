@@ -11,7 +11,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 from wavecore.models.workflow import (
-    ExecutionConfig,
     TryCatchBlock,
     Variable,
     WorkflowBlock,
@@ -71,7 +70,6 @@ class Test(VersionedEntityBase):
     finalize_blocks: list[WorkflowBlock] = Field(
         default_factory=list
     )  # Test-level finalize blocks (REQ-3.2.2.10-14)
-    execution_config: ExecutionConfig | None = None
 
 
 class SuiteTest(BaseModel):

@@ -125,7 +125,7 @@ wavecore/
 ├── core/           # Business logic and domain models
 ├── logging/        # Logging infrastructure
 ├── mcp/            # MCP server and its tools
-├── models/         # Data models (controls, profiles)
+├── models/         # Data models (controls, plugins)
 ├── plugins/        # Plugin implementations
 └── storage/        # Storage layer for persistence
 ```

@@ -8,7 +8,6 @@ Covers the V-CANVAS-01d feature surface on ``WebSocketManager``:
 - ``get_log_subscription_level``
 - ``unsubscribe`` log topic cleanup
 - ``_handle_request_history`` + tracked/ephemeral pagination helpers
-- ``create_event`` envelope structure
 """
 
 import json
@@ -24,7 +23,6 @@ from wavecore.api.services import log_streaming_service, storage_paths
 from wavecore.api.services.executions import _storage as _exec_storage
 from wavecore.api.websocket import WebSocketManager
 from wavecore.api.websocket.manager import (
-    EventType,
     _format_composite_cursor,
     _parse_composite_cursor,
 )
@@ -76,20 +74,6 @@ def test_format_composite_cursor_round_trips_x_sentinel() -> None:
     assert _format_composite_cursor(None) is None
     assert _format_composite_cursor((4, None)) == "4:x"
     assert _format_composite_cursor((4, 9)) == "4:9"
-
-
-# ---------------------------------------------------------------------------
-# create_event envelope
-# ---------------------------------------------------------------------------
-
-
-def test_create_event_emits_envelope_with_type_and_sequence() -> None:
-    manager = WebSocketManager()
-    event = manager.create_event(EventType.LOG, payload={"foo": "bar"})
-    assert event["type"] == "log"
-    assert event["payload"] == {"foo": "bar"}
-    assert isinstance(event["sequence"], int)
-    assert "timestamp" in event
 
 
 # ---------------------------------------------------------------------------

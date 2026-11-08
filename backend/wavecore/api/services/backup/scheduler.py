@@ -220,7 +220,7 @@ def _update_schedule_status(status_value: str, last_run: str | None = None) -> N
     if last_run:
         record[f"{_SECTION}.last_run"] = last_run
     try:
-        get_config().save(record, user="scheduler")
+        get_config().save(record)
     except ConfigWriteError as error:
         logger.warning("Periodic backup result not recorded: %s", error)
 

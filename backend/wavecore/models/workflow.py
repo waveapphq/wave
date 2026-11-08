@@ -1,7 +1,7 @@
 """
 WAVE Workflow Models
 
-Variable, execution config, workflow blocks, try-catch and finalize models.
+Variable, workflow blocks, try-catch and finalize models.
 """
 
 from typing import Any, Literal
@@ -20,16 +20,6 @@ class Variable(BaseModel):
     expression: str | None = None  # For computed variables
     description: str | None = None
     secret: bool = False
-
-
-class ExecutionConfig(BaseModel):
-    """Execution configuration for workflows."""
-
-    continue_on_error: bool = False
-    retry_count: int = 0
-    retry_delay: int = 0  # seconds
-    timeout: int = 300  # seconds
-    retry_backoff: str | None = "exponential"  # exponential, linear, constant
 
 
 class WorkflowBlock(BaseModel):
