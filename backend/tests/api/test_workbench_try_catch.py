@@ -533,6 +533,42 @@ class TestTryCatchWorkflowExecution:
         assert error["category"] in ("transient", "permanent", "critical")
 
     @pytest.mark.asyncio
+    async def test_a_caught_policy_refusal_is_a_permanent_connection_error(self) -> None:
+        """REQ-4.3.1: a forward the SSH host's policy refuses is not marked retryable."""
+        session_id = "tc-policy-refusal"
+        _wb_common._workbench_sessions[session_id] = _make_session(session_id)
+        refusal = (
+            "SSH tunnel to db:5432 failed: bastion refused to forward (administratively prohibited)"
+        )
+
+        nodes = [
+            _make_try_catch_node("tc-1", enable_catch=True, enable_finally=False),
+            _make_log_node("try-log", "Try Log", "'ok'"),
+            _make_log_node("catch-log", "Catch Log", "'caught'"),
+        ]
+        edges = [
+            {"source": "start-node", "target": "tc-1"},
+            {"source": "tc-1", "target": "try-log", "sourceHandle": "try"},
+            {"source": "tc-1", "target": "catch-log", "sourceHandle": "catch"},
+        ]
+        original_execute = _wb_plugins._execute_plugin
+
+        async def refuse_in_try(*args: Any, **kwargs: Any) -> Any:
+            if kwargs["block_id"] == "try-log":
+                raise ConnectionError(refusal)
+            return await original_execute(*args, **kwargs)
+
+        variables: dict[str, Any] = {"tc_error": None, "tc_caught": False}
+        with patch(
+            "wavecore.api.services.workbench.plugins._execute_plugin", side_effect=refuse_in_try
+        ):
+            await workbench_service._execute_workflow(session_id, nodes, edges, variables)
+
+        error = variables["tc_error"]
+        assert (error["type"], error["message"]) == ("ConnectionError", refusal)
+        assert (error["is_retryable"], error["category"]) == (False, "permanent")
+
+    @pytest.mark.asyncio
     async def test_try_chain_with_multiple_nodes(self) -> None:
         """Try path has multiple nodes in a chain - all execute sequentially."""
         session_id = "tc-chain"

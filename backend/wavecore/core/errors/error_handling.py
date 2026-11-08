@@ -88,6 +88,9 @@ class ErrorClassifier:
     _RUNTIME_TRANSIENT_KEYWORDS = ("temporarily unavailable", "resource temporarily")
     _RUNTIME_CRITICAL_KEYWORDS = ("engine corruption", "node failure", "kubernetes node")
 
+    # The standard name for a refusal by the far side's policy, which no retry clears.
+    _POLICY_REFUSAL = "administratively prohibited"
+
     def classify(self, error: Exception) -> ErrorCategory:
         """
         Classify an error into a category.
@@ -125,7 +128,10 @@ class ErrorClassifier:
         return None
 
     def _classify_by_type(self, error: Exception, error_str: str) -> ErrorCategory:
-        """Classify error by its type using lookup table and RuntimeError message inspection."""
+        """Classify error by its type, reading the message of a ConnectionError or RuntimeError."""
+        if isinstance(error, ConnectionError) and self._POLICY_REFUSAL in error_str.lower():
+            return ErrorCategory.PERMANENT
+
         # Check direct type matches
         for error_class, category in self._TYPE_CLASSIFICATION.items():
             if isinstance(error, error_class):

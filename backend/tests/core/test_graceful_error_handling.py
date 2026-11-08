@@ -49,6 +49,19 @@ class TestErrorClassification:
         assert category.is_retryable is True
         assert "network" in category.description.lower()
 
+    def test_classify_policy_refusal_as_permanent(self):
+        """A connection refused by the host's policy does not clear on retry."""
+        classifier = ErrorClassifier()
+
+        error = ConnectionError(
+            "SSH tunnel to db:5432 failed: bastion refused to forward (administratively prohibited)"
+        )
+        category = classifier.classify(error)
+
+        assert category == ErrorCategory.PERMANENT
+        assert category.is_retryable is False
+        assert category.error_type == "ConnectionError"
+
     def test_classify_transient_timeout_error(self):
         """Test classification of timeout errors as transient (retryable)."""
         classifier = ErrorClassifier()
