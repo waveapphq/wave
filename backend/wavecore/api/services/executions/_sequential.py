@@ -40,6 +40,9 @@ RunTestCallable = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 # child_session_id -> {parent_id, run_id, event, result}
 _child_sessions: dict[str, dict[str, Any]] = {}
 
+# stopped child_session_id -> (parent_id, run_id) until the child's run unwinds
+_unwinding_children: dict[str, tuple[str, str]] = {}
+
 # parent_execution_id -> stop-requested flag container
 _stop_flags: dict[str, dict[str, bool]] = {}
 
@@ -48,17 +51,54 @@ def dispatch_child_terminal(session_id: str, status: str, halt_scope: str | None
     """Dispatch a workbench terminal event to the sequential driver.
 
     Returns True if the session was a sequential child (and the waiting
-    driver was signaled); False if the session was not ours and the
-    caller should fall through to its default handler.
+    driver was signaled, or a stopped child's unwind was stored); False if
+    the session was not ours and the caller should fall through to its
+    default handler.
     """
     record = _child_sessions.get(session_id)
     if record is None:
-        return False
+        return _store_unwound_stop(session_id, status)
     _persist_child_snapshot(record["parent_id"], record["run_id"], session_id, status)
     record["result"] = {"status": status, "halt_scope": halt_scope}
     event: asyncio.Event = record["event"]
     event.set()
     return True
+
+
+def _store_unwound_stop(session_id: str, status: str) -> bool:
+    """A stopped child notifies again once its run unwinds; store what it bound since."""
+    from wavecore.api.services.workbench._common import _get_session
+
+    held = _unwinding_children.pop(session_id, None)
+    if held is None:
+        return False
+    parent_execution_id, run_id = held
+    if (
+        status == "stopped"
+        and _holds_stopped_run(parent_execution_id, run_id)
+        and _get_session(session_id) is not None
+    ):
+        _persist_child_snapshot(parent_execution_id, run_id, session_id, status)
+    return True
+
+
+def _holds_stopped_run(parent_execution_id: str, run_id: str) -> bool:
+    """The parent execution was not deleted and still records the run as stopped."""
+    if _execution_storage.get(parent_execution_id) is None:
+        return False
+    runs = (_get_runtime_state(parent_execution_id) or {}).get("runs") or {}
+    return (runs.get(run_id) or {}).get("status") == "stopped"
+
+
+def _hold_until_unwound(child_session_id: str, parent_execution_id: str, run_id: str) -> None:
+    """Keep a stopped child's run ids while its canceled task unwinds."""
+    from wavecore.api.services.workbench._common import _active_tasks
+
+    task = _active_tasks.get(child_session_id)
+    if task is None or task.done():
+        return
+    _unwinding_children[child_session_id] = (parent_execution_id, run_id)
+    task.add_done_callback(lambda _task: _unwinding_children.pop(child_session_id, None))
 
 
 def _persist_child_snapshot(
@@ -215,6 +255,8 @@ def _build_run_test(
         duration = round(time.monotonic() - started_monotonic, 3)
         ended_iso = datetime.now(UTC).isoformat()
         result = record["result"] if record else {"status": "failed", "halt_scope": None}
+        if result["status"] == "stopped":
+            _hold_until_unwound(child_id, execution_id, run_id)
         _record_run_transition(
             execution_id,
             run_id,

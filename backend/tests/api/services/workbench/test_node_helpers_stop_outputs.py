@@ -9,7 +9,7 @@ take what the program printed so far before the cancellation reaches the run.
 import asyncio
 import contextlib
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -24,6 +24,7 @@ from tests.api.services.workbench.parallel_harness import (  # noqa: F401
 )
 from tests.conftest import TEST_ENVIRONMENT_ID
 from wavecore.api.services import log_streaming_service
+from wavecore.api.services.executions import _sequential
 from wavecore.api.services.executions import _storage as exec_storage
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.storage_paths import get_artifacts_storage_path
@@ -317,3 +318,122 @@ class TestATrackedRunStop:
         log_file = get_artifacts_storage_path() / artifact_dir / "logs" / "Long Test.log"
         last_line = log_file.read_text(encoding="utf-8").splitlines()[-1]
         assert last_line.split(" ", 1)[1] == "WARN Test 'Long Test' execution stopped by user"
+
+
+def _seed_sequential_execution(entity_type: str, test_id: str) -> str:
+    """A running suite or regression execution of one test, whose run the test drives itself."""
+    execution_id = str(uuid.uuid4())
+    entity_id = str(uuid.uuid4())
+    execution = {
+        "id": execution_id,
+        "name": "Long Run",
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "environment_id": TEST_ENVIRONMENT_ID,
+        "status": "running",
+        "started_at": "2026-04-22T00:00:00+00:00",
+    }
+    exec_storage._save_execution(execution)
+    exec_storage._execution_storage[execution_id] = execution
+    tests = [{"id": test_id, "name": "Long Test", "run_id": "run-1"}]
+    composition = {"suites": [{"id": "suite-1", "name": "Long Suite", "tests": tests}]}
+    exec_storage._save_composition(execution_id, composition)
+    exec_storage._init_runtime_state(execution_id, execution["started_at"], composition, None)
+    return execution_id
+
+
+async def _stop_child(
+    execution_id: str,
+    entity_type: str,
+    test_id: str,
+    node: dict[str, Any],
+    ready: Path,
+    before_unwind: Callable[[], None] = lambda: None,
+) -> dict[str, Any]:
+    """Run the one block as the execution's child run until it has printed, then Stop it."""
+    children: list[asyncio.Task[None]] = []
+
+    def start(**kwargs: Any) -> dict[str, Any]:
+        child_id = kwargs["session_id"]
+        session, task = start_graph(child_id, [node], [edge("start-node", node["id"])], {})
+        session.update(test_id=test_id, test_name="Long Test")
+        _wb_common._active_tasks[child_id] = task
+        children.append(task)
+        return {"session_id": child_id, "status": "running", "test_id": test_id}
+
+    run_test = _sequential._build_run_test(
+        execution_id,
+        TEST_ENVIRONMENT_ID,
+        parent_entity_type=entity_type,
+        parent_entity_id=exec_storage._execution_storage[execution_id]["entity_id"],
+        default_suite_id="suite-1",
+    )
+    with patch.object(workbench_service, "start_workbench_run", side_effect=start):
+        run = asyncio.ensure_future(
+            run_test({"run_id": "run-1", "test_id": test_id, "suite_id": "suite-1"})
+        )
+        await _until_ready(ready)
+    execution_service.stop_execution(execution_id)
+    result = await asyncio.wait_for(run, timeout=5.0)
+    before_unwind()
+    with contextlib.suppress(asyncio.CancelledError):
+        await asyncio.wait_for(children[0], timeout=5.0)
+    return result
+
+
+@pytest.mark.parametrize("entity_type", ["suite", "regression"])
+class TestASequentialChildStop:
+    """A Stop of a suite or regression stores the outputs its stopped child's block binds."""
+
+    @pytest.fixture(autouse=True)
+    def _clean_executions(self) -> Iterator[None]:
+        exec_storage._clear_storage()
+        yield
+        exec_storage._clear_storage()
+
+    async def test_the_stored_child_snapshot_holds_what_the_script_printed(
+        self, tmp_path: Path, entity_type: str
+    ) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _seed_sequential_execution(entity_type, test_id)
+        node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+
+        result = await _stop_child(execution_id, entity_type, test_id, node, ready)
+
+        snapshot = exec_storage._load_snapshot(execution_id, "run-1") or {}
+        assert (result["status"], snapshot["status"]) == ("stopped", "stopped")
+        assert snapshot["block_states"] == {"shell-1": "stopped"}
+        assert _bound(snapshot["variables"]) == STOPPED
+
+    async def test_the_child_run_records_one_stop(self, tmp_path: Path, entity_type: str) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _seed_sequential_execution(entity_type, test_id)
+        node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+
+        result = await _stop_child(execution_id, entity_type, test_id, node, ready)
+
+        transitions = [
+            (entry["status"], entry.get("duration"))
+            for entry in exec_storage._load_status(execution_id)
+            if entry["run_id"] == "run-1"
+        ]
+        assert transitions == [("running", None), ("stopped", result["duration"])]
+
+    async def test_a_run_deleted_before_its_child_unwinds_keeps_no_snapshot(
+        self, tmp_path: Path, entity_type: str
+    ) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _seed_sequential_execution(entity_type, test_id)
+        node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+
+        def delete_the_stopped_run() -> None:
+            _sequential._finalize_execution(execution_id, "stopped")
+            assert execution_service.delete_execution(execution_id) is True
+
+        await _stop_child(execution_id, entity_type, test_id, node, ready, delete_the_stopped_run)
+
+        assert exec_storage._snapshot_file(execution_id, "run-1").exists() is False
+        assert exec_storage._execution_storage.get(execution_id) is None
