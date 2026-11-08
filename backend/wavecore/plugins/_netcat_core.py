@@ -12,7 +12,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
 from wavecore.plugins._plural import plural
 from wavecore.plugins._ports import check_port
 from wavecore.plugins._tls_material import from_home

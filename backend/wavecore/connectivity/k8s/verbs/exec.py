@@ -12,10 +12,12 @@ transport, TLS and timeout failures always raise.
 from collections.abc import Callable
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
+
 from .. import ws
 from ..rest import seconds
 from ._manifest import split_command
-from ._outputs import block_failure, block_success, empty_streams
+from ._outputs import empty_streams
 from ._resources import client_options, pod_exec
 
 TIMEOUT_DEFAULT = 60

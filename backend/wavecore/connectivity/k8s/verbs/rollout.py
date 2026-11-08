@@ -13,10 +13,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
+
 from ..rest import K8sClient, K8sResource
 from ._context import require_context
 from ._errors import K8sReadRejected, map_api_error
-from ._outputs import block_failure, block_success, read_objects, summary_table, type_name
+from ._outputs import read_objects, type_name
 from ._resources import (
     DEFAULT_TIMEOUT,
     client_options,

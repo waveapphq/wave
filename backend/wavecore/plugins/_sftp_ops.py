@@ -14,7 +14,7 @@ from typing import Any, NamedTuple
 
 import asyncssh
 
-from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._file_ops import iso_modified
 from wavecore.plugins._file_paths import (

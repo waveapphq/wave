@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import partial
 from typing import Any
 
-from wavecore.connectivity.k8s.verbs._outputs import (
+from wavecore.connectivity.block_outputs import (
     block_failure,
     block_success,
     summary_table,

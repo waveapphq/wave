@@ -27,10 +27,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any, cast
 
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
+
 from .. import ws
 from ..rest import seconds
 from ..ws import ExecOutputTooLarge, ExecRejected, ExecTimeout, ExecTransportError
-from ._outputs import block_failure, block_success, summary_table
 from ._resources import PodExec, client_options, pod_exec
 
 TIMEOUT_DEFAULT = 60

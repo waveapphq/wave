@@ -219,11 +219,12 @@ _LAUNCHER_MODULE = "wavecore.plugins._process_group"
 _NETCAT_CORE = "wavecore.plugins._netcat_core"
 _PORTS = "wavecore.plugins._ports"
 _PLURAL = "wavecore.plugins._plural"
+_BLOCK_OUTPUTS = "wavecore.connectivity.block_outputs"
 _NETCAT_MODULES = [_NETCAT_CORE, _PORTS]
 _NETCAT_WAVECORE_IMPORTS = {
     _PORTS,
     _PLURAL,
-    "wavecore.connectivity.k8s.verbs._outputs",
+    _BLOCK_OUTPUTS,
     "wavecore.plugins._tls_material",
 }
 _NETCAT_IMPORT_LINE = "from wavecore.plugins import _netcat_core as netcat_core"
@@ -809,6 +810,26 @@ class TestBundleCountWordingVendoring:
 
     def test_the_module_rides_under_its_dotted_name_as_its_source_on_disk(self) -> None:
         assert _vendored_sources().get(_PLURAL) == _module_source(_PLURAL)
+
+
+class TestBundleBlockOutputsVendoring:
+    """The output core and table envelopes the carried cores share ride the payload."""
+
+    def test_the_module_rides_under_its_dotted_name_as_its_source_on_disk(self) -> None:
+        assert _vendored_sources().get(_BLOCK_OUTPUTS) == _module_source(_BLOCK_OUTPUTS)
+
+    def test_the_module_imports_only_the_stdlib(self) -> None:
+        assert _unvendorable_imports(_module_source(_BLOCK_OUTPUTS), set()) == set()
+
+    def test_the_module_imports_without_host_site_packages(self) -> None:
+        responses = _run_bundle_lines(
+            [{"plugin_id": "import-probe", "params": {"modules": [_BLOCK_OUTPUTS]}}],
+            isolated=True,
+            source_patch=_IMPORT_PROBE,
+        )
+
+        assert responses[0]["status"] == "passed", responses[0]["error"]
+        assert responses[0]["return_value"] == [_BLOCK_OUTPUTS]
 
 
 def _carried_unit_root(unit: str) -> Path | None:

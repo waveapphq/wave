@@ -10,7 +10,7 @@ from contextlib import suppress
 from decimal import Decimal
 from typing import Any, NamedTuple
 
-from wavecore.connectivity.k8s.verbs._outputs import (
+from wavecore.connectivity.block_outputs import (
     block_failure,
     block_success,
     summary_table,

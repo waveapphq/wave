@@ -314,7 +314,7 @@ export const copiedLine = (from: string, to: string): string => `Copied ${from} 
 /** The word each Block puts at the head of a recorded WARN line. */
 export type ExecAction = 'Exec' | 'Script' | 'Copy'
 
-/** The WARN line a recorded failure writes (`verbs/_outputs._recorded_failure_line`). */
+/** The WARN line a recorded failure writes (`connectivity/block_outputs._recorded_failure_line`). */
 export function recordedLine(action: ExecAction, reason: string, message: string): string {
   return reason ? `${action} failed (${reason}): ${message}` : `${action} failed: ${message}`
 }

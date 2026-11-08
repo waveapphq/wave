@@ -25,13 +25,10 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from wavecore.connectivity import proxy, run_log
+from wavecore.connectivity.block_outputs import summary_table
 from wavecore.connectivity.k8s.rest import wave_anchors
 from wavecore.connectivity.k8s.verbs._context import require_context
-from wavecore.connectivity.k8s.verbs._outputs import (
-    empty_read_result,
-    render_read_result,
-    summary_table,
-)
+from wavecore.connectivity.k8s.verbs._outputs import empty_read_result, render_read_result
 
 DEFAULT_TIMEOUT = 300
 STATUS_TIMEOUT = 30

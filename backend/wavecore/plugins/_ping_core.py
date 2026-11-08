@@ -12,7 +12,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from typing import Any, NamedTuple
 
-from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
 from wavecore.plugins._plural import plural
 
 Log = Callable[[str, str], None]

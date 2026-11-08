@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Any
 
 from wavecore.api.services.storage_paths import get_local_process_storage_path
-from wavecore.connectivity.k8s.verbs._outputs import block_failure
+from wavecore.connectivity.block_outputs import block_failure
 from wavecore.core.execution.field_checks import name_rule_refusals
 from wavecore.core.expressions.errors import NullValueError, null_failure_message
 from wavecore.core.table import Table

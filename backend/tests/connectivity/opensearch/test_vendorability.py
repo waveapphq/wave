@@ -29,7 +29,7 @@ _WAVECORE_ROOT = _PACKAGE_ROOT.parents[1]
 
 _ALLOWED_WAVECORE_IMPORTS = {
     "wavecore.connectivity.tls_context",
-    "wavecore.connectivity.k8s.verbs._outputs",
+    "wavecore.connectivity.block_outputs",
     "wavecore.plugins._held_run",
     "wavecore.plugins._plural",
     "wavecore.connectivity.proxy",
@@ -171,7 +171,7 @@ class TestTheImportRulesSeeAViolation:
         [
             "import http.client\nimport ssl\nfrom decimal import Decimal\n",
             "from wavecore.connectivity.tls_context import build_context\n",
-            "from wavecore.connectivity.k8s.verbs._outputs import typed_table\n",
+            "from wavecore.connectivity.block_outputs import typed_table\n",
             "from wavecore.plugins._held_run import Live\n",
             "from wavecore.plugins._plural import plural\n",
             "from wavecore.connectivity.proxy import connect\n",

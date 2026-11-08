@@ -76,6 +76,7 @@ import six
 import tlslite
 
 from wavecore.connectivity import (
+    block_outputs,
     helm,
     k8s,
     opensearch,
@@ -211,6 +212,7 @@ import zipfile
 
 from wavecore.connectivity import run_log, trust_store
 from wavecore.connectivity import web_address
+from wavecore.connectivity.block_outputs import block_failure
 from wavecore.connectivity.helm import _cli as helm_cli
 from wavecore.connectivity.helm.verbs import install, rollback, status, uninstall, upgrade
 from wavecore.connectivity.helm.verbs import test as test_verb
@@ -218,7 +220,6 @@ from wavecore.connectivity.k8s.verbs import apply, connect, cp, delete, events, 
 from wavecore.connectivity.k8s.verbs import rollout, scale, script, top
 from wavecore.connectivity.k8s.verbs import exec as exec_verb
 from wavecore.connectivity.k8s.verbs import logs as logs_verb
-from wavecore.connectivity.k8s.verbs._outputs import block_failure
 from wavecore.plugins import _file_ops as file_ops
 from wavecore.plugins import _local_process
 from wavecore.plugins import _netcat_core as netcat_core
@@ -1010,8 +1011,9 @@ def _vendored_sources() -> dict[str, str]:
     with open(_process_group.__file__, encoding="utf-8") as handle:
         sources["wavecore.plugins._process_group"] = handle.read()
     # The local-process runtime, its watchdog, the Python bridge (PYRUN-12), the block cores,
-    # their count wording, the trust core and the proxy core.
+    # their output core and count wording, the trust core and the proxy core.
     for module in (
+        block_outputs,
         _held_run,
         _local_process,
         _local_process_runtime,

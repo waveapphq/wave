@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from wavecore.connectivity.k8s.verbs._outputs import typed_table
+from wavecore.connectivity.block_outputs import typed_table
 
 from ._aggregate import Stat, column_name
 from ._json_text import dumps

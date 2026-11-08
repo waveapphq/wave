@@ -14,11 +14,13 @@ import json
 from collections.abc import Callable
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
+
 from ..rest import K8sClient, K8sResource
 from ._context import K8sContext, require_context
 from ._errors import K8sReadRejected, map_api_error
 from ._manifest import parse_manifest, secret_values, synthesize_manifest
-from ._outputs import block_failure, block_success, object_names, summary_table, type_name
+from ._outputs import object_names, type_name
 from ._resources import (
     DEFAULT_TIMEOUT,
     client_options,

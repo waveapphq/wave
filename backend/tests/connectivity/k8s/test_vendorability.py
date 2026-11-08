@@ -2,11 +2,11 @@
 
 Every module under wavecore/connectivity/k8s/ is copied verbatim onto the remote
 host, so each one may import the standard library, its own package, the
-bundled TLS engine, the stdlib file core, the count wording, WAVE's trust
-store with its run log, the proxy core and the web address parser - nothing
-else, and nothing newer than the interpreter floor the runner accepts, keyword
-arguments included. The verb package carries the extra rule that it is
-synchronous and never reaches back into WAVE's own runtime.
+bundled TLS engine, the stdlib file core, the count wording, the Block output
+core, WAVE's trust store with its run log, the proxy core and the web address
+parser - nothing else, and nothing newer than the interpreter floor the runner
+accepts, keyword arguments included. The verb package carries the extra rule
+that it is synchronous and never reaches back into WAVE's own runtime.
 """
 
 import ast
@@ -35,6 +35,7 @@ _ALLOWED_WAVECORE_IMPORTS = {
     "wavecore.plugins.http_tls",
     "wavecore.plugins._file_ops",
     "wavecore.plugins._plural",
+    "wavecore.connectivity.block_outputs",
     "wavecore.connectivity.tls_capabilities",
     "wavecore.connectivity.trust_store",
     "wavecore.connectivity.run_log",

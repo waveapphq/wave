@@ -137,6 +137,7 @@ ignore = []
 "wavecore/connectivity/run_log.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/connectivity/proxy.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/connectivity/web_address.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
+"wavecore/connectivity/block_outputs.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/plugins/_user_patterns.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 
 [tool.mypy]
