@@ -181,7 +181,7 @@ class TestForLoopHandleIterationResultSource:
     def test_break_does_not_read_displayName(self) -> None:
         """A `displayName` on the data dict is not used."""
         node = _make_loop_node("for-1")
-        node["data"]["displayName"] = "LEGACY"
+        node["data"]["displayName"] = "STRAY"
         node_map = {"for-1": node}
         session = _make_session()
         with patch("wavecore.api.services.workbench.for_loop._add_execution_log") as mock_log:
@@ -233,9 +233,9 @@ class TestWhileLoopHandleBodyOutcomeSource:
             )
         assert mock_log.call_args.args[3] == "While Loop"
 
-    def test_break_ignores_legacy_displayName(self) -> None:
+    def test_break_ignores_a_stray_displayName(self) -> None:
         node = _make_loop_node("while-1", element_type="while")
-        node["data"]["displayName"] = "LEGACY"
+        node["data"]["displayName"] = "STRAY"
         node_map = {"while-1": node}
         session = _make_session()
         with patch("wavecore.api.services.workbench.while_loop._add_execution_log") as mock_log:
@@ -332,7 +332,7 @@ class TestBuildErrorObjectName:
         error_obj = _build_error_object(try_error, try_chain, session, node_map)
         assert error_obj["node"] == "HTTP Probe"
 
-    def test_error_node_ignores_legacy_displayName(self) -> None:
+    def test_error_node_ignores_a_stray_displayName(self) -> None:
         """A `displayName` on the data dict is not the source - the Name is."""
         try_error = RuntimeError("boom")
         failed_node = {
@@ -340,7 +340,7 @@ class TestBuildErrorObjectName:
             "type": "workflowNode",
             "data": {
                 "label": "HTTP Probe",
-                "displayName": "LEGACY",
+                "displayName": "STRAY",
                 "elementType": "http-client",
             },
         }
@@ -372,7 +372,7 @@ class TestBuildErrorObjectName:
         assert error_obj["element_type"] == ""
 
 
-class TestNoLegacyDisplayNameReadsInLoopModules:
+class TestNoDisplayNameReadsInLoopModules:
     """The loop, try-catch and node helper modules never mention `displayName`."""
 
     def _read(self, mod_name: str) -> str:

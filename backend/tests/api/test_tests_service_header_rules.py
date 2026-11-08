@@ -715,7 +715,7 @@ class TestRemoteBodyPathSchemesAreNotSaveFindings:
 
         assert _node_errors(result, "copy-body") == []
 
-    def test_the_finding_code_is_gone(self) -> None:
+    def test_the_service_has_no_remote_host_path_scheme_code(self) -> None:
         import inspect
 
         assert "REMOTE_HOST_PATH_SCHEME" not in inspect.getsource(test_service)
@@ -747,7 +747,7 @@ class TestProxyChoiceHasNoSaveRule:
         assert _proxy_url_findings(residual) == []
         assert [n["id"] for n in test["workflow"]["nodes"]] == ["http-1"]
 
-    def test_the_finding_code_is_gone(self) -> None:
+    def test_the_service_has_no_proxy_url_required_code(self) -> None:
         import inspect
 
         assert "PROXY_URL_REQUIRED" not in inspect.getsource(test_service)

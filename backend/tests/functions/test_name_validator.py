@@ -76,7 +76,7 @@ class TestNameRequired:
 # ---------------------------------------------------------------------------
 
 
-class TestRelaxedNameCharacters:
+class TestPrintableNameCharacters:
     @pytest.mark.parametrize(
         "good_name",
         [
@@ -97,7 +97,7 @@ class TestRelaxedNameCharacters:
             "X" * 32,  # exactly the cap
         ],
     )
-    def test_relaxed_names_are_accepted(self, client: TestClient, good_name: str) -> None:
+    def test_printable_names_are_accepted(self, client: TestClient, good_name: str) -> None:
         payload = make_function_payload(name=good_name)
         response = client.post("/functions", json=payload)
         assert response.status_code == 201, response.text

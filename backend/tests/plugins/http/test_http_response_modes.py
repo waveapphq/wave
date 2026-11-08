@@ -73,7 +73,7 @@ class TestResponseModeMetadata:
         assert file_path["required"] is False
         assert file_path["trim"] is True
 
-    def test_the_file_name_parameter_is_gone(self):
+    def test_there_is_no_file_name_parameter(self):
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         names = {p["name"] for p in HTTPClientPlugin().metadata["parameters"]}

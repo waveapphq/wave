@@ -1055,7 +1055,7 @@ class TestFixEndpointPreservesVisibleWarnings:
 
     def test_fix_preserves_required_param_missing_in_warnings(self) -> None:
         """A test with autofixable + required-missing keeps the required warning post-fix."""
-        from tests.api.test_test_service import _create_test_with_legacy_data
+        from tests.api.test_test_service import _store_unvalidated_test
 
         bad_node = _make_workflow_node(
             "node-1",
@@ -1065,7 +1065,7 @@ class TestFixEndpointPreservesVisibleWarnings:
             config={"values": {}},
         )
         good = _make_workflow_node("node-good")
-        test = _create_test_with_legacy_data(
+        test = _store_unvalidated_test(
             {
                 "name": "Fix Preserves Required",
                 "workflow": {

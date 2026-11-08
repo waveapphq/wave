@@ -1723,7 +1723,7 @@ class TestListProfileTypes:
         assert opensearch_type["description"] == OPENSEARCH_TYPE_DESCRIPTION
 
 
-class TestLdapProfileTypeRemoved:
+class TestLdapIsNotAProfileType:
     """Test suite showing ldap is not a profile type (REQ-4.7.3)."""
 
     def test_get_type_schema_returns_none_for_ldap(self) -> None:
@@ -1757,7 +1757,7 @@ class TestLdapProfileTypeRemoved:
         assert "ldap" not in _profile_common.TYPE_SCHEMAS
 
 
-class TestSftpProfileTypeRemoved:
+class TestSftpIsNotAProfileType:
     """Test suite showing sftp is not a profile type (REQ-4.7.3, REQ-4.7.5)."""
 
     def test_get_type_schema_returns_none_for_sftp(self) -> None:
@@ -1897,7 +1897,7 @@ class TestDatabaseTypeSchema:
         assert fields["driver_options"]["default"] == {}
 
     @pytest.mark.parametrize("field_name", ["failover", "timeout"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
         """Test that the database schema has no failover list and no timeout field."""
 
         assert field_name not in _schema_field_names("database")
@@ -1943,7 +1943,7 @@ class TestOpensearchTypeSchema:
         assert [name for name, field in fields.items() if "default" in field] == ["verify_ssl"]
 
     @pytest.mark.parametrize("field_name", ["host", "port", "use_ssl", "index", "timeout"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
         """Test that the opensearch schema has no host, port, TLS switch, index or timeout field."""
 
         assert field_name not in _schema_field_names("opensearch")
@@ -2019,7 +2019,7 @@ class TestKubernetesTypeSchema:
         assert _schema_fields("kubernetes")["api_url"]["type"] == "string"
 
     @pytest.mark.parametrize("field_name", ["kubeconfig", "context", "api_server"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
         """Test that the kubernetes schema has no kubeconfig, context or api_server field."""
 
         assert field_name not in _schema_field_names("kubernetes")
@@ -2054,7 +2054,7 @@ class TestSshTypeSchema:
 
         assert "timeout" not in _schema_field_names("ssh")
 
-    def test_remaining_fields_are_unchanged(self) -> None:
+    def test_other_field_types_secret_flags_and_port_default(self) -> None:
         """Test the types, secret flags and port default of the other ssh fields."""
 
         fields = _schema_fields("ssh")
