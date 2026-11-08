@@ -7,7 +7,7 @@ Two masking mechanisms share one canonical placeholder:
   variable displays (a secret shows as the bare placeholder - no keys,
   no shape, no counts)
 
-The obsolete reveal/config/filter surface is deleted, not deprecated.
+There is no reveal, config or filter surface.
 """
 
 from decimal import Decimal
@@ -419,22 +419,22 @@ class TestReprEscapedScrub:
         assert "********" in result
 
 
-class TestObsoleteSurfaceRemoved:
-    """Deletion pins: reveal, config, per-channel filter API are gone."""
+class TestMaskingSurface:
+    """There is no reveal, config or per-channel filter API."""
 
-    def test_reveal_control_is_deleted(self) -> None:
+    def test_there_is_no_reveal_control(self) -> None:
         assert not hasattr(masking_module, "SecretRevealControl")
 
-    def test_masking_config_is_deleted(self) -> None:
+    def test_there_is_no_masking_config(self) -> None:
         assert not hasattr(masking_module, "MaskingConfig")
 
-    def test_masking_filter_is_deleted(self) -> None:
+    def test_there_is_no_masking_filter(self) -> None:
         assert not hasattr(masking_module, "MaskingFilter")
 
-    def test_secret_mask_class_is_deleted(self) -> None:
+    def test_there_is_no_secret_mask_class(self) -> None:
         assert not hasattr(masking_module, "SecretMask")
 
-    def test_package_exports_the_new_surface(self) -> None:
+    def test_package_exports_the_registry_and_mask_helpers(self) -> None:
         from wavecore.core.secrets import (  # noqa: F401
             MASK_PLACEHOLDER as pkg_placeholder,
         )
@@ -450,7 +450,7 @@ class TestObsoleteSurfaceRemoved:
 
         assert pkg_placeholder == "********"
 
-    def test_package_no_longer_exports_the_reveal_surface(self) -> None:
+    def test_package_exports_no_reveal_surface(self) -> None:
         import wavecore.core.secrets as secrets_package
 
         assert not hasattr(secrets_package, "SecretRevealControl")

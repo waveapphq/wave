@@ -135,12 +135,11 @@ class TestParallelShapeChecks:
     def test_the_join_mode_is_an_enum(self) -> None:
         malformed(parallel_flow(join="race"), "'join' must be one of: all, first")
 
-    def test_the_removed_wait_any_strategy_is_not_a_join_mode(self) -> None:
-        # Guard: the discarded wait-any vocabulary must not be revived as a join value.
+    def test_wait_any_is_not_a_join_mode(self) -> None:
         malformed(parallel_flow(join="wait-any"), "'join' must be one of: all, first")
 
 
-class TestParallelRemovedKeys:
+class TestParallelUnknownKeys:
     """The format rejects what the construct does not define."""
 
     def _unknown_key(self, flow: list[Any], key: str) -> None:
@@ -148,16 +147,16 @@ class TestParallelRemovedKeys:
         finding = find_finding(findings, "UNKNOWN_STEP_KEY")
         assert finding["problem"] == f"Unknown key '{key}' on a 'parallel' construct"
 
-    def test_wait_strategy_is_no_longer_a_parallel_key(self) -> None:
+    def test_wait_strategy_is_not_a_parallel_key(self) -> None:
         self._unknown_key(parallel_flow(wait_strategy="wait-all"), "wait_strategy")
 
-    def test_wait_condition_is_no_longer_a_parallel_key(self) -> None:
+    def test_wait_condition_is_not_a_parallel_key(self) -> None:
         self._unknown_key(parallel_flow(wait_condition="done"), "wait_condition")
 
-    def test_timeout_is_no_longer_a_parallel_key(self) -> None:
+    def test_timeout_is_not_a_parallel_key(self) -> None:
         self._unknown_key(parallel_flow(timeout=1000), "timeout")
 
-    def test_capture_is_no_longer_a_parallel_key(self) -> None:
+    def test_capture_is_not_a_parallel_key(self) -> None:
         # Guard: the control binds nothing, so there is nothing to capture.
         self._unknown_key(parallel_flow(capture={"results": "out"}), "capture")
 
@@ -313,8 +312,7 @@ class TestParallelReadback:
         branches = recipe["flow"][0]["parallel"]["branches"]
         assert all("name" not in entry for entry in branches), branches
 
-    def test_the_readback_never_emits_the_removed_keys(self) -> None:
-        # Guard: the readback must not resurrect a vocabulary the format dropped.
+    def test_the_readback_never_emits_an_unknown_key(self) -> None:
         step = self._readback_step(join="first", time_limit=60000)
         for key in ("wait_strategy", "wait_condition", "timeout", "capture"):
             assert key not in step, step

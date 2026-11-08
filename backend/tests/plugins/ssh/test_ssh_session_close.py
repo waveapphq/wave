@@ -58,7 +58,7 @@ class TestMetadata:
         for output in SSHSessionClosePlugin().metadata["output_schema"]:
             assert output.get("description")
 
-    def test_obsolete_closed_hostname_output_is_gone(self) -> None:
+    def test_there_is_no_closed_hostname_output(self) -> None:
         names = [o["name"] for o in SSHSessionClosePlugin().metadata["output_schema"]]
 
         assert "closed_hostname" not in names

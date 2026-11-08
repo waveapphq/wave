@@ -755,7 +755,7 @@ OUTPUT_KEYS_FIX = (
 )
 FUNCTION_KEYS_FIX = "Valid keys: flow, inputs, name, outputs, variables"
 
-OLD_ARRAY_ENUM_INPUT: dict[str, Any] = {
+ARRAY_ENUM_INPUT: dict[str, Any] = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -818,11 +818,11 @@ DECLARATION_KEY_CASES = [
         id="function-variable",
     ),
     pytest.param(
-        make_recipe([LOG_STEP], functions=[_function(inputs=[OLD_ARRAY_ENUM_INPUT])]),
+        make_recipe([LOG_STEP], functions=[_function(inputs=[ARRAY_ENUM_INPUT])]),
         "functions[f].inputs.level",
         "Unknown key 'enumValueType' on input 'level'",
         INPUT_KEYS_FIX,
-        id="input-old-enum-value-type",
+        id="input-enum-value-type",
     ),
     pytest.param(
         make_recipe(

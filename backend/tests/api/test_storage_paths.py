@@ -309,7 +309,7 @@ class TestBasePathFromConfig:
 
         assert storage_paths.get_base_path() == tmp_path / "programmatic"
 
-    def test_the_old_default_constant_is_gone(self) -> None:
+    def test_there_is_no_default_base_path_constant(self) -> None:
         assert not hasattr(storage_paths, "_DEFAULT_BASE_PATH")
 
     def test_the_resolved_folder_stays_until_the_cache_is_reset(
@@ -356,5 +356,5 @@ class TestInstanceSettingsPaths:
     """Instance settings live in the config file, so the data folder has no path for them."""
 
     @pytest.mark.parametrize("name", ["get_mcp_settings_file_path", "get_backups_storage_path"])
-    def test_the_data_folder_path_helper_is_gone(self, name: str) -> None:
+    def test_there_is_no_data_folder_path_helper(self, name: str) -> None:
         assert not hasattr(storage_paths, name)

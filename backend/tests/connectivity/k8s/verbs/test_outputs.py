@@ -337,7 +337,7 @@ class TestDecodeTextBody:
         with pytest.raises(K8sApiError, match=_exact(UNREADABLE_BODY_MESSAGE)):
             _outputs._decode_text_body(200, b"42")
 
-    def test_a_yaml_document_is_no_longer_readable(self) -> None:
+    def test_a_yaml_document_is_unreadable(self) -> None:
         with pytest.raises(K8sApiError, match=_exact(UNREADABLE_BODY_MESSAGE)):
             _outputs._decode_text_body(200, b"kind: Pod\napiVersion: v1\n")
 

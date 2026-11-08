@@ -471,7 +471,7 @@ def _draft_declaring(**declarations: Any) -> dict[str, Any]:
     return draft
 
 
-_OLD_ARRAY_ENUM = {
+_ARRAY_ENUM = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -482,9 +482,9 @@ _LOCAL_ID = {"name": "id", "type": "string", "value": "x"}
 
 _MALFORMED_DECLARATIONS = [
     pytest.param(
-        {"inputs": [_OLD_ARRAY_ENUM]},
+        {"inputs": [_ARRAY_ENUM]},
         ("ENUM_INPUT_TYPE", "Enum input 'level' must be of type string, integer or float"),
-        id="old-array-enum",
+        id="array-enum",
     ),
     pytest.param(
         {"inputs": [_level(required=False)]},

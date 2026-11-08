@@ -743,11 +743,11 @@ class TestDeleteRegressionService:
         assert regression_service.delete_regression(created["id"]) is True
 
 
-class TestLegacyVersionPadding:
-    """Exercise the legacy single-integer version padding branches."""
+class TestSingleIntegerVersionPadding:
+    """A single-integer version is padded to MAJOR.MINOR.PATCH before the bump."""
 
-    def test_add_regression_version_pads_legacy_single_integer_version(self) -> None:
-        """add_regression_version handles legacy version='N' by padding to 'N.0.0'."""
+    def test_add_regression_version_pads_a_single_integer_version(self) -> None:
+        """add_regression_version reads version 'N' as 'N.0.0'."""
         from tests.api.regression_test_helpers import (
             load_regression_file,
             save_regression_file,
@@ -757,7 +757,7 @@ class TestLegacyVersionPadding:
 
         clear_regression_storage()
 
-        regression = regression_service.create_regression({"name": "Legacy Reg"})
+        regression = regression_service.create_regression({"name": "Single Integer Reg"})
         stored = load_regression_file(regression["id"])
         assert stored is not None
         stored["version"] = "1"

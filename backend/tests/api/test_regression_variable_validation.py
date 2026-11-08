@@ -1222,7 +1222,7 @@ class TestSuitePairCollisions:
         assert result == []
 
     def test_skips_suite_with_non_dict_variables(self) -> None:
-        """Suites whose 'variables' field is a non-dict (legacy data) are skipped."""
+        """Suites whose 'variables' field is a non-dict (corrupt data) are skipped."""
         from unittest.mock import patch
 
         from wavecore.api.services.regressions.variable_validation import (
@@ -1254,7 +1254,7 @@ class TestSuitePairCollisions:
 
 
 class TestNonDictSuiteVariables:
-    """Edge cases where suite.variables is not a dict (corrupt/legacy data)."""
+    """Edge cases where suite.variables is not a dict (corrupt data)."""
 
     def test_non_dict_suite_variables_skipped(self) -> None:
         """check_variable_collisions_for_regression skips suites whose variables are not a dict."""
@@ -1264,7 +1264,7 @@ class TestNonDictSuiteVariables:
             check_variable_collisions_for_regression,
         )
 
-        # Legacy suite where 'variables' is a list instead of dict
+        # Corrupt suite where 'variables' is a list instead of dict
         bad_suite = {
             "id": "bad-suite",
             "name": "Bad Suite",
@@ -1381,10 +1381,10 @@ class TestDeltaOnlySkipWhenUnchanged:
                 {"suites": [suite_integer["id"]]},
             )
 
-    def test_update_regression_persists_tags_and_pads_legacy_single_integer_version(
+    def test_update_regression_persists_tags_and_pads_a_single_integer_version(
         self,
     ) -> None:
-        """update_regression must persist 'tags' and pad legacy version 'N' to 'N.0.0'."""
+        """update_regression must persist 'tags' and pad version 'N' to 'N.0.0'."""
         from tests.api.regression_test_helpers import (
             load_regression_file,
             save_regression_file,
@@ -1392,7 +1392,7 @@ class TestDeltaOnlySkipWhenUnchanged:
         from wavecore.api.services.regressions import service as regression_service
 
         regression = regression_service.create_regression({"name": "Tag Target"})
-        # Rewrite the on-disk copy to simulate a legacy single-integer version
+        # Rewrite the on-disk copy with a single-integer version
         stored = load_regression_file(regression["id"])
         assert stored is not None
         stored["version"] = "1"

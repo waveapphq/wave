@@ -131,7 +131,7 @@ class TestContentTypeIsAnOrdinaryHeader:
         assert sent["Content-Type"] == "application/json"
 
     @pytest.mark.asyncio
-    async def test_generating_modes_no_longer_reject_content_type_rows(self):
+    async def test_generating_modes_do_not_reject_content_type_rows(self):
         """A form-mode Content-Type row executes - the generated header wins silently."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 

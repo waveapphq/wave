@@ -804,7 +804,7 @@ class TestVerbBridgeWiring:
         assert await FileIOPlugin().execute(ctx) == {"content": "hello\n"}
 
 
-class TestAiofilesIsGone:
+class TestNoAiofiles:
     """The plugin owns no asynchronous file access: the core is standard-library and sync."""
 
     def test_no_aiofiles_in_the_source(self) -> None:

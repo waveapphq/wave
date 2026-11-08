@@ -289,7 +289,7 @@ class TestLaunchFolderIsNeverRead:
         assert Config().to_dict(include_secrets=True) == without
         assert loader.locate_config_file() == located_file
 
-    def test_per_environment_file_lookup_is_gone(self) -> None:
+    def test_config_has_no_per_environment_file_lookup(self) -> None:
         assert not hasattr(Config, "_find_env_config_file")
 
     def test_default_location_is_not_in_the_launch_folder(
@@ -564,7 +564,7 @@ class TestUnknownSection:
         assert _loader_warnings(caplog) == []
 
 
-class TestRemovedLoggingVariable:
+class TestWaveLoggingLevelIsIgnored:
     def test_wave_logging_level_does_not_set_the_level(
         self, located_file: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

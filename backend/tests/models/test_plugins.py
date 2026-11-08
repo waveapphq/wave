@@ -48,7 +48,7 @@ class TestCategoryLiteral:
     def test_helm_is_a_category_of_its_own(self) -> None:
         assert _metadata("helm").category == "helm"
 
-    def test_orchestration_is_gone(self) -> None:
+    def test_orchestration_is_not_a_category(self) -> None:
         with pytest.raises(ValidationError):
             _metadata("orchestration")
 
@@ -66,7 +66,7 @@ class TestStorageCategories:
     def test_the_storage_list_carries_helm(self) -> None:
         assert "helm" in PLUGIN_CATEGORIES
 
-    def test_the_storage_list_no_longer_carries_orchestration(self) -> None:
+    def test_the_storage_list_does_not_carry_orchestration(self) -> None:
         assert "orchestration" not in PLUGIN_CATEGORIES
 
 

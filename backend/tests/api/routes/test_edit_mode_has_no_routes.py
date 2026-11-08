@@ -113,8 +113,8 @@ def _seed_test_with_published_node(node_id: str = "fn-1") -> str:
     return test_id
 
 
-class TestEnterEditModeEndpointRemoved:
-    def test_post_edit_mode_returns_404_route_gone(self, client: TestClient) -> None:
+class TestEnterEditModeHasNoRoute:
+    def test_post_edit_mode_answers_the_default_404(self, client: TestClient) -> None:
         test_id = _seed_test_with_published_node("fn-1")
         response = client.post(f"/tests/{test_id}/functions/fn-1/edit-mode")
         assert response.status_code == 404, response.text
@@ -122,8 +122,8 @@ class TestEnterEditModeEndpointRemoved:
         assert response.json() == {"detail": "Not Found"}
 
 
-class TestDropEditModeEndpointRemoved:
-    def test_delete_edit_mode_returns_404_route_gone(self, client: TestClient) -> None:
+class TestDropEditModeHasNoRoute:
+    def test_delete_edit_mode_answers_the_default_404(self, client: TestClient) -> None:
         test_id = _seed_test_with_published_node("fn-1")
         response = client.delete(f"/tests/{test_id}/functions/fn-1/edit-mode")
         assert response.status_code == 404, response.text

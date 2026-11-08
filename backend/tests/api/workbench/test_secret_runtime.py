@@ -612,9 +612,9 @@ class TestS10CredentialRegistration:
 
 class TestSecretSchemaExtraction:
     """Secret outputs seed from model as well as dict output schemas; the input-parameter
-    reader (_extract_secret_fields) is removed."""
+    reader (_extract_secret_fields) does not exist."""
 
-    def test_extract_secret_fields_helper_is_removed(self) -> None:
+    def test_there_is_no_extract_secret_fields_helper(self) -> None:
         assert not hasattr(wb_plugins, "_extract_secret_fields")
 
     def test_secret_outputs_seed_from_output_field_models_when_none_are_marked(self) -> None:

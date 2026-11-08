@@ -231,13 +231,13 @@ class TestMetadata:
             ("local_port", "integer"),
         ]
 
-    def test_obsolete_outputs_are_gone(self) -> None:
+    def test_there_is_no_remote_destination_or_tunnel_status_output(self) -> None:
         names = [o["name"] for o in SSHTunnelOpenPlugin().metadata["output_schema"]]
 
         assert "remote_destination" not in names
         assert "tunnel_status" not in names
 
-    def test_obsolete_profile_scope_params_are_gone(self) -> None:
+    def test_there_is_no_profile_or_scope_parameter(self) -> None:
         names = [p["name"] for p in SSHTunnelOpenPlugin().metadata["parameters"]]
 
         assert "profile" not in names

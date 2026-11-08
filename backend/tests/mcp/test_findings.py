@@ -73,7 +73,7 @@ class TestServiceFinding:
 
 
 class TestOrganizeConsumesThePromotion:
-    """organize.py imports the helpers; its private copies are gone."""
+    """organize.py imports the helpers and defines neither of its own."""
 
     def test_organize_reuses_the_promoted_finding(self) -> None:
         assert organize()._finding is findings()._finding
@@ -81,7 +81,7 @@ class TestOrganizeConsumesThePromotion:
     def test_organize_reuses_the_promoted_service_finding(self) -> None:
         assert organize()._service_finding is findings()._service_finding
 
-    def test_the_private_definitions_are_no_longer_in_organize(self) -> None:
+    def test_organize_defines_neither_helper_itself(self) -> None:
         source = inspect.getsource(organize())
 
         assert "def _finding(" not in source

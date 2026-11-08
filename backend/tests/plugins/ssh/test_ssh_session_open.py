@@ -135,7 +135,7 @@ class TestMetadata:
 
         assert names == EXPECTED_PARAM_ORDER
 
-    def test_obsolete_profile_model_is_gone(self) -> None:
+    def test_there_is_no_profile_or_keep_alive_parameter(self) -> None:
         names = [p["name"] for p in SSHSessionOpenPlugin().metadata["parameters"]]
 
         assert "profile" not in names
@@ -247,7 +247,7 @@ class TestMetadata:
         for output in SSHSessionOpenPlugin().metadata["output_schema"]:
             assert output.get("description")
 
-    def test_obsolete_outputs_are_gone(self) -> None:
+    def test_there_is_no_remote_host_or_connection_status_output(self) -> None:
         names = [o["name"] for o in SSHSessionOpenPlugin().metadata["output_schema"]]
 
         assert "remote_host" not in names

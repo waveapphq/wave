@@ -715,7 +715,7 @@ class TestPackagedSwitchExample:
             assert "when" in case, f"case is not condition-guarded: {case!r}"
             assert isinstance(case["steps"], list) and case["steps"]
 
-    def test_the_removed_keys_are_gone(self) -> None:
+    def test_the_switch_has_no_on_capture_or_equals_key(self) -> None:
         # YAML 1.1 reads a bare 'on:' as boolean True, so both forms are checked.
         switch = _branching_example_switch()
         assert "on" not in switch
@@ -754,7 +754,7 @@ class TestPackagedWaitUntilExample:
         wait = _wait_until_example()
         assert isinstance(wait["retry"], list) and wait["retry"]
 
-    def test_the_removed_leaf_keys_are_gone(self) -> None:
+    def test_the_wait_has_no_condition_or_poll_interval_key(self) -> None:
         wait = _wait_until_example()
         assert "condition" not in wait
         assert "poll_interval" not in wait
@@ -851,7 +851,7 @@ class TestWaitUntilAuthoring:
         }
         assert handles == {"retry", "then"}
 
-    def test_the_removed_leaf_form_is_refused(self) -> None:
+    def test_the_condition_leaf_form_is_refused(self) -> None:
         result = author().validate_recipe(
             make_recipe(
                 [{"wait_until": {"condition": "pod_phase == 'Running'", "timeout": 30000}}],
@@ -1409,8 +1409,8 @@ class TestFunctionInputDeclarations:
         (function,) = readback["functions"]
         assert function["inputs"] == DECLARED_INPUTS
 
-    def test_the_old_array_enum_form_is_refused(self) -> None:
-        old = {
+    def test_an_array_enum_with_an_enum_value_type_is_refused(self) -> None:
+        array_enum = {
             "name": "level",
             "type": "array",
             "required": True,
@@ -1418,7 +1418,7 @@ class TestFunctionInputDeclarations:
             "enumValues": ["low", "high"],
         }
 
-        result = author().validate_recipe(declared_inputs_recipe("Old Enum Form", [old]))
+        result = author().validate_recipe(declared_inputs_recipe("Array Enum Form", [array_enum]))
 
         assert result["valid"] is False
         assert find_finding(result["findings"], "UNKNOWN_KEY") == {

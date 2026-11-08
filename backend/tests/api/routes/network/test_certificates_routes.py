@@ -575,7 +575,7 @@ class TestStaticRoutes:
         assert response.json() == {"certificates": [], "errors": []}
 
 
-def _removed_calls(chain: _Chain) -> dict[str, tuple[str, str, dict[str, Any] | None]]:
+def _absent_endpoint_calls(chain: _Chain) -> dict[str, tuple[str, str, dict[str, Any] | None]]:
     root_id = _id(chain.root)
     return {
         "put-settings": ("PUT", f"{BASE}/settings", {"public_source": "builtin"}),
@@ -590,7 +590,7 @@ def _removed_calls(chain: _Chain) -> dict[str, tuple[str, str, dict[str, Any] | 
 
 
 @pytest.mark.usefixtures("no_host_store")
-class TestRemovedEndpoints:
+class TestAbsentEndpoints:
     @pytest.mark.parametrize(
         "name", ["put-settings", "post-additional", "delete-one", "delete-batch"]
     )
@@ -599,7 +599,7 @@ class TestRemovedEndpoints:
     ) -> None:
         client.patch(BASE, json={"add": [chain.root.cert_pem]})
         before = client.get(BASE).json()
-        method, path, body = _removed_calls(chain)[name]
+        method, path, body = _absent_endpoint_calls(chain)[name]
 
         response = client.request(method, path, json=body)
 

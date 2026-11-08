@@ -126,7 +126,7 @@ REASONS = ["NonZeroExit", "Exception", "Timeout", "FailPattern", "StartFailed", 
 # the other three ride the block's output bindings.
 EXPORT_ROW_COLUMNS = ["name", "type", "secret", "variable"]
 
-REMOVED_PARAMETERS = [
+ABSENT_PARAMETERS = [
     "code",
     "output_vars",
     "input_variables",
@@ -136,7 +136,7 @@ REMOVED_PARAMETERS = [
     "storage_limit",
 ]
 
-STRUCK_TOKENS = ["marshal", "import resource", "python_worker", "CodeExecutorBase"]
+SANDBOX_TOKENS = ["marshal", "import resource", "python_worker", "CodeExecutorBase"]
 
 
 def _parameters() -> dict[str, dict[str, Any]]:
@@ -432,11 +432,11 @@ class TestPythonOutputSchema:
         assert "type_when" not in _outputs()[name]
 
 
-class TestPythonRemovedSchema:
+class TestPythonAbsentFields:
     """No sandbox and no resource limits (PYRUN-1)."""
 
-    @pytest.mark.parametrize("name", REMOVED_PARAMETERS)
-    def test_removed_parameters_are_absent(self, name: str) -> None:
+    @pytest.mark.parametrize("name", ABSENT_PARAMETERS)
+    def test_the_parameter_is_absent(self, name: str) -> None:
         assert name not in _parameters()
 
     @pytest.mark.parametrize("name", sorted(EXPECTED_PARAMS))
@@ -446,6 +446,6 @@ class TestPythonRemovedSchema:
     def test_no_protocol_secret_fields(self) -> None:
         assert "secret_mask_fields" not in PythonPlugin().metadata
 
-    @pytest.mark.parametrize("token", STRUCK_TOKENS)
-    def test_the_module_carries_nothing_of_the_old_scheme(self, token: str) -> None:
+    @pytest.mark.parametrize("token", SANDBOX_TOKENS)
+    def test_the_module_carries_no_sandbox_token(self, token: str) -> None:
         assert token not in inspect.getsource(python)

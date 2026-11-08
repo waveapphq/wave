@@ -798,7 +798,7 @@ class TestStopExecution:
             assert result is not None
 
 
-class TestCancelExecutionRemoved:
+class TestThereIsNoCancelExecution:
     """There is no cancel_execution service function; only stop_execution exists."""
 
     def test_cancel_execution_not_exported(self) -> None:
@@ -983,7 +983,7 @@ class TestStateValidation:
             with pytest.raises(ConflictException, match=r"Cannot"):
                 _exec_storage._validate_state_transition(invalid_source, "stopped", "stop")
 
-    def test_validate_state_transition_cancel_op_removed(self) -> None:
+    def test_state_transitions_have_no_cancel_op(self) -> None:
         """There is no `cancel` transition op in STATE_TRANSITIONS."""
         from wavecore.api.services.executions import _storage as _exec_storage
 

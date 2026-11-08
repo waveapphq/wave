@@ -117,8 +117,8 @@ def _as_reoffered(key: Any) -> Any:
     return asyncssh.import_public_key(key.export_public_key("openssh"))
 
 
-def _old_known_hosts_file() -> Path:
-    """Where WAVE once kept its host key record; it is neither read nor written now."""
+def _data_folder_known_hosts_file() -> Path:
+    """A known hosts file in the data folder; WAVE neither reads nor writes it."""
     return get_base_path() / "ssh" / "known_hosts"
 
 
@@ -361,12 +361,12 @@ class TestHostKeyCheck:
         assert trusted_entries() == [("node-1.example.com", 2222, _public_line(key))]
         assert known_hosts_lines() == [f"[node-1.example.com]:2222 {_public_line(key)}"]
 
-    def test_first_contact_never_writes_the_old_known_hosts_file(self) -> None:
+    def test_first_contact_never_writes_a_known_hosts_file_in_the_data_folder(self) -> None:
         _host_key_check("accept-new").validate_host_public_key(
             "node-1.example.com", "10.0.0.7", 22, _another_key().convert_to_public()
         )
 
-        assert _old_known_hosts_file().exists() is False
+        assert _data_folder_known_hosts_file().exists() is False
 
     def test_a_changed_key_is_refused(self) -> None:
         trust_host("node-1.example.com", 22, _another_key())
@@ -416,11 +416,11 @@ class TestHostKeyCheck:
 
         assert check.refusal == "key-changed"
 
-    def test_the_old_known_hosts_file_is_never_read(self) -> None:
+    def test_a_known_hosts_file_in_the_data_folder_is_never_read(self) -> None:
         key = _another_key().convert_to_public()
-        old = _old_known_hosts_file()
-        old.parent.mkdir(parents=True)
-        old.write_text(f"node-1.example.com {_public_line(key)}\n", encoding="utf-8")
+        stray = _data_folder_known_hosts_file()
+        stray.parent.mkdir(parents=True)
+        stray.write_text(f"node-1.example.com {_public_line(key)}\n", encoding="utf-8")
         check = _host_key_check("strict")
 
         accepted = check.validate_host_public_key("node-1.example.com", "10.0.0.7", 22, key)
@@ -697,7 +697,7 @@ class TestHostKeyCheckWhenAnotherOpenRecordsFirst:
         assert check.refusal is None
 
 
-class TestTheRetiredKnownHostsRecordIsGone:
+class TestTheTrustedHostsListIsTheOnlyRecord:
     """WAVE's trusted hosts list is the only record; no known hosts file is read."""
 
     @pytest.mark.parametrize(
@@ -710,22 +710,22 @@ class TestTheRetiredKnownHostsRecordIsGone:
             "_record_host_key",
         ],
     )
-    def test_the_old_symbol_is_deleted(self, name: str) -> None:
+    def test_there_is_no_known_hosts_record_symbol(self, name: str) -> None:
         assert not hasattr(_ssh_session, name)
 
-    def test_no_certificate_authority_branch_is_left(self) -> None:
+    def test_there_is_no_certificate_authority_branch(self) -> None:
         assert "ca_keys" not in inspect.getsource(_ssh_session)
 
     @pytest.mark.parametrize(
-        "old_text",
+        "text",
         [
             "the host offered a key that differs from the one WAVE recorded for it",
             "the host has no recorded key and the host key policy is 'strict'",
             "SSH known hosts file",
         ],
     )
-    def test_the_old_refusal_text_is_gone(self, old_text: str) -> None:
-        assert old_text not in inspect.getsource(_ssh_session)
+    def test_the_source_has_no_known_hosts_refusal_text(self, text: str) -> None:
+        assert text not in inspect.getsource(_ssh_session)
 
 
 def _live_session(registry: SSHSessionRegistry) -> dict[str, Any]:
@@ -1097,7 +1097,7 @@ class TestHostKeyVerificationOverARealHandshake:
         assert known_hosts_lines() == [
             f"[127.0.0.1]:{ssh_endpoint.port} {_public_line(ssh_endpoint.host_key)}"
         ]
-        assert _old_known_hosts_file().exists() is False
+        assert _data_folder_known_hosts_file().exists() is False
 
     async def test_accept_new_reuses_the_record_on_the_next_connection(
         self, ssh_endpoint: SSHEndpoint
@@ -1191,13 +1191,13 @@ class TestHostKeyVerificationOverARealHandshake:
         with pytest.raises(ConnectionError, match=_refused_at(ssh_endpoint, NOT_TRUSTED_STRICT)):
             await _connect_and_close(ssh_endpoint, "strict")
 
-    async def test_the_old_known_hosts_file_in_the_data_folder_is_ignored(
+    async def test_a_known_hosts_file_in_the_data_folder_is_ignored(
         self, ssh_endpoint: SSHEndpoint
     ) -> None:
-        old = _old_known_hosts_file()
-        old.parent.mkdir(parents=True)
+        stray = _data_folder_known_hosts_file()
+        stray.parent.mkdir(parents=True)
         line = f"[127.0.0.1]:{ssh_endpoint.port} {_public_line(ssh_endpoint.host_key)}\n"
-        old.write_text(line, encoding="utf-8")
+        stray.write_text(line, encoding="utf-8")
 
         with pytest.raises(ConnectionError, match=_refused_at(ssh_endpoint, NOT_TRUSTED_STRICT)):
             await _connect_and_close(ssh_endpoint, "strict")

@@ -1578,7 +1578,7 @@ class TestTLSConfigParameterMetadata:
             )
 
     @pytest.mark.asyncio
-    async def test_auto_is_no_longer_a_tls_version(self):
+    async def test_auto_is_not_a_tls_version(self):
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()

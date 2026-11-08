@@ -1337,7 +1337,7 @@ class TestDropSecretInputDefaults:
 
         assert function_def == before
 
-    def test_the_old_helper_name_is_gone(self) -> None:
+    def test_there_is_no_drop_meaningless_input_defaults_helper(self) -> None:
         from wavecore.api.services.functions import _storage
 
         assert not hasattr(_storage, "drop_meaningless_input_defaults")

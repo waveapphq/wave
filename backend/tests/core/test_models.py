@@ -1447,18 +1447,18 @@ class TestBlockParameterValidation:
         assert "extra_param" in workflow_block.parameters
 
 
-class TestBlockParameterBackwardsCompatibility:
-    """Test backwards compatibility for blocks with parameters (REQ-3.1.2.1)."""
+class TestBlocksWithAndWithoutParameters:
+    """A test holds blocks with and without parameters (REQ-3.1.2.1)."""
 
-    def test_old_blocks_without_parameters_still_work(self):
-        """Test existing blocks without parameters continue working (REQ-3.1.2.1)."""
+    def test_a_block_without_parameters_works_in_a_test(self):
+        """A block without parameters works in a test (REQ-3.1.2.1)."""
         from wavecore.models.entities import Test
         from wavecore.models.workflow import WorkflowBlock
 
-        # Old-style block without parameters
-        old_block = create_test_block(
-            id="old-block",
-            name="Old Block",
+        # Block without parameters
+        bare_block = create_test_block(
+            id="bare-block",
+            name="Bare Block",
             version="1.0.0",
             type="action",
             plugins=[],
@@ -1472,7 +1472,7 @@ class TestBlockParameterBackwardsCompatibility:
             version="1.0.0",
             blocks=[
                 WorkflowBlock(
-                    block_id="old-block",
+                    block_id="bare-block",
                     block_version="1.0.0",
                     order=1,
                     parameters={},
@@ -1480,7 +1480,7 @@ class TestBlockParameterBackwardsCompatibility:
             ],
         )
 
-        assert len(old_block.parameters) == 0
+        assert len(bare_block.parameters) == 0
         assert len(test.blocks) == 1
 
     def test_mixing_blocks_with_and_without_parameters(self):
@@ -1490,9 +1490,9 @@ class TestBlockParameterBackwardsCompatibility:
         from wavecore.models.workflow import WorkflowBlock
 
         # Block with parameters
-        new_block = create_test_block(
-            id="new-block",
-            name="New Block",
+        param_block = create_test_block(
+            id="param-block",
+            name="Param Block",
             version="1.0.0",
             type="action",
             parameters=[
@@ -1503,9 +1503,9 @@ class TestBlockParameterBackwardsCompatibility:
         )
 
         # Block without parameters
-        old_block = create_test_block(
-            id="old-block",
-            name="Old Block",
+        bare_block = create_test_block(
+            id="bare-block",
+            name="Bare Block",
             version="1.0.0",
             type="action",
             plugins=[],
@@ -1519,13 +1519,13 @@ class TestBlockParameterBackwardsCompatibility:
             version="1.0.0",
             blocks=[
                 WorkflowBlock(
-                    block_id="new-block",
+                    block_id="param-block",
                     block_version="1.0.0",
                     order=1,
                     parameters={"config": "value"},
                 ),
                 WorkflowBlock(
-                    block_id="old-block",
+                    block_id="bare-block",
                     block_version="1.0.0",
                     order=2,
                     parameters={},
@@ -1534,8 +1534,8 @@ class TestBlockParameterBackwardsCompatibility:
         )
 
         assert len(test.blocks) == 2
-        assert len(new_block.parameters) == 1
-        assert len(old_block.parameters) == 0
+        assert len(param_block.parameters) == 1
+        assert len(bare_block.parameters) == 0
 
 
 class TestTestModel:

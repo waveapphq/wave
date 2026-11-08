@@ -1,12 +1,8 @@
-"""``__scope_failed`` is an engine key and must be stripped.
+"""Engine keys never reach the result dict that feeds output bindings.
 
-The scope-fail signal is the only assert signal missing from the engine-key
-strip set, so on the non-adjacency body path (a loop body or try path walked
-without nested dispatch) it survives into the result dict that feeds output
-bindings.
-
-The Switch container signals (``__switch`` / ``__switch_branches``) join the
-same strip set for the same reason.
+``__scope_failed`` and the Switch container signals (``__switch`` /
+``__switch_branches``) are engine keys, so a loop body or try path walked
+without nested dispatch strips them too.
 """
 
 from typing import Any
@@ -74,7 +70,7 @@ class TestStripSet:
 
         assert result == {"output": "kept"}
 
-    def test_previously_stripped_keys_are_still_stripped(self) -> None:
+    def test_every_engine_key_is_stripped_together(self) -> None:
         result: dict[str, Any] = {
             "__scope_failed": True,
             "__branch": "fail",
