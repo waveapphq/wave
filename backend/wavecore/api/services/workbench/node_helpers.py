@@ -1,5 +1,6 @@
 """Node field extraction, queue management, and node dispatch for workbench execution."""
 
+import asyncio
 from typing import Any
 
 import wavecore.core.secrets.masking_settings as masking_settings
@@ -80,21 +81,52 @@ async def _execute_plugin_node(
         return await _remote_exec.run_on_body_worker(
             body_worker, node_fields, variables, session_id, node_id
         )
-    return await _plugins._execute_plugin(
-        node_fields["element_type"],
-        node_fields["version"],
-        node_fields["config_values"],
+    stop_outputs: dict[str, Any] = {}
+    try:
+        return await _plugins._execute_plugin(
+            node_fields["element_type"],
+            node_fields["version"],
+            node_fields["config_values"],
+            variables,
+            session_id=session_id,
+            block_id=node_id,
+            block_label=_stored_name(node_fields),
+            expression_fields=node_fields["expression_fields"],
+            template_fields=node_fields["template_fields"],
+            reveal_secrets=reveal_secrets,
+            unmasked_secret_fields=node_fields.get("unmasked_secret_fields", []),
+            output_secret_fields=node_fields.get("output_secret_fields"),
+            output_bindings=node_fields["output_bindings"],
+            stop_outputs=stop_outputs,
+        )
+    except asyncio.CancelledError:
+        await _bind_stop_outputs(node_fields, stop_outputs, variables, session_id, node_id)
+        raise
+
+
+async def _bind_stop_outputs(
+    node_fields: dict[str, Any],
+    outputs: dict[str, Any],
+    variables: dict[str, Any],
+    session_id: str,
+    node_id: str,
+) -> None:
+    """Bind the outputs a block left when a stop cut it short (SHRUN-7)."""
+    import wavecore.api.services.workbench.plugins as _plugins
+    from wavecore.api.services.workbench._common import _push_variable_changes
+    from wavecore.api.services.workbench.signals import _assign_output_bindings
+
+    _plugins._register_secret_outputs(node_fields, outputs, session_id)
+    before = variables.copy()
+    written = _assign_output_bindings(
+        outputs,
+        node_fields["output_bindings"],
         variables,
-        session_id=session_id,
-        block_id=node_id,
-        block_label=_stored_name(node_fields),
-        expression_fields=node_fields["expression_fields"],
-        template_fields=node_fields["template_fields"],
-        reveal_secrets=reveal_secrets,
-        unmasked_secret_fields=node_fields.get("unmasked_secret_fields", []),
-        output_secret_fields=node_fields.get("output_secret_fields"),
-        output_bindings=node_fields["output_bindings"],
+        session_id,
+        node_fields["block_name"],
+        node_id,
     )
+    await _push_variable_changes(session_id, before, variables, written)
 
 
 def _stored_name(node_fields: dict[str, Any]) -> str | None:

@@ -783,6 +783,64 @@ class TestBlankExpressionEntries:
         assert found == []
 
 
+class TestNameRules:
+    """A field's name rule holds for every map key and list item, ASCII only, with its message."""
+
+    _RULE = {"pattern": "[a-z]+", "message": "Bad name: '{name}'"}
+    _NAMES_MAP = {"name": "names", "type": "map", "name_rule": _RULE}
+    _NAMES_LIST = {"name": "listed", "type": "array", "name_rule": _RULE}
+
+    def test_a_map_key_outside_the_rule_is_refused(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": {"ok": 1, "Bad": 2}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'Bad'", None, "names")]
+
+    def test_a_list_item_outside_the_rule_is_refused(self) -> None:
+        found = _check([self._NAMES_LIST], {"listed": ["ok", "no1"]})
+
+        assert found == [("INVALID_NAME", "Bad name: 'no1'", None, "listed")]
+
+    def test_a_list_item_that_is_not_text_is_named_by_its_text(self) -> None:
+        found = _check([self._NAMES_LIST], {"listed": [7]})
+
+        assert found == [("INVALID_NAME", "Bad name: '7'", None, "listed")]
+
+    def test_every_name_outside_the_rule_is_refused_in_order(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": {"B": 1, "ok": 2, "C": 3}})
+
+        assert found == [
+            ("INVALID_NAME", "Bad name: 'B'", None, "names"),
+            ("INVALID_NAME", "Bad name: 'C'", None, "names"),
+        ]
+
+    def test_a_word_class_in_the_rule_matches_ascii_only(self) -> None:
+        field = {"name": "names", "type": "map", "name_rule": {**self._RULE, "pattern": r"\w+"}}
+
+        found = _check([field], {"names": {"ok_1": 1, "café": 2}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'café'", None, "names")]
+
+    def test_names_inside_the_rule_are_accepted(self) -> None:
+        found = _check([self._NAMES_MAP, self._NAMES_LIST], {"names": {"a": 1}, "listed": ["b"]})
+
+        assert found == []
+
+    def test_a_whole_field_expression_has_no_names_to_check(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": "Bad"}, expression_fields={"names"})
+
+        assert found == []
+
+    def test_a_field_set_to_null_has_no_names_to_check(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": None})
+
+        assert found == []
+
+    def test_a_field_without_a_rule_takes_any_name(self) -> None:
+        found = _check([{"name": "names", "type": "map"}], {"names": {"Any Name!": 1}})
+
+        assert found == []
+
+
 class TestStoredBlockValues:
     """Each literal number of a declared number field is stored in its wire form."""
 

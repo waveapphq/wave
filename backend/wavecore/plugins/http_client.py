@@ -48,6 +48,7 @@ from wavecore.plugins import http_tls
 from wavecore.plugins._content_types import content_type_for
 from wavecore.plugins._executor_base import validate_enum_from_schema
 from wavecore.plugins._file_paths import plain_path, resolve_plugin_path
+from wavecore.plugins._shared_params import gate
 from wavecore.plugins._tls_material import is_pem, read_pem
 from wavecore.plugins._verb_bridge import log_via
 from wavecore.plugins.base import PluginBase
@@ -89,6 +90,7 @@ _STREAM_CHUNK = 65536
 _FALLBACK_DOWNLOAD_NAME = "response"
 
 _AUTH_SECRET_FIELDS = {"basic": "auth_password", "bearer": "auth_token", "api_key": "auth_key"}
+_AUTH_ON = gate("auth_enabled", "true")
 
 _TLS_VERSION_CHOICES = ["1.0", "1.1", "1.2", "1.3"]
 _TLS_DEFAULT_MIN = "1.2"
@@ -666,12 +668,14 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_username",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "basic")],
                     "description": "Username for Basic auth",
                 },
                 {
                     "name": "auth_password",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "basic")],
                     "secret": True,
                     "description": "Password for Basic auth",
                 },
@@ -679,6 +683,7 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_token",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "bearer")],
                     "secret": True,
                     "description": "Token for Bearer token auth",
                 },
@@ -687,6 +692,7 @@ class HTTPClientPlugin(PluginBase):
                     "type": "string",
                     "trim": True,
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "api_key")],
                     "default": "X-API-Key",
                     "description": "Header name carrying the API key",
                 },
@@ -694,6 +700,7 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_key",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "api_key")],
                     "secret": True,
                     "description": "API key sent under the configured header name",
                 },
@@ -735,6 +742,7 @@ class HTTPClientPlugin(PluginBase):
                     "type": "string",
                     "trim": True,
                     "required": False,
+                    "required_when": gate("body_mode", "file"),
                     "description": (
                         "File sent as the request body (file body mode): "
                         "artifact://, testdata://, or an absolute or relative path"

@@ -540,6 +540,42 @@ class TestCreateTestPipeline:
         assert listed == []
 
 
+class TestBlockNameRulesAtSave:
+    """A Block's name rule is the save's: a name the run refuses is never stored."""
+
+    def setup_method(self) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.python import PythonPlugin
+
+        _reset_storage_and_registry()
+        register_plugin(PythonPlugin())
+
+    def test_create_test_refuses_a_python_input_variable_name_outside_ascii(self) -> None:
+        node = _make_workflow_node(
+            "node-1",
+            "python",
+            "plugin",
+            "Python",
+            config={"values": {"script": "print(café)", "input_vars": {"café": 1}}},
+        )
+        data = {
+            "name": "Python Name Outside ASCII",
+            "workflow": {"nodes": [node], "edges": []},
+            "variables": {},
+        }
+
+        with pytest.raises(SaveValidationError) as excinfo:
+            test_service.create_test(data)
+
+        assert [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors] == [
+            (
+                "INVALID_NAME",
+                "Invalid variable name: 'café'",
+                "nodes[0].data.config.values.input_vars",
+            )
+        ]
+
+
 class TestUpdateTestPipeline:
     """update_test runs the same pipeline as create_test."""
 
@@ -2353,6 +2389,185 @@ class TestK8sReadBlocksAreGatedBeforeTheRun:
         self, element_type: str, values: dict[str, Any]
     ) -> None:
         await _k8s_plugin(element_type).validate({"session": _K8S_SESSION, **values})
+
+
+# ---------------------------------------------------------------------------
+# HTTP Request and SSH Session Open are refused half-filled at save and run
+# ---------------------------------------------------------------------------
+
+# The values each Block needs whatever its mode, so only the field under test is missing.
+_BASE_VALUES: dict[str, dict[str, Any]] = {
+    "http-client": {"url": "http://example.com"},
+    "ssh-session-open": {"host": "node-1", "username": "wave", "password": "pw"},
+}
+
+_ON = {"auth_enabled": True}
+
+# id, element type, block label, the parameter left unset, the mode values that ask for it
+_HALF_FILLED_CASES = [
+    (
+        "basic-username",
+        "http-client",
+        "HTTP Request",
+        "auth_username",
+        {**_ON, "auth_mode": "basic", "auth_password": "pw"},
+    ),
+    (
+        "basic-password",
+        "http-client",
+        "HTTP Request",
+        "auth_password",
+        {**_ON, "auth_mode": "basic", "auth_username": "alice"},
+    ),
+    (
+        "basic-by-default-mode",
+        "http-client",
+        "HTTP Request",
+        "auth_password",
+        {**_ON, "auth_username": "alice"},
+    ),
+    ("bearer-token", "http-client", "HTTP Request", "auth_token", {**_ON, "auth_mode": "bearer"}),
+    ("api-key", "http-client", "HTTP Request", "auth_key", {**_ON, "auth_mode": "api_key"}),
+    ("file-source", "http-client", "HTTP Request", "file_source", {"body_mode": "file"}),
+    (
+        "parent-session",
+        "ssh-session-open",
+        "SSH Session Open",
+        "parent_session_id",
+        {"use_parent": True},
+    ),
+]
+
+# The API-key header name declares a default, so only a blank one is a hole.
+_BLANK_ONLY_CASES = [
+    (
+        "api-key-header-name",
+        "http-client",
+        "HTTP Request",
+        "auth_header_name",
+        {**_ON, "auth_mode": "api_key", "auth_key": "k"},
+    ),
+]
+
+# id, element type, values whose mode does not ask for the field or that fill it
+_FILLED_OR_NOT_ASKED_CASES = [
+    ("auth-untouched", "http-client", {"auth_mode": "bearer"}),
+    ("auth-off", "http-client", {"auth_enabled": False, "auth_mode": "api_key"}),
+    (
+        "basic-filled",
+        "http-client",
+        {**_ON, "auth_mode": "basic", "auth_username": "alice", "auth_password": "pw"},
+    ),
+    ("bearer-filled", "http-client", {**_ON, "auth_mode": "bearer", "auth_token": "t"}),
+    ("api-key-default-header", "http-client", {**_ON, "auth_mode": "api_key", "auth_key": "k"}),
+    ("text-body", "http-client", {"body_mode": "text"}),
+    ("file-body-filled", "http-client", {"body_mode": "file", "file_source": "artifact://in.bin"}),
+    ("direct-untouched", "ssh-session-open", {}),
+    ("direct", "ssh-session-open", {"use_parent": False}),
+    ("via-parent-filled", "ssh-session-open", {"use_parent": True, "parent_session_id": "sid"}),
+]
+
+
+def _half_filled_test(element_type: str, label: str, values: dict[str, Any]) -> dict[str, Any]:
+    """A Test holding one Block with its base values plus the values under test."""
+    node = _make_workflow_node(
+        "blk-1",
+        element_type,
+        "plugin",
+        label,
+        config={"values": {**_BASE_VALUES[element_type], **values}},
+    )
+    return {
+        "name": f"Half Filled {uuid.uuid4().hex[:8]}",
+        "workflow": {
+            "nodes": [node],
+            "edges": [{"id": "e1", "source": "start-node", "target": "blk-1"}],
+        },
+        "variables": {},
+    }
+
+
+class TestHalfFilledHttpAndSshOpenBlocks:
+    """A field the mode makes required is refused while empty, naming Block and field."""
+
+    @pytest.fixture(autouse=True)
+    def _registered_plugins(self) -> Any:
+        from wavecore.controls.registry import _registry, register_all_core_controls
+        from wavecore.core.plugin_registry import clear_registry, register_plugin
+        from wavecore.plugins.http_client import HTTPClientPlugin
+        from wavecore.plugins.ssh_session_open import SSHSessionOpenPlugin
+
+        test_service._clear_storage()
+        _registry.clear()
+        register_all_core_controls(_registry)
+        clear_registry()
+        register_plugin(HTTPClientPlugin())
+        register_plugin(SSHSessionOpenPlugin())
+        yield
+        clear_registry()
+
+    @pytest.mark.parametrize(
+        ("element_type", "label", "param_name", "values"),
+        [case[1:] for case in _HALF_FILLED_CASES],
+        ids=_ids(_HALF_FILLED_CASES),
+    )
+    def test_save_refuses_an_unset_conditional_field(
+        self, element_type: str, label: str, param_name: str, values: dict[str, Any]
+    ) -> None:
+        with pytest.raises(SaveValidationError) as excinfo:
+            test_service.create_test(_half_filled_test(element_type, label, values))
+
+        assert [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors] == [
+            (
+                "REQUIRED_PARAM_MISSING",
+                f"Required parameter '{param_name}' is missing",
+                f"nodes[0].data.config.values.{param_name}",
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        ("element_type", "label", "param_name", "values"),
+        [case[1:] for case in _HALF_FILLED_CASES],
+        ids=_ids(_HALF_FILLED_CASES),
+    )
+    def test_the_run_gate_refuses_an_unset_conditional_field(
+        self, element_type: str, label: str, param_name: str, values: dict[str, Any]
+    ) -> None:
+        data = _half_filled_test(element_type, label, values)
+
+        errors = test_service._validate_test_data(data, context="run")["errors"]
+
+        assert [(e["node_label"], e["code"], e["message"]) for e in errors] == [
+            (label, "REQUIRED_PARAM_MISSING", f"Required parameter '{param_name}' is missing")
+        ]
+
+    @pytest.mark.parametrize(
+        ("element_type", "label", "param_name", "values"),
+        [case[1:] for case in _HALF_FILLED_CASES + _BLANK_ONLY_CASES],
+        ids=_ids(_HALF_FILLED_CASES + _BLANK_ONLY_CASES),
+    )
+    def test_a_blank_conditional_field_is_refused_as_empty(
+        self, element_type: str, label: str, param_name: str, values: dict[str, Any]
+    ) -> None:
+        data = _half_filled_test(element_type, label, {**values, param_name: "   "})
+
+        errors = test_service._validate_test_data(data, context="save")["errors"]
+
+        assert [(e["node_label"], e["code"], e["message"]) for e in errors] == [
+            (label, "REQUIRED_PARAM_EMPTY", f"Required parameter '{param_name}' is empty")
+        ]
+
+    @pytest.mark.parametrize(
+        ("element_type", "values"),
+        [case[1:] for case in _FILLED_OR_NOT_ASKED_CASES],
+        ids=_ids(_FILLED_OR_NOT_ASKED_CASES),
+    )
+    def test_a_filled_block_or_one_whose_mode_does_not_ask_passes(
+        self, element_type: str, values: dict[str, Any]
+    ) -> None:
+        data = _half_filled_test(element_type, "Block", values)
+
+        assert test_service._validate_test_data(data, context="run")["errors"] == []
 
 
 # ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -37,9 +38,11 @@ from wavecore.plugins._local_process_common import (
     shell_parameter,
     start_line,
     stop_on_pattern_parameters,
+    stop_reporter,
     stream_outputs,
 )
 from wavecore.plugins._local_process_runtime import (
+    NAME_PATTERN,
     check_shell,
     compile_patterns,
     export_refusal,
@@ -63,6 +66,8 @@ CHANNEL_REDIRECT = 'exec 3>"$1"\nshift\nexec "$@"\n'
 BRIDGE_PATH = str(Path(__file__).with_name("_python_bridge.py"))
 _REASONS = "NonZeroExit, Exception, Timeout, FailPattern, StartFailed or OutputVariable"
 CHANNEL_POLL = 0.05
+# Shell Script's ASCII name that does not start with a double underscore (PYRUN-5, PYRUN-6).
+PYTHON_NAME = re.compile(rf"(?!__){NAME_PATTERN.pattern}", re.ASCII)
 _LOG_METHODS = {
     "DEBUG": "debug",
     "INFO": "info",
@@ -73,8 +78,8 @@ _LOG_METHODS = {
 
 
 def _is_python_name(name: Any) -> bool:
-    """A global the script can read: a Python identifier that is not a dunder."""
-    return isinstance(name, str) and name.isidentifier() and not name.startswith("__")
+    """A global the script can read and the form can edit."""
+    return isinstance(name, str) and PYTHON_NAME.fullmatch(name) is not None
 
 
 def _check_input_names(params: Mapping[str, Any]) -> None:
@@ -399,6 +404,10 @@ class PythonPlugin(PluginBase):
                     "type": "map",
                     "required": False,
                     "default": {},
+                    "name_rule": {
+                        "pattern": PYTHON_NAME.pattern,
+                        "message": "Invalid variable name: '{name}'",
+                    },
                     "description": (
                         "Each entry becomes a global of the script before its first line "
                         "runs, as the Python type its WAVE type maps to: a float arrives as "
@@ -417,6 +426,10 @@ class PythonPlugin(PluginBase):
                     "required": False,
                     "default": [],
                     "declares_outputs": True,
+                    "name_rule": {
+                        "pattern": PYTHON_NAME.pattern,
+                        "message": "Invalid script variable name: '{name}'",
+                    },
                     "description": (
                         "Globals the script sets, each bound to one WAVE variable and read "
                         "as that variable's type. They are read even when the script raises."
@@ -496,7 +509,7 @@ class PythonPlugin(PluginBase):
             spec = launch_spec(params, context, argv, cwd, env, patterns)
             follower = _ChannelFollower(channel_path, logger)
             try:
-                outcome = await run_local_process(spec)
+                outcome = await run_local_process(spec, stop_reporter(context))
             finally:
                 taken = await follower.close()
             records = _read_channel(channel_path)

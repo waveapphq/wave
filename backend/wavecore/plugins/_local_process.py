@@ -3,7 +3,8 @@
 One launch under the watchdog: stream both pipes as lines, keep a capped tail of
 each, and stop on a pattern match or the deadline (SHRUN-12, SHRUN-13, SHRUN-15).
 A pattern match terminates the group so the shell may run its exit handler, then
-kills it once the grace has passed; the deadline and a cancel kill it at once. The
+kills it once the grace has passed; the deadline and a cancel kill it at once, and a
+cancel hands what the program printed to on_stop before it reaches the caller. The
 core builds no block message; _local_process_common.judge_outcome reads the outcome.
 """
 
@@ -13,6 +14,7 @@ import re
 import select
 import sys
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -28,6 +30,8 @@ READ_SIZE = 65536
 PATTERN_STOP_SETTLE = 0.05
 PATTERN_STOP_NUDGE = 0.25
 PATTERN_STOP_GRACE = 2.0
+# After the deadline kill; a program in a session of its own may keep the pipes open.
+PIPE_CLOSE_GRACE = 1.0
 MATCH_LINE_LIMIT = 200
 STOPPED_EXIT_CODE = 137
 PASS_MATCH = "Output matched the pass pattern"
@@ -126,6 +130,12 @@ class _Halt:
         for timer in self.timers:
             timer.cancel()
 
+    def abort(self) -> None:
+        """End the group at once, whatever stop was under way."""
+        _kill_group(self.pgid)
+        self.settle()
+        self.stop, self.match_line, self.match_stream = "cancel", None, None
+
 
 def _timeout_errors() -> tuple[type[BaseException], ...]:
     """asyncio.TimeoutError is its own class below Python 3.11, the bundle's interpreter floor."""
@@ -202,7 +212,41 @@ async def _supervise(
     await proc.wait()
 
 
-async def run_local_process(spec: LaunchSpec) -> ProcessOutcome:
+async def _drain(work: asyncio.Future[None]) -> None:
+    """Let the readers take what is left for a grace, then stop them where they are."""
+    try:
+        await asyncio.wait_for(asyncio.shield(work), PIPE_CLOSE_GRACE)
+    except _timeout_errors():
+        work.cancel()
+
+
+def _outcome(
+    states: dict[str, _StreamState],
+    spec: LaunchSpec,
+    halt: _Halt,
+    ended_on_own: bool,
+    exit_code: int,
+    start_error: str | None,
+) -> ProcessOutcome:
+    """The captured tails with the run's status; a stream that dropped its front says so."""
+    for stream, state in states.items():
+        if state.dropped and spec.logger is not None:
+            spec.logger.warn(f"{stream.capitalize()} truncated: {state.dropped} bytes dropped")
+    return ProcessOutcome(
+        stdout=states["stdout"].text(),
+        stderr=states["stderr"].text(),
+        exit_code=exit_code,
+        ended_on_own=ended_on_own,
+        stop=halt.stop,
+        match_line=halt.match_line,
+        match_stream=halt.match_stream,
+        start_error=start_error,
+    )
+
+
+async def run_local_process(
+    spec: LaunchSpec, on_stop: Callable[[ProcessOutcome], None] | None = None
+) -> ProcessOutcome:
     lifeline_r, lifeline_w = os.pipe()
     status_r, status_w = os.pipe()
     states = {"stdout": _StreamState(), "stderr": _StreamState()}
@@ -235,29 +279,23 @@ async def run_local_process(spec: LaunchSpec) -> ProcessOutcome:
                 await asyncio.wait_for(asyncio.shield(work), spec.timeout)
             except _timeout_errors():
                 halt("timeout", None, None)
-                await work
+                await _drain(work)
             halt.settle()
             ended_on_own, exit_code, start_error = _read_status(status_r)
             if halt.terminated:
                 ended_on_own, exit_code = False, STOPPED_EXIT_CODE
-        except BaseException:
-            _kill_group(proc.pid)
-            halt.settle()
-            work.cancel()
+        except BaseException as exc:
+            halt.abort()
+            try:
+                if on_stop is not None and isinstance(exc, asyncio.CancelledError):
+                    # The cancel must reach the caller whatever the readers raise.
+                    with suppress(Exception):
+                        await _drain(work)
+                    on_stop(_outcome(states, spec, halt, False, STOPPED_EXIT_CODE, None))
+            finally:
+                work.cancel()
             raise
     finally:
         os.close(lifeline_w)
         os.close(status_r)
-    for stream, state in states.items():
-        if state.dropped and spec.logger is not None:
-            spec.logger.warn(f"{stream.capitalize()} truncated: {state.dropped} bytes dropped")
-    return ProcessOutcome(
-        stdout=states["stdout"].text(),
-        stderr=states["stderr"].text(),
-        exit_code=exit_code,
-        ended_on_own=ended_on_own,
-        stop=halt.stop,
-        match_line=halt.match_line,
-        match_stream=halt.match_stream,
-        start_error=start_error,
-    )
+    return _outcome(states, spec, halt, ended_on_own, exit_code, start_error)

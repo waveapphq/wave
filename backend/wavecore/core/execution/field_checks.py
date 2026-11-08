@@ -5,6 +5,7 @@ REQ-3.1.1.5, REQ-3.1.2.4, REQ-3.1.2.11, REQ-3.4.2.2, REQ-3.5.0.3.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -379,6 +380,17 @@ def _is_literal(
     return name in values and name not in expression_fields and name not in template_fields
 
 
+def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
+    """Each map key or list item the field's name rule refuses, matched in full as ASCII."""
+    rule = get_param_attr(field, "name_rule")
+    if rule is None or not isinstance(value, dict | list):
+        return
+    for item in value:
+        if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
+            message = rule["message"].replace("{name}", str(item))
+            yield FieldFinding("INVALID_NAME", message, None, name)
+
+
 def check_block_fields(
     fields: Sequence[Any],
     values: Mapping[str, Any],
@@ -416,6 +428,7 @@ def check_block_fields(
                     entry_sources=sources,
                 )
             )
+            findings.extend(_name_findings(field, name, values[name]))
     findings.extend(unknown_field_findings(fields, values, block_id=block_id))
     for name in declared_names:
         findings.extend(_blank_entry_findings(name, values.get(name), expression_fields))

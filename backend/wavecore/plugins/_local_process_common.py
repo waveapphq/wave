@@ -3,8 +3,9 @@
 The descriptors the blocks declare, the checks that need WAVE's own folders, the
 environment the child inherits (SHRUN-2), the value-to-text table (SHRUN-5), the
 working-directory and script-file resolvers (SHRUN-10), the typed export coercion
-(PYRUN-6), the start line (SHRUN-12) and the outcome-to-message judgment. The
-standard-library half every remote run shares lives in _local_process_runtime.
+(PYRUN-6), the start line (SHRUN-12), the outputs a stopped run leaves (SHRUN-7)
+and the outcome-to-message judgment. The standard-library half every remote run
+shares lives in _local_process_runtime.
 """
 
 import os
@@ -22,12 +23,14 @@ from wavecore.core.variables.decimal_value import decimal_to_str, to_wave_decima
 from wavecore.core.variables.print_form import encode_typed_json
 from wavecore.plugins._executor_base import validate_enum_param
 from wavecore.plugins._file_paths import has_plugin_scheme, plain_path, resolve_plugin_path
+from wavecore.plugins._local_process import ProcessOutcome
 from wavecore.plugins._local_process_runtime import (
     _NOT_STARTED,
     export_refusal,
     require_existing_dir,
     resolve_program,
     setting,
+    stream_values,
 )
 from wavecore.plugins._shared_params import (
     on_error_parameter,
@@ -360,6 +363,14 @@ def fail_or_record(
 def not_started(params: dict[str, Any], message: str, logger: Any, noun: str) -> dict[str, Any]:
     """The StartFailed outcome: exit code -1 and nothing captured."""
     return fail_or_record(params, dict(_NOT_STARTED), message, "StartFailed", logger, noun)
+
+
+def stop_reporter(context: Mapping[str, Any]) -> Callable[[ProcessOutcome], None] | None:
+    """Hands the engine Stdout, Stderr and Exit Code of a run a stop cut short, never exports."""
+    left = context.get("stop_outputs")
+    if left is None:
+        return None
+    return lambda outcome: left.update(stream_values(outcome))
 
 
 def sweep_private_dirs() -> None:

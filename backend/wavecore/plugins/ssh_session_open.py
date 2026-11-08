@@ -19,6 +19,7 @@ from wavecore.plugins._ports import check_port
 from wavecore.plugins._shared_params import (
     check_at_least,
     check_integer,
+    gate,
     number_setting,
     plural,
 )
@@ -164,6 +165,7 @@ class SSHSessionOpenPlugin(PluginBase):
                     "type": "string",
                     "trim": True,
                     "required": False,
+                    "required_when": gate("use_parent", "true"),
                     "description": (
                         "Session ID of the open parent SSH session to tunnel over (used "
                         "when 'Chain through a parent session' is on). The connection "

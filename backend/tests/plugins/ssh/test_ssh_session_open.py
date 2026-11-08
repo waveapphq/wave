@@ -153,6 +153,17 @@ class TestMetadata:
                 continue
             assert params[name].get("required") is False
 
+    def test_parent_session_alone_is_required_by_a_mode(self) -> None:
+        params = _params_by_name(SSHSessionOpenPlugin())
+
+        conditional = {
+            name: param.get("required_when") or param.get("required_when_all")
+            for name, param in params.items()
+            if param.get("required_when") or param.get("required_when_all")
+        }
+
+        assert conditional == {"parent_session_id": {"field": "use_parent", "values": ["true"]}}
+
     def test_parameter_types(self) -> None:
         params = _params_by_name(SSHSessionOpenPlugin())
 

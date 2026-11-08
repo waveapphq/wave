@@ -18,6 +18,7 @@ from wavecore.plugins._local_process_common import (
     shell_parameter,
     start_line,
     stop_on_pattern_parameters,
+    stop_reporter,
     stream_outputs,
 )
 from wavecore.plugins._local_process_runtime import (
@@ -99,7 +100,7 @@ class ShellExecPlugin(PluginBase):
             return not_started(params, str(exc), logger, NOUN)
         argv = [*shell_argv, "-c", setting(params, "command", "")]
         spec = launch_spec(params, context, argv, cwd, env, patterns)
-        outcome = await run_local_process(spec)
+        outcome = await run_local_process(spec, stop_reporter(context))
         outputs = stream_values(outcome)
         timeout = setting(params, "timeout", 300)
         message, reason = judge_outcome(outcome, NOUN, timeout, spec.secret_streams)

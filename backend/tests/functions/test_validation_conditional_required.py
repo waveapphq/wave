@@ -308,3 +308,36 @@ class TestUnconditionalRequiredUnchanged:
             )
         )
         assert _missing_params(errors, "K8s_Get_1") == []
+
+
+class TestHttpAndSshOpenHolesInFunctionBody:
+    """The field a mode makes required is refused inside a Function body too."""
+
+    @pytest.fixture(autouse=True)
+    def _register_http_and_ssh_open(self) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.http_client import HTTPClientPlugin
+        from wavecore.plugins.ssh_session_open import SSHSessionOpenPlugin
+
+        register_plugin(HTTPClientPlugin())
+        register_plugin(SSHSessionOpenPlugin())
+
+    def test_http_basic_auth_without_a_password_is_refused(self) -> None:
+        errors = _errors_for(
+            _plugin_node(
+                "http-client",
+                {"url": "http://example.com", "auth_enabled": True, "auth_username": "alice"},
+                label="HTTP_1",
+            )
+        )
+        assert _missing_params(errors, "HTTP_1") == ["auth_password"]
+
+    def test_ssh_open_via_parent_without_a_parent_session_is_refused(self) -> None:
+        errors = _errors_for(
+            _plugin_node(
+                "ssh-session-open",
+                {"host": "node-1", "username": "wave", "password": "pw", "use_parent": True},
+                label="SSH_Open_1",
+            )
+        )
+        assert _missing_params(errors, "SSH_Open_1") == ["parent_session_id"]
