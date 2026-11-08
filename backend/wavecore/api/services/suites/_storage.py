@@ -10,7 +10,7 @@ import yaml
 from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.shared import stored_variable_values
-from wavecore.api.services.storage_paths import get_suites_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_suites_storage_path, is_entity_id
 from wavecore.core.secrets.sealing import seal_variables
 
 
@@ -29,11 +29,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_suite_dir(suite_id: str) -> Path:
     """Get directory path for a suite."""
-    return get_suites_storage_path() / suite_id
+    return entity_dir(get_suites_storage_path(), suite_id)
 
 
 def _load_suite(suite_id: str) -> dict[str, Any] | None:
     """Load suite from file storage."""
+    if not is_entity_id(suite_id):
+        return None
     suite_file = _get_suite_dir(suite_id) / "suite.yaml"
     if not suite_file.exists():
         return None

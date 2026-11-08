@@ -7,12 +7,17 @@ import os
 from pathlib import Path
 
 from wavecore.api.config import get_config
+from wavecore.api.exceptions import ValidationException
 
 # The data folder in use: set_base_path() or the config's folder, fixed until reset_path_cache().
 _base_path_cache: Path | None = None
 
 # Cache for the artifact root (env override or {base_path}/artifacts)
 _artifacts_path_cache: Path | None = None
+
+# What one path segment can never be, or hold, on any host.
+_NOT_SEGMENTS = frozenset({"", ".", ".."})
+_SEPARATORS = frozenset("/\\\0")
 
 
 def get_base_path() -> Path:
@@ -21,6 +26,18 @@ def get_base_path() -> Path:
     if _base_path_cache is None:
         _base_path_cache = get_config().resolved_data_folder()
     return _base_path_cache
+
+
+def is_entity_id(entity_id: str) -> bool:
+    """Whether an ID is one plain path segment, the only kind that names a stored entity."""
+    return entity_id not in _NOT_SEGMENTS and _SEPARATORS.isdisjoint(entity_id)
+
+
+def entity_dir(root: Path, entity_id: str) -> Path:
+    """A stored entity's folder under its storage root; refuses an ID is_entity_id rejects."""
+    if not is_entity_id(entity_id):
+        raise ValidationException(f"Invalid UUID format for id: '{entity_id}'")
+    return root / entity_id
 
 
 def get_tests_storage_path() -> Path:
@@ -89,7 +106,7 @@ def get_testdata_storage_path() -> Path:
 
 def get_test_testdata_path(test_id: str) -> Path:
     """A test's own Test Data folder (base_path/testdata/<test_id>)."""
-    return get_testdata_storage_path() / test_id
+    return entity_dir(get_testdata_storage_path(), test_id)
 
 
 def get_local_process_storage_path() -> Path:

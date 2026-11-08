@@ -23,10 +23,12 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import (
@@ -744,6 +746,25 @@ class TestBatchBlockOperationsEndpoint:
             data = response.json()
             assert len(data["deleted"]) == 2
             assert data["failed"] == []
+
+    def test_batch_delete_an_id_walking_back_into_the_folder_is_not_found(
+        self, client: TestClient
+    ) -> None:
+        """Test an ID that reaches a stored block through its folder deletes nothing."""
+        from wavecore.api.services.blocks import _storage as block_storage
+
+        block_id = str(uuid.uuid4())
+        block_storage._save_block({"id": block_id, "name": "kept_block", "dependencies": []})
+        crafted = f"../api_blocks/{block_id}"
+
+        response = client.request("DELETE", "/blocks/batch", json=[crafted])
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "deleted": [],
+            "failed": [{"index": 0, "error": f"Block with ID '{crafted}' not found"}],
+        }
+        assert block_storage._load_block(block_id) is not None
 
 
 class TestListBlockVersionsEndpoint:
@@ -1597,6 +1618,29 @@ class TestValidateBlockEndpoint:
             assert data["success"] is True
             assert data["data"]["valid"] is False
             assert len(data["data"]["errors"]) == 2
+
+    def test_validate_block_plugin_id_reaching_another_folder_is_not_found(
+        self, client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test a plugin_id that walks into another category reads no plugin there."""
+        from tests.conftest import create_test_plugin
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.storage import FileBasedStorage
+
+        plugin = create_test_plugin(id="stored-plugin", category="network")
+        plugin_file = tmp_path / "plugins" / "network" / "stored-plugin" / "1.0.0.yaml"
+        plugin_file.parent.mkdir(parents=True)
+        plugin_file.write_text(yaml.safe_dump(plugin.model_dump(mode="json")), encoding="utf-8")
+        monkeypatch.setattr(block_storage, "_storage", FileBasedStorage(tmp_path))
+        plugin_id = "../network/stored-plugin"
+
+        response = client.post(
+            "/blocks/validate",
+            json={"name": "Probe", "plugin_id": plugin_id, "description": "Probe"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["errors"] == [f"Plugin reference '{plugin_id}' not found"]
 
     def test_validate_block_detects_circular_dependencies(self, client: TestClient) -> None:
         """Test that POST /blocks/validate detects circular dependencies (REQ-5.2.4.2)."""

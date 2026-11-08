@@ -106,6 +106,18 @@ class TestErrorPaths:
         with pytest.raises(FileNotFoundError, match="^Plugin not found: empty-plugin$"):
             storage.load_plugin("empty-plugin")
 
+    @pytest.mark.parametrize(
+        "plugin_id", ["../network/stored-plugin", "..\\network\\stored-plugin", "..", ""]
+    )
+    def test_load_plugin_id_that_is_not_one_plain_segment_is_not_found(self, storage, plugin_id):
+        """Test an ID reaching another folder never loads the YAML it points at."""
+        _store_plugin(storage.base_path, create_test_plugin(id="stored-plugin", category="network"))
+
+        with pytest.raises(FileNotFoundError) as missing:
+            storage.load_plugin(plugin_id)
+
+        assert str(missing.value) == f"Plugin not found: {plugin_id}"
+
 
 LOCALE_TEXT = {"name": "Grüße 測試", "description": "Grüße 測試 description"}
 

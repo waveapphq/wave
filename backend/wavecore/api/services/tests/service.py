@@ -43,7 +43,7 @@ from wavecore.api.services.block_node_checks import (
 )
 from wavecore.api.services.block_schema import BlockSchema, block_schema
 from wavecore.api.services.entity_cache import DirectoryCache
-from wavecore.api.services.storage_paths import get_tests_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_tests_storage_path, is_entity_id
 from wavecore.api.services.tests import testdata_service
 from wavecore.api.services.typed_numbers import store_workflow_numbers
 from wavecore.api.services.variable_service import refuse_value_problems
@@ -394,11 +394,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_test_dir(test_id: str) -> Path:
     """Get directory path for a test."""
-    return get_tests_storage_path() / test_id
+    return entity_dir(get_tests_storage_path(), test_id)
 
 
 def _load_test(test_id: str) -> dict[str, Any] | None:
     """Load test from file storage, forgetting the cached entry when the file is gone."""
+    if not is_entity_id(test_id):
+        return None
     test_file = _get_test_dir(test_id) / _TEST_FILENAME
     if not test_file.exists():
         _test_directory.forget(test_id)

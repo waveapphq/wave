@@ -16,7 +16,7 @@ from wavecore.api.exceptions import (
 )
 from wavecore.api.services.entity_cache import DirectoryCache
 from wavecore.api.services.shared import export_file_stem, first_free_name
-from wavecore.api.services.storage_paths import get_profiles_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_profiles_storage_path
 from wavecore.core.execution.field_checks import type_name
 from wavecore.core.number_rule import (
     MAX_FLOAT_SIG_DIGITS,
@@ -182,7 +182,7 @@ def _ensure_storage_dir() -> None:
 
 def _get_profile_dir(profile_id: str) -> Path:
     """Get directory path for a profile."""
-    return get_profiles_storage_path() / profile_id
+    return entity_dir(get_profiles_storage_path(), profile_id)
 
 
 def _save_profile(profile: dict[str, Any]) -> None:

@@ -793,6 +793,27 @@ class TestBatchDeleteTestsEndpoint:
             assert len(data["deleted"]) == 1
             assert len(data["failed"]) == 1
 
+    def test_batch_delete_an_id_walking_back_into_the_folder_is_not_found(
+        self, client: TestClient
+    ) -> None:
+        """Test an ID that reaches a stored test through its folder deletes nothing."""
+        from wavecore.api.services.tests import service as test_service
+        from wavecore.api.services.tests import testdata_service
+
+        kept = test_service.create_test({"name": "Kept Test"})
+        testdata_service.write_files(kept["id"], [("kept.csv", b"1")])
+        crafted = f"../api_tests/{kept['id']}"
+
+        response = client.request("DELETE", "/tests/batch", json=[crafted])
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "deleted": [],
+            "failed": [{"index": 0, "error": f"Test with ID '{crafted}' not found"}],
+        }
+        assert test_service.get_test(kept["id"]) is not None
+        assert [rel for rel, _path in testdata_service.iter_files(kept["id"])] == ["kept.csv"]
+
 
 class TestGetTestEndpoint:
     """Test suite for GET /tests/{test_id} endpoint (get test by ID)."""

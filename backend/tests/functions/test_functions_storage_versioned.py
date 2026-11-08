@@ -808,6 +808,25 @@ class TestDeleteVersion:
         # The function directory is removed once its last version is dropped.
         assert not (_published_dir() / fn_id).exists()
 
+    def test_a_listed_version_that_is_not_semver_is_refused_and_deletes_nothing(self) -> None:
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.functions._storage import delete_version, save_new_version
+
+        fn_id, other_id = str(uuid.uuid4()), "victim"
+        save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="g")
+        save_new_version(other_id, "1.0.0", _make_definition(), _make_metadata(), name="h")
+        crafted = f"../../{other_id}/versions/1.0.0"
+        index_file = _published_dir() / fn_id / "index.yaml"
+        index = yaml.safe_load(index_file.read_text(encoding="utf-8"))
+        index["available_versions"].append(crafted)
+        index_file.write_text(yaml.safe_dump(index), encoding="utf-8")
+
+        with pytest.raises(ValidationException) as refused:
+            delete_version(fn_id, crafted)
+
+        assert refused.value.message == f"Function version '{crafted}' is not a valid semver"
+        assert (_published_dir() / other_id / "versions" / "1.0.0.yaml").exists()
+
 
 class TestScanFunctionDependentsEdges:
     """`_scan_function_dependents` silently skips non-dir entries and dirs

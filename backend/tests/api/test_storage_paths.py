@@ -12,6 +12,7 @@ import yaml
 
 from wavecore.api.config import loader
 from wavecore.api.config.loader import Config, ConfigValidationError
+from wavecore.api.exceptions import ValidationException
 from wavecore.api.services import storage_paths
 
 
@@ -206,6 +207,44 @@ class TestTestDataStoragePaths:
 
         storage_paths.reset_path_cache()
         storage_paths.set_base_path(temp_storage_path)
+
+    def test_get_test_testdata_path_refuses_an_id_leaving_the_zone(self, tmp_path: Path) -> None:
+        storage_paths.set_base_path(str(tmp_path))
+
+        with pytest.raises(ValidationException, match=r"^Invalid UUID format for id: '\.\./x'$"):
+            storage_paths.get_test_testdata_path("../x")
+
+
+NOT_ONE_SEGMENT = ["", ".", "..", "../outside", "a/b", "/abs", "a\\b", "..\\outside", "a\x00b"]
+
+
+class TestEntityDir:
+    """A stored entity's folder is one plain path segment under its storage root."""
+
+    def test_an_id_is_the_folder_under_the_root(self, tmp_path: Path) -> None:
+        entity_id = "11111111-2222-3333-4444-555555555555"
+
+        assert storage_paths.entity_dir(tmp_path, entity_id) == tmp_path / entity_id
+
+    @pytest.mark.parametrize("entity_id", ["abc", "a.b", "...", "name with spaces"])
+    def test_any_plain_segment_is_accepted(self, tmp_path: Path, entity_id: str) -> None:
+        assert storage_paths.entity_dir(tmp_path, entity_id).parent == tmp_path
+
+    @pytest.mark.parametrize("entity_id", NOT_ONE_SEGMENT)
+    def test_an_id_that_is_not_one_plain_segment_is_refused(
+        self, tmp_path: Path, entity_id: str
+    ) -> None:
+        with pytest.raises(ValidationException) as refused:
+            storage_paths.entity_dir(tmp_path, entity_id)
+
+        assert refused.value.message == f"Invalid UUID format for id: '{entity_id}'"
+
+    @pytest.mark.parametrize("entity_id", NOT_ONE_SEGMENT)
+    def test_is_entity_id_is_false_for_what_entity_dir_refuses(self, entity_id: str) -> None:
+        assert storage_paths.is_entity_id(entity_id) is False
+
+    def test_is_entity_id_is_true_for_a_uuid(self) -> None:
+        assert storage_paths.is_entity_id("11111111-2222-3333-4444-555555555555") is True
 
 
 class TestBasePathFromConfig:

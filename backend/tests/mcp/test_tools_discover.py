@@ -437,6 +437,65 @@ class TestResolveRef:
             )
 
 
+def _stored_entity(kind: str) -> str:
+    from tests.mcp.conftest import create_test_entity
+    from wavecore.api.services.regressions import service as regression_service
+    from wavecore.api.services.suites import service as suite_service
+
+    if kind == "test":
+        return str(create_test_entity("Stored Test")["id"])
+    if kind == "suite":
+        return str(suite_service.create_suite({"name": "Stored Suite"})["id"])
+    return str(regression_service.create_regression({"name": "Stored Regression"})["id"])
+
+
+class TestReferenceOutsideItsFolder:
+    """A reference that is not one plain path segment names no stored entity."""
+
+    @pytest.mark.parametrize(
+        ("kind", "folder"),
+        [("test", "api_tests"), ("suite", "api_suites"), ("regression", "api_regressions")],
+    )
+    def test_a_reference_walking_back_into_the_folder_is_not_found(
+        self, kind: str, folder: str
+    ) -> None:
+        from wavecore.mcp.tools import discover
+
+        ref = f"../{folder}/{_stored_entity(kind)}"
+        getter = getattr(discover, f"get_{kind}")
+
+        with pytest.raises(NotFoundException, match=rf"^{kind.capitalize()} '{ref}' not found$"):
+            getter(ref)
+
+    def test_a_name_holding_a_slash_still_resolves_by_name(self) -> None:
+        from tests.mcp.conftest import create_test_entity
+        from wavecore.mcp.tools import discover
+
+        created = create_test_entity("Smoke / Nightly")
+
+        assert discover.get_test("Smoke / Nightly")["id"] == created["id"]
+
+    def test_a_function_reference_walking_back_into_the_folder_is_not_found(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        ref = f"../functions/{_create_function('alpha_fn')['id']}"
+
+        with pytest.raises(NotFoundException, match=rf"^Function '{ref}' not found$"):
+            discover.get_function(ref)
+
+    def test_a_version_reaching_another_function_is_not_found(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        pinned = _create_function("alpha_fn")["id"]
+        other = _create_function("beta_fn")["id"]
+        version = f"../../{other}/versions/1.0.0"
+
+        with pytest.raises(
+            NotFoundException, match=rf"^Function '{pinned}' version '{version}' not found$"
+        ):
+            discover.get_function(pinned, version=version)
+
+
 class TestSuites:
     def _seed(self) -> tuple[str, str]:
         from tests.mcp.conftest import create_test_entity

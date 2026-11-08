@@ -30,7 +30,7 @@ import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.entity_cache import DirectoryCache
-from wavecore.api.services.storage_paths import get_executions_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_executions_storage_path
 from wavecore.core.namespace_base import is_engine_injected
 from wavecore.core.secrets.masking import mask_structure
 from wavecore.core.secrets.registry import SecretRegistry
@@ -121,7 +121,7 @@ def _ensure_storage_dir() -> None:
 
 
 def _get_execution_dir(execution_id: str) -> Path:
-    return get_executions_storage_path() / execution_id
+    return entity_dir(get_executions_storage_path(), execution_id)
 
 
 def _logs_dir(execution_id: str) -> Path:

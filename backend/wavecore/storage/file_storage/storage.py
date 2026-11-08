@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 from packaging import version as pkg_version
 
+from wavecore.api.services.storage_paths import entity_dir, is_entity_id
 from wavecore.models.plugins import Plugin
 
 PLUGIN_CATEGORIES = [
@@ -41,8 +42,9 @@ class FileBasedStorage:
 
     def load_plugin(self, plugin_id: str) -> Plugin:
         """Load the latest version of a plugin from whichever category holds it."""
-        for category in PLUGIN_CATEGORIES:
-            plugin_dir = self.base_path / "plugins" / category / plugin_id
+        categories = PLUGIN_CATEGORIES if is_entity_id(plugin_id) else []
+        for category in categories:
+            plugin_dir = entity_dir(self.base_path / "plugins" / category, plugin_id)
             versions = [f.stem for f in plugin_dir.glob("*.yaml")]
             if versions:
                 latest = max(versions, key=pkg_version.parse)

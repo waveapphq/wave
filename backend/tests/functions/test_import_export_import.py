@@ -516,6 +516,22 @@ class TestCleanImport:
         listed = client.get("/functions?search=persisted_import").json()["data"]
         assert any(row["name"] == "persisted_import" for row in listed)
 
+    def test_an_id_leaving_the_library_folder_is_skipped_and_writes_nothing(
+        self, client: TestClient
+    ) -> None:
+        doc = _export_doc(name="escapes", id="../escaped")
+
+        response = _import(client, _yaml_bytes(doc), "escapes.yaml")
+
+        assert response.status_code == 200, response.text
+        result = response.json()["data"]
+        assert result["imported"] == []
+        assert result["skipped"] == [
+            {"name": "escapes", "reason": "Invalid UUID format for id: '../escaped'"}
+        ]
+        assert _library_files() == {}
+        assert not (get_functions_storage_path().parent / "escaped").exists()
+
     @pytest.mark.usefixtures("http_client_plugin")
     @pytest.mark.parametrize("kind", ["foreign", "masked"])
     @pytest.mark.parametrize("place", _FUNCTION_SECRET_PLACES)

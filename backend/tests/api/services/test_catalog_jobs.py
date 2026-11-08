@@ -576,6 +576,26 @@ class TestStartingVariables:
         ):
             catalog_jobs.starting_variables(None, "e1", [])
 
+    def test_an_environment_reached_through_another_folder_is_refused(
+        self, seed_test_environment: str
+    ) -> None:
+        from wavecore.api.services.environments import service as environment_service
+
+        environment_service._clear_in_memory_cache()
+        crafted = f"../api_environments/{seed_test_environment}"
+
+        with pytest.raises(
+            UnprocessableEntityException, match=exact(f"Environment with ID '{crafted}' not found")
+        ):
+            catalog_jobs.starting_variables(None, crafted, [])
+
+    def test_a_test_reached_through_another_folder_declares_nothing(self) -> None:
+        test_id = saved_test({"os_host": {"type": "string", "value": "vars-host"}})
+
+        variables = catalog_jobs.starting_variables(f"../api_tests/{test_id}", None, [])
+
+        assert "os_host" not in variables
+
     def test_the_tests_declared_variables_are_there(self) -> None:
         test_id = saved_test(
             {
