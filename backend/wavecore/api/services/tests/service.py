@@ -1205,7 +1205,7 @@ def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
             update = shared.batch_object(item)
             test_id = str(update.get("id", ""))
             # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
-            update_data = update.get("update", {})
+            update_data = shared.batch_update_fields(update)
             if not update_data:
                 # If no "update" key, use remaining fields as update data
                 update_data = {k: v for k, v in update.items() if k != "id"}

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Body, Query, Response, status
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
+from wavecore.api.routes.shared import list_field
 from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import _versioning as function_versioning
 from wavecore.api.services.functions import service as function_service
@@ -86,7 +87,7 @@ async def list_functions(
 async def batch_create_functions(
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, Any]:
-    items = payload.get("items") or []
+    items = list_field(payload, "items", "'items' must be a list")
     result = function_service.batch_create_functions(items)
     return {"success": True, "data": result}
 
@@ -95,7 +96,8 @@ async def batch_create_functions(
 async def batch_delete_functions(
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, Any]:
-    ids = payload.get("ids") or []
+    # Each item that is not an ID string fails on its own, so only the list shape is refused here
+    ids = list_field(payload, "ids", "'ids' must be a list of ID strings")
     cascade = bool(payload.get("cascade", False))
     result = function_service.batch_delete_functions(ids, cascade=cascade)
     return {"success": True, "data": result}

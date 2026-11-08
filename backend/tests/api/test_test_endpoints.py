@@ -39,6 +39,7 @@ from fastapi.testclient import TestClient
 from tests.api.body_shape_support import (
     NOT_AN_ID_ITEM,
     NOT_AN_OBJECT_ITEM,
+    NOT_AN_UPDATE_OBJECT,
     NOT_ARRAY_BODIES,
     NOT_ID_ITEMS,
     NOT_OBJECT_BODIES,
@@ -3786,6 +3787,30 @@ class TestATestBatchItemOfTheWrongShape:
             "updated": [test_id],
             "failed": [{"index": 0, "error": NOT_AN_OBJECT_ITEM}],
         }
+        assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("update", NOT_OBJECT_ITEMS)
+    def test_an_update_item_whose_update_is_not_an_object_fails(
+        self, client: TestClient, update: Any
+    ) -> None:
+        kept_id = self._create(client)
+        test_id = self._create(client)
+        before = client.get(f"/tests/{kept_id}").json()["data"]
+
+        response = client.patch(
+            "/tests/batch",
+            json=[
+                {"id": kept_id, "update": update},
+                {"id": test_id, "update": {"description": "Updated"}},
+            ],
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_UPDATE_OBJECT}],
+        }
+        assert client.get(f"/tests/{kept_id}").json()["data"] == before
         assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
 
     @pytest.mark.parametrize("item", NOT_ID_ITEMS)

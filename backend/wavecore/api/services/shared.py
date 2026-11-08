@@ -627,6 +627,14 @@ def batch_object(item: Any) -> dict[str, Any]:
     return item
 
 
+def batch_update_fields(item: dict[str, Any]) -> dict[str, Any]:
+    """A batch item's 'update' as a JSON object, empty when absent; else the item fails."""
+    fields = item.get("update", {})
+    if not isinstance(fields, dict):
+        raise ValidationException("'update' must be a JSON object")
+    return fields
+
+
 def batch_id(item: Any) -> str:
     """A batch item as an ID string; any other item fails on its own."""
     if not isinstance(item, str):

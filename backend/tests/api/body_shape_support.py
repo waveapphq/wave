@@ -40,6 +40,21 @@ NOT_ID_ITEMS = [
     pytest.param(None, id="null"),
 ]
 
+NOT_AN_UPDATE_OBJECT = "'update' must be a JSON object"
+
+NOT_LIST_FIELDS = [
+    pytest.param(5, id="number"),
+    pytest.param("abc", id="string"),
+    pytest.param({"id": "x"}, id="object"),
+    pytest.param(None, id="null"),
+]
+
+NOT_ID_LIST_FIELDS = [
+    *NOT_LIST_FIELDS,
+    pytest.param([1], id="list-of-numbers"),
+    pytest.param(["x", None], id="list-with-null"),
+]
+
 
 def send_text(client: TestClient, method: str, path: str, text: str) -> Any:
     """Send `text` as the JSON request body, whatever it holds."""

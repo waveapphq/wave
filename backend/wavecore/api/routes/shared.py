@@ -48,6 +48,23 @@ async def read_json_array(request: Request) -> list[Any]:
     return body
 
 
+def list_field(body: dict[str, Any], field: str, message: str) -> list[Any]:
+    """The body's `field` as a list, empty when absent; any other value is a bad request."""
+    value = body.get(field, [])
+    if not isinstance(value, list):
+        raise ValidationException(message)
+    return value
+
+
+def id_list_field(body: dict[str, Any], field: str) -> list[str]:
+    """The body's `field` as a list of ID strings, empty when absent; else a bad request."""
+    message = f"'{field}' must be a list of ID strings"
+    ids = list_field(body, field, message)
+    if not all(isinstance(item, str) for item in ids):
+        raise ValidationException(message)
+    return ids
+
+
 def envelope(payload: dict[str, Any]) -> dict[str, Any]:
     """The success body every WAVE endpoint answers with; the client reads `data`."""
     return {"success": True, "data": payload}

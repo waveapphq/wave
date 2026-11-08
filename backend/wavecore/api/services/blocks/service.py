@@ -19,7 +19,7 @@ from wavecore.api.services.blocks._storage import (
     _validate_plugin_exists,
     get_block_dependents,
 )
-from wavecore.api.services.shared import batch_delete, batch_object
+from wavecore.api.services.shared import batch_delete, batch_object, batch_update_fields
 
 # ===========================================================================
 # CRUD
@@ -161,11 +161,11 @@ def batch_update_blocks(updates: list[Any]) -> dict[str, Any]:
     for idx, item in enumerate(updates):
         try:
             update = batch_object(item)
+            update_data = batch_update_fields(update)
         except ValidationException as e:
             failed.append({"index": idx, "error": str(e)})
             continue
         block_id = str(update.get("id", ""))
-        update_data = update.get("update", {})
         block = _load_block(block_id)
         if block is None:
             failed.append({"index": idx, "error": f"Block with ID '{block_id}' not found"})
