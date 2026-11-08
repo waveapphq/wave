@@ -14,6 +14,8 @@ from typing import Any
 import pytest
 import yaml
 
+from wavecore.core.table import Table
+
 
 class TestPluginExecutor:
     """Test suite for PluginExecutor utility."""
@@ -2305,6 +2307,8 @@ _QUERY_ESCAPE = {
     "default": "dql",
 }
 
+_SECRET_TABLE = Table.from_list([{"name": "alpha", "qty": 1}])
+
 
 def _resolve_query(
     parameters: dict[str, Any], variables: dict[str, Any], **kwargs: Any
@@ -2636,6 +2640,49 @@ class TestTemplateEscapeSecretForms:
 
         assert result["query"] == r'{"match": {"pw":"pa\bss\fw0rd"}}'
         assert mask_text(result["query"], registry.scan_values()) == '{"match": {"pw":"********"}}'
+
+    @pytest.mark.parametrize(
+        ("value", "filled"),
+        [
+            (_SECRET_TABLE, '[{"name":"alpha","qty":1}]'),
+            (["alpha", 1e-07], '["alpha",1e-07]'),
+            ({"host": "db.internal", "rate": 1e-07}, '{"host":"db.internal","rate":1e-07}'),
+        ],
+        ids=["table", "list", "map"],
+    )
+    def test_the_run_registry_scrubs_a_secret_container_standing_alone_in_json(
+        self, value: Any, filled: str
+    ) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", value, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"terms": {{ rows }}}'},
+            {"rows": value},
+            registry=registry,
+        )
+
+        assert result["query"] == '{"terms": ' + filled + "}"
+        assert mask_text(result["query"], registry.scan_values()) == '{"terms": ********}'
+
+    def test_the_run_registry_scrubs_a_secret_table_filled_inside_a_json_string(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", _SECRET_TABLE, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"m": "{{ rows }}"}'},
+            {"rows": _SECRET_TABLE},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"m": "[{\"name\":\"alpha\",\"qty\":1}]"}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"m": "********"}'
 
     def test_a_value_that_is_no_secret_registers_nothing(self) -> None:
         registry = _SpyRegistry(("hunter2secret",))

@@ -104,9 +104,10 @@ class SecretRegistry:
             # An empty container holds nothing to hide: its forms would mask every empty one.
             if not items:
                 return
-            # A secret container masks whole: register its str() and printed forms (REQ-3.1.3.23).
+            # A secret container masks whole: its str(), print and fill forms (REQ-3.1.3.23).
             self._add_scan_form(str(value), forms)
             self._add_scan_form(value_text(value), forms)
+            self._add_scan_form(_template_fill_text(value), forms)
             for item in items:
                 self._collect_forms(item, forms)
             return
@@ -144,6 +145,14 @@ def _container_items(value: Any) -> list[Any] | None:
     if isinstance(value, Table):
         return [cell for row in value.to_list() for cell in row.values()]
     return None
+
+
+def _template_fill_text(value: Any) -> str:
+    """The text a DQL or JSON template fills in for ``value`` (REQ-3.3.2.6)."""
+    # The template fill imports core/table, which imports the secrets package.
+    from wavecore.core.expressions.template_escape import text_form
+
+    return text_form(value)
 
 
 def _repr_inner(value: str, quote: str) -> str:

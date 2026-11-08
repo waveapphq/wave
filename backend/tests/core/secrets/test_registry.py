@@ -8,6 +8,9 @@ state - no scopes, no reveal, no source-store back ends.
 """
 
 from decimal import Decimal
+from typing import Any
+
+import pytest
 
 from wavecore.core.secrets.masking import mask_text
 from wavecore.core.secrets.registry import SecretRegistry
@@ -412,6 +415,27 @@ class TestJsonEscapedForms:
         printed = value_text({"user": "ann", "key": "k3y\bvalue"})
 
         assert mask_text(printed, registry.scan_values()) == '{"user":"ann","key":"********"}'
+
+
+class TestJsonFillForms:
+    """A secret list, map or table filled alone in a JSON template masks whole (REQ-3.3.2.6)."""
+
+    @pytest.mark.parametrize(
+        ("value", "filled"),
+        [
+            (Table.from_list([{"name": "alpha", "qty": 1}]), '[{"name":"alpha","qty":1}]'),
+            (["alpha", 1e-07], '["alpha",1e-07]'),
+            ({"host": "db.internal", "rate": 1e-07}, '{"host":"db.internal","rate":1e-07}'),
+        ],
+        ids=["table", "list", "map"],
+    )
+    def test_the_text_a_json_fill_writes_is_masked_whole(self, value: Any, filled: str) -> None:
+        registry = SecretRegistry()
+        registry.register("rows", value, "declared")
+
+        query = '{"terms": ' + filled + "}"
+
+        assert mask_text(query, registry.scan_values()) == '{"terms": ********}'
 
 
 class TestHeldNames:
