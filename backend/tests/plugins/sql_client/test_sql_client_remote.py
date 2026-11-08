@@ -96,7 +96,10 @@ ORDERS = (
 
 
 def _refusal(scheme: str) -> str:
-    return f"{scheme} paths are not available on the remote host"
+    return (
+        f"{scheme} paths are not available on the remote host - "
+        "use an absolute or relative path on the remote host"
+    )
 
 
 @pytest.fixture(autouse=True)
