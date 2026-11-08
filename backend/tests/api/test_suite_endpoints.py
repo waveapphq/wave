@@ -21,13 +21,16 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
     NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
     NOT_OBJECT_BODIES,
     assert_refused,
     send_text,
@@ -2304,3 +2307,40 @@ class TestASuiteBatchBodyThatIsNotAJsonArray:
         self, client: TestClient, method: str, path: str, text: str, message: str
     ) -> None:
         assert_refused(send_text(client, method, path, text), message)
+
+
+class TestASuiteBatchItemThatIsNotAnId:
+    """A Suite batch item that is not an ID string fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/suites", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.request("DELETE", "/suites/batch", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [suite_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_clone_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.post("/suites/batch/clone", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
+        assert [entry["original_id"] for entry in body["cloned"]] == [suite_id]

@@ -37,8 +37,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
     NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
     NOT_OBJECT_BODIES,
+    NOT_OBJECT_ITEMS,
     assert_refused,
     send_text,
 )
@@ -3743,3 +3747,55 @@ class TestATestBatchBodyThatIsNotAJsonArray:
         response = send_text(client, "DELETE", "/tests/batch", '{"ids": "x"}')
 
         assert_refused(response, "The request body must be a JSON array")
+
+
+class TestATestBatchItemOfTheWrongShape:
+    """A Test batch item of the wrong shape fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/tests", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_a_create_item_that_is_not_an_object_fails(self, client: TestClient, item: Any) -> None:
+        response = client.post("/tests/batch", json=[item, {"name": "Batch Created"}])
+
+        assert response.status_code == 201, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_OBJECT_ITEM}]
+        assert len(body["created"]) == 1
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_update_item_that_is_not_an_object_fails(
+        self, client: TestClient, item: Any
+    ) -> None:
+        test_id = self._create(client)
+
+        response = client.patch(
+            "/tests/batch", json=[item, {"id": test_id, "update": {"description": "Updated"}}]
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_OBJECT_ITEM}],
+        }
+        assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_that_is_not_an_id_fails(self, client: TestClient, item: Any) -> None:
+        test_id = self._create(client)
+
+        response = client.request("DELETE", "/tests/batch", json=[item, test_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }

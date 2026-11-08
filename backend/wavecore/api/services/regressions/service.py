@@ -513,12 +513,12 @@ def delete_regression(regression_id: str) -> bool:
     return True
 
 
-def batch_delete_regressions(regression_ids: list[str]) -> dict[str, Any]:
+def batch_delete_regressions(regression_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple regressions in a batch."""
     return batch_delete(regression_ids, delete_regression, "Regression")
 
 
-def batch_clone_regressions(regression_ids: list[str]) -> dict[str, Any]:
+def batch_clone_regressions(regression_ids: list[Any]) -> dict[str, Any]:
     """Clone multiple regressions in a batch."""
     from wavecore.api.services.regressions import version_service
 

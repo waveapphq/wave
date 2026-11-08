@@ -23,6 +23,23 @@ NOT_ARRAY_BODIES = [
     pytest.param("{not json", NOT_JSON, id="not-json"),
 ]
 
+NOT_AN_OBJECT_ITEM = "The item must be a JSON object"
+NOT_AN_ID_ITEM = "The item must be an ID string"
+
+NOT_OBJECT_ITEMS = [
+    pytest.param(1, id="number"),
+    pytest.param("name", id="string"),
+    pytest.param([1], id="list"),
+    pytest.param(None, id="null"),
+]
+
+NOT_ID_ITEMS = [
+    pytest.param(1, id="number"),
+    pytest.param({"id": "x"}, id="object"),
+    pytest.param(["x"], id="list"),
+    pytest.param(None, id="null"),
+]
+
 
 def send_text(client: TestClient, method: str, path: str, text: str) -> Any:
     """Send `text` as the JSON request body, whatever it holds."""

@@ -1163,7 +1163,7 @@ def delete_test(test_id: str) -> bool:
     return True
 
 
-def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
     """Create multiple tests in a batch.
 
     Args:
@@ -1177,7 +1177,7 @@ def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
 
     for idx, test_data in enumerate(tests):
         try:
-            test = create_test(test_data)
+            test = create_test(shared.batch_object(test_data))
             created.append(test["id"])
         except SaveValidationError as e:
             failed.append({"index": idx, "error": e.errors[0]["message"]})
@@ -1187,7 +1187,7 @@ def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
     return {"created": created, "failed": failed}
 
 
-def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
     """Update multiple tests in a batch.
 
     Args:
@@ -1200,15 +1200,15 @@ def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
 
-    for idx, update in enumerate(updates):
-        test_id = str(update.get("id", ""))
-        # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
-        update_data = update.get("update", {})
-        if not update_data:
-            # If no "update" key, use remaining fields as update data
-            update_data = {k: v for k, v in update.items() if k != "id"}
-
+    for idx, item in enumerate(updates):
         try:
+            update = shared.batch_object(item)
+            test_id = str(update.get("id", ""))
+            # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
+            update_data = update.get("update", {})
+            if not update_data:
+                # If no "update" key, use remaining fields as update data
+                update_data = {k: v for k, v in update.items() if k != "id"}
             result = update_test(test_id, update_data)
             if result is None:
                 failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
@@ -1222,7 +1222,7 @@ def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
     return {"updated": updated, "failed": failed}
 
 
-def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
+def batch_delete_tests(test_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple tests in a batch.
 
     Args:

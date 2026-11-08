@@ -620,16 +620,31 @@ def refuse_unknown_members(
             raise ValidationException(f"{kind} with ID '{member_id}' not found")
 
 
+def batch_object(item: Any) -> dict[str, Any]:
+    """A batch item as a JSON object; any other item fails on its own."""
+    if not isinstance(item, dict):
+        raise ValidationException("The item must be a JSON object")
+    return item
+
+
+def batch_id(item: Any) -> str:
+    """A batch item as an ID string; any other item fails on its own."""
+    if not isinstance(item, str):
+        raise ValidationException("The item must be an ID string")
+    return item
+
+
 def _batch_each[
     Done
-](ids: Sequence[str], act: Callable[[str], Done | None], kind: str) -> tuple[
+](ids: Sequence[Any], act: Callable[[str], Done | None], kind: str) -> tuple[
     list[Done], list[dict[str, Any]]
 ]:
-    """Act on each ID in turn; a missing (None) or refused one goes to the failures by its index."""
+    """Act on each ID in turn; a malformed, missing (None) or refused one fails by its index."""
     done: list[Done] = []
     failed: list[dict[str, Any]] = []
-    for idx, item_id in enumerate(ids):
+    for idx, item in enumerate(ids):
         try:
+            item_id = batch_id(item)
             result = act(item_id)
         except (ValueError, WaveException) as e:
             failed.append({"index": idx, "error": str(e)})
@@ -641,16 +656,16 @@ def _batch_each[
     return done, failed
 
 
-def batch_delete(ids: Sequence[str], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
-    """Delete each ID in turn; a missing or refused one goes to ``failed`` by its index."""
+def batch_delete(ids: Sequence[Any], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
+    """Delete each ID in turn; a missing, refused or malformed one goes to ``failed``."""
     deleted, failed = _batch_each(ids, lambda item_id: item_id if delete(item_id) else None, kind)
     return {"deleted": deleted, "failed": failed}
 
 
 def batch_clone(
-    ids: Sequence[str], clone: Callable[[str], dict[str, Any] | None], kind: str
+    ids: Sequence[Any], clone: Callable[[str], dict[str, Any] | None], kind: str
 ) -> dict[str, Any]:
-    """Clone each ID in turn; a missing or refused one goes to ``failed`` by its index."""
+    """Clone each ID in turn; a missing, refused or malformed one goes to ``failed``."""
 
     def clone_one(item_id: str) -> dict[str, str] | None:
         copied = clone(item_id)

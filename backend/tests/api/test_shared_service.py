@@ -15,7 +15,7 @@ Test Coverage:
 - The export file name rule every export shares (REQ-4.6.9)
 - The first free numbered name and the match and target of an incoming item (REQ-5.2.4.9.5)
 - Variables as a save stores them: typed numbers in wire form (REQ-3.1.3.14)
-- One batch delete pass for Suites, Regressions and Tests
+- One batch delete pass for Suites, Regressions, Tests and Blocks
 - One batch clone pass for Suites and Regressions
 """
 
@@ -29,6 +29,7 @@ from typing import Any
 
 import pytest
 
+from tests.api.body_shape_support import NOT_AN_ID_ITEM, NOT_ID_ITEMS
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import shared
 from wavecore.api.services.environments import service as environment_service
@@ -805,6 +806,20 @@ class TestBatchDelete:
             "failed": [{"index": 1, "error": "Test with ID 'gone' not found"}],
         }
 
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_keeps_an_item_that_is_not_an_id_and_goes_on(self, item: Any) -> None:
+        seen: list[str] = []
+
+        def delete(item_id: str) -> bool:
+            seen.append(item_id)
+            return True
+
+        assert shared.batch_delete([item, "free"], delete, "Block") == {
+            "deleted": ["free"],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+        assert seen == ["free"]
+
     @pytest.mark.parametrize("error", [ConflictException("Busy"), ValueError("Busy")])
     def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
         def delete(item_id: str) -> bool:
@@ -845,6 +860,20 @@ class TestBatchClone:
             "cloned": [{"original_id": "here", "cloned_id": "here-copy"}],
             "failed": [{"index": 1, "error": "Regression with ID 'gone' not found"}],
         }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_keeps_an_item_that_is_not_an_id_and_goes_on(self, item: Any) -> None:
+        seen: list[str] = []
+
+        def clone(item_id: str) -> dict[str, Any]:
+            seen.append(item_id)
+            return {"id": f"{item_id}-copy"}
+
+        assert shared.batch_clone([item, "free"], clone, "Suite") == {
+            "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+        assert seen == ["free"]
 
     @pytest.mark.parametrize("error", [ConflictException("Taken"), ValueError("Taken")])
     def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:

@@ -342,12 +342,12 @@ def delete_suite(suite_id: str) -> bool:
     return True
 
 
-def batch_delete_suites(suite_ids: list[str]) -> dict[str, Any]:
+def batch_delete_suites(suite_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple suites in a batch."""
     return batch_delete(suite_ids, delete_suite, "Suite")
 
 
-def batch_clone_suites(suite_ids: list[str]) -> dict[str, Any]:
+def batch_clone_suites(suite_ids: list[Any]) -> dict[str, Any]:
     """Clone multiple suites in a batch."""
     from wavecore.api.services.suites import version_service
 

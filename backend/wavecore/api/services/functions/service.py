@@ -24,6 +24,7 @@ from wavecore.api.exceptions import (
 from wavecore.api.services.block_schema import block_schema
 from wavecore.api.services.functions import _storage, _versioning
 from wavecore.api.services.functions.import_export import circle_path, circle_text
+from wavecore.api.services.shared import batch_id, batch_object
 from wavecore.core.functions.references import referenced_function_ids
 from wavecore.core.secrets.sealing import (
     mask_definition_function_secrets,
@@ -531,25 +532,26 @@ def _collect_errors(exc: WaveException) -> list[str]:
     return [exc.message]
 
 
-def batch_create_functions(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def batch_create_functions(items: Sequence[Any]) -> dict[str, Any]:
     created: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         try:
-            definition, _etag = create_function(item)
+            definition, _etag = create_function(batch_object(item))
             created.append(definition)
         except WaveException as exc:
             failed.append({"index": index, "errors": _collect_errors(exc)})
     return {"created": created, "failed": failed}
 
 
-def batch_delete_functions(ids: Sequence[str], *, cascade: bool = False) -> dict[str, Any]:
+def batch_delete_functions(ids: Sequence[Any], *, cascade: bool = False) -> dict[str, Any]:
     deleted: list[str] = []
     failed: list[dict[str, Any]] = []
-    for function_id in ids:
+    for item in ids:
         try:
+            function_id = batch_id(item)
             delete_function(function_id, cascade=cascade)
             deleted.append(function_id)
         except WaveException as exc:
-            failed.append({"id": function_id, "errors": _collect_errors(exc)})
+            failed.append({"id": item, "errors": _collect_errors(exc)})
     return {"deleted": deleted, "failed": failed}
