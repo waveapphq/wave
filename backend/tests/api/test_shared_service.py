@@ -16,6 +16,7 @@ Test Coverage:
 - The first free numbered name and the match and target of an incoming item (REQ-5.2.4.9.5)
 - Variables as a save stores them: typed numbers in wire form (REQ-3.1.3.14)
 - One batch delete pass for Suites, Regressions and Tests
+- One batch clone pass for Suites and Regressions
 """
 
 import dataclasses
@@ -814,4 +815,45 @@ class TestBatchDelete:
         assert shared.batch_delete(["busy", "free"], delete, "Regression") == {
             "deleted": ["free"],
             "failed": [{"index": 0, "error": "Busy"}],
+        }
+
+
+class TestBatchClone:
+    """shared.batch_clone: one pass over the IDs, each refusal kept by its index."""
+
+    def test_clones_each_id_in_order(self) -> None:
+        seen: list[str] = []
+
+        def clone(item_id: str) -> dict[str, Any]:
+            seen.append(item_id)
+            return {"id": f"{item_id}-copy", "name": "Copy"}
+
+        assert shared.batch_clone(["a", "b"], clone, "Suite") == {
+            "cloned": [
+                {"original_id": "a", "cloned_id": "a-copy"},
+                {"original_id": "b", "cloned_id": "b-copy"},
+            ],
+            "failed": [],
+        }
+        assert seen == ["a", "b"]
+
+    def test_names_a_missing_id_by_kind_and_index(self) -> None:
+        def clone(item_id: str) -> dict[str, Any] | None:
+            return {"id": "here-copy"} if item_id == "here" else None
+
+        assert shared.batch_clone(["here", "gone"], clone, "Regression") == {
+            "cloned": [{"original_id": "here", "cloned_id": "here-copy"}],
+            "failed": [{"index": 1, "error": "Regression with ID 'gone' not found"}],
+        }
+
+    @pytest.mark.parametrize("error", [ConflictException("Taken"), ValueError("Taken")])
+    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+        def clone(item_id: str) -> dict[str, Any]:
+            if item_id == "taken":
+                raise error
+            return {"id": f"{item_id}-copy"}
+
+        assert shared.batch_clone(["taken", "free"], clone, "Suite") == {
+            "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
+            "failed": [{"index": 0, "error": "Taken"}],
         }

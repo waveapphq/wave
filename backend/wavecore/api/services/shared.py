@@ -620,19 +620,44 @@ def refuse_unknown_members(
             raise ValidationException(f"{kind} with ID '{member_id}' not found")
 
 
-def batch_delete(ids: Sequence[str], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
-    """Delete each ID in turn; a missing or refused one goes to ``failed`` by its index."""
-    deleted: list[str] = []
+def _batch_each[
+    Done
+](ids: Sequence[str], act: Callable[[str], Done | None], kind: str) -> tuple[
+    list[Done], list[dict[str, Any]]
+]:
+    """Act on each ID in turn; a missing (None) or refused one goes to the failures by its index."""
+    done: list[Done] = []
     failed: list[dict[str, Any]] = []
     for idx, item_id in enumerate(ids):
         try:
-            if delete(item_id):
-                deleted.append(item_id)
-            else:
-                failed.append({"index": idx, "error": f"{kind} with ID '{item_id}' not found"})
+            result = act(item_id)
         except (ValueError, WaveException) as e:
             failed.append({"index": idx, "error": str(e)})
+            continue
+        if result is None:
+            failed.append({"index": idx, "error": f"{kind} with ID '{item_id}' not found"})
+        else:
+            done.append(result)
+    return done, failed
+
+
+def batch_delete(ids: Sequence[str], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
+    """Delete each ID in turn; a missing or refused one goes to ``failed`` by its index."""
+    deleted, failed = _batch_each(ids, lambda item_id: item_id if delete(item_id) else None, kind)
     return {"deleted": deleted, "failed": failed}
+
+
+def batch_clone(
+    ids: Sequence[str], clone: Callable[[str], dict[str, Any] | None], kind: str
+) -> dict[str, Any]:
+    """Clone each ID in turn; a missing or refused one goes to ``failed`` by its index."""
+
+    def clone_one(item_id: str) -> dict[str, str] | None:
+        copied = clone(item_id)
+        return None if copied is None else {"original_id": item_id, "cloned_id": copied["id"]}
+
+    cloned, failed = _batch_each(ids, clone_one, kind)
+    return {"cloned": cloned, "failed": failed}
 
 
 ZipContent = str | bytes | Path

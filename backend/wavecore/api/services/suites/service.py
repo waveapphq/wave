@@ -7,8 +7,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, WaveException
+from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.shared import (
+    batch_clone,
     batch_delete,
     bump_version_and_record,
     mask_secret_variables,
@@ -350,23 +351,7 @@ def batch_clone_suites(suite_ids: list[str]) -> dict[str, Any]:
     """Clone multiple suites in a batch."""
     from wavecore.api.services.suites import version_service
 
-    cloned: list[dict[str, str]] = []
-    failed: list[dict[str, Any]] = []
-    for idx, suite_id in enumerate(suite_ids):
-        try:
-            source = _load_suite(suite_id)
-            if source is None:
-                failed.append({"index": idx, "error": f"Suite with ID '{suite_id}' not found"})
-                continue
-            new_name = f"{source.get('name', 'Suite')} (Copy)"
-            result = version_service.clone_suite(suite_id, new_name)
-            if result is None:
-                failed.append({"index": idx, "error": f"Suite with ID '{suite_id}' not found"})
-            else:
-                cloned.append({"original_id": suite_id, "cloned_id": result["id"]})
-        except (ValueError, WaveException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"cloned": cloned, "failed": failed}
+    return batch_clone(suite_ids, version_service.clone_suite, "Suite")
 
 
 def get_suite_variables(suite_id: str) -> dict[str, Any] | None:

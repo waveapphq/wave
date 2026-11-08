@@ -735,6 +735,26 @@ class TestBatchCloneSuitesService:
         assert len(result["failed"]) == 1
         assert suite["id"] in result["failed"][0]["error"]
 
+    def test_batch_clone_suites_names_each_copy_and_each_missing_suite(self) -> None:
+        """Each copy takes its source name with '(Copy)'; a missing suite is named by its index."""
+        from wavecore.api.services.suites import service as suite_service
+
+        clear_suite_storage()
+
+        real = suite_service.create_suite({"name": "Suite One"})
+        missing_id = str(uuid.uuid4())
+
+        result = suite_service.batch_clone_suites([missing_id, real["id"]])
+
+        assert result["failed"] == [
+            {"index": 0, "error": f"Suite with ID '{missing_id}' not found"}
+        ]
+        [entry] = result["cloned"]
+        assert entry["original_id"] == real["id"]
+        clone = suite_service.get_suite(entry["cloned_id"])
+        assert clone is not None
+        assert clone["name"] == "Suite One (Copy)"
+
 
 class TestListSuiteVersionsService:
     """Test suite for list_suite_versions service function."""
@@ -1096,6 +1116,19 @@ class TestCloneSuiteService:
         result = _suite_version_svc.clone_suite(str(uuid.uuid4()), "Clone Name")
 
         assert result is None
+
+    def test_clone_suite_without_a_name_names_the_copy(self) -> None:
+        """Without a new name the clone takes the source name with '(Copy)'."""
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.suites import version_service as _suite_version_svc
+
+        clear_suite_storage()
+
+        original = suite_service.create_suite({"name": "Original Suite"})
+        clone = _suite_version_svc.clone_suite(original["id"])
+
+        assert clone is not None
+        assert clone["name"] == "Original Suite (Copy)"
 
 
 class TestSuiteVariableValues:

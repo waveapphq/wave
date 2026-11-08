@@ -905,6 +905,38 @@ class TestBatchCloneRegressionsService:
         assert len(result["failed"]) == 1
         assert "Name already exists" in result["failed"][0]["error"]
 
+    def test_batch_clone_regressions_captures_any_wave_error(self) -> None:
+        """Any WAVE refusal of one regression is kept per item, as for Suites."""
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.regressions import version_service as _reg_version_svc
+
+        with patch.object(
+            _reg_version_svc, "clone_regression", side_effect=WaveException("Save failed")
+        ):
+            result = regression_service.batch_clone_regressions(["reg-1"])
+
+        assert result == {"cloned": [], "failed": [{"index": 0, "error": "Save failed"}]}
+
+    def test_batch_clone_regressions_names_each_copy_and_each_missing_one(self) -> None:
+        """Each copy takes its source name with '(Copy)'; a missing one is named by its index."""
+        from wavecore.api.services.regressions import service as regression_service
+
+        clear_regression_storage()
+
+        real = regression_service.create_regression({"name": "Real One"})
+        ghost_id = str(uuid.uuid4())
+
+        result = regression_service.batch_clone_regressions([ghost_id, real["id"]])
+
+        assert result["failed"] == [
+            {"index": 0, "error": f"Regression with ID '{ghost_id}' not found"}
+        ]
+        [entry] = result["cloned"]
+        assert entry["original_id"] == real["id"]
+        clone = regression_service.get_regression(entry["cloned_id"])
+        assert clone is not None
+        assert clone["name"] == "Real One (Copy)"
+
 
 class TestListRegressionVersionsService:
     """Test suite for list_regression_versions service function."""

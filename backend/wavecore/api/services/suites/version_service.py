@@ -237,12 +237,15 @@ def remove_test_from_suite(suite_id: str, test_id: str) -> dict[str, Any] | None
 
 
 def clone_suite(
-    suite_id: str, new_name: str, new_version: str | None = None
+    suite_id: str, new_name: str | None = None, new_version: str | None = None
 ) -> dict[str, Any] | None:
     """Clone a suite with a new name."""
     source = _load_suite(suite_id)
     if source is None:
         return None
+
+    if new_name is None:
+        new_name = f"{source.get('name', 'Suite')} (Copy)"
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())

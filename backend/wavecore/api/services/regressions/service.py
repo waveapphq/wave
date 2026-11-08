@@ -26,6 +26,7 @@ from wavecore.api.services.regressions._storage import (
     _validate_name,
 )
 from wavecore.api.services.shared import (
+    batch_clone,
     batch_delete,
     bump_version_and_record,
     read_secret_variables,
@@ -521,20 +522,7 @@ def batch_clone_regressions(regression_ids: list[str]) -> dict[str, Any]:
     """Clone multiple regressions in a batch."""
     from wavecore.api.services.regressions import version_service
 
-    cloned: list[dict[str, str]] = []
-    failed: list[dict[str, Any]] = []
-    for idx, regression_id in enumerate(regression_ids):
-        try:
-            result = version_service.clone_regression(regression_id)
-            if result is None:
-                failed.append(
-                    {"index": idx, "error": f"Regression with ID '{regression_id}' not found"}
-                )
-            else:
-                cloned.append({"original_id": regression_id, "cloned_id": result["id"]})
-        except (ValueError, ConflictException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"cloned": cloned, "failed": failed}
+    return batch_clone(regression_ids, version_service.clone_regression, "Regression")
 
 
 # ===========================================================================
