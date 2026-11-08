@@ -1381,22 +1381,12 @@ class TestDeltaOnlySkipWhenUnchanged:
                 {"suites": [suite_integer["id"]]},
             )
 
-    def test_update_regression_persists_tags_and_pads_a_single_integer_version(
-        self,
-    ) -> None:
-        """update_regression must persist 'tags' and pad version 'N' to 'N.0.0'."""
-        from tests.api.regression_test_helpers import (
-            load_regression_file,
-            save_regression_file,
-        )
+    def test_update_regression_persists_tags(self) -> None:
+        """update_regression persists 'tags' and bumps the minor version."""
+        from tests.api.regression_test_helpers import load_regression_file
         from wavecore.api.services.regressions import service as regression_service
 
         regression = regression_service.create_regression({"name": "Tag Target"})
-        # Rewrite the on-disk copy with a single-integer version
-        stored = load_regression_file(regression["id"])
-        assert stored is not None
-        stored["version"] = "1"
-        save_regression_file(stored)
 
         result = regression_service.update_regression(
             regression["id"],
@@ -1405,8 +1395,33 @@ class TestDeltaOnlySkipWhenUnchanged:
 
         assert result is not None
         assert result["tags"] == ["nightly", "smoke"]
-        # Padded "1" -> "1.0.0" then bumped to "1.1.0"
         assert result["version"] == "1.1.0"
+        stored = load_regression_file(regression["id"])
+        assert stored is not None
+        assert stored["tags"] == ["nightly", "smoke"]
+
+    def test_update_regression_refuses_a_single_integer_version(self) -> None:
+        """update_regression refuses stored version '1' and keeps the stored regression."""
+        from tests.api.regression_test_helpers import (
+            load_regression_file,
+            save_regression_file,
+        )
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.regressions import service as regression_service
+
+        regression = regression_service.create_regression({"name": "Tag Target"})
+        stored = load_regression_file(regression["id"])
+        assert stored is not None
+        stored["version"] = "1"
+        save_regression_file(stored)
+
+        with pytest.raises(ValidationException) as exc_info:
+            regression_service.update_regression(regression["id"], {"tags": ["nightly"]})
+
+        assert exc_info.value.message == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression["id"]) == stored
 
     def test_update_with_identical_variables_skips_collision_check(self) -> None:
         """Re-sending the same variables does not trigger collision validation."""

@@ -17,6 +17,7 @@ Test Coverage:
 - Variables as a save stores them: typed numbers in wire form (REQ-3.1.3.14)
 - One batch delete pass for Suites, Regressions, Tests and Blocks
 - One batch clone pass for Suites and Regressions
+- One minor version bump for Suites and Regressions, refused on a version that is not semantic
 """
 
 import dataclasses
@@ -886,3 +887,47 @@ class TestBatchClone:
             "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
             "failed": [{"index": 0, "error": "Taken"}],
         }
+
+
+class TestBumpVersionAndRecord:
+    """shared.bump_version_and_record: a MINOR bump of a MAJOR.MINOR.PATCH version, else refused."""
+
+    def test_bumps_minor_and_records_the_change(self) -> None:
+        entity: dict[str, Any] = {"version": "2.3.4"}
+        saved: list[dict[str, Any]] = []
+        history: list[list[dict[str, Any]]] = []
+
+        shared.bump_version_and_record(
+            entity,
+            "ent-1",
+            "Change",
+            save_entity=saved.append,
+            load_versions=lambda _entity_id: [],
+            save_versions=lambda _entity_id, versions: history.append(versions),
+        )
+
+        assert entity["version"] == "2.4.0"
+        assert saved == [entity]
+        assert [row["version"] for row in history[0]] == ["2.4.0"]
+
+    @pytest.mark.parametrize("stored", ["1", "1.0", "1.0.0.0", "v1.0.0", "1.0.0-beta"])
+    def test_refuses_a_stored_version_that_is_not_semantic(self, stored: str) -> None:
+        entity: dict[str, Any] = {"version": stored}
+        writes: list[str] = []
+
+        with pytest.raises(ValidationException) as exc_info:
+            shared.bump_version_and_record(
+                entity,
+                "ent-1",
+                "Change",
+                save_entity=lambda _entity: writes.append("entity"),
+                load_versions=lambda _entity_id: [],
+                save_versions=lambda _entity_id, _versions: writes.append("history"),
+            )
+
+        assert exc_info.value.message == (
+            f"Invalid version format '{stored}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert entity == {"version": stored}
+        assert writes == []

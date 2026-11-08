@@ -10,7 +10,6 @@ Targets residual coverage gaps in:
 - Profile exception constructors
 - Workbench try_catch node execution edge cases
 - Parallel output_collection merge error paths
-- Shared service utilities (version padding)
 """
 
 import asyncio
@@ -285,36 +284,3 @@ class TestTryCatchNodeEdgeCases:
             )
         )
         assert result is None
-
-
-# ===========================================================================
-# 13. Shared service utils: bump_version_and_record short version padding
-# ===========================================================================
-
-
-class TestBumpVersionShortVersionPadding:
-    """Test that bump_version_and_record pads short version strings to 3 parts."""
-
-    def test_bump_version_pads_two_part_version(self) -> None:
-        """Version '1.0' is padded to '1.0.0' then bumped to '1.1.0'."""
-        from wavecore.api.services.shared import bump_version_and_record
-
-        entity: dict[str, Any] = {"version": "1.0"}
-        saved_versions: list[list[dict[str, Any]]] = []
-
-        def save_entity(e: dict[str, Any]) -> None:
-            pass
-
-        def load_versions(_id: str) -> list[dict[str, Any]]:
-            return []
-
-        def save_versions(_id: str, v: list[dict[str, Any]]) -> None:
-            saved_versions.append(v)
-
-        bump_version_and_record(
-            entity, "ent-1", "test change", save_entity, load_versions, save_versions
-        )
-
-        assert entity["version"] == "1.1.0"
-        assert len(saved_versions) == 1
-        assert saved_versions[0][0]["version"] == "1.1.0"

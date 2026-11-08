@@ -25,12 +25,12 @@ from wavecore.api.exceptions import ValidationException
 from wavecore.api.routes.shared import (
     read_json_array,
     read_json_object,
-    validate_semantic_version,
     validate_uuid,
 )
 from wavecore.api.services.blocks import _storage as _block_storage
 from wavecore.api.services.blocks import service as block_service
 from wavecore.api.services.blocks import version_service as _block_version_svc
+from wavecore.api.services.shared import validate_semantic_version
 
 # Create router for block import/export endpoints
 router = APIRouter(tags=["Blocks"], prefix="/blocks")

@@ -8,6 +8,7 @@ entity resolution, and file parsing for import/export.
 import copy
 import io
 import json
+import re
 import unicodedata
 import uuid
 import zipfile
@@ -526,6 +527,37 @@ def read_secret_variables(variables: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# Semantic version pattern: MAJOR.MINOR.PATCH
+SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def validate_semantic_version(version: str) -> None:
+    """Validate semantic version format (MAJOR.MINOR.PATCH).
+
+    Args:
+        version: Version string to validate.
+
+    Raises:
+        ValidationException: If version format is invalid.
+    """
+    if not SEMVER_PATTERN.match(version):
+        raise ValidationException(
+            f"Invalid version format '{version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+
+
+def semantic_version_numbers(version: str) -> tuple[int, int, int]:
+    """The MAJOR, MINOR and PATCH numbers of a semantic version.
+
+    Raises:
+        ValidationException: If ``version`` is not MAJOR.MINOR.PATCH.
+    """
+    validate_semantic_version(version)
+    major, minor, patch = (int(part) for part in version.split("."))
+    return major, minor, patch
+
+
 def bump_version_and_record(
     entity: dict[str, Any],
     entity_id: str,
@@ -555,13 +587,13 @@ def bump_version_and_record(
 
     Returns:
         The ISO-formatted timestamp of the update.
+
+    Raises:
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH;
+            nothing is saved then.
     """
-    current_version = str(entity.get("version", "1.0.0"))
-    parts = [int(x) for x in current_version.split(".")]
-    # Pad to at least MAJOR.MINOR.PATCH
-    while len(parts) < 3:
-        parts.append(0)
-    new_version = f"{parts[0]}.{parts[1] + 1}.0"
+    major, minor, _patch = semantic_version_numbers(str(entity.get("version", "1.0.0")))
+    new_version = f"{major}.{minor + 1}.0"
 
     now = datetime.now(UTC).isoformat()
     entity["version"] = new_version

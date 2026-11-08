@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from wavecore.api.exceptions import ConflictException, ValidationException
-from wavecore.api.services.shared import bump_version_and_record, mask_secret_variables
+from wavecore.api.services.shared import (
+    bump_version_and_record,
+    mask_secret_variables,
+    semantic_version_numbers,
+)
 from wavecore.api.services.suites._storage import (
     _load_suite,
     _load_versions,
@@ -34,15 +38,14 @@ def add_suite_version(suite_id: str, data: dict[str, Any]) -> dict[str, Any] | N
     versions = _load_versions(suite_id)
 
     version_bump = data.get("version_bump", "minor")
-    current_version = suite.get("version", "1.0.0")
-    parts = [int(x) for x in current_version.split(".")]
+    major, minor, patch = semantic_version_numbers(str(suite.get("version", "1.0.0")))
 
     if version_bump == "major":
-        new_version = f"{parts[0] + 1}.0.0"
+        new_version = f"{major + 1}.0.0"
     elif version_bump == "minor":
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
+        new_version = f"{major}.{minor + 1}.0"
     else:
-        new_version = f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
+        new_version = f"{major}.{minor}.{patch + 1}"
 
     now = datetime.now(UTC).isoformat()
     suite["version"] = new_version

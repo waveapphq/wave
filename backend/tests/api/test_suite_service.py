@@ -822,6 +822,35 @@ class TestAddSuiteVersionService:
         result = _suite_version_svc.add_suite_version(suite["id"], {"version_bump": "patch"})
         assert result["version"] == "2.0.1"
 
+    @pytest.mark.parametrize("version_bump", ["major", "minor", "patch"])
+    def test_add_suite_version_refuses_a_stored_version_that_is_not_semantic(
+        self, version_bump: str
+    ) -> None:
+        """A stored version '1' refuses every bump type and writes nothing."""
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.api.services.suites import version_service as _suite_version_svc
+
+        clear_suite_storage()
+
+        suite = suite_service.create_suite({"name": "Test Suite"})
+        stored = load_suite_file(suite["id"])
+        assert stored is not None
+        stored["version"] = "1"
+        save_suite_file(stored)
+        history = load_versions_file(suite["id"])
+
+        with pytest.raises(ValidationException) as exc_info:
+            _suite_version_svc.add_suite_version(
+                suite["id"], {"version_bump": version_bump, "description": "next"}
+            )
+
+        assert exc_info.value.message == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_suite_file(suite["id"]) == stored
+        assert load_versions_file(suite["id"]) == history
+
 
 class TestGetSuiteVersionService:
     """Test suite for get_suite_version service function."""

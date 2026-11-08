@@ -743,15 +743,11 @@ class TestDeleteRegressionService:
         assert regression_service.delete_regression(created["id"]) is True
 
 
-class TestSingleIntegerVersionPadding:
-    """A single-integer version is padded to MAJOR.MINOR.PATCH before the bump."""
+class TestVersionThatIsNotSemantic:
+    """A stored version that is not MAJOR.MINOR.PATCH refuses the version bump."""
 
-    def test_add_regression_version_pads_a_single_integer_version(self) -> None:
-        """add_regression_version reads version 'N' as 'N.0.0'."""
-        from tests.api.regression_test_helpers import (
-            load_regression_file,
-            save_regression_file,
-        )
+    def test_add_regression_version_refuses_a_single_integer_version(self) -> None:
+        """add_regression_version refuses version '1' and writes nothing."""
         from wavecore.api.services.regressions import service as regression_service
         from wavecore.api.services.regressions import version_service as _reg_version_svc
 
@@ -762,10 +758,16 @@ class TestSingleIntegerVersionPadding:
         assert stored is not None
         stored["version"] = "1"
         save_regression_file(stored)
+        history = load_versions_file(regression["id"])
 
-        result = _reg_version_svc.add_regression_version(regression["id"], {"description": "next"})
-        assert result is not None
-        assert result["version"] == "1.1.0"
+        with pytest.raises(ValidationException) as exc_info:
+            _reg_version_svc.add_regression_version(regression["id"], {"description": "next"})
+
+        assert exc_info.value.message == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression["id"]) == stored
+        assert load_versions_file(regression["id"]) == history
 
 
 class TestBatchDeleteRegressionsService:

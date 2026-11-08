@@ -2300,3 +2300,42 @@ class TestARegressionBatchItemThatIsNotAnId:
         body = response.json()
         assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
         assert [entry["original_id"] for entry in body["cloned"]] == [regression_id]
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A regression whose stored version is not MAJOR.MINOR.PATCH refuses a change with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create FastAPI test client."""
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions")],
+        ids=["update", "add-version"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.regression_test_helpers import (
+            load_regression_file,
+            save_regression_file,
+        )
+
+        created = client.post("/regressions", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        regression_id = created.json()["data"]["id"]
+        stored = load_regression_file(regression_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_regression_file(stored)
+
+        response = client.request(
+            method, f"/regressions/{regression_id}{suffix}", json={"description": "x"}
+        )
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression_id) == stored

@@ -30,10 +30,10 @@ from fastapi.responses import JSONResponse
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.routes.shared import (
     read_json_object,
-    validate_semantic_version,
     validate_uuid,
 )
 from wavecore.api.services import workflow_service
+from wavecore.api.services.shared import validate_semantic_version
 from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests.service import SaveValidationError
 

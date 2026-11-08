@@ -6,7 +6,6 @@ consistent request handling, validation, and response formatting.
 Routes should use these instead of implementing their own copies.
 """
 
-import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -16,10 +15,6 @@ from fastapi import Request
 from wavecore import __version__
 from wavecore.api.exceptions import ValidationException
 from wavecore.core.variables.return_values import ReturnValueType
-
-# Semantic version pattern: MAJOR.MINOR.PATCH
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-
 
 NOT_A_JSON_ARRAY = "The request body must be a JSON array"
 
@@ -88,22 +83,6 @@ def validate_uuid(value: str, field_name: str = "id") -> str:
         return value
     except ValueError as err:
         raise ValidationException(f"Invalid UUID format for {field_name}: '{value}'") from err
-
-
-def validate_semantic_version(version: str) -> None:
-    """Validate semantic version format (MAJOR.MINOR.PATCH).
-
-    Args:
-        version: Version string to validate.
-
-    Raises:
-        ValueError: If version format is invalid.
-    """
-    if not SEMVER_PATTERN.match(version):
-        raise ValueError(
-            f"Invalid version format '{version}': "
-            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
-        )
 
 
 def build_response_meta(request: Request) -> dict[str, Any]:
