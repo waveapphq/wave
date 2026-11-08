@@ -301,9 +301,8 @@ class TestTheBlocksThatReferenceTheSession:
         outputs = {o["name"]: o for o in SSHSessionOpenPlugin().metadata["output_schema"]}
 
         assert outputs["session_id"]["description"] == (
-            "Handle for this session: bind it to a variable and reference it from SSH "
-            "Session Exec, SSH Session Script, SSH Session Close, SSH Tunnel Open, SFTP, "
-            "Remote Execution, or a chained Open's Parent Session"
+            "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+            "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
         )
 
     def test_the_module_docstring_names_every_consumer(self) -> None:

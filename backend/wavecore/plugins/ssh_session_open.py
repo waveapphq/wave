@@ -25,6 +25,7 @@ from wavecore.plugins._shared_params import (
 )
 from wavecore.plugins._ssh_session import (
     DEFAULT_CONNECT_TIMEOUT,
+    SESSION_ID_DESCRIPTION,
     drop_session_on_a_refused_host_key,
     host_key_identity,
     host_key_mode,
@@ -167,9 +168,8 @@ class SSHSessionOpenPlugin(PluginBase):
                     "required": False,
                     "required_when": gate("use_parent", "true"),
                     "description": (
-                        "Session ID of the open parent SSH session to tunnel over (used "
-                        "when 'Chain through a parent session' is on). The connection "
-                        "fails if the parent is not open."
+                        "Session ID of the open parent SSH session to tunnel over. "
+                        "The connection fails if the parent is not open"
                     ),
                 },
                 {
@@ -241,11 +241,7 @@ class SSHSessionOpenPlugin(PluginBase):
                 {
                     "name": "session_id",
                     "type": "string",
-                    "description": (
-                        "Handle for this session: bind it to a variable and reference it "
-                        "from SSH Session Exec, SSH Session Script, SSH Session Close, SSH "
-                        "Tunnel Open, SFTP, Remote Execution, or a chained Open's Parent Session"
-                    ),
+                    "description": SESSION_ID_DESCRIPTION,
                 },
                 {
                     "name": "connected",

@@ -254,7 +254,7 @@ class TestRemoteExecutionEntry:
 
 
 class TestSshSessionIdInTheCatalog:
-    """Every SSH block that takes a session describes session_id as the editor does."""
+    """Every SSH block describes session_id and the parent session as the editor does."""
 
     @pytest.mark.parametrize(
         "block_id",
@@ -265,6 +265,21 @@ class TestSshSessionIdInTheCatalog:
 
         session_id = next(p for p in entry["parameters"] if p["name"] == "session_id")
         assert session_id["description"] == SESSION_ID_DESCRIPTION
+
+    def test_the_open_block_session_id_output_uses_the_editor_text(self) -> None:
+        entry = _by_id(_blocks())["ssh-session-open"]
+
+        session_id = next(o for o in entry["output_schema"] if o["name"] == "session_id")
+        assert session_id["description"] == SESSION_ID_DESCRIPTION
+
+    def test_the_open_block_parent_session_setting_uses_the_editor_text(self) -> None:
+        entry = _by_id(_blocks())["ssh-session-open"]
+
+        parent = next(p for p in entry["parameters"] if p["name"] == "parent_session_id")
+        assert parent["description"] == (
+            "Session ID of the open parent SSH session to tunnel over. "
+            "The connection fails if the parent is not open"
+        )
 
 
 class TestProxySupportInTheCatalog:
