@@ -246,6 +246,37 @@ class TestEntityDir:
     def test_is_entity_id_is_true_for_a_uuid(self) -> None:
         assert storage_paths.is_entity_id("11111111-2222-3333-4444-555555555555") is True
 
+    def test_the_folder_is_the_normal_path_under_the_root(self, tmp_path: Path) -> None:
+        assert storage_paths.entity_dir(tmp_path / "x" / "..", "abc") == tmp_path / "abc"
+
+
+class TestPathUnder:
+    """A name joined to a root is its normal path under that root; one that leaves it is refused."""
+
+    @pytest.mark.parametrize(
+        ("name", "parts"),
+        [
+            ("1.0.0-rc.1+build.5.yaml", ["1.0.0-rc.1+build.5.yaml"]),
+            ("a/b", ["a", "b"]),
+            ("a/../b", ["b"]),
+            ("...", ["..."]),
+        ],
+    )
+    def test_a_name_that_stays_under_the_root_is_its_normal_path(
+        self, tmp_path: Path, name: str, parts: list[str]
+    ) -> None:
+        assert storage_paths.path_under(tmp_path, name) == tmp_path.joinpath(*parts)
+
+    def test_a_relative_root_gives_an_absolute_path(self) -> None:
+        assert storage_paths.path_under(Path("."), "abc") == Path.cwd() / "abc"
+
+    @pytest.mark.parametrize("name", ["", ".", "..", "../outside", "a/../..", "/abs"])
+    def test_a_name_that_leaves_the_root_is_refused(self, tmp_path: Path, name: str) -> None:
+        with pytest.raises(ValidationException) as refused:
+            storage_paths.path_under(tmp_path, name)
+
+        assert refused.value.message == f"Invalid path: '{name}'"
+
 
 class TestBasePathFromConfig:
     """One resolver: get_base_path() reads Config.resolved_data_folder() (REQ-4.7.13)."""

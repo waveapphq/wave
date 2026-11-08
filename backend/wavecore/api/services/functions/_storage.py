@@ -30,6 +30,7 @@ from wavecore.api.services.storage_paths import (
     get_functions_storage_path,
     get_tests_storage_path,
     is_entity_id,
+    path_under,
 )
 from wavecore.api.services.typed_numbers import store_definition_numbers
 from wavecore.core.execution.field_checks import check_block_fields
@@ -92,7 +93,7 @@ def _versions_dir(function_id: str) -> Path:
 
 def _version_file(function_id: str, version: str) -> Path:
     _validate_version_str(version)
-    return _versions_dir(function_id) / f"{version}.yaml"
+    return path_under(_versions_dir(function_id), f"{version}.yaml")
 
 
 def compute_etag(definition: Mapping[str, Any]) -> str:

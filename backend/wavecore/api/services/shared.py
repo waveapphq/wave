@@ -655,18 +655,32 @@ def refuse_unknown_members(
             raise ValidationException(f"{kind} with ID '{member_id}' not found")
 
 
+_NOT_AN_OBJECT_ITEM = "The item must be a JSON object"
+_NOT_AN_UPDATE_OBJECT = "'update' must be a JSON object"
+
+
 def batch_object(item: Any) -> dict[str, Any]:
     """A batch item as a JSON object; any other item fails on its own."""
     if not isinstance(item, dict):
-        raise ValidationException("The item must be a JSON object")
+        raise ValidationException(_NOT_AN_OBJECT_ITEM)
     return item
+
+
+def batch_update_problem(item: Any) -> str | None:
+    """Why a batch update item fails: not an object, or an 'update' that is not one; else None."""
+    if not isinstance(item, dict):
+        return _NOT_AN_OBJECT_ITEM
+    if not isinstance(item.get("update", {}), dict):
+        return _NOT_AN_UPDATE_OBJECT
+    return None
 
 
 def batch_update_fields(item: dict[str, Any]) -> dict[str, Any]:
     """A batch item's 'update' as a JSON object, empty when absent; else the item fails."""
-    fields = item.get("update", {})
-    if not isinstance(fields, dict):
-        raise ValidationException("'update' must be a JSON object")
+    problem = batch_update_problem(item)
+    if problem is not None:
+        raise ValidationException(problem)
+    fields: dict[str, Any] = item.get("update", {})
     return fields
 
 

@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
+from wavecore.api.exceptions import ConflictException, WaveException
 from wavecore.api.services.blocks._storage import (
     _check_circular_dependencies,
     _check_name_unique,
@@ -19,7 +19,7 @@ from wavecore.api.services.blocks._storage import (
     _validate_plugin_exists,
     get_block_dependents,
 )
-from wavecore.api.services.shared import batch_delete, batch_object, batch_update_fields
+from wavecore.api.services.shared import batch_delete, batch_object, batch_update_problem
 
 # ===========================================================================
 # CRUD
@@ -159,18 +159,16 @@ def batch_update_blocks(updates: list[Any]) -> dict[str, Any]:
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
     for idx, item in enumerate(updates):
-        try:
-            update = batch_object(item)
-            update_data = batch_update_fields(update)
-        except ValidationException as e:
-            failed.append({"index": idx, "error": str(e)})
+        problem = batch_update_problem(item)
+        if problem is not None:
+            failed.append({"index": idx, "error": problem})
             continue
-        block_id = str(update.get("id", ""))
+        block_id = str(item.get("id", ""))
         block = _load_block(block_id)
         if block is None:
             failed.append({"index": idx, "error": f"Block with ID '{block_id}' not found"})
             continue
-        for key, value in update_data.items():
+        for key, value in item.get("update", {}).items():
             if key not in ("id", "created_at"):
                 block[key] = value
         block["updated_at"] = datetime.now(UTC).isoformat()

@@ -31,7 +31,13 @@ from typing import Any
 
 import pytest
 
-from tests.api.body_shape_support import NOT_AN_ID_ITEM, NOT_ID_ITEMS
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
+    NOT_AN_UPDATE_OBJECT,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_ITEMS,
+)
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import shared
 from wavecore.api.services.environments import service as environment_service
@@ -833,6 +839,24 @@ class TestBatchDelete:
             "deleted": ["free"],
             "failed": [{"index": 0, "error": "Busy"}],
         }
+
+
+class TestBatchUpdateProblem:
+    """shared.batch_update_problem: why a batch update item is malformed, or None."""
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_item_that_is_not_an_object(self, item: Any) -> None:
+        assert shared.batch_update_problem(item) == NOT_AN_OBJECT_ITEM
+
+    @pytest.mark.parametrize("update", NOT_OBJECT_ITEMS)
+    def test_an_update_that_is_not_an_object(self, update: Any) -> None:
+        assert shared.batch_update_problem({"id": "x", "update": update}) == NOT_AN_UPDATE_OBJECT
+
+    @pytest.mark.parametrize("item", [{"id": "x"}, {"id": "x", "update": {"name": "Renamed"}}])
+    def test_an_object_with_no_update_or_an_object_update_has_none(
+        self, item: dict[str, Any]
+    ) -> None:
+        assert shared.batch_update_problem(item) is None
 
 
 class TestBatchClone:

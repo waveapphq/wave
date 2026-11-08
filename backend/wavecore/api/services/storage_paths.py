@@ -37,7 +37,16 @@ def entity_dir(root: Path, entity_id: str) -> Path:
     """A stored entity's folder under its storage root; refuses an ID is_entity_id rejects."""
     if not is_entity_id(entity_id):
         raise ValidationException(f"Invalid UUID format for id: '{entity_id}'")
-    return root / entity_id
+    return path_under(root, entity_id)
+
+
+def path_under(root: Path, name: str) -> Path:
+    """``root / name`` as an absolute normal path; refuses a name that does not stay under root."""
+    base = os.path.abspath(root)
+    path = os.path.abspath(os.path.join(base, name))
+    if not path.startswith(os.path.join(base, "")):
+        raise ValidationException(f"Invalid path: '{name}'")
+    return Path(path)
 
 
 def get_tests_storage_path() -> Path:
