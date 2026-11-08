@@ -9,6 +9,7 @@ import builtins
 import errno
 import io
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -18,6 +19,7 @@ import pytest
 import yaml
 
 import wavecore
+from tests.conftest import EXAMPLE_CONFIG_FILE
 from wavecore.api import config as config_package
 from wavecore.api.config import loader
 from wavecore.api.config.loader import Config, ConfigValidationError
@@ -493,6 +495,73 @@ class TestUnreadableFile:
 
         with pytest.raises(ConfigValidationError, match=_not_a_mapping(link)):
             Config()
+
+
+def _loader_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == loader.__name__ and record.levelno == logging.WARNING
+    ]
+
+
+class TestUnknownSection:
+    def test_misspelled_section_is_named_in_a_warning_and_ignored(
+        self, located_file: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        _write(
+            located_file,
+            {"secret_maskng": {"run_output": True}, "server": {"port": 4100}},
+        )
+
+        with caplog.at_level(logging.WARNING, logger=loader.__name__):
+            config = Config()
+
+        assert _loader_warnings(caplog) == [
+            f"Config file {located_file}: unknown section 'secret_maskng' is ignored"
+        ]
+        assert config.server.port == 4100
+        assert config.secret_masking.run_output is False
+
+    def test_each_unknown_section_is_named_in_file_order(
+        self, located_file: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        located_file.write_text(
+            "Server:\n  port: 4101\nlogging:\n  level: INFO\nbackups:\n  enabled: true\n",
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.WARNING, logger=loader.__name__):
+            config = Config()
+
+        assert _loader_warnings(caplog) == [
+            f"Config file {located_file}: unknown section 'Server' is ignored",
+            f"Config file {located_file}: unknown section 'backups' is ignored",
+        ]
+        assert config.server.port == 8000
+
+    def test_unknown_section_is_named_when_the_file_is_refused(
+        self, located_file: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        _write(located_file, {"servr": {"port": 4102}, "logging": {"level": "verbose"}})
+
+        with caplog.at_level(logging.WARNING, logger=loader.__name__):
+            with pytest.raises(ConfigValidationError):
+                Config()
+
+        assert _loader_warnings(caplog) == [
+            f"Config file {located_file}: unknown section 'servr' is ignored"
+        ]
+
+    def test_example_file_names_no_unknown_section(
+        self, located_file: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        located_file.write_text(EXAMPLE_CONFIG_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+
+        with caplog.at_level(logging.WARNING, logger=loader.__name__):
+            Config()
+
+        assert _loader_warnings(caplog) == []
 
 
 class TestRemovedLoggingVariable:

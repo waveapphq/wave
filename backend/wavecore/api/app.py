@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
 
 def _refuse_to_start(message: str) -> NoReturn:
     """Log why WAVE cannot start and end the process with exit code 1."""
-    logger.error("%s", message)
+    logger.critical("%s", message)
     # A raised error in the startup event leaves the server hung, so the process ends here.
     os._exit(1)
 

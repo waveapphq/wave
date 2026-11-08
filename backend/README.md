@@ -234,7 +234,7 @@ who should read the same secrets.
 
 The key is locked in at install: it must stay identical for the life of an instance's data.
 On startup, if the key is missing, malformed, or cannot decrypt existing sealed data, WAVE
-logs the reason at ERROR and exits with a non-zero status rather than running in a state where
+logs the reason at FATAL and exits with a non-zero status rather than running in a state where
 runs hang on undecryptable secrets; for a missing key the message names the command above. Moving data to a new key requires re-encrypting the existing envelopes
 under the new key, not just changing the key.
 

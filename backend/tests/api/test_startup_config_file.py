@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from wavecore.api import app as app_module
 from wavecore.api.app import app
 from wavecore.api.config import get_config, loader
+from wavecore.core.logging import formatter
 
 pytestmark = pytest.mark.usefixtures("restore_log_levels")
 
@@ -47,7 +48,27 @@ class TestConfigFileRefusals:
                 app_module._load_config()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [
+        assert startup_messages(caplog, logging.CRITICAL) == [
+            f"Config file not found: {missing} (set WAVE_CONFIG_FILE to use another file)"
+        ]
+
+    def test_missing_file_is_logged_at_log_level_fatal(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+        exit_call: MagicMock,
+        startup_messages: Callable[..., list[str]],
+    ) -> None:
+        missing = tmp_path / "missing.yaml"
+        _start_with(monkeypatch, missing)
+        formatter.set_log_level("FATAL")
+
+        with pytest.raises(SystemExit):
+            app_module._load_config()
+
+        exit_call.assert_called_once_with(1)
+        assert startup_messages(caplog, logging.CRITICAL) == [
             f"Config file not found: {missing} (set WAVE_CONFIG_FILE to use another file)"
         ]
 
@@ -65,7 +86,7 @@ class TestConfigFileRefusals:
                 app_module._load_config()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [
+        assert startup_messages(caplog, logging.CRITICAL) == [
             "WAVE_CONFIG_FILE must be an absolute path: conf/wave.yaml"
         ]
 
@@ -108,7 +129,7 @@ class TestConfigFileRefusals:
                 app_module._load_config()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [message.format(path=path)]
+        assert startup_messages(caplog, logging.CRITICAL) == [message.format(path=path)]
 
     def test_unparsable_file_logs_one_line_and_exits(
         self,
@@ -127,7 +148,7 @@ class TestConfigFileRefusals:
                 app_module._load_config()
 
         exit_call.assert_called_once_with(1)
-        errors = startup_messages(caplog, logging.ERROR)
+        errors = startup_messages(caplog, logging.CRITICAL)
         assert len(errors) == 1
         assert re.match(rf"^Config file {re.escape(str(path))} cannot be read: .+$", errors[0])
         assert "\n" not in errors[0]
@@ -152,7 +173,7 @@ class TestConfigFileInUse:
         assert config is get_config()
         assert config.config_file == config_file
         assert config.logging.level == "ERROR"
-        assert startup_messages(caplog, logging.ERROR) == []
+        assert startup_messages(caplog, logging.CRITICAL) == []
 
     def test_running_config_is_returned_as_it_is(self, exit_call: MagicMock) -> None:
         running = get_config()
@@ -178,7 +199,7 @@ class TestLogLevelAtStartup:
                 app_module._apply_log_level()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [UNKNOWN_ENV_LEVEL]
+        assert startup_messages(caplog, logging.CRITICAL) == [UNKNOWN_ENV_LEVEL]
         assert root_logger.level == before
 
     def test_file_level_is_in_force_when_the_variable_is_unset(
@@ -220,7 +241,7 @@ class TestLogLevelAtStartup:
             app_module._apply_log_level()
 
         exit_call.assert_not_called()
-        assert startup_messages(caplog, logging.ERROR) == []
+        assert startup_messages(caplog, logging.CRITICAL) == []
         assert logging.getLogger().level == logging.DEBUG
 
     def test_level_is_info_when_neither_names_one(self, exit_call: MagicMock) -> None:

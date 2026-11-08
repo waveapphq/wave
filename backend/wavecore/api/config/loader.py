@@ -17,6 +17,7 @@ Provides centralized configuration management with:
 """
 
 import copy
+import logging
 import os
 import threading
 from collections.abc import Callable, Mapping
@@ -31,6 +32,8 @@ from ruamel.yaml.error import MarkedYAMLError, YAMLError
 import wavecore
 from wavecore.api.config import instance_settings
 from wavecore.api.exceptions import ValidationException
+
+logger = logging.getLogger(__name__)
 
 CONFIG_FILE_ENV: Final[str] = "WAVE_CONFIG_FILE"
 
@@ -330,6 +333,9 @@ class Config:
         except ConfigFileProblem as error:
             raise ConfigValidationError(f"Config file {path} {error}") from error
         data = document or {}
+        for name in data:
+            if name not in _SECTION_NAMES:
+                logger.warning("Config file %s: unknown section %r is ignored", path, name)
         problem = instance_settings.section_problem(data, _SECTION_NAMES)
         if problem:
             raise ConfigValidationError(f"Config file {path}: {problem}")

@@ -23,7 +23,7 @@ NOT_UTF8_LINE = re.compile(
     r"^WAVE needs UTF-8 and this host's encoding is \S+: "
     r"set PYTHONUTF8=1 in the environment that starts WAVE$"
 )
-ERROR_LINE = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3} ERROR (.+)$")
+FATAL_LINE = re.compile(r"^\d{2}:\d{2}:\d{2}\.\d{3} FATAL (.+)$")
 
 
 def _host_encoding(encoding: str) -> Any:
@@ -47,9 +47,9 @@ def _start_wave(tmp_path: Path, env: dict[str, str]) -> subprocess.CompletedProc
     )
 
 
-def _error_lines(done: subprocess.CompletedProcess[str]) -> list[str]:
-    """The message of every ERROR line on the child's error output."""
-    found = [ERROR_LINE.match(line) for line in done.stderr.splitlines()]
+def _fatal_lines(done: subprocess.CompletedProcess[str]) -> list[str]:
+    """The message of every FATAL line on the child's error output."""
+    found = [FATAL_LINE.match(line) for line in done.stderr.splitlines()]
     return [match.group(1) for match in found if match]
 
 
@@ -67,7 +67,7 @@ class TestTextEncodingRefusals:
                 app_module._check_text_encoding()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [NOT_UTF8.format(encoding=encoding)]
+        assert startup_messages(caplog, logging.CRITICAL) == [NOT_UTF8.format(encoding=encoding)]
 
 
 class TestTextEncodingInUse:
@@ -83,7 +83,7 @@ class TestTextEncodingInUse:
             app_module._check_text_encoding()
 
         exit_call.assert_not_called()
-        assert startup_messages(caplog, logging.ERROR) == []
+        assert startup_messages(caplog, logging.CRITICAL) == []
 
 
 class TestStartInAChildPython:
@@ -94,7 +94,18 @@ class TestStartInAChildPython:
         done = _start_wave(tmp_path, non_utf8_child_env)
 
         assert done.returncode == 1
-        errors = _error_lines(done)
+        errors = _fatal_lines(done)
+        assert len(errors) == 1
+        assert NOT_UTF8_LINE.match(errors[0])
+
+    def test_refusal_is_printed_at_log_level_fatal(
+        self, tmp_path: Path, non_utf8_child_env: dict[str, str]
+    ) -> None:
+        # Starts a child Python.
+        done = _start_wave(tmp_path, {**non_utf8_child_env, "WAVE_LOG_LEVEL": "FATAL"})
+
+        assert done.returncode == 1
+        errors = _fatal_lines(done)
         assert len(errors) == 1
         assert NOT_UTF8_LINE.match(errors[0])
 
@@ -105,7 +116,7 @@ class TestStartInAChildPython:
         done = _start_wave(tmp_path, {**non_utf8_child_env, "PYTHONUTF8": "1"})
 
         assert done.returncode == 0
-        assert _error_lines(done) == []
+        assert _fatal_lines(done) == []
 
     def test_host_with_no_language_setting_starts(
         self, tmp_path: Path, non_utf8_child_env: dict[str, str]
@@ -117,7 +128,7 @@ class TestStartInAChildPython:
         done = _start_wave(tmp_path, env)
 
         assert done.returncode == 0
-        assert _error_lines(done) == []
+        assert _fatal_lines(done) == []
 
 
 class TestStartupSequence:
@@ -130,6 +141,6 @@ class TestStartupSequence:
         done = _start_wave(tmp_path, {**non_utf8_child_env, **unusable})
 
         assert done.returncode == 1
-        errors = _error_lines(done)
+        errors = _fatal_lines(done)
         assert len(errors) == 1
         assert NOT_UTF8_LINE.match(errors[0])
