@@ -29,7 +29,12 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
+from tests.api.body_shape_support import (
+    NOT_ID_LIST_FIELDS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 from tests.api.download_name_helpers import EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
@@ -2446,6 +2451,14 @@ class TestBulkExportExecutionsEndpoint:
 
         assert response.status_code == 400
         assert response.json()["error"]["message"] == "execution_ids must be a non-empty list"
+
+    @pytest.mark.parametrize("execution_ids", NOT_ID_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_of_strings_are_refused(
+        self, client: TestClient, execution_ids: Any
+    ) -> None:
+        response = client.post("/executions/export", json={"execution_ids": execution_ids})
+
+        assert_refused(response, "'execution_ids' must be a list of ID strings")
 
     def test_invalid_format_returns_400(self, client: TestClient) -> None:
         """Invalid format returns 400 with exact message."""

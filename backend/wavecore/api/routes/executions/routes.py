@@ -26,7 +26,7 @@ from wavecore.api.routes.executions.shared import (
     _create_success_response,
     _parse_datetime,
 )
-from wavecore.api.routes.shared import read_json_object, validate_uuid
+from wavecore.api.routes.shared import id_list_field, read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.file_tree import content_disposition
@@ -237,7 +237,7 @@ async def export_executions_bulk(request: Request) -> Response:
         Single file download for one id, ZIP archive for two or more.
     """
     body = await read_json_object(request)
-    execution_ids = body.get("execution_ids", [])
+    execution_ids = id_list_field(body, "execution_ids")
     fmt = body.get("format", "json")
 
     if not execution_ids:
@@ -247,12 +247,7 @@ async def export_executions_bulk(request: Request) -> Response:
         raise ValidationException(f"Invalid format: '{fmt}'. Must be 'yaml' or 'json'")
 
     for execution_id in execution_ids:
-        try:
-            uuid.UUID(execution_id)
-        except ValueError as err:
-            raise ValidationException(
-                f"Invalid UUID format for execution_id: '{execution_id}'"
-            ) from err
+        validate_uuid(execution_id, "execution_id")
 
     # NotFoundException propagates to middleware if any execution not found
     results = execution_service.export_executions_batch(execution_ids, fmt)
