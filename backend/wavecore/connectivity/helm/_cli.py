@@ -275,10 +275,13 @@ def _bracketed(host: str) -> str:
 
 def _helm_executable(helm_path: str) -> str:
     """A bare name for the PATH lookup; a path with a folder starts at the home folder (HELM-1)."""
+    # Imported here: the plugins package loads every plugin, and the Helm ones import this module.
+    from wavecore.plugins._tls_material import from_home
+
     value = helm_path.strip()
     if "/" not in value:
         return value or "helm"
-    return os.path.join(os.path.expanduser("~"), os.path.expanduser(value))
+    return from_home(os.path.expanduser(value))
 
 
 def _stream(value: Any) -> str:

@@ -218,8 +218,14 @@ _FILE_IO_MODULE = "wavecore.plugins._file_ops"
 _LAUNCHER_MODULE = "wavecore.plugins._process_group"
 _NETCAT_CORE = "wavecore.plugins._netcat_core"
 _PORTS = "wavecore.plugins._ports"
+_PLURAL = "wavecore.plugins._plural"
 _NETCAT_MODULES = [_NETCAT_CORE, _PORTS]
-_NETCAT_WAVECORE_IMPORTS = {_PORTS, "wavecore.connectivity.k8s.verbs._outputs"}
+_NETCAT_WAVECORE_IMPORTS = {
+    _PORTS,
+    _PLURAL,
+    "wavecore.connectivity.k8s.verbs._outputs",
+    "wavecore.plugins._tls_material",
+}
 _NETCAT_IMPORT_LINE = "from wavecore.plugins import _netcat_core as netcat_core"
 _NETCAT_ENTRY = (
     '"netcat": lambda params, variables, logs: '
@@ -764,7 +770,7 @@ class TestBundleNetcatRegistration:
 class TestTheNetcatCoreStaysVendorable:
     """Both modules are copied verbatim onto a host whose floor is Python 3.10."""
 
-    def test_the_core_imports_only_the_stdlib_the_port_check_and_the_output_core(self) -> None:
+    def test_the_core_imports_only_the_stdlib_and_the_carried_cores(self) -> None:
         source = _module_source(_NETCAT_CORE)
 
         assert _unvendorable_imports(source, _NETCAT_WAVECORE_IMPORTS) == set()
@@ -796,6 +802,13 @@ class TestTheNetcatCoreStaysVendorable:
             if isinstance(node, ast.Name) and node.id == "TimeoutError"
         ]
         assert builtin == []
+
+
+class TestBundleCountWordingVendoring:
+    """The count wording the carried cores share rides the payload as its source on disk."""
+
+    def test_the_module_rides_under_its_dotted_name_as_its_source_on_disk(self) -> None:
+        assert _vendored_sources().get(_PLURAL) == _module_source(_PLURAL)
 
 
 def _carried_unit_root(unit: str) -> Path | None:

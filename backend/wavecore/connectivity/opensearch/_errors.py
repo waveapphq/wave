@@ -62,7 +62,7 @@ def unreachable(where: str, error: BaseException) -> OpenSearchFailure:
 def connect_timeout(where: str, seconds: float) -> OpenSearchFailure:
     return OpenSearchFailure(
         f"Could not connect to OpenSearch at {where}: "
-        f"no answer within {seconds} seconds (Connect timeout)",
+        f"no answer within {_seconds(seconds)} (Connect timeout)",
         UNREACHABLE,
     )
 
@@ -75,9 +75,16 @@ def no_answer(where: str, error: BaseException) -> OpenSearchFailure:
 
 def timeout_message(seconds: float) -> str:
     return (
-        f"Timed out after {seconds} seconds; the connection was shut down, "
+        f"Timed out after {_seconds(seconds)}; the connection was shut down, "
         "so OpenSearch ends the search"
     )
+
+
+def _seconds(count: float) -> str:
+    # Imported here: importing wavecore.plugins at load time would import the OpenSearch block.
+    from wavecore.plugins._plural import plural
+
+    return plural(count, "second", "seconds")
 
 
 def failure_for(answer: "Answer", query_as_sent: Any = None) -> OpenSearchFailure:

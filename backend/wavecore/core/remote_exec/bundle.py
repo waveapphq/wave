@@ -97,6 +97,7 @@ from wavecore.plugins import (
     _netcat_core,
     _opensearch_core,
     _ping_core,
+    _plural,
     _ports,
     _process_group,
     _python_bridge,
@@ -1009,7 +1010,7 @@ def _vendored_sources() -> dict[str, str]:
     with open(_process_group.__file__, encoding="utf-8") as handle:
         sources["wavecore.plugins._process_group"] = handle.read()
     # The local-process runtime, its watchdog, the Python bridge (PYRUN-12), the block cores,
-    # the trust core and the proxy core.
+    # their count wording, the trust core and the proxy core.
     for module in (
         _held_run,
         _local_process,
@@ -1019,6 +1020,7 @@ def _vendored_sources() -> dict[str, str]:
         _netcat_core,
         _opensearch_core,
         _ping_core,
+        _plural,
         _ports,
         _sql_core,
         _tls_material,

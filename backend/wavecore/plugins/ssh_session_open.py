@@ -15,13 +15,13 @@ from typing import Any
 from wavecore.api.config.instance_settings import HOST_KEY_ACTIONS
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._executor_base import validate_enum_from_schema
+from wavecore.plugins._plural import plural
 from wavecore.plugins._ports import check_port
 from wavecore.plugins._shared_params import (
     check_at_least,
     check_integer,
     gate,
     number_setting,
-    plural,
 )
 from wavecore.plugins._ssh_session import (
     DEFAULT_CONNECT_TIMEOUT,

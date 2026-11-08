@@ -13,7 +13,9 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.plugins._plural import plural
 from wavecore.plugins._ports import check_port
+from wavecore.plugins._tls_material import from_home
 
 Log = Callable[[str, str], None]
 Stream = tuple[Any, Any]
@@ -263,7 +265,7 @@ def _file_bytes(params: dict[str, Any], payload: bytes | None) -> bytes:
     if params.get("payload_base64") is not None:
         return base64.b64decode(params["payload_base64"])
     file = str(params["file"]).strip()
-    return read_payload_file(os.path.join(os.path.expanduser("~"), file), file)
+    return read_payload_file(from_home(file), file)
 
 
 async def _resolve(settings: _Settings) -> list[str]:
@@ -319,7 +321,8 @@ async def _connect(
         try:
             return await asyncio.wait_for(attempt(), settings.timeout), "open", ""
         except asyncio.TimeoutError:  # on the 3.10 floor this differs from the builtin one
-            state, reason = "timed out", f"No answer within {settings.timeout} seconds"
+            within = plural(settings.timeout, "second", "seconds")
+            state, reason = "timed out", f"No answer within {within}"
         except OSError as exc:
             state, reason = "closed", _os_text(exc)
     return None, state, reason
@@ -413,7 +416,8 @@ async def _datagrams(
     loop = asyncio.get_running_loop()
     family = socket.AF_INET6 if ":" in address else socket.AF_INET
     timeout = settings.timeout
-    state, reason, reply = _OPEN_OR_FILTERED, f"No reply within {timeout} seconds", bytearray()
+    within = plural(timeout, "second", "seconds")
+    state, reason, reply = _OPEN_OR_FILTERED, f"No reply within {within}", bytearray()
     try:
         with socket.socket(family, socket.SOCK_DGRAM) as sock, suppress(asyncio.TimeoutError):
             sock.setblocking(False)
@@ -467,9 +471,8 @@ def _apply_pass_rule(settings: _Settings, results: list[PortResult]) -> None:
         port = failed[0].port
         if failed[0].state == "closed":
             raise NetcatFailure(f"Port {port} on {host} is closed: {failed[0].reason}", "Closed")
-        raise NetcatFailure(
-            f"Port {port} on {host} timed out after {settings.timeout} seconds", "Timeout"
-        )
+        after = plural(settings.timeout, "second", "seconds")
+        raise NetcatFailure(f"Port {port} on {host} timed out after {after}", "Timeout")
     if settings.pass_all:
         listed = ", ".join(f"{result.port} {result.state}" for result in failed[:_LISTED_FAILURES])
         more = len(failed) - _LISTED_FAILURES

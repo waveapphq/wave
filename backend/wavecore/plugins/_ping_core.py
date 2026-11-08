@@ -13,6 +13,7 @@ from contextlib import suppress
 from typing import Any, NamedTuple
 
 from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.plugins._plural import plural
 
 Log = Callable[[str, str], None]
 
@@ -512,7 +513,8 @@ def _check_timeout(
         reply.status == TIMED_OUT for reply in replies
     )
     if unfinished and clock() >= deadline:
-        raise PingFailure(f"Ping did not finish within {settings.timeout} seconds", "Timeout")
+        within = plural(settings.timeout, "second", "seconds")
+        raise PingFailure(f"Ping did not finish within {within}", "Timeout")
 
 
 def _percent(part: int, whole: int) -> float:

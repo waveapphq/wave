@@ -3,8 +3,8 @@
 Every module under wavecore/connectivity/helm/ is copied verbatim onto the
 execution host beside the Kubernetes core, so each one may import the standard
 library, its own package, the Kubernetes package, the process launcher, the
-stdlib file core, the proxy core and the run log - nothing else, and nothing
-the host's floor interpreter cannot parse.
+stdlib file core, the home-relative path join, the proxy core and the run log -
+nothing else, and nothing the host's floor interpreter cannot parse.
 """
 
 from pathlib import Path
@@ -21,7 +21,7 @@ from tests.core.remote_exec._vendorability import (
 from wavecore.connectivity import helm as helm_package
 from wavecore.connectivity import k8s as k8s_package
 from wavecore.connectivity import run_log
-from wavecore.plugins import _file_ops, _process_group
+from wavecore.plugins import _file_ops, _process_group, _tls_material
 
 _ROOT = Path(str(helm_package.__file__)).parent
 _PACKAGE = helm_package.__name__
@@ -34,6 +34,7 @@ _WALK = PackageWalk(
         k8s_package.__name__,
         _process_group.__name__,
         _file_ops.__name__,
+        _tls_material.__name__,
         _PROXY_CORE,
         run_log.__name__,
     ),

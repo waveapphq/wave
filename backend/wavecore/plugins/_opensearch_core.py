@@ -36,6 +36,7 @@ from wavecore.connectivity.opensearch._time import Window, iso, parse_time, wind
 from wavecore.connectivity.opensearch._url import index_path, parse_cluster_url
 from wavecore.connectivity.url_credentials import mask_url_passwords
 from wavecore.plugins._held_run import Live, held
+from wavecore.plugins._plural import plural
 
 Log = Callable[[str, str], None]
 
@@ -142,10 +143,6 @@ def _empties() -> dict[str, Any]:
     return {"results": summary_table([], []), "total_results": 0}
 
 
-def _count(number: int, noun: str) -> str:
-    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
-
-
 class _Run:
     """One run's block, window, author query and log, and when its first request went out."""
 
@@ -167,11 +164,12 @@ class _Run:
         for note in self.author.notes:
             log("INFO", note)
         kept = len(table["rows"])
-        size = f"{kept} kept" if block.searching else _count(kept, "row")
+        size = f"{kept} kept" if block.searching else plural(kept, "row", "rows")
+        found = plural(total, "result", "results")
         log(
             "INFO",
             f"{_ACTIONS[block.mode]} {block.index} from {iso(self.span.from_ms)} to "
-            f"{iso(self.span.to_ms)}: {_count(total, 'result')}, {size}, {seconds:.2f} s",
+            f"{iso(self.span.to_ms)}: {found}, {size}, {seconds:.2f} s",
         )
         outputs = block_success({"results": table, "total_results": total})
         return {**outputs, "__block_warning": True} if amber else outputs

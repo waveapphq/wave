@@ -38,15 +38,20 @@ def timeout_parameter(default: int, description: str) -> dict[str, Any]:
     }
 
 
-def stream_output_parameter(description: str) -> dict[str, Any]:
-    """The Log Output switch, in no group; each caller places the row itself."""
+def toggle_parameter(name: str, description: str) -> dict[str, Any]:
+    """An optional on/off row that starts off."""
     return {
-        "name": "stream_output",
+        "name": name,
         "type": "boolean",
         "required": False,
         "default": False,
         "description": description,
     }
+
+
+def stream_output_parameter(description: str) -> dict[str, Any]:
+    """The Log Output switch, in no group; each caller places the row itself."""
+    return toggle_parameter("stream_output", description)
 
 
 def output_core(
@@ -136,11 +141,6 @@ def require_positive(params: dict[str, Any], name: str) -> None:
     value = params.get(name)
     if value is not None and value <= 0:
         raise ValueError(f"Parameter '{name}' must be positive")
-
-
-def plural(count: float, one: str, many: str) -> str:
-    """A count with its noun, singular only for exactly one."""
-    return f"{count} {one if count == 1 else many}"
 
 
 def blank(value: Any) -> bool:

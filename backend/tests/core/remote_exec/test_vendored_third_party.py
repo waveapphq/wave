@@ -39,6 +39,7 @@ CORES = (
     "_ping_core",
     "_netcat_core",
     "_file_ops",
+    "_plural",
     "_ports",
     "_process_group",
     "_sql_core",

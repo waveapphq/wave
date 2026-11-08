@@ -13,7 +13,12 @@ from typing import Any, cast
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._ports import check_port
 from wavecore.plugins._shared_params import check_boolean, number_setting
-from wavecore.plugins._ssh_forward import start_forwarder, tunnel_failed, validate_target
+from wavecore.plugins._ssh_forward import (
+    closed_phrase,
+    start_forwarder,
+    tunnel_failed,
+    validate_target,
+)
 from wavecore.plugins._ssh_session import require_session, session_id_param
 from wavecore.plugins.base import PluginBase
 
@@ -148,14 +153,16 @@ class SSHTunnelOpenPlugin(PluginBase):
             raise
 
         local_port = listener.get_port()
-        registry.add_tunnel(
+        # Another branch can close the session while the Local Port binds.
+        if not registry.add_tunnel(
             session_id,
             tunnel_id,
             listener,
             local_port,
             f"{remote_host}:{remote_port}",
             held=held,
-        )
+        ):
+            raise tunnel_failed(remote_host, remote_port, closed_phrase(record))
         logger.debug(
             f"Opened tunnel {tunnel_id}: localhost:{local_port} -> {remote_host}:{remote_port}"
         )
