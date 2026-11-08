@@ -477,6 +477,8 @@ def process_regression_operations(
 def process_execution_operations(
     operations: list[BulkOperation], required_fields: list[str]
 ) -> list[BulkResultItem]:
+    # A first load mid-request would replace the store and drop the rows added before it.
+    _exec_storage._ensure_cache_loaded()
     results = _process_bulk_operations(
         _DictStoreAdapter("Execution", _exec_storage._execution_storage),
         operations,
