@@ -123,10 +123,10 @@ class _AdhocBodyWorker:
                 record, session_ref = _require_adhoc_session(
                     self._container, self._variables, self._session, self._session_id
                 )
-                _remote_session_id, worker = await self._held.enter_async_context(
+                _remote_session_id, opened = await self._held.enter_async_context(
                     _registered_worker(self._session, record, session_ref)
                 )
-                self._opened = BodyWorker(worker=worker, host=record["host"])
+                self._opened = opened
         return self._opened
 
 
@@ -248,14 +248,16 @@ def _require_adhoc_session(
 @asynccontextmanager
 async def _registered_worker(
     session: dict[str, Any], record: dict[str, Any], session_ref: Any
-) -> AsyncIterator[tuple[str, Any]]:
+) -> AsyncIterator[tuple[str, BodyWorker]]:
     """Open a worker on the session's remote host; on exit the registry stops it, then it closes."""
     registry = _get_remote_worker_registry(session)
     remote_session_id = uuid.uuid4().hex
     worker = await open_worker(record["connection"])
-    registry.register(remote_session_id, worker, session_ref, record["host"])
+    # A session opened on a tunnel's Local Port is named by its far host, not the loopback.
+    host = record["host_identity"]
+    registry.register(remote_session_id, worker, session_ref, host)
     try:
-        yield remote_session_id, worker
+        yield remote_session_id, BodyWorker(worker=worker, host=host)
     finally:
         registry.close(remote_session_id)
         await close_worker(worker)
@@ -266,8 +268,7 @@ async def _held_body_worker(
     session: dict[str, Any], record: dict[str, Any], session_ref: Any
 ) -> AsyncIterator[tuple[str, BodyWorker]]:
     """Open a worker on the session's remote host and hold it for everything run inside."""
-    async with _registered_worker(session, record, session_ref) as (remote_session_id, worker):
-        body_worker = BodyWorker(worker=worker, host=record["host"])
+    async with _registered_worker(session, record, session_ref) as (remote_session_id, body_worker):
         with _body_worker_scope(body_worker):
             yield remote_session_id, body_worker
 
