@@ -93,7 +93,13 @@ REMOTE_EXECUTION_ENTRY: dict[str, Any] = {
     "kind": "plugin",
     "version": "1.0.0",
     "parameters": {
-        "session_id": {"name": "session_id", "type": "string", "required": True, "default": None}
+        "session_id": {
+            "name": "session_id",
+            "type": "string",
+            "required": True,
+            "default": None,
+            "description": "Name of an open SSH session the body executes over",
+        }
     },
     "outputs": {"remote_session_id": "string"},
     "stub": False,
