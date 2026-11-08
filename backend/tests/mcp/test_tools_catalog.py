@@ -50,7 +50,8 @@ def _registries(seed_registries: None) -> None:
 def _blocks() -> list[dict[str, Any]]:
     from wavecore.mcp.tools import discover
 
-    return discover.list_blocks()["blocks"]
+    blocks: list[dict[str, Any]] = discover.list_blocks()["blocks"]
+    return blocks
 
 
 def _by_id(blocks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -156,6 +157,19 @@ class TestListBlocks:
         assert [entry["id"] for entry in plugin_entries] == ["log"]
 
 
+SESSION_ID_DESCRIPTION = (
+    "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+    "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
+)
+REMOTE_SESSION_ID_OUTPUT = {
+    "name": "remote_session_id",
+    "type": "string",
+    "description": (
+        "Handle to the persistent remote worker opened on the SSH session host for this container"
+    ),
+}
+
+
 class TestRemoteExecutionEntry:
     """The container's setting and output are the ones a recipe compiles and the engine reads."""
 
@@ -168,14 +182,14 @@ class TestRemoteExecutionEntry:
                 "type": "string",
                 "required": True,
                 "default": None,
-                "description": "Name of an open SSH session the body executes over",
+                "description": SESSION_ID_DESCRIPTION,
             }
         ]
 
     def test_the_entry_lists_the_remote_session_id_output(self) -> None:
         entry = _by_id(_blocks())["remote-execution"]
 
-        assert entry["output_schema"] == [{"name": "remote_session_id", "type": "string"}]
+        assert entry["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
 
     def test_get_block_lists_the_same_setting_and_output(self) -> None:
         from wavecore.mcp.tools import discover
@@ -226,7 +240,17 @@ class TestRemoteExecutionEntry:
         again = discover.get_block("remote-execution")
 
         assert again["parameter_schema"][0]["name"] == "session_id"
-        assert again["output_schema"] == [{"name": "remote_session_id", "type": "string"}]
+        assert again["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
+
+    def test_a_returned_output_is_a_fresh_copy(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        first = discover.get_block("remote-execution")
+        first["output_schema"][0]["description"] = "changed"
+
+        again = discover.get_block("remote-execution")
+
+        assert again["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
 
 
 class TestProxySupportInTheCatalog:

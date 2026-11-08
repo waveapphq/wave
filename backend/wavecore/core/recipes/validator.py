@@ -98,10 +98,23 @@ REMOTE_EXECUTION_ENTRY: dict[str, Any] = {
             "type": "string",
             "required": True,
             "default": None,
-            "description": "Name of an open SSH session the body executes over",
+            "description": (
+                "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+                "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session "
+                "reference it"
+            ),
         }
     },
-    "outputs": {"remote_session_id": "string"},
+    "outputs": {
+        "remote_session_id": {
+            "name": "remote_session_id",
+            "type": "string",
+            "description": (
+                "Handle to the persistent remote worker opened on the SSH session host "
+                "for this container"
+            ),
+        }
+    },
     "stub": False,
 }
 
@@ -258,7 +271,7 @@ def remote_execution_entry() -> BlockEntry:
         kind=entry["kind"],
         version=entry["version"],
         parameters=dict(entry["parameters"]),
-        outputs=dict(entry["outputs"]),
+        outputs={name: str(out["type"]) for name, out in entry["outputs"].items()},
     )
 
 

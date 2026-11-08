@@ -54,7 +54,8 @@ def validate(text: str) -> list[dict[str, Any]]:
 def compile_findings(text: str) -> list[dict[str, Any]]:
     from wavecore.core.recipes.compiler import compile_recipe
 
-    return compile_recipe(text)["findings"]
+    findings: list[dict[str, Any]] = compile_recipe(text)["findings"]
+    return findings
 
 
 def http_step(**settings: Any) -> dict[str, Any]:
@@ -126,6 +127,11 @@ class TestBlockCatalog:
 
         assert load_block_catalog()["delay"].output_type_when == {}
         assert remote_execution_entry().output_type_when == {}
+
+    def test_the_remote_execution_entry_maps_its_output_to_its_type(self) -> None:
+        from wavecore.core.recipes.validator import remote_execution_entry
+
+        assert remote_execution_entry().outputs == {"remote_session_id": "string"}
 
     def test_a_block_with_output_type_rules_carries_them(self) -> None:
         from wavecore.core.recipes.validator import load_block_catalog

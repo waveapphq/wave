@@ -20,7 +20,7 @@ from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests import testdata_service
 from wavecore.controls.registry import list_latest_control_metadata
 from wavecore.core.plugin_registry import list_plugins
-from wavecore.core.recipes.validator import remote_execution_entry
+from wavecore.core.recipes.validator import REMOTE_EXECUTION_ENTRY
 from wavecore.core.secrets.sealing import mask_definition_function_secrets
 from wavecore.plugins.base import PROXY_NOT_APPLICABLE, PluginBase
 
@@ -33,21 +33,19 @@ ENTITY_TYPES = ("test", "suite", "regression")
 
 def _remote_execution_entry() -> dict[str, Any]:
     """The container entry, its setting and output taken from the recipe compiler's entry."""
-    remote = remote_execution_entry()
+    remote = REMOTE_EXECUTION_ENTRY
     return {
-        "id": remote.id,
-        "name": remote.name,
+        "id": remote["id"],
+        "name": remote["name"],
         "kind": "container",
         "category": "remote",
-        "version": remote.version,
+        "version": remote["version"],
         "description": (
             "Container that runs its body blocks on a remote host over an open SSH "
             "session. Blocks are placed in the body via the 'body' handle."
         ),
-        "parameter_schema": [dict(param) for param in remote.parameters.values()],
-        "output_schema": [
-            {"name": name, "type": output_type} for name, output_type in remote.outputs.items()
-        ],
+        "parameter_schema": [dict(param) for param in remote["parameters"].values()],
+        "output_schema": [dict(out) for out in remote["outputs"].values()],
         "structure_hints": {
             "type": "scoped",
             "has_body": True,
