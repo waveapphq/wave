@@ -74,6 +74,8 @@ python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# Seconds per test, setup and teardown included: a hang fails by name instead of stalling the run
+timeout = 60
 # Coverage disabled by default due to pytest-cov memory issues with large async test suites
 addopts = [
     "-v",
