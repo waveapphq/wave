@@ -309,6 +309,61 @@ class TestSaveNewVersionImmutability:
         assert version_path.read_bytes() == original_bytes
 
 
+class TestSaveNewVersionAtomicWrite:
+    """The version and index yaml are written through the shared synced temp-file writer."""
+
+    def test_version_and_index_texts_go_through_the_shared_writer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services import settings_file
+        from wavecore.api.services.functions._storage import save_new_version
+
+        real_write = settings_file.write_text_atomic
+        calls: list[tuple[Path, str, int | None]] = []
+
+        def spy(path: Path, text: str, mode: int | None = None) -> None:
+            calls.append((path, text, mode))
+            real_write(path, text, mode)
+
+        monkeypatch.setattr(settings_file, "write_text_atomic", spy)
+
+        fn_id = str(uuid.uuid4())
+        save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+
+        fn_dir = _published_dir() / fn_id
+        version_path = fn_dir / "versions" / "1.0.0.yaml"
+        index_path = fn_dir / "index.yaml"
+        assert [(path, mode) for path, _, mode in calls] == [
+            (version_path, None),
+            (index_path, None),
+        ]
+        version_text = calls[0][1]
+        assert version_text == yaml.safe_dump(yaml.safe_load(version_text), sort_keys=False)
+        assert list(yaml.safe_load(version_text)) == ["version", "definition", "metadata"]
+        assert calls[1][1] == index_path.read_text(encoding="utf-8")
+
+    def test_a_failed_version_write_leaves_no_temp_file(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import errno
+        import os
+
+        from wavecore.api.services.functions._storage import save_new_version
+
+        def refuse(*args: Any, **kwargs: Any) -> None:
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+        monkeypatch.setattr(os, "replace", refuse)
+
+        fn_id = str(uuid.uuid4())
+        with pytest.raises(OSError) as caught:
+            save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+
+        assert caught.value.errno == errno.ENOSPC
+        versions_dir = _published_dir() / fn_id / "versions"
+        assert sorted((_published_dir() / fn_id).rglob("*")) == [versions_dir]
+
+
 class TestSaveNewVersionVersionValidation:
     """Every version string is validated as strict semver before any
     filesystem write, so it can never escape the versions directory or poison

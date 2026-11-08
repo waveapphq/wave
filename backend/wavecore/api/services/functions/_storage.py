@@ -6,7 +6,6 @@ import ast
 import copy
 import hashlib
 import json
-import os
 import re
 import shutil
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, MutableMapping
@@ -17,6 +16,7 @@ from typing import Any
 import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.services import settings_file
 from wavecore.api.services.block_node_checks import (
     block_type_registered,
     validate_node_element_type,
@@ -108,11 +108,8 @@ def _load_yaml(path: Path) -> Any:
         return yaml.load(f, Loader=_YAML_LOADER)
 
 
-def _atomic_write_yaml(path: Path, payload: Any) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        yaml.safe_dump(payload, f, sort_keys=False)
-    os.replace(tmp, path)
+def _write_yaml(path: Path, payload: Any) -> None:
+    settings_file.write_text_atomic(path, yaml.safe_dump(payload, sort_keys=False))
 
 
 def _read_index(function_id: str) -> dict[str, Any] | None:
@@ -124,7 +121,7 @@ def _read_index(function_id: str) -> dict[str, Any] | None:
 
 
 def _write_index(function_id: str, index: dict[str, Any]) -> None:
-    _atomic_write_yaml(_index_file(function_id), index)
+    _write_yaml(_index_file(function_id), index)
 
 
 def _read_version_payload(function_id: str, version: str) -> dict[str, Any] | None:
@@ -294,7 +291,7 @@ def _persist_version(
         "definition": _build_version_body(definition),
         "metadata": metadata_block,
     }
-    _atomic_write_yaml(version_path, version_payload)
+    _write_yaml(version_path, version_payload)
     _upsert_version_index(function_id, name, version, metadata_block["published_at"])
     return compute_etag(version_payload)
 
