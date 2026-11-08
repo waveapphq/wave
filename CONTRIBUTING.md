@@ -259,7 +259,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 9. If the change needs a docs change, push the docs branch with `git push -u origin <branch>`. Open `https://github.com/waveapphq/wave-docs/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. Link that pull request in the description of your WAVE pull request. Use the full link, as the template shows. If the change needs no docs change, tick the box "No docs change needed" in the description.
 
-A check fails each pull request that neither ticks "No docs change needed" nor links a merged pull request of the docs repo with the same branch name. The docs pull request must be merged first. Then re-run the check, or edit the description of your pull request.
+A check blocks the merge of each pull request until it ticks "No docs change needed" or links a merged pull request of the docs repo with the same branch name. While the linked docs pull request is open, the check waits and the merge stays blocked. When the docs pull request is merged, re-run the check. The check fails when the description ticks no box and links no docs pull request, or when the linked docs pull request is on a branch with another name, was closed without a merge, or does not exist.
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 
