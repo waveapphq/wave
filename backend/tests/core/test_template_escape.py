@@ -144,6 +144,84 @@ class TestEscapedPairs:
         )
 
 
+def _part_pairs(
+    template: str, rule: str, parts: tuple[str, ...], **values: Any
+) -> list[tuple[str, str]]:
+    """The pairs render_escaped answers when told which parts to look for."""
+    evaluate = _evaluator(values)
+    return render_escaped(template, rule, evaluate, MARKER, setting="query", parts=parts)[1]
+
+
+class TestEscapedParts:
+    """A part found inside a larger value pairs with the escaped text it takes there."""
+
+    def test_a_part_inside_a_quoted_dql_value(self) -> None:
+        pairs = _part_pairs('msg: "{{ v }}"', "dql", ('p"w',), v='id p"w end')
+
+        assert pairs == [('id p"w end', r"id p\"w end"), ('p"w', r"p\"w")]
+
+    def test_a_part_inside_a_bare_dql_value(self) -> None:
+        pairs = _part_pairs("msg: {{ v }}", "dql", ("pass(w)",), v="id pass(w) end")
+
+        assert pairs == [("id pass(w) end", r"id pass\(w\) end"), ("pass(w)", r"pass\(w\)")]
+
+    def test_a_bare_dql_part_keeps_the_operator_marks_of_the_whole_value(self) -> None:
+        pairs = _part_pairs("msg: {{ v }}", "dql", ("or b:c", "p:w or"), v="a or b:c p:w orb")
+
+        assert pairs == [
+            ("a or b:c p:w orb", r"a \or b\:c p\:w orb"),
+            ("or b:c", r"\or b\:c"),
+            ("p:w or", r"p\:w or"),
+        ]
+
+    def test_a_part_inside_a_json_string(self) -> None:
+        pairs = _part_pairs('{"q": "{{ v }}"}', "json", ("a\\b",), v="id a\\b end")
+
+        assert pairs == [("id a\\b end", r"id a\\b end"), ("a\\b", r"a\\b")]
+
+    def test_a_part_inside_a_standing_alone_json_text(self) -> None:
+        pairs = _part_pairs('{"q": {{ v }}}', "json", ("p\bw",), v="id p\bw")
+
+        assert pairs == [("id p\bw", r'"id p\bw"'), ("p\bw", r"p\bw")]
+
+    def test_a_part_inside_a_standing_alone_json_list_keeps_its_text(self) -> None:
+        pairs = _part_pairs('{"q": {{ v }}}', "json", ("secret1",), v=["secret1", "x"])
+
+        assert pairs == [('["secret1","x"]', '["secret1","x"]'), ("secret1", "secret1")]
+
+    def test_a_part_found_twice_with_one_escaped_text_pairs_once(self) -> None:
+        pairs = _part_pairs('msg: "{{ v }}"', "dql", ('p"w',), v='p"w and p"w')
+
+        assert pairs == [('p"w and p"w', r"p\"w and p\"w"), ('p"w', r"p\"w")]
+
+    def test_a_part_found_twice_with_two_escaped_texts_pairs_each(self) -> None:
+        pairs = _part_pairs("msg: {{ v }}", "dql", ("x or",), v="x or x orb")
+
+        assert pairs == [("x or x orb", r"x \or x orb"), ("x or", r"x \or"), ("x or", "x or")]
+
+    def test_a_part_that_is_the_whole_value_adds_no_pair(self) -> None:
+        pairs = _part_pairs('msg: "{{ v }}"', "dql", ('p"w',), v='p"w')
+
+        assert pairs == [('p"w', r"p\"w")]
+
+    def test_a_part_the_value_does_not_hold_adds_no_pair(self) -> None:
+        pairs = _part_pairs('msg: "{{ v }}"', "dql", ("hunter2",), v='id p"w')
+
+        assert pairs == [('id p"w', r"id p\"w")]
+
+    def test_parts_are_looked_for_in_every_marker(self) -> None:
+        template = 'a: "{{ trace }}" and b: {{ user }}'
+
+        pairs = _part_pairs(template, "dql", ("k(1)",), trace="id k(1)", user="k(1) x")
+
+        assert pairs == [
+            ("id k(1)", "id k(1)"),
+            ("k(1)", "k(1)"),
+            ("k(1) x", r"k\(1\) x"),
+            ("k(1)", r"k\(1\)"),
+        ]
+
+
 class TestLandingScanner:
     """A quote not preceded by an odd run of backslashes toggles the landing."""
 

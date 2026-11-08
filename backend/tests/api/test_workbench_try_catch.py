@@ -11,6 +11,7 @@ Coverage targets:
 """
 
 import asyncio
+import logging
 from typing import Any
 from unittest.mock import patch
 
@@ -1059,6 +1060,38 @@ class TestApplyPathOutputBindings:
         variables: dict[str, Any] = {}
         _wb_try_catch._apply_path_output_bindings({"out1": "v"}, {}, variables)
         assert variables == {}
+
+
+class TestRecordNodeFailure:
+    """A path node failure is logged to the backend with the run's secrets masked."""
+
+    @pytest.mark.asyncio
+    async def test_the_failure_log_line_masks_a_secret_value(
+        self, wavecore_log: list[logging.LogRecord]
+    ) -> None:
+        from wavecore.api.services import log_streaming_service
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        session_id = "record-node-failure"
+        registry = SecretRegistry()
+        registry.register("token", "s3cr3t-t0ken-99", "declared")
+        log_streaming_service.register_secret_registry(session_id, registry)
+        try:
+            await _wb_try_catch._record_node_failure(
+                _make_session(session_id),
+                session_id,
+                "n1",
+                "N1",
+                RuntimeError("token s3cr3t-t0ken-99 refused"),
+            )
+        finally:
+            log_streaming_service._clear_session_logs(session_id)
+
+        assert [
+            record.getMessage()
+            for record in wavecore_log
+            if record.name == "wavecore.api.services.workbench._common"
+        ] == ["Try-catch path node n1 failed: token ******** refused"]
 
 
 class TestTracePathChainHelpers:

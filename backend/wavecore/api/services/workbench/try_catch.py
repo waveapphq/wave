@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
+from wavecore.api.services.log_streaming_service import scrub_message
 from wavecore.api.services.workbench._common import (
     BlockAttempt,
     NodeStep,
@@ -167,7 +168,8 @@ async def _record_node_failure(
     walker: str = "Try-catch path",
 ) -> None:
     """Mark the node failed, log the failure and paint it."""
-    logger.error("%s node %s failed: %s", walker, path_node_id, exc)
+    message = scrub_message(session_id, str(exc), "SYSTEM", block_id=path_node_id)
+    logger.error("%s node %s failed: %s", walker, path_node_id, message)
     session["block_states"][path_node_id] = "failed"
     _add_execution_log(
         session_id,
