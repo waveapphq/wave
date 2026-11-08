@@ -27,7 +27,7 @@ from wavecore.core.secrets.sealing import unseal_all
 def _create_test_with_legacy_data(data: dict[str, Any]) -> dict[str, Any]:
     """Create a test bypassing the save pipeline variable validation.
 
-    Used to simulate legacy data that may have undeclared variables.
+    Models stored data that may have undeclared variables.
     """
     test_id = str(uuid.uuid4())
     now = datetime.now(UTC).isoformat()
@@ -2000,7 +2000,7 @@ class TestNodeSizingFieldsRoundTrip:
         assert "nameCollapsed" not in nodes[0]["data"]
 
     def test_node_with_legacy_measured_field_round_trips(self) -> None:
-        """Nodes carrying the legacy 'measured' field still load and the field round-trips."""
+        """A node's 'measured' field round-trips through save and load."""
         created = test_service.create_test({"name": "Legacy Measured"})
 
         node = self._make_workflow_node(
@@ -2474,9 +2474,7 @@ class TestValidateTest:
         for this combination, otherwise the persist-stage autofix strips the
         node and the user silently loses their work on save.
         """
-        # Use the real create_test path (which exercises _validate_for_persist
-        # + autofix), not the legacy bypass helper. This is the contract that
-        # the drag-to-create flow depends on.
+        # create_test runs the persist validation and autofix the drag-to-create flow relies on.
         created = test_service.create_test(
             {
                 "name": "Function ElementType Test",

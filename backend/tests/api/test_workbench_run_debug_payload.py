@@ -65,7 +65,7 @@ class TestWorkbenchRunRegularPayload:
     def test_regular_run_does_not_accept_debug_mode_field(
         self, client: TestClient, test_id: str, environment_id: str
     ) -> None:
-        """Legacy ``debug_mode`` is removed from the request model."""
+        """A ``debug_mode`` field is not part of the request model."""
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:

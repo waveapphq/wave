@@ -636,8 +636,7 @@ class TestFieldExpressionRestrictions:
 
 
 class TestRetiredCredentialHelpers:
-    """The credential expression helpers are deleted: auth is
-    the HTTP plugin's Auth config section, not an expression-language feature."""
+    """Auth is the HTTP plugin's Auth config section, not an expression-language feature."""
 
     def test_retired_helper_names_are_not_whitelisted(self) -> None:
         """basic_auth / bearer / secret must not exist in the eval sandbox."""
@@ -645,7 +644,7 @@ class TestRetiredCredentialHelpers:
             assert name not in SAFE_BUILTINS
 
     def test_secret_result_builtins_surface_is_deleted(self) -> None:
-        """The secret-result metadata surface is gone with the helpers."""
+        """The security module has no SECRET_RESULT_BUILTINS."""
         import wavecore.core.expressions.security as security
 
         assert not hasattr(security, "SECRET_RESULT_BUILTINS")

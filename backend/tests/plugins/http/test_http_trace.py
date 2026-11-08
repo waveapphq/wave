@@ -772,7 +772,7 @@ class TestTraceWithoutWireEvidence:
 
 
 class TestHTTPPluginLogging:
-    """INFO summary formatting details (migrated, unchanged)."""
+    """INFO summary formatting details."""
 
     @pytest.mark.asyncio
     async def test_response_logging_kb_size_display(self):
@@ -799,7 +799,7 @@ class TestHTTPPluginLogging:
 
 
 class TestHTTPPluginLogBranches:
-    """Logging early-return branches (migrated, unchanged)."""
+    """Logging early-return branches."""
 
     def test_log_request_no_logger(self):
         from wavecore.plugins.http_client import HTTPClientPlugin, HTTPRequestConfig

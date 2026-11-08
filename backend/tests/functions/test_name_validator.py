@@ -1,14 +1,11 @@
-"""Backend tests for the relaxed Function name validator.
+"""Backend tests for the Function name validator.
 
-Contract (FN-LC-1):
+Contract (FN-LC-1): any printable keyboard character (letters, digits, spaces,
+common punctuation), capped at 32 chars; uniqueness case-insensitive.
 
-    Function name validator loosened: any printable keyboard character
-    (letters, digits, spaces, common punctuation), capped at 32 chars;
-    uniqueness case-insensitive.
-
-These tests assert the NEW contract against the public `/functions` API
-surface (`create_function`) so any internal refactor of `_storage._validate_name`
-and the duplicate-name check is exercised end-to-end.
+These tests assert the contract against the public `/functions` API surface
+(`create_function`), so `_storage._validate_name` and the duplicate-name check
+are exercised end-to-end.
 
 Error messages are asserted with anchored regex.
 """
@@ -47,7 +44,7 @@ def _all_error_messages(body: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Empty / whitespace-only names are still rejected
+# Empty / whitespace-only names are rejected
 # ---------------------------------------------------------------------------
 
 
@@ -75,7 +72,7 @@ class TestNameRequired:
 
 
 # ---------------------------------------------------------------------------
-# Relaxed character set: any printable keyboard character is accepted
+# Any printable keyboard character is accepted
 # ---------------------------------------------------------------------------
 
 

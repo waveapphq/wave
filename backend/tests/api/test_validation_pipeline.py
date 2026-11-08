@@ -147,10 +147,7 @@ class TestApplySafeAutofixes:
         assert "INVALID_OUTPUT_BINDING_TYPE" not in codes
 
     def test_process_variables_for_save_passes_non_dict_var_through(self) -> None:
-        """Non-dict variable values are stored verbatim (legacy/imported tests)."""
-        # Build the test via legacy-data path to bypass the unified pipeline
-        # (which validates variable shape strictly). The else branch in
-        # _process_variables_for_save fires when var_info is not a dict.
+        """A non-dict variable value passes through verbatim."""
         from wavecore.api.services.tests.service import _process_variables_for_save
 
         result = _process_variables_for_save({"plain": "raw_string_value"})
@@ -183,7 +180,7 @@ class TestApplySafeAutofixes:
         assert edges[0].get("targetHandle") is None
 
     def test_apply_safe_autofixes_is_exported(self) -> None:
-        """The new helper is a public symbol of the service module."""
+        """The service module exposes _apply_safe_autofixes."""
         assert hasattr(test_service, "_apply_safe_autofixes")
 
     def test_apply_safe_autofixes_returns_test_dict(self) -> None:
@@ -1036,7 +1033,7 @@ class TestFixEndpointPreservesVisibleWarnings:
 
 
 class TestRoutesUnifiedSaveValidation:
-    """POST /tests and PUT /tests/{id} render 422 with the new top-level message."""
+    """POST /tests and PUT /tests/{id} render 422 with the top-level message."""
 
     @pytest.fixture
     def client(self) -> TestClient:

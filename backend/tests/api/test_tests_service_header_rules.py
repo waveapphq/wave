@@ -7,7 +7,7 @@ HTTP-node value rules, with exact design-time messages:
   rows duplicating an earlier one AND for rows colliding with a header the
   saved config generates at send time (Auth section; body_auto_headers +
   mode-implied Content-Type; multipart ALWAYS generates - the checkbox is
-  forced). Key rendered as typed. The mode-conflict message is RETIRED.
+  forced). Key rendered as typed.
 - `Header "Content-Length" cannot be set manually - the HTTP stack blocks
   length overrides` (canonical casing regardless of typed casing;
   Transfer-Encoding rows are allowed - the transport arbitrates)

@@ -317,7 +317,7 @@ class TestCreateProfile:
         assert "Invalid profile type" in str(exc_info.value)
 
     def test_create_profile_rejects_ldap_type(self) -> None:
-        """Test that create_profile rejects the removed ldap type (REQ-4.7.3)."""
+        """Test that create_profile rejects the ldap type (REQ-4.7.3)."""
         from wavecore.api.services.profiles import service as profile_service
 
         with pytest.raises(ValidationException, match=LDAP_TYPE_REJECTED):
@@ -328,7 +328,7 @@ class TestCreateProfile:
             )
 
     def test_create_profile_rejects_sftp_type(self) -> None:
-        """Test that create_profile rejects the removed sftp type (REQ-4.7.3)."""
+        """Test that create_profile rejects the sftp type (REQ-4.7.3)."""
         from wavecore.api.services.profiles import service as profile_service
 
         with (
@@ -1724,7 +1724,7 @@ class TestListProfileTypes:
 
 
 class TestLdapProfileTypeRemoved:
-    """Test suite for the removal of the ldap profile type (REQ-4.7.3)."""
+    """Test suite showing ldap is not a profile type (REQ-4.7.3)."""
 
     def test_get_type_schema_returns_none_for_ldap(self) -> None:
         """Test that ldap has no type schema."""
@@ -1739,7 +1739,7 @@ class TestLdapProfileTypeRemoved:
         assert "ldap" not in profile_service.list_profile_types()
 
     def test_ldap_has_no_type_description(self) -> None:
-        """Test that no ldap description remains."""
+        """Test that PROFILE_TYPE_DESCRIPTIONS has no ldap entry."""
 
         assert "ldap" not in _profile_common.PROFILE_TYPE_DESCRIPTIONS
 
@@ -1752,13 +1752,13 @@ class TestLdapProfileTypeRemoved:
         assert all(item["type"] != "ldap" for item in result)
 
     def test_ldap_has_no_type_schema_entry(self) -> None:
-        """Test that the ldap TYPE_SCHEMAS entry is gone."""
+        """Test that TYPE_SCHEMAS has no ldap entry."""
 
         assert "ldap" not in _profile_common.TYPE_SCHEMAS
 
 
 class TestSftpProfileTypeRemoved:
-    """Test suite for the removal of the sftp profile type (REQ-4.7.3, REQ-4.7.5)."""
+    """Test suite showing sftp is not a profile type (REQ-4.7.3, REQ-4.7.5)."""
 
     def test_get_type_schema_returns_none_for_sftp(self) -> None:
         """Test that sftp has no type schema."""
@@ -1767,7 +1767,7 @@ class TestSftpProfileTypeRemoved:
         assert profile_service.get_type_schema("sftp") is None
 
     def test_sftp_has_no_type_description(self) -> None:
-        """Test that no sftp description remains."""
+        """Test that PROFILE_TYPE_DESCRIPTIONS has no sftp entry."""
 
         assert "sftp" not in _profile_common.PROFILE_TYPE_DESCRIPTIONS
 
@@ -1787,7 +1787,7 @@ class TestSftpProfileTypeRemoved:
         ]
 
     def test_sftp_has_no_type_schema_entry(self) -> None:
-        """Test that the sftp TYPE_SCHEMAS entry is gone."""
+        """Test that TYPE_SCHEMAS has no sftp entry."""
 
         assert "sftp" not in _profile_common.TYPE_SCHEMAS
 
@@ -1898,7 +1898,7 @@ class TestDatabaseTypeSchema:
 
     @pytest.mark.parametrize("field_name", ["failover", "timeout"])
     def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the failover list and the timeout field are gone."""
+        """Test that the database schema has no failover list and no timeout field."""
 
         assert field_name not in _schema_field_names("database")
 
@@ -1944,7 +1944,7 @@ class TestOpensearchTypeSchema:
 
     @pytest.mark.parametrize("field_name", ["host", "port", "use_ssl", "index", "timeout"])
     def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the host, port, TLS switch, index default and timeout fields are gone."""
+        """Test that the opensearch schema has no host, port, TLS switch, index or timeout field."""
 
         assert field_name not in _schema_field_names("opensearch")
 
@@ -2020,7 +2020,7 @@ class TestKubernetesTypeSchema:
 
     @pytest.mark.parametrize("field_name", ["kubeconfig", "context", "api_server"])
     def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the kubeconfig-era fields are gone."""
+        """Test that the kubernetes schema has no kubeconfig, context or api_server field."""
 
         assert field_name not in _schema_field_names("kubernetes")
 
@@ -2029,7 +2029,7 @@ class TestSshTypeSchema:
     """Test suite for the ssh profile type schema (REQ-4.7.3)."""
 
     def test_field_list_is_exact_and_ordered(self) -> None:
-        """Test that ssh keeps its six fields and ends with connect_timeout."""
+        """Test that ssh declares its seven fields, ending with connect_timeout."""
 
         assert _schema_field_names("ssh") == [
             "host",
@@ -2055,7 +2055,7 @@ class TestSshTypeSchema:
         assert "timeout" not in _schema_field_names("ssh")
 
     def test_remaining_fields_are_unchanged(self) -> None:
-        """Test that the rename touched nothing else in the ssh schema."""
+        """Test the types, secret flags and port default of the other ssh fields."""
 
         fields = _schema_fields("ssh")
 

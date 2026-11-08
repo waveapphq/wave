@@ -12,7 +12,7 @@ No ``/executions/{execution_id}/...`` debug route exists:
     POST   /executions/{id}/re-execute
     POST   /executions/{id}/skip-block
 
-These tests prove the surface is gone at three levels:
+These tests check three levels:
     1. The ``debug_routes`` module does not exist.
     2. ``app.routes`` contains no path matching these patterns.
     3. Live HTTP calls return 404 with FastAPI's default ``detail`` body
@@ -40,7 +40,7 @@ _LEGACY_METHOD_PATHS: list[tuple[str, str]] = [
 
 
 class TestLegacyDebugModulesGone:
-    """``debug_routes`` and ``debug_actions`` modules are entirely removed."""
+    """The ``debug_routes`` and ``debug_actions`` modules do not exist."""
 
     def test_debug_routes_module_no_longer_importable(self) -> None:
         """``wavecore.api.routes.executions.debug_routes`` must not exist."""
@@ -60,10 +60,10 @@ class TestLegacyDebugModulesGone:
 
 
 class TestLegacyDebugRoutesNotRegistered:
-    """``app.routes`` contains none of the legacy debug paths."""
+    """``app.routes`` contains none of these debug paths."""
 
     def test_no_legacy_debug_path_registered(self) -> None:
-        """Scan ``app.routes`` and confirm no legacy debug route remains."""
+        """Scan ``app.routes`` and confirm no debug route is registered."""
         from wavecore.api.app import app
 
         registered_paths = {getattr(route, "path", "") for route in app.routes}
@@ -92,7 +92,6 @@ class TestLegacyDebugRoutesReturn404:
         response = client.request(method, path)
         assert response.status_code == 404
         # FastAPI's default 404 shape: ``{"detail": "Not Found"}``.
-        # A WAVE route handler returns ``{"success": false, ...}`` - seeing
-        # that envelope would mean a route is still registered.
+        # A WAVE route handler would answer with its ``{"success": false, ...}`` envelope.
         body = response.json()
         assert body == {"detail": "Not Found"}

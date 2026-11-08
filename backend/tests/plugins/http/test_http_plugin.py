@@ -159,8 +159,7 @@ class TestHTTPPluginMetadata:
         assert "proxy_url" not in {f.name for f in fields(HTTPRequestConfig)}
 
     def test_map_and_parts_params_do_not_declare_templatable(self):
-        """Section 18: the templatable hybrid model is retired; values are
-        literal-or-expression via dotted expressionFields, never whole-map {{ }}."""
+        """Map and parts values use dotted expressionFields, never a whole-map {{ }}."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         params = {p["name"]: p for p in HTTPClientPlugin().metadata["parameters"]}
@@ -169,7 +168,7 @@ class TestHTTPPluginMetadata:
             assert "templatable" not in params[name]
 
     def test_headers_key_policy_drops_mode_conflicts_and_declares_generated_keys(self):
-        """Section 9: mode-conflict rules retired; generated rows drive the dup rule."""
+        """The key policy has no mode-conflict rules; generated rows drive the dup rule."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         params = {p["name"]: p for p in HTTPClientPlugin().metadata["parameters"]}

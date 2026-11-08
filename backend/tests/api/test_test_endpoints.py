@@ -377,7 +377,7 @@ class TestCreateTestEndpoint:
     def test_create_test_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that POST /tests allows special characters in test name.
 
-        Naming restrictions removed - all characters are valid.
+        All characters are valid.
         Future: REQ-6.4.1 will add proper sanitization for security.
         """
         with patch("wavecore.api.routes.tests.routes.test_service.create_test") as mock_create:
@@ -956,7 +956,7 @@ class TestUpdateTestEndpoint:
     def test_update_test_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that PUT /tests/{test_id} allows special characters in name.
 
-        Naming restrictions removed - all characters are valid.
+        All characters are valid.
         Future: REQ-6.4.1 will add proper sanitization for security.
         """
         test_id = str(uuid.uuid4())
@@ -1096,7 +1096,7 @@ class TestUpdateTestMetadataEndpoint:
     def test_update_metadata_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that PATCH /tests/{test_id}/metadata allows special characters.
 
-        Naming restrictions removed - all characters are valid.
+        All characters are valid.
         Future: REQ-6.4.1 will add proper sanitization for security.
         """
         test_id = str(uuid.uuid4())
