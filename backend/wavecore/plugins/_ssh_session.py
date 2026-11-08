@@ -281,7 +281,7 @@ def host_key_identity(route: TunnelRoute) -> tuple[str, int]:
     """The far host and port whose host key a session on the tunnel's Local Port meets (SSH-8)."""
     if route.far_host in _LOOPBACK_FAR_HOSTS:
         # A loopback far end is the tunnel session's own server.
-        return route.record["host"], route.far_port
+        return route.record["host_identity"], route.far_port
     return route.far_host, route.far_port
 
 

@@ -1486,6 +1486,26 @@ class TestHostKeyUnderTheTunnelsFarHost:
 
         assert trusted_entries() == [_entry(SSH_HOST, port)]
 
+    async def test_a_loopback_far_end_on_a_session_through_a_tunnel_records_its_far_host(
+        self, ssh_endpoint: SSHEndpoint
+    ) -> None:
+        registry = _through_tunnel(f"{FAR_HOST}:22", ssh_endpoint)
+        params = _tunnel_params(ssh_endpoint, "accept-new")
+        logger = MagicMock()
+
+        async with _opened_session(registry, params) as first:
+            registry.close_tunnel(f"t{ssh_endpoint.port}")
+            registry.add_tunnel(
+                first["session_id"], "t-inner", MagicMock(), ssh_endpoint.port, "127.0.0.1:2200"
+            )
+            async with _opened_session(registry, params, logger) as second:
+                record = registry.get(second["session_id"])
+                assert record is not None
+                assert record["host_identity"] == FAR_HOST
+
+        assert _tunnel_line(ssh_endpoint.port, f"{FAR_HOST}:2200") in _info(logger)
+        assert trusted_entries() == [_entry(FAR_HOST, 22), _entry(FAR_HOST, 2200)]
+
     async def test_accept_new_reuses_the_far_host_record_on_the_next_session(
         self, ssh_endpoint: SSHEndpoint
     ) -> None:

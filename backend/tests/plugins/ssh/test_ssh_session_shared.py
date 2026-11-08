@@ -2466,6 +2466,30 @@ class TestHostKeyIdentity:
 
         assert _ssh_session.host_key_identity(route) == (SSH_HOST, far_port)
 
+    def test_a_loopback_far_end_on_a_session_opened_through_a_tunnel_is_its_far_host(
+        self,
+    ) -> None:
+        registry = tunnel_registry({LOCAL_PORT: f"{FAR_HOST}:22"}, MagicMock())
+        first = _ssh_session.resolve_tunnel("127.0.0.1", LOCAL_PORT, registry)
+        assert first is not None
+        far_host, _far_port = _ssh_session.host_key_identity(first)
+        registry.register(
+            "inner",
+            MagicMock(),
+            None,
+            "127.0.0.1",
+            None,
+            None,
+            connect_timeout=30,
+            host_identity=far_host,
+        )
+        registry.add_tunnel("inner", "t-inner", MagicMock(), LOCAL_PORT + 1, "127.0.0.1:2200")
+
+        second = _ssh_session.resolve_tunnel("127.0.0.1", LOCAL_PORT + 1, registry)
+        assert second is not None
+
+        assert _ssh_session.host_key_identity(second) == (FAR_HOST, 2200)
+
 
 class TestHostKeyTarget:
     """host_key_target - what a host key refusal names."""
