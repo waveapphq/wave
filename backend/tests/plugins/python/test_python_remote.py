@@ -67,7 +67,10 @@ LOADER_END = "_sys.meta_path.insert(0, _WaveFinder())"
 
 HOST_FAILED = f"Remote Execution failed on host '{HOST}': "
 REMOTE_START_LINE = "Running the script under WAVE's own interpreter on the remote host"
-REMOTE_SCHEME_REFUSED = "testdata:// paths are not available on the remote host"
+REMOTE_SCHEME_REFUSED = (
+    "{scheme} paths are not available on the remote host - "
+    "use an absolute or relative path on the remote host"
+)
 INTERPRETER_MISSING = "Interpreter not found on the remote host: nosuchpython"
 
 READINGS_SCRIPT = "label = readings[0]['sensor']\ntotal = threshold * 2\nprint(label)\n"
@@ -606,19 +609,21 @@ class TestTheRemoteDefaultWorkingDirectory:
 class TestTheRemoteHostRefusesWaveSidePaths:
     """A folder only WAVE can resolve fails the block on the remote host (PYRUN-11)."""
 
-    async def test_a_testdata_working_directory_fails_with_start_failed(self) -> None:
+    @pytest.mark.parametrize("scheme", ["testdata://", "artifact://"])
+    async def test_a_wave_side_working_directory_fails_with_start_failed(self, scheme: str) -> None:
         variables = await _run_python_body(
             {
                 "script_type": "source",
                 "script": "print('never')",
-                "working_dir": "testdata://data",
+                "working_dir": f"{scheme}data",
                 "on_error": "record",
             },
             worker=_bundle_worker,
             bindings={"error": "err", "reason": "why", "success": "ok", "stdout": "out"},
         )
 
-        assert re.match(exact(REMOTE_SCHEME_REFUSED), variables["err"]) is not None
+        refused = REMOTE_SCHEME_REFUSED.format(scheme=scheme)
+        assert re.match(exact(refused), variables["err"]) is not None
         assert variables["why"] == "StartFailed"
         assert variables["ok"] is False
         assert variables["out"] == ""

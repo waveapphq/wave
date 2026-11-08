@@ -401,7 +401,6 @@ def _http_client(params, variables, logs):
 
 
 _PY_NOUN = "Script"
-_PY_SCHEMES = ("testdata://", "artifact://")
 # The interpreter is handed fd 3 by a shell redirect: the watchdog closes every inherited one.
 _PY_REDIRECT = 'exec 3>"$1"\\nshift\\nexec "$@"\\n'
 _PY_HOOK_NOT_REACHED = (
@@ -460,19 +459,12 @@ def _py_text(value):
     return str(value)
 
 
-def _py_refuse_scheme(path):
-    for scheme in _PY_SCHEMES:
-        if path.startswith(scheme):
-            raise ValueError("%s paths are not available on the remote host" % scheme)
-
-
 def _py_working_dir(path):
-    _py_refuse_scheme(path)
-    return runtime.require_existing_dir(os.path.abspath(path))
+    return runtime.require_existing_dir(file_ops.local_path(path))
 
 
 def _py_script_file(path, cwd):
-    _py_refuse_scheme(path)
+    file_ops.refuse_wave_scheme(path)
     resolved = os.path.abspath(os.path.join(cwd, path))
     if not os.path.isfile(resolved):
         raise ValueError("Script file not found: %s" % path)
