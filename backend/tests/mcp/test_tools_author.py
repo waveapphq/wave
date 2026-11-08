@@ -1317,6 +1317,36 @@ class TestGetTestRecipe:
         assert errors == []
         assert recompiled["test_data"] is not None
 
+    def test_a_stored_secret_setting_reads_back_only_when_written_as_an_expression(self) -> None:
+        k8s_step = {
+            "block": "k8s-get",
+            "settings": {"session": {"expr": "kube"}, "kind": "Pod", "name": "web-0"},
+        }
+        sql_step = {
+            "block": "sql-client",
+            "settings": {
+                "host": "db",
+                "database": "wave",
+                "username": "wave",
+                "password": "pw-classified",
+                "sql": "SELECT 1",
+            },
+        }
+        recipe = make_recipe(
+            [k8s_step, sql_step],
+            name="Secret Expression Readback",
+            variables={"kube": {"type": "string", "secret": True}},
+        )
+        created = author().create_test_from_recipe(recipe)
+        assert created["created"] is True, created["findings"]
+
+        readback = author().get_test_recipe(created["test_id"])["recipe"]
+
+        k8s, sql = yaml.safe_load(readback)["flow"]
+        assert k8s["settings"]["session"] == {"expr": "kube"}
+        assert "password" not in sql["settings"]
+        assert "pw-classified" not in readback
+
     def test_resolves_the_target_by_id(self) -> None:
         created = author().create_test_from_recipe(simple_recipe("Readback By Id"))
         result = author().get_test_recipe(created["test_id"])

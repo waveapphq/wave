@@ -296,17 +296,17 @@ block and `connect_timeout` the connection. A `database` profile holds `host`,
 `port`, `database`, `username`, `password`, `verify_ssl`, `ca_cert`,
 `client_cert`, `client_key` and `driver_options`: bind it and set each row from
 its fields (`host: {expr: "db.host"}`). `password` and `client_key` are secret
-settings, so a readback leaves them out like every secret: re-provide them when
-you amend. See `11-sql`.
+settings, so a readback leaves out a literal one, like every literal secret:
+re-provide it when you amend. See `11-sql`.
 
 The OpenSearch block (`opensearch`) reads a cluster and never writes. `mode` is
 `search` (the default) or `aggregate`. It connects with `url` (required) and at
 most one sign-in: `username` and `password`, `api_key`, or `bearer_token`;
 `verify_ssl`, `ca_cert`, `client_cert` and `client_key` set the TLS trust.
 `password`, `api_key`, `bearer_token` and `client_key` are secret settings, so a
-readback leaves them out like every secret. `index` (required) is the index
-pattern. `from` and `to` take a timestamp, epoch milliseconds or `now` date
-math (`now-15m`, `now/d`), by default `now-15m` and `now`, and bound
+readback leaves out a literal one, like every literal secret. `index` (required)
+is the index pattern. `from` and `to` take a timestamp, epoch milliseconds or
+`now` date math (`now-15m`, `now/d`), by default `now-15m` and `now`, and bound
 `time_field` (default `@timestamp`). `query_language` is `dql` (the default) or
 `query_dsl`; `query` holds a DQL line or the query part of a Query DSL body as
 JSON text. A `query` string holding `{{ }}` is a template whose values are
@@ -656,10 +656,12 @@ publishing.
 Edit that recipe and hand it to `amend_test_from_recipe` to replace the test's
 workflow, bumping its version and preserving the positions of blocks you did not
 move. Secret values are never included in a readback - re-provide them (inline,
-`value_from_file`, or declare-empty) in the amended recipe. A block or Function step
-may carry `key: <name>`, a name of your own for it: an amendment keeps a Block's
-place on the canvas when its step keeps the same `key`, even after steps before it
-are added or removed. A step with no `key` is matched by its place in the flow.
+`value_from_file`, or declare-empty) in the amended recipe. A secret setting written
+as an expression names a variable, not a value, so it reads back as written. A
+block or Function step may carry `key: <name>`, a name of your own for it: an
+amendment keeps a Block's place on the canvas when its step keeps the same `key`,
+even after steps before it are added or removed. A step with no `key` is matched
+by its place in the flow.
 
 A readback carries `test.version`. Because an amendment applies the whole recipe,
 one built on a readback that has since been superseded - by a person editing in

@@ -728,11 +728,10 @@ class _Walker:
                 nested[head].append(tail)
         result: dict[str, Any] = {}
         for name, value in values.items():
-            if name in secret_names:
-                continue
+            # A secret written as an expression names a variable, so only a literal one stays out.
             if name in expr_fields:
                 result[name] = {"expr": value}
-            else:
+            elif name not in secret_names:
                 result[name] = _rewrap_nested(value, nested.get(name, []))
         return result
 
