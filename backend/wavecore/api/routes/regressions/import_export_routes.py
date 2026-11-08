@@ -16,6 +16,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import ValidationException
+from wavecore.api.routes.shared import read_json_object
 from wavecore.api.routes.shared import validate_uuid as _validate_uuid_shared
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
@@ -62,7 +63,7 @@ async def export_regression(
 @router.post("/regressions/export")
 async def export_regressions_bulk(request: Request) -> Response:
     """Export multiple regressions as single file or ZIP archive."""
-    body = await request.json()
+    body = await read_json_object(request)
     regression_ids = body.get("regression_ids", [])
     fmt = body.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))

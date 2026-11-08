@@ -396,18 +396,11 @@ async def update_test(
             },
         )
     except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
         return JSONResponse(
-            status_code=status_code,
+            status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
+                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
             },
         )
 
@@ -474,18 +467,11 @@ async def update_test_metadata(
             },
         )
     except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
         return JSONResponse(
-            status_code=status_code,
+            status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
+                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
             },
         )
 

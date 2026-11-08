@@ -37,6 +37,13 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_ARRAY_BODIES,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
+
 
 class TestListTestsEndpoint:
     """Test suite for GET /tests endpoint (list all tests)."""
@@ -1154,17 +1161,19 @@ class TestUpdateTestMetadataEndpoint:
 
             assert response.status_code == 412
 
-    def test_update_metadata_returns_412_on_legacy_value_error_precondition(
-        self, client: TestClient
-    ) -> None:
-        """Legacy `ValueError('Precondition failed ...')` defensive path."""
+    def test_update_metadata_value_error_is_400_whatever_its_text(self, client: TestClient) -> None:
+        """Only the typed conflict answers 412; a plain ValueError stays a 400."""
         test_id = str(uuid.uuid4())
         with patch(
             "wavecore.api.routes.tests.routes.test_service.update_test_metadata"
         ) as mock_update:
             mock_update.side_effect = ValueError("Precondition failed: stale etag")
             response = client.patch(f"/tests/{test_id}/metadata", json={"name": "X"})
-            assert response.status_code == 412
+        assert response.status_code == 400
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Precondition failed: stale etag", "code": "VALIDATION_ERROR"},
+        }
 
 
 class TestDeleteTestEndpoint:
@@ -2599,15 +2608,49 @@ class TestTestEndpointConcurrencyControl:
             assert response.status_code == 409
             assert "already exists" in response.json()["error"]["message"]
 
-    def test_update_returns_412_on_legacy_value_error_precondition(
-        self, client: TestClient
-    ) -> None:
-        """Legacy `ValueError('Precondition failed ...')` path on PUT /tests/{id}."""
+    def test_update_value_error_is_400_whatever_its_text(self, client: TestClient) -> None:
+        """Only the typed conflict answers 412; a plain ValueError stays a 400."""
         test_id = str(uuid.uuid4())
         with patch("wavecore.api.routes.tests.routes.test_service.update_test") as mock_update:
             mock_update.side_effect = ValueError("Precondition failed: stale etag")
             response = client.put(f"/tests/{test_id}", json={"name": "X"})
-            assert response.status_code == 412
+        assert response.status_code == 400
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Precondition failed: stale etag", "code": "VALIDATION_ERROR"},
+        }
+
+    @pytest.mark.parametrize(
+        ("method", "path_suffix"),
+        [("put", ""), ("patch", "/metadata")],
+    )
+    def test_stale_if_match_on_stored_test_returns_412(
+        self, client: TestClient, method: str, path_suffix: str
+    ) -> None:
+        """A stale If-Match against a stored Test answers 412 and leaves the Test as it was."""
+        from wavecore.api.services.tests import service as test_service
+
+        created = test_service.create_test({"name": "Stale ETag Test"})
+
+        response = client.request(
+            method,
+            f"/tests/{created['id']}{path_suffix}",
+            json={"name": "Renamed"},
+            headers={"If-Match": '"stale-etag"'},
+        )
+
+        assert response.status_code == 412
+        assert response.json() == {
+            "success": False,
+            "error": {
+                "message": "Precondition failed: resource has been modified",
+                "code": "CONFLICT",
+            },
+        }
+        stored = test_service.get_test(created["id"])
+        assert stored is not None
+        assert stored["name"] == "Stale ETag Test"
+        assert stored["version"] == created["version"]
 
     def test_delete_with_if_match_succeeds_when_matching(self, client: TestClient) -> None:
         """Test that delete with matching If-Match succeeds."""
@@ -3776,3 +3819,50 @@ class TestABodyThatIsNotAJsonObject:
 
         assert response.status_code == 201, response.json()
         assert response.json()["data"]["name"].endswith("(Copy)")
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/tests/export", id="export"),
+            pytest.param("POST", "/tests/{id}/versions", id="add-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestATestBatchBodyThatIsNotAJsonArray:
+    """A Test batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(self, client: TestClient, method: str, text: str, message: str) -> None:
+        assert_refused(send_text(client, method, "/tests/batch", text), message)
+
+    def test_a_delete_takes_the_ids_of_an_object(self, client: TestClient) -> None:
+        test_id = str(uuid.uuid4())
+
+        with patch(
+            "wavecore.api.routes.tests.batch_routes.test_service.batch_delete_tests"
+        ) as batch_delete:
+            batch_delete.return_value = {"deleted": [test_id], "failed": []}
+            response = client.request("DELETE", "/tests/batch", json={"ids": [test_id]})
+
+        assert response.status_code == 200, response.json()
+        batch_delete.assert_called_once_with([test_id])
+
+    def test_a_delete_whose_ids_are_not_an_array_is_refused(self, client: TestClient) -> None:
+        response = send_text(client, "DELETE", "/tests/batch", '{"ids": "x"}')
+
+        assert_refused(response, "The request body must be a JSON array")

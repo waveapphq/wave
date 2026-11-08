@@ -17,7 +17,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.file_tree import content_disposition
@@ -31,7 +31,7 @@ VALID_EXPORT_FORMATS = {"yaml", "json"}
 @router.post("/export")
 async def export_environments_bulk(request: Request) -> Response:
     """Export multiple environments as single file or ZIP archive."""
-    body = await request.json()
+    body = await read_json_object(request)
     env_ids = body.get("environment_ids", [])
     fmt = body.get("format", "yaml")
 

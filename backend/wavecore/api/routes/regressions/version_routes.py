@@ -19,6 +19,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi import status as http_status
 from fastapi.responses import JSONResponse
 
+from wavecore.api.routes.shared import read_json_object
 from wavecore.api.services.regressions import service as regression_service
 from wavecore.api.services.regressions import version_service as _reg_version_svc
 
@@ -102,7 +103,7 @@ async def add_regression_version(
     try:
         validate_uuid(regression_id, "regression_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         result = _reg_version_svc.add_regression_version(regression_id, body)
 
@@ -204,7 +205,7 @@ async def update_regression_version(
     try:
         validate_uuid(regression_id, "regression_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         result = _reg_version_svc.update_regression_version(regression_id, version, body)
 

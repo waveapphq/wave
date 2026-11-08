@@ -19,7 +19,7 @@ from wavecore.api.exceptions import (
     UnprocessableEntityException,
     ValidationException,
 )
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.functions.service import SaveValidationError
 from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.workbench import functions as workbench_functions
@@ -161,8 +161,8 @@ async def _run_body_node_op(
         return stale
 
     try:
-        body = await request.json()
-    except Exception:
+        body = await read_json_object(request)
+    except ValidationException:
         body = {}
 
     node_id = body.get("node_id", "")

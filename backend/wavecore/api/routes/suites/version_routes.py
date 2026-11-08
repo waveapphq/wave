@@ -18,7 +18,7 @@ from fastapi import status as status_module
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.suites import version_service as _suite_version_svc
 
 # Create router for suite version endpoints
@@ -80,7 +80,7 @@ async def add_suite_version(suite_id: str, request: Request) -> dict[str, Any]:
     """
     validate_uuid(suite_id, "suite_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     result = _suite_version_svc.add_suite_version(suite_id, body)
 
@@ -136,7 +136,7 @@ async def update_suite_version(
     """
     validate_uuid(suite_id, "suite_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # ConflictException propagates to middleware for published versions
     result = _suite_version_svc.update_suite_version(suite_id, version, body)

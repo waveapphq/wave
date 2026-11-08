@@ -540,6 +540,22 @@ class TestPublishRouteInvalidInputs:
         messages = _all_error_messages(response.json())
         assert any("not found in Test" in m for m in messages), messages
 
+    @pytest.mark.parametrize("text", ['"node_id"', '["node_id"]', "5"])
+    def test_a_body_that_is_not_an_object_is_treated_as_empty(
+        self, client: TestClient, text: str
+    ) -> None:
+        test_id = _seed_test_with_local_function()
+        etag = _get_test_etag(client, test_id)
+
+        response = client.post(
+            f"/tests/{test_id}/functions/publish",
+            content=text,
+            headers={"Content-Type": "application/json", "If-Match": etag},
+        )
+
+        assert response.status_code == 404, response.json()
+        assert response.json()["error"]["message"] == f"Block '' not found in Test '{test_id}'"
+
 
 class TestDetachRouteInvalidInputs:
     def test_invalid_test_uuid_returns_400(self, client: TestClient) -> None:
@@ -563,6 +579,22 @@ class TestDetachRouteInvalidInputs:
         assert response.status_code == 404
         messages = _all_error_messages(response.json())
         assert any("not found in Test" in m for m in messages), messages
+
+    @pytest.mark.parametrize("text", ['"node_id"', '["node_id"]', "5"])
+    def test_a_body_that_is_not_an_object_is_treated_as_empty(
+        self, client: TestClient, text: str
+    ) -> None:
+        test_id, _node_id = _seed_test_with_shared_function(client)
+        etag = _get_test_etag(client, test_id)
+
+        response = client.post(
+            f"/tests/{test_id}/functions/detach",
+            content=text,
+            headers={"Content-Type": "application/json", "If-Match": etag},
+        )
+
+        assert response.status_code == 404, response.json()
+        assert response.json()["error"]["message"] == f"Block '' not found in Test '{test_id}'"
 
 
 # ---------------------------------------------------------------------------

@@ -2,8 +2,7 @@
 
 This module provides the service layer for connection profile operations.
 It acts as an intermediary between API routes and the storage layer,
-providing profile CRUD operations, connectivity testing, type discovery,
-and schema retrieval.
+providing profile CRUD operations, type discovery, and schema retrieval.
 """
 
 import copy
@@ -27,7 +26,6 @@ from wavecore.api.services.profiles._common import (
     _map_json_schema_type,
     _now_iso,
     _paginate,
-    _perform_connectivity_test,
     _prepare_profile_response,
     _reconcile_cache,
     _save_profile,
@@ -388,15 +386,6 @@ def delete_profile(profile_id: str) -> bool:
     _delete_profile_files(profile_id)
     del _profile_common._profile_storage[profile_id]
     return True
-
-
-def test_connectivity(profile_id: str) -> dict[str, Any] | None:
-    """Test connectivity for a profile."""
-    profile = _cached_profile(profile_id)
-    if profile is None:
-        return None
-
-    return _perform_connectivity_test(profile)
 
 
 def list_profile_types() -> list[str]:

@@ -387,16 +387,6 @@ def _set_version_attribute(test_id: str, version: str, attr: str, value: Any) ->
     _save_versions(test_id, versions)
 
 
-def _save_executions(test_id: str, executions: list[dict[str, Any]]) -> None:
-    """Save execution history to storage."""
-    _ensure_storage_dir()
-    test_dir = _get_test_dir(test_id)
-    test_dir.mkdir(parents=True, exist_ok=True)
-    executions_file = test_dir / "executions.yaml"
-    with open(executions_file, "w", encoding="utf-8") as f:
-        yaml.dump(executions, f, default_flow_style=False, sort_keys=False)
-
-
 def _ensure_storage_dir() -> None:
     """Ensure storage directory exists."""
     get_tests_storage_path().mkdir(parents=True, exist_ok=True)
@@ -1003,6 +993,7 @@ def update_test(
 
     Raises:
         ConflictException: If ETag mismatch or the new name is taken
+        SaveValidationError: If validation errors remain after autofix
     """
     test = _load_test(test_id)
     if test is None:

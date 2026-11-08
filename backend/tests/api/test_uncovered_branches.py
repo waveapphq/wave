@@ -240,31 +240,6 @@ class TestSchedulerBackupFailure:
 
 
 # ===========================================================================
-# 8. Profile _common: exception class constructors (lines 23-24, 31-32)
-# ===========================================================================
-
-
-class TestProfileExceptionConstructors:
-    """Test ProfileNotFoundError and ProfileNameConflictError constructors."""
-
-    def test_profile_not_found_error_stores_profile_id(self) -> None:
-        """ProfileNotFoundError stores profile_id and formats message."""
-        from wavecore.api.services.profiles._common import ProfileNotFoundError
-
-        err = ProfileNotFoundError("abc-123")
-        assert err.profile_id == "abc-123"
-        assert "abc-123" in str(err)
-
-    def test_profile_name_conflict_error_stores_name(self) -> None:
-        """ProfileNameConflictError stores name and formats message."""
-        from wavecore.api.services.profiles._common import ProfileNameConflictError
-
-        err = ProfileNameConflictError("My Profile")
-        assert err.name == "My Profile"
-        assert "My Profile" in str(err)
-
-
-# ===========================================================================
 # 10. Workbench try_catch: return None for unknown node type (line 112)
 #     and return None for missing node (line 127)
 # ===========================================================================

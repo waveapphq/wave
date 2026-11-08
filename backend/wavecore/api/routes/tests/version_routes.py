@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.tests import service as test_service
 
 # Create router for test version endpoints
@@ -37,7 +37,7 @@ async def add_test_version(test_id: str, request: Request) -> dict[str, Any] | J
     try:
         validate_uuid(test_id, "test_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         result = test_service.add_test_version(test_id, body)
 

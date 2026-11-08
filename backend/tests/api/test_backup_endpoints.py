@@ -27,6 +27,7 @@ from tests.api.backup_support import (
     expiry_timers_fixture,  # noqa: F401
     kept_uploads_cleared_fixture,  # noqa: F401
 )
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
 from tests.api.download_name_helpers import ENTITY_NAME, assert_whole_name
 from tests.plugins.http.tls_material import Credential, make_credential
 from wavecore.api.services.backup import uploads as backup_uploads
@@ -2049,3 +2050,26 @@ class TestRestoreByUploadIdThenPreviewAgain:
         assert _counts(restored_again.json()["data"]) == {
             "environments": {"imported": 0, "skipped": 1, "fatal": 0}
         }
+
+
+class TestABackupBodyThatIsNotAJsonObject:
+    """A backup request whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/api/backup/create", id="create"),
+            pytest.param("PUT", "/api/backup/schedule", id="schedule"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)

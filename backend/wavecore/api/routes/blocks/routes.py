@@ -19,7 +19,7 @@ from fastapi import APIRouter, Header, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.blocks import service as block_service
 
 # Create router for block endpoints
@@ -131,7 +131,7 @@ async def create_block(request: Request, response: Response) -> dict[str, Any] |
         Created block with metadata
     """
     try:
-        body = await request.json()
+        body = await read_json_object(request)
 
         if "name" not in body:
             raise ValueError("Field 'name' is required")

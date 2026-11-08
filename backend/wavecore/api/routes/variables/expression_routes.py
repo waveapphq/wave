@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Request, Response, status
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import build_response_meta, validate_uuid
+from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
 from wavecore.api.services import variable_service
 
 _ERR_VARIABLES_REQUIRED = "Field 'variables' is required"
@@ -38,7 +38,7 @@ async def evaluate_expression(request: Request) -> dict[str, Any]:
     Returns:
         Evaluation result with type and secret indicator
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "expression" not in body:
@@ -66,7 +66,7 @@ async def validate_expression(request: Request) -> dict[str, Any]:
     Returns:
         Validation result with errors and warnings
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "expression" not in body:
@@ -98,7 +98,7 @@ async def watch_variables(request: Request) -> dict[str, Any]:
     Returns:
         Watch registration with watch_id
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "variables" not in body:

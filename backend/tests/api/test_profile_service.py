@@ -1,15 +1,14 @@
 """Unit tests for profile service layer (REQ-5.2.4.8).
 
 This module tests the profile service layer that provides business logic
-for connection profile operations including CRUD operations, connectivity
-testing, type discovery, and schema retrieval.
+for connection profile operations including CRUD operations, type discovery,
+and schema retrieval.
 
 Test Coverage:
 - Profile CRUD: Create, read, update, delete profile operations
 - Profile listing: List all profiles
 - Profile types: Enumerate supported profile types with descriptions
 - Type schemas: JSON Schema retrieval for type-specific configuration
-- Connectivity testing: Verify profile configuration correctness
 - Secret handling: Credential masking (password, api_key, private_key, token, client_key,
   bearer_token)
 - Validation: Type validation, configuration schema validation with field paths
@@ -1637,91 +1636,6 @@ class TestUpdateProfileStructuralLock:
         assert result == {"p-meta", "p-from-node"}
 
 
-class TestTestConnectivity:
-    """Test suite for test_connectivity function."""
-
-    def test_test_connectivity_returns_success_result(self) -> None:
-        """Test that test_connectivity returns success result."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "localhost", "port": 5432},
-                }
-            },
-        ):
-            mock_rv = {"connected": True, "latency": 15}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert result["connected"] is True
-                assert result["latency"] == 15
-
-    def test_test_connectivity_returns_failure_result(self) -> None:
-        """Test that test_connectivity returns failure with error details."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "unreachable", "port": 5432},
-                }
-            },
-        ):
-            mock_rv = {"connected": False, "error": "Connection refused"}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert result["connected"] is False
-                assert "Connection refused" in result["error"]
-
-    def test_test_connectivity_returns_none_when_not_found(self) -> None:
-        """Test that test_connectivity returns None when profile not found."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        with _patch_profile_storage({}):
-            result = profile_service.test_connectivity(str(uuid.uuid4()))
-
-            assert result is None
-
-    def test_test_connectivity_includes_latency(self) -> None:
-        """Test that test_connectivity includes latency measurement."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "localhost"},
-                }
-            },
-        ):
-            mock_rv = {"connected": True, "latency": 42}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert "latency" in result
-                assert isinstance(result["latency"], int)
-
-
 class TestListProfileTypes:
     """Test suite for list_profile_types function."""
 
@@ -3000,27 +2914,6 @@ class TestImportedProfileNumbers:
         stored = storage[result["imported"][0]["id"]]
         assert stored["config"]["r"]["value"] == "0.00001"
         assert stored["environment_values"]["env-1"]["r"]["value"] == "30.0"
-
-
-class TestPerformConnectivityTest:
-    """Test suite for _perform_connectivity_test internal function."""
-
-    def test_perform_connectivity_test_raises_not_implemented(self) -> None:
-        """Test that _perform_connectivity_test raises NotImplementedError."""
-
-        # Direct call to internal function should raise NotImplementedError
-        with pytest.raises(NotImplementedError) as exc_info:
-            _profile_common._perform_connectivity_test(
-                {
-                    "id": "test-id",
-                    "name": "test-profile",
-                    "type": "database",
-                    "config": {"host": "localhost", "port": 5432},
-                }
-            )
-
-        assert "database" in str(exc_info.value)
-        assert "plugin implementations" in str(exc_info.value)
 
 
 class TestCreateProfileTags:

@@ -26,6 +26,12 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_ARRAY_BODIES,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 from wavecore.api.exceptions import ConflictException, ValidationException
 
 
@@ -2256,3 +2262,45 @@ class TestASuiteBodyThatIsNotAJsonObject:
         assert response.status_code == 400, response.json()
         assert response.json()["error"]["message"] == message
         update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/suites/{id}/tests", id="add-test"),
+            pytest.param("PUT", "/suites/{id}/variables", id="variables"),
+            pytest.param("POST", "/suites/{id}/clone", id="clone"),
+            pytest.param("POST", "/suites/export", id="export"),
+            pytest.param("POST", "/suites/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/suites/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestASuiteBatchBodyThatIsNotAJsonArray:
+    """A Suite batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("DELETE", "/suites/batch", id="delete"),
+            pytest.param("POST", "/suites/batch/clone", id="clone"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)

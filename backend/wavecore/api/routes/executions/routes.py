@@ -26,7 +26,7 @@ from wavecore.api.routes.executions.shared import (
     _create_success_response,
     _parse_datetime,
 )
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.file_tree import content_disposition
@@ -236,7 +236,7 @@ async def export_executions_bulk(request: Request) -> Response:
     Returns:
         Single file download for one id, ZIP archive for two or more.
     """
-    body = await request.json()
+    body = await read_json_object(request)
     execution_ids = body.get("execution_ids", [])
     fmt = body.get("format", "json")
 

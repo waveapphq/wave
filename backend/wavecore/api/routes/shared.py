@@ -21,14 +21,30 @@ from wavecore.core.variables.return_values import ReturnValueType
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 
 
-async def read_json_object(request: Request) -> dict[str, Any]:
-    """The request body as a JSON object; any other body is a bad request, never a server error."""
+NOT_A_JSON_ARRAY = "The request body must be a JSON array"
+
+
+async def read_json(request: Request) -> Any:
+    """The request body as any JSON value; a body that is not JSON is a bad request."""
     try:
-        body = await request.json()
+        return await request.json()
     except ValueError:
         raise ValidationException("The request body is not valid JSON") from None
+
+
+async def read_json_object(request: Request) -> dict[str, Any]:
+    """The request body as a JSON object; any other body is a bad request, never a server error."""
+    body = await read_json(request)
     if not isinstance(body, dict):
         raise ValidationException("The request body must be a JSON object")
+    return body
+
+
+async def read_json_array(request: Request) -> list[Any]:
+    """The request body as a JSON array; any other body is a bad request, never a server error."""
+    body = await read_json(request)
+    if not isinstance(body, list):
+        raise ValidationException(NOT_A_JSON_ARRAY)
     return body
 
 

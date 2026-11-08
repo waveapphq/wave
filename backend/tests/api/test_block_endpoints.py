@@ -28,6 +28,13 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_ARRAY_BODIES,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
+
 
 class TestListBlocksEndpoint:
     """Test suite for GET /blocks endpoint (list all blocks)."""
@@ -2541,3 +2548,39 @@ class TestBlockEndpointIntegration:
         assert response.status_code == 404
         data = response.json()
         assert "not found" in data["error"]["message"]
+
+
+class TestABlockBodyOfTheWrongShape:
+    """A Block request whose body is not the JSON shape the route takes is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/blocks", id="create"),
+            pytest.param("POST", "/blocks/validate", id="validate"),
+            pytest.param("POST", "/blocks/validate-dependencies", id="validate-dependencies"),
+            pytest.param("POST", "/blocks/{id}/clone", id="clone"),
+            pytest.param("POST", "/blocks/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/blocks/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_a_body_that_is_not_an_object_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+    @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_a_batch_body_that_is_not_an_array_is_refused(
+        self, client: TestClient, method: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, "/blocks/batch", text), message)

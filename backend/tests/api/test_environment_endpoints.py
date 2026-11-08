@@ -21,6 +21,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
 from wavecore.api.exceptions import ConflictException, ValidationException
 
 
@@ -1404,3 +1405,29 @@ class TestEnvironmentConcurrencyControl:
             response = client.delete(f"/environments/{env_id}")
 
             assert response.status_code == 204
+
+
+class TestAnEnvironmentBodyThatIsNotAJsonObject:
+    """An Environment write whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/environments", id="create"),
+            pytest.param("PUT", "/environments/{id}", id="update"),
+            pytest.param("POST", "/environments/export", id="export"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)

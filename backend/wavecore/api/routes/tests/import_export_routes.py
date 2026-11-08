@@ -17,7 +17,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile,
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.tests import service as test_service
@@ -38,7 +38,7 @@ async def export_tests_bulk(request: Request) -> Response:
     Returns:
         File download: the document for one test without files, a ZIP otherwise
     """
-    body = await request.json()
+    body = await read_json_object(request)
     test_ids = body.get("test_ids", [])
     fmt = body.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))

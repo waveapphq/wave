@@ -57,6 +57,13 @@ def _create_test_with_legacy_data(data: dict[str, Any]) -> dict[str, Any]:
     return test
 
 
+def _write_executions_file(test_id: str, executions: list[dict[str, Any]]) -> Path:
+    """Seed the per-test executions file that get_test_executions reads."""
+    executions_file = test_service._get_test_dir(test_id) / "executions.yaml"
+    executions_file.write_text(yaml.dump(executions), encoding="utf-8")
+    return executions_file
+
+
 class TestMaskSecretVariables:
     """The masker a Test read uses: the shared one, with the response-only masked flag."""
 
@@ -1259,13 +1266,12 @@ class TestDeleteTest:
         """Test that delete also removes execution history."""
         created = test_service.create_test({"name": "Exec Test"})
         test_id = created["id"]
-        # Add some executions
-        test_service._save_executions(test_id, [{"id": "exec-1", "status": "passed"}])
+        executions_file = _write_executions_file(test_id, [{"id": "exec-1", "status": "passed"}])
 
         test_service.delete_test(test_id)
 
-        executions = test_service.get_test_executions(test_id)
-        assert executions is None
+        assert not executions_file.exists()
+        assert test_service.get_test_executions(test_id) is None
 
 
 class TestDeleteTestPreservesTrackedExecutions:
@@ -7239,8 +7245,7 @@ class TestExecutions:
     def test_get_executions_supports_pagination(self) -> None:
         """Test that executions support pagination."""
         created = test_service.create_test({"name": "Exec Test"})
-        # Add some executions
-        test_service._save_executions(
+        _write_executions_file(
             created["id"], [{"id": f"exec-{i}", "status": "passed"} for i in range(25)]
         )
 

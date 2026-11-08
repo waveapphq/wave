@@ -40,22 +40,6 @@ logger = logging.getLogger(__name__)
 _PROFILE_FILENAME = "profile.yaml"
 
 
-class ProfileNotFoundError(Exception):
-    """Raised when a profile is not found."""
-
-    def __init__(self, profile_id: str):
-        self.profile_id = profile_id
-        super().__init__(f"Profile with ID '{profile_id}' not found")
-
-
-class ProfileNameConflictError(Exception):
-    """Raised when a profile name already exists."""
-
-    def __init__(self, name: str):
-        self.name = name
-        super().__init__(f"Profile with name '{name}' already exists")
-
-
 # Valid profile types as defined in OpenAPI spec
 VALID_PROFILE_TYPES = [
     "database",
@@ -587,17 +571,6 @@ def _get_profile_references(profile_id: str) -> list[str]:
             name = test.get("name") or test.get("id") or "unknown"
             references.append(name)
     return references
-
-
-def _perform_connectivity_test(
-    profile: dict[str, Any],
-) -> dict[str, Any]:
-    """Perform connectivity test for a profile."""
-    profile_type = profile.get("type", "unknown")
-    raise NotImplementedError(
-        f"Connectivity testing for '{profile_type}' profiles requires "
-        "plugin implementations (planned for future phase)"
-    )
 
 
 def _now_iso() -> str:

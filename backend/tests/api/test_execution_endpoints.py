@@ -29,6 +29,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
 from tests.api.download_name_helpers import EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
@@ -2597,3 +2598,17 @@ class TestExportKeepsTheWholeFileName:
             response = client.post("/executions/export", json={"execution_ids": [execution_id]})
 
         assert_whole_name(response, name)
+
+
+class TestAnExecutionExportBodyThatIsNotAJsonObject:
+    """An execution export whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(self, client: TestClient, text: str, message: str) -> None:
+        assert_refused(send_text(client, "POST", "/executions/export", text), message)

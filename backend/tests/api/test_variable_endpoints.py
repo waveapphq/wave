@@ -25,6 +25,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
 from wavecore.api.exceptions import NotFoundException, ValidationException
 
 
@@ -1707,3 +1708,32 @@ class TestSystemNumbersAreStoredInWireForm:
         assert client.get("/variables/system").json()["data"]["variables"] == stored
         on_disk = yaml.safe_load(get_system_variables_file_path().read_text(encoding="utf-8"))
         assert on_disk == {"variables": stored}
+
+
+class TestAVariableBodyThatIsNotAJsonObject:
+    """A variable request whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/variables/evaluate", id="evaluate"),
+            pytest.param("POST", "/variables/validate-expression", id="validate-expression"),
+            pytest.param("POST", "/variables/watch", id="watch"),
+            pytest.param("POST", "/variables/system", id="set-system"),
+            pytest.param("POST", "/variables/suite/{id}", id="set-entity"),
+            pytest.param("PATCH", "/variables/suite/{id}", id="update-entity"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)

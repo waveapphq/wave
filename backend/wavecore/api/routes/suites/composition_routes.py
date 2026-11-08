@@ -19,7 +19,11 @@ from fastapi import APIRouter, Request
 from fastapi import status as status_module
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import validate_uuid, validate_variable_types
+from wavecore.api.routes.shared import (
+    read_json_object,
+    validate_uuid,
+    validate_variable_types,
+)
 from wavecore.api.services.suites import service as suite_service
 from wavecore.api.services.suites import version_service as _suite_version_svc
 
@@ -84,7 +88,7 @@ async def add_test_to_suite(suite_id: str, request: Request) -> dict[str, Any]:
     """
     validate_uuid(suite_id, "suite_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required field
     if "test_id" not in body:
@@ -164,7 +168,7 @@ async def update_suite_variables(suite_id: str, request: Request) -> dict[str, A
     """
     validate_uuid(suite_id, "suite_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     try:
         validate_variable_types(body)
@@ -195,7 +199,7 @@ async def clone_suite(suite_id: str, request: Request) -> dict[str, Any]:
     """
     validate_uuid(suite_id, "suite_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required field
     if "new_name" not in body:
