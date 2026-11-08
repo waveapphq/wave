@@ -40,9 +40,6 @@ def _now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-_MISSING_REFERENCE_CODES = ("MISSING_FUNCTION_ID", "MISSING_FUNCTION_VERSION")
-
-
 def _normalize_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
     """Coerce optional fields to their defaults so downstream code is uniform."""
     body = _storage.function_body(payload)
@@ -398,7 +395,8 @@ def add_function_version(
 
     Test-independent edit-mode publish: validates the draft against its source
     version (changelog required, valid semver, source exists, target not a
-    duplicate, target is an allowed bump) then persists via save_new_version.
+    duplicate, target is an allowed bump, body passes the create checks) then
+    persists via save_new_version.
     Returns ``{function_id, version}``.
     """
     if not changelog.strip():
@@ -449,14 +447,7 @@ def add_function_version(
         )
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
 
-    _refuse_circle(function_id, draft_definition)
-    _refuse_errors(
-        issue
-        for issue in _storage._validate_references(
-            draft_definition, function_registry=load_library_index()
-        )
-        if issue.code in _MISSING_REFERENCE_CODES
-    )
+    refuse_invalid_body(function_id, draft_definition)
 
     metadata = {
         "description": description or "",
