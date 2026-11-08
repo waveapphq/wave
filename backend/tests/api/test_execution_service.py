@@ -40,6 +40,14 @@ VALID_ENTITY_TYPES = ["test", "suite", "regression"]
 TEST_ENV_ID = "env-test-00000000-0000-0000-0000-000000000001"
 
 
+@pytest.fixture(autouse=True)
+def _empty_run_list() -> None:
+    """Each test starts from an empty run list, whatever ran before it on the worker."""
+    from wavecore.api.services.executions import _storage as _exec_storage
+
+    _exec_storage._clear_storage()
+
+
 class TestStartExecution:
     """Test suite for start_execution service function."""
 

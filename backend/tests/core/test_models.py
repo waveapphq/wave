@@ -151,6 +151,7 @@ class TestPluginModel:
             parameters=[],
         )
 
+        assert plugin.description == "Test plugin"
         assert plugin.author == "Test Author"
         assert "testing" in plugin.tags
         assert plugin.created_at is not None

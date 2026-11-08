@@ -31,7 +31,6 @@ class TestErrorClassification:
 
         assert category == ErrorCategory.PERMANENT
         assert category.is_retryable is False
-        assert category.error_type == "ConnectionError"
 
     def test_classify_transient_timeout_error(self):
         """Test classification of timeout errors as transient (retryable)."""

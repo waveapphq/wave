@@ -1,6 +1,8 @@
 """Plugin and control execution for workbench sessions."""
 
-from collections.abc import Container, Mapping
+from collections.abc import Container, Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from typing import Any
@@ -22,6 +24,19 @@ from wavecore.logging.session_logger import SessionLogger
 from wavecore.models.plugins import get_param_attr
 
 _IO_VALUE_LIMIT = 2048
+
+_stop_outputs: ContextVar[dict[str, Any] | None] = ContextVar("wave_stop_outputs", default=None)
+
+
+@contextmanager
+def holding_stop_outputs() -> Iterator[dict[str, Any]]:
+    """A holder the plugin block run inside fills with its outputs so far when a stop ends it."""
+    holder: dict[str, Any] = {}
+    token = _stop_outputs.set(holder)
+    try:
+        yield holder
+    finally:
+        _stop_outputs.reset(token)
 
 
 @dataclass(frozen=True)
@@ -655,7 +670,6 @@ def _build_plugin_context(
     unmasked_secret_fields: list[str] | None,
     output_bindings: dict[str, str] | None,
     effective_secret_outputs: list[str],
-    stop_outputs: dict[str, Any] | None,
 ) -> dict[str, Any]:
     """Assemble the plugin execution context, including the secret-register hook.
 
@@ -694,7 +708,7 @@ def _build_plugin_context(
         context["artifacts_dir"] = artifacts_dir
     context.update(variables)
     # After the variables, so a variable of the same name never stands in for the holder.
-    context["stop_outputs"] = stop_outputs
+    context["stop_outputs"] = _stop_outputs.get()
     return context
 
 
@@ -712,7 +726,6 @@ async def _execute_plugin_with_session(
     unmasked_secret_fields: list[str] | None = None,
     output_secret_fields: list[str] | None = None,
     output_bindings: dict[str, str] | None = None,
-    stop_outputs: dict[str, Any] | None = None,
 ) -> Any:
     """Execute a plugin with session logging, parameter resolution, and masked I/O lines."""
     from wavecore.core.execution.plugin_executor import build_parameter_sources
@@ -764,7 +777,6 @@ async def _execute_plugin_with_session(
         unmasked_secret_fields,
         output_bindings,
         sorted(_effective_secret_output_names(plugin_metadata, output_secret_fields)),
-        stop_outputs,
     )
     context["logger"] = session_logger
     map_param_names = {
@@ -845,9 +857,8 @@ async def _execute_plugin(
     unmasked_secret_fields: list[str] | None = None,
     output_secret_fields: list[str] | None = None,
     output_bindings: dict[str, str] | None = None,
-    stop_outputs: dict[str, Any] | None = None,
 ) -> Any:
-    """Execute a plugin (e.g., Log); a stop leaves its outputs so far in ``stop_outputs``."""
+    """Execute a plugin (e.g., Log); a stop leaves its outputs so far in the stop holder."""
     from wavecore.core.plugin_registry import get_plugin
 
     plugin = get_plugin(plugin_type, version)
@@ -869,7 +880,6 @@ async def _execute_plugin(
             unmasked_secret_fields=unmasked_secret_fields,
             output_secret_fields=output_secret_fields,
             output_bindings=output_bindings,
-            stop_outputs=stop_outputs,
         )
     return await _execute_plugin_fallback(plugin, parameters, variables)
 

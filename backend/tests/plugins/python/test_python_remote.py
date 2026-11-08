@@ -214,6 +214,7 @@ def _registered_plugins() -> Iterator[None]:
     register_all_core_controls(_registry)
     clear_registry()
     register_plugin(PythonPlugin())
+    log_streaming_service._session_logs.clear()
     yield
     clear_registry()
     wb_common._workbench_sessions.clear()

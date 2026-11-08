@@ -65,6 +65,27 @@ def _save_validation_response(error: SaveValidationError) -> JSONResponse:
     )
 
 
+def _conflict_response(error: ConflictException) -> JSONResponse:
+    """409 for a conflicting save; 412 when the If-Match ETag no longer matches."""
+    message = error.message
+    if _ERR_PRECONDITION in message:
+        status_code = status.HTTP_412_PRECONDITION_FAILED
+    else:
+        status_code = status.HTTP_409_CONFLICT
+    return JSONResponse(
+        status_code=status_code,
+        content={"success": False, "error": {"message": message, "code": "CONFLICT"}},
+    )
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    """400 for a request the save refuses before it runs."""
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"success": False, "error": {"message": str(error), "code": "VALIDATION_ERROR"}},
+    )
+
+
 def validate_test_name(name: str) -> None:
     """Validate test name length.
 
@@ -381,26 +402,9 @@ async def update_test(
     except SaveValidationError as e:
         return _save_validation_response(e)
     except ConflictException as e:
-        error_message = e.message
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_409_CONFLICT
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+        return _conflict_response(e)
     except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+        return _bad_request_response(e)
 
 
 @router.patch("/tests/{test_id}/metadata", response_model=None)
@@ -452,26 +456,9 @@ async def update_test_metadata(
         return {"success": True, "data": result}
 
     except ConflictException as e:
-        error_message = e.message
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_409_CONFLICT
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+        return _conflict_response(e)
     except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+        return _bad_request_response(e)
 
 
 @router.delete("/tests/{test_id}", status_code=status.HTTP_204_NO_CONTENT)

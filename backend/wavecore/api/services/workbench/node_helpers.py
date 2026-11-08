@@ -81,27 +81,26 @@ async def _execute_plugin_node(
         return await _remote_exec.run_on_body_worker(
             body_worker, node_fields, variables, session_id, node_id
         )
-    stop_outputs: dict[str, Any] = {}
-    try:
-        return await _plugins._execute_plugin(
-            node_fields["element_type"],
-            node_fields["version"],
-            node_fields["config_values"],
-            variables,
-            session_id=session_id,
-            block_id=node_id,
-            block_label=_stored_name(node_fields),
-            expression_fields=node_fields["expression_fields"],
-            template_fields=node_fields["template_fields"],
-            reveal_secrets=reveal_secrets,
-            unmasked_secret_fields=node_fields.get("unmasked_secret_fields", []),
-            output_secret_fields=node_fields.get("output_secret_fields"),
-            output_bindings=node_fields["output_bindings"],
-            stop_outputs=stop_outputs,
-        )
-    except asyncio.CancelledError:
-        await _bind_stop_outputs(node_fields, stop_outputs, variables, session_id, node_id)
-        raise
+    with _plugins.holding_stop_outputs() as stop_outputs:
+        try:
+            return await _plugins._execute_plugin(
+                node_fields["element_type"],
+                node_fields["version"],
+                node_fields["config_values"],
+                variables,
+                session_id=session_id,
+                block_id=node_id,
+                block_label=_stored_name(node_fields),
+                expression_fields=node_fields["expression_fields"],
+                template_fields=node_fields["template_fields"],
+                reveal_secrets=reveal_secrets,
+                unmasked_secret_fields=node_fields.get("unmasked_secret_fields", []),
+                output_secret_fields=node_fields.get("output_secret_fields"),
+                output_bindings=node_fields["output_bindings"],
+            )
+        except asyncio.CancelledError:
+            await _bind_stop_outputs(node_fields, stop_outputs, variables, session_id, node_id)
+            raise
 
 
 async def _bind_stop_outputs(

@@ -229,10 +229,10 @@ async def _read_output(
     )
 
 
-async def _watch(proc: asyncio.subprocess.Process, halt: _Halt, timeout: float) -> None:
+async def _watch(proc: asyncio.subprocess.Process, halt: _Halt, spec: LaunchSpec) -> None:
     """Wait for the watchdog to end, which it does with the program; the deadline kills it."""
     try:
-        await asyncio.wait_for(proc.wait(), timeout)
+        await asyncio.wait_for(proc.wait(), spec.timeout)
     except _timeout_errors():
         halt("timeout", None, None)
         await proc.wait()
@@ -304,7 +304,7 @@ async def run_local_process(
         halt = _Halt(proc.pid, status_r, spec)
         work = asyncio.ensure_future(_read_output(output, states, spec, halt))
         try:
-            await _watch(proc, halt, spec.timeout)
+            await _watch(proc, halt, spec)
             await _drain(work)
             halt.settle()
             ended_on_own, exit_code, start_error = _read_status(status_r)
