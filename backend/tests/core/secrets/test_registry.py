@@ -396,6 +396,24 @@ class TestReprEscapedForms:
         assert 'say \\"hi\\"-s3cr3t-value' in values
 
 
+class TestJsonEscapedForms:
+    """A string secret in JSON text, such as WAVE's print form, escapes its control characters."""
+
+    def test_control_character_value_registers_its_json_escaped_form(self) -> None:
+        registry = SecretRegistry()
+        registry.register("token", "pa\bss\fw\x01rd", "declared")
+
+        assert r"pa\bss\fw\u0001rd" in registry.scan_values()
+
+    def test_a_secret_leaf_printed_inside_another_map_is_masked(self) -> None:
+        registry = SecretRegistry()
+        registry.register("keys", ["k3y\bvalue", "other-v4lue"], "declared")
+
+        printed = value_text({"user": "ann", "key": "k3y\bvalue"})
+
+        assert mask_text(printed, registry.scan_values()) == '{"user":"ann","key":"********"}'
+
+
 class TestHeldNames:
     """A name a holder holds (a Function call's secret output) is secret, and the values
     written to it scrub, only until the holder releases it (SECUI-11)."""

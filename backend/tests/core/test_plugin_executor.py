@@ -2306,7 +2306,9 @@ _QUERY_ESCAPE = {
 }
 
 
-def _resolve_query(parameters, variables, **kwargs):
+def _resolve_query(
+    parameters: dict[str, Any], variables: dict[str, Any], **kwargs: Any
+) -> dict[str, Any]:
     """The Query row as a template field carrying its escape spec (REQ-3.3.2.6)."""
     from wavecore.core.execution.plugin_executor import resolve_parameters
 
@@ -2618,6 +2620,22 @@ class TestTemplateEscapeSecretForms:
         )
 
         assert r"pass\(word\)" in registry.scan_values()
+
+    def test_the_run_registry_scrubs_a_secret_leaf_in_a_standing_alone_json_map(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("keys", ["pa\bss\fw0rd", "second-k3y"], "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"match": {{ filter }}}'},
+            {"filter": {"pw": "pa\bss\fw0rd"}},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"match": {"pw":"pa\bss\fw0rd"}}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"match": {"pw":"********"}}'
 
     def test_a_value_that_is_no_secret_registers_nothing(self) -> None:
         registry = _SpyRegistry(("hunter2secret",))

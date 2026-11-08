@@ -1,5 +1,6 @@
 """Per-run secret registry (REQ-3.1.3.5, REQ-4.5.3)."""
 
+import json
 from collections.abc import Hashable
 from typing import Any
 
@@ -120,6 +121,8 @@ class SecretRegistry:
             self._add_scan_form(value, forms, floor)
             self._add_scan_form(_repr_inner(value, "'"), forms, floor)
             self._add_scan_form(_repr_inner(value, '"'), forms, floor)
+            # JSON text, such as WAVE's print form, writes control characters as \b or \u0001.
+            self._add_scan_form(json.dumps(value, ensure_ascii=False)[1:-1], forms, floor)
             return
         self._add_scan_form(str(value), forms, floor)
 
