@@ -18,7 +18,6 @@ Endpoints:
 - POST /tests/{test_id}/fix: Apply automatic fixes
 - POST /tests/{test_id}/clone: Clone test
 - GET /tests/{test_id}/dependency-graph: Get dependency graph
-- GET /tests/{test_id}/executions: Get execution history
 - POST /workflows/validate: Validate workflow structure
 """
 
@@ -895,53 +894,6 @@ async def get_test_dependency_graph(test_id: str) -> dict[str, Any] | JSONRespon
             )
 
         return {"success": True, "data": result, "nodes": result["nodes"], "edges": result["edges"]}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
-
-
-@router.get("/tests/{test_id}/executions", response_model=None)
-async def get_test_executions(
-    test_id: str,
-    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
-    per_page: Annotated[int, Query(ge=1, le=100, description="Results per page")] = 20,
-) -> dict[str, Any] | JSONResponse:
-    """Get test execution history.
-
-    Links to past runs enabling trend analysis and regression detection.
-
-    Args:
-        test_id: Test UUID
-        page: Page number
-        per_page: Results per page
-
-    Returns:
-        Paginated execution history
-    """
-    try:
-        validate_uuid(test_id, "test_id")
-
-        result = test_service.get_test_executions(test_id, page=page, per_page=per_page)
-
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return {"success": True, "data": result["executions"], "pagination": result}
 
     except (ValueError, ValidationException) as e:
         return JSONResponse(

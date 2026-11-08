@@ -468,15 +468,6 @@ def _save_versions(test_id: str, versions: list[dict[str, Any]]) -> None:
         yaml.dump(versions, f, default_flow_style=False, sort_keys=False)
 
 
-def _load_executions(test_id: str) -> list[dict[str, Any]]:
-    """Load execution history from file storage."""
-    executions_file = _get_test_dir(test_id) / "executions.yaml"
-    if not executions_file.exists():
-        return []
-    with open(executions_file, encoding="utf-8") as f:
-        return yaml.safe_load(f) or []
-
-
 def _list_all_tests() -> list[dict[str, Any]]:
     """List all tests from in-memory cache (metadata views, no workflow)."""
     _reconcile_cache()
@@ -4610,34 +4601,6 @@ def get_test_dependency_graph(test_id: str) -> dict[str, Any] | None:
                 dep_edges.append({"source": test_id, "target": block_id})
 
     return {"nodes": dep_nodes, "edges": dep_edges}
-
-
-def get_test_executions(test_id: str, page: int = 1, per_page: int = 20) -> dict[str, Any] | None:
-    """Get test execution history.
-
-    Args:
-        test_id: Test UUID
-        page: Page number
-        per_page: Results per page
-
-    Returns:
-        Paginated execution history or None if test not found
-    """
-    test = _load_test(test_id)
-    if test is None:
-        return None
-
-    executions = _load_executions(test_id)
-    total = len(executions)
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-
-    return {
-        "executions": executions[start_idx:end_idx],
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-    }
 
 
 def get_test_history(test_id: str) -> dict[str, Any] | None:

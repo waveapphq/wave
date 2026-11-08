@@ -57,13 +57,6 @@ def _create_test_with_legacy_data(data: dict[str, Any]) -> dict[str, Any]:
     return test
 
 
-def _write_executions_file(test_id: str, executions: list[dict[str, Any]]) -> Path:
-    """Seed the per-test executions file that get_test_executions reads."""
-    executions_file = test_service._get_test_dir(test_id) / "executions.yaml"
-    executions_file.write_text(yaml.dump(executions), encoding="utf-8")
-    return executions_file
-
-
 class TestMaskSecretVariables:
     """The masker a Test read uses: the shared one, with the response-only masked flag."""
 
@@ -1262,29 +1255,14 @@ class TestDeleteTest:
         # Version file is removed with the test directory
         assert test_service._load_versions(test_id) == []
 
-    def test_delete_test_removes_executions(self) -> None:
-        """Test that delete also removes execution history."""
-        created = test_service.create_test({"name": "Exec Test"})
-        test_id = created["id"]
-        executions_file = _write_executions_file(test_id, [{"id": "exec-1", "status": "passed"}])
-
-        test_service.delete_test(test_id)
-
-        assert not executions_file.exists()
-        assert test_service.get_test_executions(test_id) is None
-
 
 class TestDeleteTestPreservesTrackedExecutions:
     """Test suite for the preserve-history contract on test deletion.
 
-    Tracked executions (entities managed by wavecore.api.services.executions)
-    are distinct from the per-test local `executions.yaml` stored inside the
-    test directory. When a test is deleted, the per-test local log is removed
-    alongside the test directory (existing behavior) BUT every tracked
-    execution that ran against that test must remain on disk and reachable
-    through the Executions API. The workflow snapshot persisted on each
-    execution record is what keeps the Historical Test Canvas viewable after
-    deletion.
+    When a test is deleted, every tracked execution that ran against that
+    test must remain on disk and reachable through the Executions API. The
+    workflow snapshot persisted on each execution record is what keeps the
+    Historical Test Canvas viewable after deletion.
     """
 
     @pytest.fixture(autouse=True)
@@ -7217,43 +7195,6 @@ class TestDependencyGraph:
         result = test_service.get_test_dependency_graph("nonexistent-id")
 
         assert result is None
-
-
-class TestExecutions:
-    """Test suite for get_test_executions service function."""
-
-    def setup_method(self) -> None:
-        """Reset test storage before each test."""
-        test_service._clear_storage()
-
-    def test_get_executions_returns_empty_list(self) -> None:
-        """Test getting executions for a test with no history."""
-        created = test_service.create_test({"name": "Exec Test"})
-
-        result = test_service.get_test_executions(created["id"])
-
-        assert result is not None
-        assert result["executions"] == []
-        assert result["total"] == 0
-
-    def test_get_executions_returns_none_when_not_found(self) -> None:
-        """Test that get_executions returns None when not found."""
-        result = test_service.get_test_executions("nonexistent-id")
-
-        assert result is None
-
-    def test_get_executions_supports_pagination(self) -> None:
-        """Test that executions support pagination."""
-        created = test_service.create_test({"name": "Exec Test"})
-        _write_executions_file(
-            created["id"], [{"id": f"exec-{i}", "status": "passed"} for i in range(25)]
-        )
-
-        result = test_service.get_test_executions(created["id"], page=2, per_page=10)
-
-        assert result is not None
-        assert len(result["executions"]) == 10
-        assert result["total"] == 25
 
 
 class TestHistory:

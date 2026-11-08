@@ -13,7 +13,6 @@ Test Coverage:
 - Validation: Workflow graph validation, block reference validation
 - Clone operations: Test derivation through cloning
 - Dependency analysis: Block references and version constraints
-- Execution history: Links to past runs for trend analysis
 - Error handling: Validation errors, conflicts, not found, internal errors
 - Caching and performance: Multi-layer caching with TTL policies
 - Concurrency control: Optimistic concurrency via ETag/If-Match headers
@@ -2221,8 +2220,8 @@ class TestGetTestDependencyGraphEndpoint:
         )
 
 
-class TestGetTestExecutionsEndpoint:
-    """Test suite for GET /tests/{test_id}/executions endpoint."""
+class TestPerTestExecutionsRouteAbsent:
+    """A Test's runs are listed by GET /executions; no per-Test executions route exists."""
 
     @pytest.fixture
     def client(self) -> TestClient:
@@ -2231,84 +2230,12 @@ class TestGetTestExecutionsEndpoint:
 
         return TestClient(app)
 
-    def test_get_test_executions_returns_200_with_history(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns 200."""
-        test_id = str(uuid.uuid4())
-        exec1_id = str(uuid.uuid4())
-        exec2_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
+    def test_get_test_executions_returns_fastapi_not_found(self, client: TestClient) -> None:
+        """GET /tests/{test_id}/executions gets FastAPI's default 404, not a WAVE envelope."""
+        response = client.get(f"/tests/{uuid.uuid4()}/executions")
 
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [
-                    {
-                        "id": exec1_id,
-                        "status": "passed",
-                        "started_at": now,
-                        "duration_ms": 1234,
-                    },
-                    {
-                        "id": exec2_id,
-                        "status": "failed",
-                        "started_at": now,
-                        "duration_ms": 5678,
-                    },
-                ],
-                "total": 2,
-                "page": 1,
-                "per_page": 20,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data["data"]) == 2
-            assert data["data"][0]["status"] == "passed"
-            assert data["data"][1]["status"] == "failed"
-
-    def test_get_test_executions_supports_pagination(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions supports pagination."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [],
-                "total": 50,
-                "page": 2,
-                "per_page": 10,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions?page=2&per_page=10")
-
-            assert response.status_code == 200
-            mock_get.assert_called_once_with(test_id, page=2, per_page=10)
-
-    def test_get_test_executions_returns_404_when_not_found(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns 404."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = None
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(rf"^Test with ID '{test_id}' not found$", data["error"]["message"])
-
-    def test_get_test_executions_validates_uuid_format(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions validates UUID format."""
-        response = client.get("/tests/invalid-uuid/executions")
-
-        assert response.status_code == 400
-        data = response.json()
-        assert data["success"] is False
-        assert re.match(
-            r"^Invalid UUID format for test_id: 'invalid-uuid'$",
-            data["error"]["message"],
-        )
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Not Found"}
 
 
 class TestGetTestHistoryEndpoint:
@@ -3351,56 +3278,6 @@ class TestResponseEnvelopeConsistency:
             assert data["success"] is True
             assert "data" in data
             assert "versions" in data["data"]
-
-    def test_get_test_executions_uses_standard_envelope(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions uses standard response envelope."""
-        test_id = str(uuid.uuid4())
-        exec_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [
-                    {"id": exec_id, "status": "passed", "started_at": now},
-                ],
-                "total": 1,
-                "page": 1,
-                "per_page": 20,
-                "total_pages": 1,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert "success" in data
-            assert data["success"] is True
-            assert "data" in data
-            assert "pagination" in data
-            assert data["pagination"]["total_pages"] == 1
-
-    def test_get_test_executions_includes_total_pages(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions includes total_pages in pagination."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [],
-                "total": 100,
-                "page": 1,
-                "per_page": 20,
-                "total_pages": 5,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert "pagination" in data
-            assert data["pagination"]["total"] == 100
-            assert data["pagination"]["total_pages"] == 5
-            assert data["pagination"]["page"] == 1
-            assert data["pagination"]["per_page"] == 20
 
 
 class TestListTestTagsEndpoint:
