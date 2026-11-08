@@ -184,11 +184,6 @@ def scrub_message(
     return cap_message(mask_text(message, registry.scan_values(exclude_for_block=block_id)))
 
 
-# Backward-compat aliases the sequential driver uses.
-register_child_session = register_log_sink
-unregister_child_session = unregister_log_sink
-
-
 # ---------------------------------------------------------------------------
 # Log entry creation
 # ---------------------------------------------------------------------------

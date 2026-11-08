@@ -173,7 +173,7 @@ def _build_run_test(
             "event": event,
             "result": {"status": "failed", "halt_scope": None},
         }
-        log_streaming_service.register_child_session(
+        log_streaming_service.register_log_sink(
             child_id,
             execution_id,
             run_id=run_id,
@@ -195,7 +195,7 @@ def _build_run_test(
             )
         except Exception:
             _child_sessions.pop(child_id, None)
-            log_streaming_service.unregister_child_session(child_id)
+            log_streaming_service.unregister_log_sink(child_id)
             ended_iso = datetime.now(UTC).isoformat()
             _record_run_transition(
                 execution_id,
@@ -210,7 +210,7 @@ def _build_run_test(
             await event.wait()
         finally:
             record = _child_sessions.pop(child_id, None)
-            log_streaming_service.unregister_child_session(child_id)
+            log_streaming_service.unregister_log_sink(child_id)
 
         duration = round(time.monotonic() - started_monotonic, 3)
         ended_iso = datetime.now(UTC).isoformat()

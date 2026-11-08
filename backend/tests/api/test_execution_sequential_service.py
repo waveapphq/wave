@@ -13,7 +13,7 @@ import asyncio
 import uuid
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -248,6 +248,98 @@ async def test_build_run_test_handles_workbench_start_failure(
     assert result == {"status": "failed", "duration": 0.0, "halt_scope": None}
     # The child session bookkeeping is cleaned up on failure.
     assert not _sequential._child_sessions
+
+
+@pytest.mark.asyncio
+async def test_build_run_test_registers_and_drops_child_log_sink(tmp_storage: Any) -> None:
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    from wavecore.api.services.workbench import service as workbench_service
+
+    started: list[str] = []
+
+    def _fake_start(**kwargs: Any) -> dict[str, Any]:
+        sid = kwargs["session_id"]
+        started.append(sid)
+        _sequential.dispatch_child_terminal(sid, "passed", None)
+        return {"session_id": sid, "status": "running"}
+
+    with (
+        patch.object(workbench_service, "start_workbench_run", side_effect=_fake_start),
+        patch(
+            "wavecore.api.services.workbench._common.get_session_snapshot",
+            return_value={"test_id": "t-r1", "block_states": {}, "variables": {}},
+        ),
+        patch(
+            "wavecore.api.services.tests.service.get_test_workflow",
+            return_value=None,
+        ),
+        patch.object(
+            log_streaming_service,
+            "register_log_sink",
+            wraps=log_streaming_service.register_log_sink,
+        ) as register_mock,
+        patch.object(
+            log_streaming_service,
+            "unregister_log_sink",
+            wraps=log_streaming_service.unregister_log_sink,
+        ) as unregister_mock,
+    ):
+        run_test = _sequential._build_run_test(
+            exec_id,
+            "env",
+            parent_entity_type="suite",
+            parent_entity_id="sA",
+            default_suite_id="sA",
+        )
+        result = await run_test({"run_id": "r1", "test_id": "t-r1", "suite_id": "sA"})
+
+    assert result["status"] == "passed"
+    assert len(started) == 1
+    child_id = started[0]
+    assert register_mock.call_args_list == [call(child_id, exec_id, run_id="r1", test_id="t-r1")]
+    assert unregister_mock.call_args_list == [call(child_id)]
+
+
+@pytest.mark.asyncio
+async def test_build_run_test_drops_child_log_sink_when_start_fails(
+    tmp_storage: Any,
+) -> None:
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    from wavecore.api.services.workbench import service as workbench_service
+
+    started: list[str] = []
+
+    def _fail(**kwargs: Any) -> None:
+        started.append(kwargs["session_id"])
+        raise RuntimeError("cannot start")
+
+    with (
+        patch.object(workbench_service, "start_workbench_run", side_effect=_fail),
+        patch.object(
+            log_streaming_service,
+            "register_log_sink",
+            wraps=log_streaming_service.register_log_sink,
+        ) as register_mock,
+        patch.object(
+            log_streaming_service,
+            "unregister_log_sink",
+            wraps=log_streaming_service.unregister_log_sink,
+        ) as unregister_mock,
+    ):
+        run_test = _sequential._build_run_test(
+            exec_id,
+            "env",
+            parent_entity_type="suite",
+            parent_entity_id="sA",
+            default_suite_id="sA",
+        )
+        result = await run_test({"run_id": "r1", "test_id": "t-r1", "suite_id": "sA"})
+
+    assert result == {"status": "failed", "duration": 0.0, "halt_scope": None}
+    assert len(started) == 1
+    child_id = started[0]
+    assert register_mock.call_args_list == [call(child_id, exec_id, run_id="r1", test_id="t-r1")]
+    assert unregister_mock.call_args_list == [call(child_id)]
 
 
 # ---------------------------------------------------------------------------
