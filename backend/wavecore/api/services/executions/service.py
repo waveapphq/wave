@@ -828,7 +828,6 @@ def _on_workbench_session_terminated(
         _child_sessions,
         dispatch_child_terminal,
     )
-    from wavecore.api.services.workbench._common import get_session_snapshot
 
     child_record = _child_sessions.get(session_id)
     if dispatch_child_terminal(session_id, status, halt_scope):
@@ -840,17 +839,10 @@ def _on_workbench_session_terminated(
     if execution is None:
         return
     if execution.get("status") in TERMINAL_STATUSES:
+        _store_unwound_stop(session_id, execution, status)
         return
 
     run_id = execution.get("run_id") or session_id
-    snapshot_source = get_session_snapshot(session_id) or {}
-    registry = _get_session_secret_registry(session_id)
-    variables = {
-        k: v
-        for k, v in (snapshot_source.get("variables") or {}).items()
-        if not _is_namespace_object(v)
-    }
-
     ended_iso = datetime.now(UTC).isoformat()
     duration: float | None = None
     started_at = execution.get("started_at")
@@ -876,13 +868,22 @@ def _on_workbench_session_terminated(
     )
     _update_execution_status(session_id, status)
 
-    _persist_terminal_snapshot(
-        session_id, execution, run_id, status, snapshot_source, variables, registry
-    )
+    _persist_terminal_snapshot(session_id, execution, status)
 
     # Last so an artifact-write error aborts nothing; the record is terminal.
     if status == "failed" and execution.get("artifact_dir"):
         _write_failure_artifact(execution)
+    log_writer.write_execution_logs(execution)
+
+
+def _store_unwound_stop(session_id: str, execution: dict[str, Any], status: str) -> None:
+    """A stopped run notifies again once it unwinds; store what it bound and logged since."""
+    from wavecore.api.services.workbench._common import _get_session
+
+    same_run = (_get_session(session_id) or {}).get("execution_id") == session_id
+    if not same_run or status != "stopped" or execution.get("status") != "stopped":
+        return
+    _persist_terminal_snapshot(session_id, execution, status)
     log_writer.write_execution_logs(execution)
 
 
@@ -893,15 +894,7 @@ def _get_session_secret_registry(session_id: str) -> Any:
     return (_get_session(session_id) or {}).get("secret_registry")
 
 
-def _persist_terminal_snapshot(
-    session_id: str,
-    execution: dict[str, Any],
-    run_id: str,
-    status: str,
-    snapshot_source: dict[str, Any],
-    variables: dict[str, Any],
-    registry: Any = None,
-) -> None:
+def _persist_terminal_snapshot(session_id: str, execution: dict[str, Any], status: str) -> None:
     """Best-effort persistence of the session's snapshot + variables.
 
     These write paths go through yaml.safe_dump, which rejects any type it
@@ -912,7 +905,16 @@ def _persist_terminal_snapshot(
     and persisting variables is a nice-to-have for the historical canvas.
     """
     from wavecore.api.services.executions._storage import _save_snapshot
+    from wavecore.api.services.workbench._common import get_session_snapshot
 
+    run_id = execution.get("run_id") or session_id
+    snapshot_source = get_session_snapshot(session_id) or {}
+    registry = _get_session_secret_registry(session_id)
+    variables = {
+        k: v
+        for k, v in (snapshot_source.get("variables") or {}).items()
+        if not _is_namespace_object(v)
+    }
     snapshot: dict[str, Any] = {
         "run_id": run_id,
         "test_id": execution.get("entity_id"),

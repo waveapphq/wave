@@ -8,7 +8,7 @@ On-disk layout (v2 - append-only):
       runs.yaml            append-only; one entry per dispatched test
       status.yaml          append-only; one entry per test state transition
       logs/<run_id>.yaml   append-only; per-test console output
-      snapshots/<run_id>.yaml  per-test terminal snapshot; written once
+      snapshots/<run_id>.yaml  per-test terminal snapshot; a Stop writes it again on unwind
       variables.yaml       (test-type executions only) end-of-run variables
 
 No file that grows with the size of a run is ever rewritten. Every live write

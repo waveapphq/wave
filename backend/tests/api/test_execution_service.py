@@ -3251,6 +3251,109 @@ class TestOnWorkbenchSessionTerminatedHelpers:
         # Already-terminal executions are not rewritten.
         assert _exec_storage._execution_storage[exec_id]["status"] == "passed"
 
+    @staticmethod
+    def _tracked_run(session_id: str) -> dict[str, Any]:
+        """A running test execution and the live session of its own tracked run."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _exec_storage._clear_storage()
+        _exec_storage._execution_storage[session_id] = {
+            "id": session_id,
+            "status": "running",
+            "entity_type": "test",
+            "entity_id": str(uuid.uuid4()),
+            "started_at": "2026-04-22T00:00:00+00:00",
+            "run_id": session_id,
+        }
+        _exec_storage._save_execution(_exec_storage._execution_storage[session_id])
+        session: dict[str, Any] = {
+            "session_id": session_id,
+            "execution_id": session_id,
+            "block_states": {"b1": "stopped"},
+            "variables": {"x": 1},
+        }
+        _wb_common._workbench_sessions[session_id] = session
+        return session
+
+    def test_a_second_stopped_notice_stores_what_the_run_bound_since(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        session = self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+            ended = dict(_exec_storage._execution_storage[session_id])
+            session["variables"]["out"] = "tail"
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["variables"] == {"x": 1, "out": "tail"}
+        assert _exec_storage._load_variables(session_id) == {"x": 1, "out": "tail"}
+        record = _exec_storage._execution_storage[session_id]
+        assert (record["status"], record["ended_at"]) == ("stopped", ended["ended_at"])
+
+    def test_a_stopped_notice_from_another_run_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+            _wb_common._workbench_sessions[session_id] = {
+                "session_id": session_id,
+                "execution_id": None,
+                "block_states": {},
+                "variables": {"x": 2},
+            }
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["variables"] == {"x": 1}
+        assert _exec_storage._load_variables(session_id) == {"x": 1}
+
+    def test_a_stopped_notice_after_the_session_closed_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        self._tracked_run(session_id)
+        execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        _wb_common._workbench_sessions.pop(session_id, None)
+
+        execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["block_states"] == {"b1": "stopped"}
+        assert snapshot["variables"] == {"x": 1}
+
+    def test_a_stopped_notice_after_a_finished_run_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        session = self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "passed", None)
+            session["variables"]["x"] = 2
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert (snapshot["status"], snapshot["variables"]) == ("passed", {"x": 1})
+        assert _exec_storage._execution_storage[session_id]["status"] == "passed"
+
     def test_callback_persists_snapshot_and_variables_for_test_execution(self) -> None:
         from wavecore.api.services.executions import _storage as _exec_storage
         from wavecore.api.services.executions import service as execution_service

@@ -8,8 +8,11 @@ take what the program printed so far before the cancellation reaches the run.
 
 import asyncio
 import contextlib
+import uuid
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -19,6 +22,11 @@ from tests.api.services.workbench.parallel_harness import (  # noqa: F401
     make_node,
     start_graph,
 )
+from tests.conftest import TEST_ENVIRONMENT_ID
+from wavecore.api.services import log_streaming_service
+from wavecore.api.services.executions import _storage as exec_storage
+from wavecore.api.services.executions import service as execution_service
+from wavecore.api.services.storage_paths import get_artifacts_storage_path
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.core.plugin_registry import register_plugin
@@ -214,3 +222,98 @@ class TestAServerShutdown:
 
         assert _bound(variables) == STOPPED
         assert _bound(seen["variables"]) == STOPPED
+
+
+def _start_tracked_execution(test_id: str) -> str:
+    """A tracked test execution whose run the test drives itself; its logs land on disk."""
+    with (
+        patch.object(
+            execution_service, "_get_entity", return_value={"id": test_id, "name": "Long Test"}
+        ),
+        patch.object(execution_service, "_launch_execution_runner"),
+    ):
+        execution_id = str(
+            execution_service.start_execution(
+                entity_type="test", entity_id=test_id, environment_id=TEST_ENVIRONMENT_ID
+            )["id"]
+        )
+    log_streaming_service.register_log_sink(execution_id, execution_id, execution_id, test_id)
+    return execution_id
+
+
+async def _stop_tracked(execution_id: str, test_id: str, node: dict[str, Any], ready: Path) -> None:
+    """Run the one block as the tracked run until it has printed, then Stop the execution."""
+    session, task = start_graph(execution_id, [node], [edge("start-node", node["id"])], {})
+    session.update(execution_id=execution_id, test_id=test_id, test_name="Long Test")
+    _wb_common._active_tasks[execution_id] = task
+    try:
+        await _until_ready(ready)
+        execution_service.stop_execution(execution_id)
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.wait_for(task, timeout=5.0)
+    finally:
+        _wb_common._active_tasks.pop(execution_id, None)
+
+
+class TestATrackedRunStop:
+    """A user Stop stores the outputs the stopped block binds, as a shutdown does."""
+
+    @pytest.fixture(autouse=True)
+    def _clean_executions(self) -> Iterator[None]:
+        exec_storage._clear_storage()
+        yield
+        exec_storage._clear_storage()
+
+    async def test_the_stored_snapshot_and_variables_hold_what_the_script_printed(
+        self, tmp_path: Path
+    ) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _start_tracked_execution(test_id)
+        try:
+            node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+            await _stop_tracked(execution_id, test_id, node, ready)
+        finally:
+            log_streaming_service.unregister_log_sink(execution_id)
+
+        snapshot = exec_storage._load_snapshot(execution_id, execution_id) or {}
+        assert snapshot["status"] == "stopped"
+        assert _bound(snapshot["variables"]) == STOPPED
+        assert _bound(execution_service.get_execution_variables(execution_id) or {}) == STOPPED
+
+    async def test_the_record_keeps_the_end_time_the_stop_gave_it(self, tmp_path: Path) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _start_tracked_execution(test_id)
+        ended: dict[str, Any] = {}
+
+        def capture(sid: str, status: str, halt_scope: Any = None) -> None:
+            if sid == execution_id and not ended:
+                ended.update(exec_storage._execution_storage[sid])
+
+        _wb_common.register_terminal_callback(capture)
+        try:
+            node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+            await _stop_tracked(execution_id, test_id, node, ready)
+        finally:
+            _wb_common.unregister_terminal_callback(capture)
+            log_streaming_service.unregister_log_sink(execution_id)
+
+        record = exec_storage._execution_storage[execution_id]
+        assert record["status"] == "stopped"
+        assert (record["ended_at"], record["duration"]) == (ended["ended_at"], ended["duration"])
+
+    async def test_the_stored_log_file_ends_with_the_stop_line(self, tmp_path: Path) -> None:
+        test_id = str(uuid.uuid4())
+        ready = tmp_path / "ready"
+        execution_id = _start_tracked_execution(test_id)
+        try:
+            node = _shell_script(tmp_path, _prints_then_waits(ready), dict(STREAMS))
+            await _stop_tracked(execution_id, test_id, node, ready)
+        finally:
+            log_streaming_service.unregister_log_sink(execution_id)
+
+        artifact_dir = exec_storage._execution_storage[execution_id]["artifact_dir"]
+        log_file = get_artifacts_storage_path() / artifact_dir / "logs" / "Long Test.log"
+        last_line = log_file.read_text(encoding="utf-8").splitlines()[-1]
+        assert last_line.split(" ", 1)[1] == "WARN Test 'Long Test' execution stopped by user"
