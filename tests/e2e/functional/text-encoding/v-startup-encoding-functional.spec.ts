@@ -9,7 +9,7 @@
  *
  * Pass Criteria:
  * 1. ENCODING-1: started with `LC_ALL=C`, `PYTHONUTF8=0` and `PYTHONCOERCECLOCALE=0`, the backend
- *    exits with code 1 and its output holds one ERROR line that reads exactly
+ *    exits with code 1 and its output holds one FATAL line that reads exactly
  *    `WAVE needs UTF-8 and this host's encoding is {encoding}: set PYTHONUTF8=1 in the environment
  *    that starts WAVE`, where `{encoding}` is the host's own name for its encoding and is not
  *    UTF-8. The refusal comes before anything else: the output names no config file and no data
@@ -26,7 +26,7 @@ import { removeSpawnedBackends, spawnBackend } from '../../helpers/spawn-backend
 const NOT_UTF8 = { LC_ALL: 'C', PYTHONUTF8: '0', PYTHONCOERCECLOCALE: '0' }
 
 const REFUSAL =
-  /^\d{2}:\d{2}:\d{2}\.\d{3} ERROR WAVE needs UTF-8 and this host's encoding is (\S+): set PYTHONUTF8=1 in the environment that starts WAVE$/m
+  /^\d{2}:\d{2}:\d{2}\.\d{3} FATAL WAVE needs UTF-8 and this host's encoding is (\S+): set PYTHONUTF8=1 in the environment that starts WAVE$/m
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
