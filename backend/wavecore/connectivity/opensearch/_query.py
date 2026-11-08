@@ -34,6 +34,26 @@ FIELD_KEYED_QUERIES = frozenset(
 )
 # The options a field-keyed query object may hold beside its field (the terms query's).
 _QUERY_OPTIONS = frozenset({"_name", "boost", "value_type"})
+# Queries that name their field as a key beside their parameters; equals the extract's params.
+FIELD_NAMED_QUERIES = {
+    "geo_bounding_box": frozenset(
+        {"_name", "boost", "ignore_unmapped", "type", "validation_method"}
+    ),
+    "geo_distance": frozenset(
+        {
+            "_name",
+            "boost",
+            "distance",
+            "distance_type",
+            "ignore_unmapped",
+            "unit",
+            "validation_method",
+        }
+    ),
+    "geo_polygon": frozenset({"_name", "boost", "ignore_unmapped", "validation_method"}),
+    "geo_shape": frozenset({"_name", "boost", "ignore_unmapped"}),
+    "xy_shape": frozenset({"_name", "boost", "ignore_unmapped"}),
+}
 # Top-level keys that mark a whole pasted search request rather than a query.
 _REQUEST_KEYS = frozenset(
     {
@@ -148,7 +168,7 @@ def _dsl_query(value: Any) -> AuthorQuery:
 
 
 def _dsl_fields(node: Any, names: list[str]) -> None:
-    """Field-keyed query keys, `field` values and `fields` entries without their `^boost`."""
+    """Field-keyed and field-named query keys, `field` values, `fields` entries without `^boost`."""
     if isinstance(node, list):
         for item in node:
             _dsl_fields(item, names)
@@ -159,9 +179,10 @@ def _dsl_fields(node: Any, names: list[str]) -> None:
 
 
 def _key_fields(key: str, value: Any) -> list[str]:
-    """The fields one key names directly: a field-keyed query, `field` or `fields`."""
-    if key in FIELD_KEYED_QUERIES and isinstance(value, dict):
-        return [name for name in value if name not in _QUERY_OPTIONS]
+    """The fields one key names directly: a field-keyed or field-named query, `field`, `fields`."""
+    options = _QUERY_OPTIONS if key in FIELD_KEYED_QUERIES else FIELD_NAMED_QUERIES.get(key)
+    if options is not None and isinstance(value, dict):
+        return [name for name in value if name not in options]
     if key == "field" and isinstance(value, str):
         return [value]
     if key == "fields" and isinstance(value, list):

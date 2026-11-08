@@ -3,7 +3,7 @@
 Findings are advisory: 1-based line and column and a length, all counted in characters.
 """
 
-from collections.abc import Collection, Iterable, Iterator
+from collections.abc import Collection, Iterable, Iterator, Mapping
 from typing import Any
 
 from wavecore.api.exceptions import UnprocessableEntityException, ValidationException
@@ -14,7 +14,7 @@ from wavecore.connectivity.opensearch import dql
 from wavecore.connectivity.opensearch._aggregate import _COMPANIONS
 from wavecore.connectivity.opensearch._fields import FieldInfo, FieldList
 from wavecore.connectivity.opensearch._json_text import JsonNode, JsonTextError, parse
-from wavecore.connectivity.opensearch._query import _QUERY_OPTIONS
+from wavecore.connectivity.opensearch._query import _QUERY_OPTIONS, FIELD_NAMED_QUERIES
 from wavecore.core.expressions.template import _TEMPLATE_PATTERN
 from wavecore.core.expressions.template_escape import mask_markers
 
@@ -40,10 +40,6 @@ _QUERY_PARAMS = {
     "nested": frozenset({"query"}),
     "script_score": frozenset({"query"}),
 }
-# Queries that name their field as a key beside their own parameters.
-_FIELD_NAMED_QUERIES = frozenset(
-    {"geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"}
-)
 
 # A finding before it is placed: start and end offsets in characters, and its message.
 Span = tuple[int, int, str]
@@ -110,9 +106,14 @@ def _json(language: str, source: str, known: FieldList | None, where: str) -> li
     spec = api_spec.load_extract()
     spans = _vocabulary(spec, language, root)
     if known is not None:
-        keyed = spec.field_keyed_queries if language == "query_dsl" else frozenset()
-        spans += _unknown(_json_fields(keyed, root), known, where)
+        beside = _beside_the_field(spec) if language == "query_dsl" else {}
+        spans += _unknown(_json_fields(beside, root), known, where)
     return spans
+
+
+def _beside_the_field(spec: ApiSpec) -> dict[str, Collection[str]]:
+    """The keys beside the field in each query that holds its field as a key, as a run reads it."""
+    return {**dict.fromkeys(spec.field_keyed_queries, _QUERY_OPTIONS), **FIELD_NAMED_QUERIES}
 
 
 def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
@@ -159,7 +160,7 @@ def _children(node: JsonNode) -> list[JsonNode]:
 
 def _params(spec: ApiSpec, language: str, path: list[str], node: JsonNode) -> list[Span]:
     spans: list[Span] = []
-    field_named = language == "query_dsl" and path[0] in _FIELD_NAMED_QUERIES
+    field_named = language == "query_dsl" and path[0] in FIELD_NAMED_QUERIES
     for key, value in _members(node):
         param = spec.param(language, path, key)
         if param is not None:
@@ -180,23 +181,25 @@ def _value_problem(key: str, param: Param, value: JsonNode) -> list[Span]:
     return [(value.start, value.end, message)] if message else []
 
 
-def _json_fields(keyed: Collection[str], node: JsonNode) -> Iterator[tuple[str, int, int]]:
-    """Field names as a run reads them: under field-keyed queries, in `field` and `fields`."""
+def _json_fields(
+    beside: Mapping[str, Collection[str]], node: JsonNode
+) -> Iterator[tuple[str, int, int]]:
+    """Field names as a run reads them: keys of queries keyed by field, `field` and `fields`."""
     for key, value in _members(node):
-        if key in keyed:
-            yield from _key_names(value)
+        if key in beside:
+            yield from _key_names(value, beside[key])
         if key == "field" and value.kind == "string":
             yield _name(value)
         if key == "fields" and value.kind == "array":
             yield from (_name(entry) for entry in value.value if entry.kind == "string")
     for child in _children(node):
-        yield from _json_fields(keyed, child)
+        yield from _json_fields(beside, child)
 
 
-def _key_names(node: JsonNode) -> Iterator[tuple[str, int, int]]:
-    """The keys under a field-keyed query, but for the query's own options."""
+def _key_names(node: JsonNode, options: Collection[str]) -> Iterator[tuple[str, int, int]]:
+    """The keys under a query that holds its field as a key, but for the query's own options."""
     for name, (start, _end) in node.keys.items():
-        if name not in _QUERY_OPTIONS:
+        if name not in options:
             yield name, start + 1, start + 1 + len(name)
 
 

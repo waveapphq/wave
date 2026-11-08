@@ -48,7 +48,7 @@ FROM_MS = 1790332025123
 WINDOW = "from 2026-09-25T10:27:05.123Z to 2026-09-25T10:42:05.123Z"
 AGG_WINDOW = {"from": "2026-09-25T10:00:00.000Z", "to": "2026-09-25T10:02:59.999Z"}
 AGG_WINDOW_TEXT = "from 2026-09-25T10:00:00.000Z to 2026-09-25T10:02:59.999Z"
-FIELDS = {**FIELD_TYPES, "bytes": "long", "user.id": "keyword"}
+FIELDS: dict[str, str | list[str]] = {**FIELD_TYPES, "bytes": "long", "user.id": "keyword"}
 NO_INDEX = "Index pattern filebeat-* matches no index"
 TIME_FIELD_NOT_DATE = "Time field log.level is not a date field in filebeat-*: it is keyword"
 SHARD_FAILURE = {
@@ -392,6 +392,15 @@ class TestUnknownFields:
         out = run(cluster, log, query_language="query_dsl", query=query)
 
         assert warnings(log) == [unknown(name)]
+        assert amber(out) is True
+
+    def test_the_field_of_a_geo_query(self, cluster: RecordingHTTPServer, log: LogRecorder) -> None:
+        answered(cluster, search_answer([], 0))
+        query = '{"geo_distance": {"distance": "12km", "pin.locaton": {"lat": 40, "lon": -70}}}'
+
+        out = run(cluster, log, query_language="query_dsl", query=query)
+
+        assert warnings(log) == [unknown("pin.locaton")]
         assert amber(out) is True
 
     def test_a_fields_entry(self, cluster: RecordingHTTPServer, log: LogRecorder) -> None:

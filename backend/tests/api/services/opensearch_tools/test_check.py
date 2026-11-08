@@ -31,6 +31,7 @@ FIELDS = [
     {"name": "log.level", "types": ["keyword"], "aggregatable": True},
     {"name": "log.logger", "types": ["keyword"], "aggregatable": True},
     {"name": "message", "types": ["text"], "aggregatable": False},
+    {"name": "pin.location", "types": ["geo_point"], "aggregatable": True},
     {"name": "service.name", "types": ["keyword"], "aggregatable": True},
     {"name": "service.version", "types": ["keyword"], "aggregatable": True},
 ]
@@ -596,12 +597,38 @@ class TestGeoQueries:
 
     def test_an_enum_parameter_beside_the_field_is_checked(self) -> None:
         text = (
-            '{"geo_distance": {"distance": "12km", "distance_type": "flat", "pin": "drm3btev3e86"}}'
+            '{"geo_distance": {"distance": "12km", "distance_type": "flat", '
+            '"pin.location": "drm3btev3e86"}}'
         )
 
         assert issues("query_dsl", text) == [
             finding(text, '"flat"', "distance_type takes one of: arc, plane")
         ]
+
+    @pytest.mark.parametrize("name", FIELD_NAMED_QUERIES)
+    def test_an_unknown_field_key_is_underlined_over_its_name(self, name: str) -> None:
+        text = f'{{"{name}": {{"pin.locaton": {{"lat": 40, "lon": -70}}, "boost": 2}}}}'
+
+        assert issues("query_dsl", text) == [unknown(text, "pin.locaton")]
+
+    def test_the_parameters_beside_the_field_are_not_read_as_fields(self) -> None:
+        text = (
+            '{"geo_distance": {"distance": "12km", "distance_type": "arc", "unit": "km", '
+            '"validation_method": "STRICT", "ignore_unmapped": true, "_name": "near", '
+            '"pin.location": [-70, 40]}}'
+        )
+
+        assert issues("query_dsl", text) == []
+
+    def test_an_unknown_field_key_in_a_bool_clause_is_underlined(self) -> None:
+        text = '{"bool": {"filter": [{"geo_shape": {"pin.locaton": {"relation": "within"}}}]}}'
+
+        assert issues("query_dsl", text) == [unknown(text, "pin.locaton")]
+
+    def test_an_unknown_field_key_without_a_field_list_is_not_flagged(self) -> None:
+        text = '{"geo_polygon": {"pin.locaton": {"points": [[-70, 40]]}}}'
+
+        assert issues("query_dsl", text, job=None) == []
 
     def test_a_geo_aggregation_still_flags_an_unknown_parameter(self) -> None:
         text = '{"geo_distance": {"field": "host.name", "origin": "52, 4", "radius": 5}}'
