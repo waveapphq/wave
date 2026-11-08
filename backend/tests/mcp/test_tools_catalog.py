@@ -253,6 +253,20 @@ class TestRemoteExecutionEntry:
         assert again["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
 
 
+class TestSshSessionIdInTheCatalog:
+    """Every SSH block that takes a session describes session_id as the editor does."""
+
+    @pytest.mark.parametrize(
+        "block_id",
+        ["ssh-session-exec", "ssh-session-script", "ssh-session-close", "ssh-tunnel-open", "sftp"],
+    )
+    def test_the_session_id_setting_uses_the_editor_text(self, block_id: str) -> None:
+        entry = _by_id(_blocks())[block_id]
+
+        session_id = next(p for p in entry["parameters"] if p["name"] == "session_id")
+        assert session_id["description"] == SESSION_ID_DESCRIPTION
+
+
 class TestProxySupportInTheCatalog:
     """REQ-4.7.14: every catalog entry says how the block relates to the Proxy setting."""
 

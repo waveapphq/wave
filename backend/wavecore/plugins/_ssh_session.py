@@ -53,12 +53,17 @@ _REFUSAL_DETAIL = {
     ),
 }
 
+SESSION_ID_DESCRIPTION = (
+    "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+    "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
+)
+
 SESSION_ID_PARAM: dict[str, Any] = {
     "name": "session_id",
     "type": "string",
     "trim": True,
     "required": True,
-    "description": "Session ID of the target SSH session, as returned by SSH Session Open",
+    "description": SESSION_ID_DESCRIPTION,
 }
 
 

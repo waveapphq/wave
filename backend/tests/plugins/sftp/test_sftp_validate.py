@@ -27,6 +27,10 @@ def varies(**texts: str) -> list[dict[str, Any]]:
     return [{"when": [gate(operation)], "description": text} for operation, text in texts.items()]
 
 
+SESSION_ID_TEXT = (
+    "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+    "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
+)
 OPERATION_TEXT = (
     "What to do. Upload and Download move files between WAVE and the server; List, Stats, "
     "Delete, Move and Create folder work on the server."
@@ -99,7 +103,7 @@ EXPECTED_PARAMETERS: list[dict[str, Any]] = [
         "type": "string",
         "trim": True,
         "required": True,
-        "description": "Session ID of the target SSH session, as returned by SSH Session Open",
+        "description": SESSION_ID_TEXT,
     },
     {
         "name": "operation",

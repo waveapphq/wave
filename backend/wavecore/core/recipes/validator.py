@@ -59,6 +59,7 @@ from wavecore.plugins._file_paths import (
     resolve_plugin_matches,
     resolve_plugin_path,
 )
+from wavecore.plugins._ssh_session import SESSION_ID_DESCRIPTION
 
 _LIST_ALL = 10_000
 _JOIN_MODES = ("all", "first")
@@ -98,11 +99,7 @@ REMOTE_EXECUTION_ENTRY: dict[str, Any] = {
             "type": "string",
             "required": True,
             "default": None,
-            "description": (
-                "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
-                "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session "
-                "reference it"
-            ),
+            "description": SESSION_ID_DESCRIPTION,
         }
     },
     "outputs": {
