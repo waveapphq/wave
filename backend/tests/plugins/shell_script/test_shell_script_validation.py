@@ -2,7 +2,7 @@
 
 Every rejection carries the exact pinned message and raises ValueError, whatever On error
 says. An absent or None setting reads as its metadata default before any check, so a
-parameter set holding only the script validates clean.
+parameter set holding only the script validates clean. The save refuses the same names.
 """
 
 import re
@@ -10,11 +10,16 @@ from typing import Any
 
 import pytest
 
+from wavecore.core.execution.field_checks import check_block_fields
 from wavecore.plugins.shell_script import ShellScriptPlugin
 
 RESERVED_OUTPUTS = ["stdout", "stderr", "exit_code", "success", "error", "reason"]
 
 VALID_NAMES = ["X", "_x", "COUNT", "A1", "_", "a_b_9"]
+
+NON_IDENTIFIERS = ["1x", "a-b", "a b", "", "a.b", "X\n", "café"]
+
+WAVE_PREFIXED = ["WAVE_X", "WAVE_", "WAVE_TESTDATA_DIR"]
 
 
 def exact(message: str) -> str:
@@ -143,6 +148,88 @@ class TestScriptVariableDuplicates:
             await ShellScriptPlugin().validate(
                 params_for(script_variables=["COUNT", "count", "COUNT"])
             )
+
+
+def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
+    """The save's findings for a valid Source-mode Block with the overrides applied."""
+    findings = check_block_fields(
+        ShellScriptPlugin().metadata["parameters"],
+        params_for(**overrides),
+        block_id="shell-script",
+        expression_fields=set(),
+        template_fields=set(),
+        check_required=True,
+    )
+    return [(f.code, f.message, f.fix, f.field) for f in findings]
+
+
+async def ran(**overrides: Any) -> str:
+    """The run's refusal for a Source-mode Block with the overrides applied."""
+    with pytest.raises(ValueError) as excinfo:
+        await ShellScriptPlugin().validate(params_for(**overrides))
+    return str(excinfo.value)
+
+
+class TestNamesAtSave:
+    """The save refuses the names the run refuses, with the run's own message (SHRUN-5, SHRUN-6)."""
+
+    @pytest.mark.parametrize("name", NON_IDENTIFIERS)
+    async def test_an_input_variable_name_that_is_not_a_shell_identifier(self, name: str) -> None:
+        message = f"Invalid variable name: '{name}'"
+
+        assert saved(input_vars={name: 1}) == [("INVALID_NAME", message, None, "input_vars")]
+        assert await ran(input_vars={name: 1}) == message
+
+    @pytest.mark.parametrize("name", WAVE_PREFIXED)
+    async def test_an_input_variable_name_that_takes_the_wave_prefix(self, name: str) -> None:
+        message = f"Variable names may not start with WAVE_: '{name}'"
+
+        assert saved(input_vars={name: 1}) == [("INVALID_NAME", message, None, "input_vars")]
+        assert await ran(input_vars={name: 1}) == message
+
+    async def test_the_identifier_rule_is_checked_before_the_prefix_rule(self) -> None:
+        message = "Invalid variable name: 'WAVE-X'"
+
+        assert saved(input_vars={"WAVE-X": 1}) == [("INVALID_NAME", message, None, "input_vars")]
+        assert await ran(input_vars={"WAVE-X": 1}) == message
+
+    @pytest.mark.parametrize("name", NON_IDENTIFIERS)
+    async def test_an_export_name_that_is_not_a_shell_identifier(self, name: str) -> None:
+        message = f"Invalid script variable name: '{name}'"
+
+        assert saved(script_variables=[name]) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        assert await ran(script_variables=[name]) == message
+
+    @pytest.mark.parametrize(("item", "shown"), [(3, "3"), (None, "None"), (True, "True")])
+    async def test_an_export_that_is_not_text_is_named_by_its_text(
+        self, item: Any, shown: str
+    ) -> None:
+        message = f"Invalid script variable name: '{shown}'"
+
+        assert saved(script_variables=[item]) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        assert await ran(script_variables=[item]) == message
+
+    def test_the_wave_prefix_rule_is_not_applied_to_exports(self) -> None:
+        assert saved(script_variables=["WAVE_X"]) == []
+
+    @pytest.mark.parametrize("name", VALID_NAMES)
+    def test_a_name_the_run_takes_is_saved(self, name: str) -> None:
+        assert saved(input_vars={name: 1}, script_variables=[name]) == []
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        assert saved(input_vars={"A": 1, "WAVE_B": 2, "1C": 3}) == [
+            (
+                "INVALID_NAME",
+                "Variable names may not start with WAVE_: 'WAVE_B'",
+                None,
+                "input_vars",
+            ),
+            ("INVALID_NAME", "Invalid variable name: '1C'", None, "input_vars"),
+        ]
 
 
 class TestScriptTypeEnum:

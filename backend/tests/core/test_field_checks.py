@@ -841,6 +841,49 @@ class TestNameRules:
         assert found == []
 
 
+class TestBlockedNamePrefixes:
+    """A name that fits the pattern is refused when it starts with a blocked prefix, with the
+    prefix's own message; a name outside the pattern gets only the pattern's message."""
+
+    _RULE = {
+        "pattern": "[A-Za-z_]+",
+        "message": "Bad name: '{name}'",
+        "blocked_prefixes": [
+            {"prefix": "SYS_", "message": "Names may not start with SYS_: '{name}'"},
+            {"prefix": "OS_", "message": "Names may not start with OS_: '{name}'"},
+        ],
+    }
+    _NAMES = {"name": "names", "type": "map", "name_rule": _RULE}
+
+    def test_a_name_that_starts_with_a_blocked_prefix_is_refused(self) -> None:
+        found = _check([self._NAMES], {"names": {"SYS_X": 1}})
+
+        assert found == [("INVALID_NAME", "Names may not start with SYS_: 'SYS_X'", None, "names")]
+
+    def test_each_prefix_carries_its_own_message(self) -> None:
+        found = _check([self._NAMES], {"names": {"OS_X": 1}})
+
+        assert found == [("INVALID_NAME", "Names may not start with OS_: 'OS_X'", None, "names")]
+
+    def test_the_pattern_is_checked_before_the_prefixes(self) -> None:
+        found = _check([self._NAMES], {"names": {"SYS_1": 1}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'SYS_1'", None, "names")]
+
+    def test_a_prefix_matches_its_case_only(self) -> None:
+        found = _check([self._NAMES], {"names": {"sys_x": 1, "SYSX": 2}})
+
+        assert found == []
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        found = _check([self._NAMES], {"names": {"ok": 1, "SYS_A": 2, "B1": 3}})
+
+        assert found == [
+            ("INVALID_NAME", "Names may not start with SYS_: 'SYS_A'", None, "names"),
+            ("INVALID_NAME", "Bad name: 'B1'", None, "names"),
+        ]
+
+
 class TestStoredBlockValues:
     """Each literal number of a declared number field is stored in its wire form."""
 

@@ -18,7 +18,6 @@ from wavecore.plugins._local_process_common import (
     build_environment,
     check_on_error,
     check_script_variables,
-    environment_parameter,
     execution_parameters,
     fail_or_record,
     failure_parameter,
@@ -27,6 +26,7 @@ from wavecore.plugins._local_process_common import (
     resolve_script_file,
     resolve_shell,
     resolve_working_dir,
+    shell_environment_parameter,
     shell_parameter,
     start_line,
     stop_on_pattern_parameters,
@@ -211,13 +211,17 @@ class ShellScriptPlugin(PluginBase):
                         "is passed as an empty argument."
                     ),
                 },
-                environment_parameter("input_vars", NOUN),
+                shell_environment_parameter("input_vars", NOUN),
                 {
                     "name": "script_variables",
                     "type": "array",
                     "required": False,
                     "default": [],
                     "declares_outputs": True,
+                    "name_rule": {
+                        "pattern": NAME_PATTERN.pattern,
+                        "message": "Invalid script variable name: '{name}'",
+                    },
                     "description": (
                         "Shell variables the script sets, each bound to one WAVE variable "
                         "and read as that variable's type."

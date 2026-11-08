@@ -380,15 +380,23 @@ def _is_literal(
     return name in values and name not in expression_fields and name not in template_fields
 
 
+def _name_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
+    """The pattern's message for a name outside it, else the first blocked prefix's message."""
+    if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
+        return cast(str, rule["message"])
+    blocked = rule.get("blocked_prefixes", ())
+    return next((b["message"] for b in blocked if item.startswith(b["prefix"])), None)
+
+
 def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
     """Each map key or list item the field's name rule refuses, matched in full as ASCII."""
     rule = get_param_attr(field, "name_rule")
     if rule is None or not isinstance(value, dict | list):
         return
     for item in value:
-        if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
-            message = rule["message"].replace("{name}", str(item))
-            yield FieldFinding("INVALID_NAME", message, None, name)
+        message = _name_refusal(rule, item)
+        if message is not None:
+            yield FieldFinding("INVALID_NAME", message.replace("{name}", str(item)), None, name)
 
 
 def check_block_fields(

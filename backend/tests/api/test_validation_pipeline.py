@@ -576,6 +576,48 @@ class TestBlockNameRulesAtSave:
         ]
 
 
+class TestShellNameRulesAtSave:
+    """Shell Script's name rules are the save's: a name its run refuses is never stored."""
+
+    def setup_method(self) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.shell_script import ShellScriptPlugin
+
+        _reset_storage_and_registry()
+        register_plugin(ShellScriptPlugin())
+
+    def _create(self, values: dict[str, Any]) -> list[tuple[str, str, str]]:
+        node = _make_workflow_node(
+            "node-1", "shell-script", "plugin", "Shell Script", config={"values": values}
+        )
+        data = {
+            "name": "Shell Names",
+            "workflow": {"nodes": [node], "edges": []},
+            "variables": {},
+        }
+        with pytest.raises(SaveValidationError) as excinfo:
+            test_service.create_test(data)
+        return [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors]
+
+    def test_create_test_refuses_an_input_variable_that_takes_the_wave_prefix(self) -> None:
+        assert self._create({"script": "echo hi", "input_vars": {"WAVE_X": 1}}) == [
+            (
+                "INVALID_NAME",
+                "Variable names may not start with WAVE_: 'WAVE_X'",
+                "nodes[0].data.config.values.input_vars",
+            )
+        ]
+
+    def test_create_test_refuses_an_export_that_is_not_a_shell_identifier(self) -> None:
+        assert self._create({"script": "echo hi", "script_variables": ["1X"]}) == [
+            (
+                "INVALID_NAME",
+                "Invalid script variable name: '1X'",
+                "nodes[0].data.config.values.script_variables",
+            )
+        ]
+
+
 class TestUpdateTestPipeline:
     """update_test runs the same pipeline as create_test."""
 

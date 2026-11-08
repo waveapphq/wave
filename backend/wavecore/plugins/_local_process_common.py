@@ -26,6 +26,7 @@ from wavecore.plugins._file_paths import has_plugin_scheme, plain_path, resolve_
 from wavecore.plugins._local_process import ProcessOutcome
 from wavecore.plugins._local_process_runtime import (
     _NOT_STARTED,
+    NAME_PATTERN,
     export_refusal,
     require_existing_dir,
     resolve_program,
@@ -91,6 +92,20 @@ def environment_parameter(name: str, noun: str) -> dict[str, Any]:
             f"Each entry is exported into the {noun.lower()}'s environment. Text, numbers "
             "and booleans arrive as text; arrays, maps and tables as JSON text."
         ),
+    }
+
+
+def shell_environment_parameter(name: str, noun: str) -> dict[str, Any]:
+    """A shell block's Input Variables, whose names the save checks as the run does (SHRUN-5)."""
+    return {
+        **environment_parameter(name, noun),
+        "name_rule": {
+            "pattern": NAME_PATTERN.pattern,
+            "message": "Invalid variable name: '{name}'",
+            "blocked_prefixes": [
+                {"prefix": "WAVE_", "message": "Variable names may not start with WAVE_: '{name}'"}
+            ],
+        },
     }
 
 

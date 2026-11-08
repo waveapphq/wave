@@ -2,7 +2,8 @@
 
 Every rejection carries the exact pinned message and raises ValueError, whatever On error
 says. REQ-3.4.2.2: the Input Variables names follow the shell identifier rule and may not
-take the WAVE_ prefix. An absent or None setting reads its metadata default before any check.
+take the WAVE_ prefix, and the save refuses the same names. An absent or None setting reads
+its metadata default before any check.
 """
 
 import re
@@ -10,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from wavecore.core.execution.field_checks import check_block_fields
 from wavecore.plugins.shell_exec import ShellExecPlugin
 
 
@@ -100,6 +102,48 @@ class TestEnvironmentNames:
     @pytest.mark.parametrize("name", ["GREETING", "_private", "a1", "WAVES", "count_2"])
     async def test_accepted_names(self, name: str) -> None:
         await ShellExecPlugin().validate(params(env_vars={name: "value"}))
+
+
+def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
+    """The save's findings for a valid Block with the overrides applied."""
+    findings = check_block_fields(
+        ShellExecPlugin().metadata["parameters"],
+        params(**overrides),
+        block_id="shell-exec",
+        expression_fields=set(),
+        template_fields=set(),
+        check_required=True,
+    )
+    return [(f.code, f.message, f.fix, f.field) for f in findings]
+
+
+class TestEnvironmentNamesAtSave:
+    """The save refuses the names the run refuses, with the run's own message (SHRUN-5)."""
+
+    @pytest.mark.parametrize("name", ["bad-name", "1st", "", "has space", "a.b", "café"])
+    async def test_a_name_that_is_not_a_shell_identifier(self, name: str) -> None:
+        message = f"Invalid variable name: '{name}'"
+
+        assert saved(env_vars={name: "v"}) == [("INVALID_NAME", message, None, "env_vars")]
+        with pytest.raises(ValueError, match=exact(message)):
+            await ShellExecPlugin().validate(params(env_vars={name: "v"}))
+
+    @pytest.mark.parametrize("name", ["WAVE_KEY", "WAVE_", "WAVE_TESTDATA_DIR"])
+    async def test_a_name_that_takes_the_reserved_prefix(self, name: str) -> None:
+        message = f"Variable names may not start with WAVE_: '{name}'"
+
+        assert saved(env_vars={name: "v"}) == [("INVALID_NAME", message, None, "env_vars")]
+        with pytest.raises(ValueError, match=exact(message)):
+            await ShellExecPlugin().validate(params(env_vars={name: "v"}))
+
+    def test_the_identifier_rule_is_checked_before_the_prefix_rule(self) -> None:
+        assert saved(env_vars={"WAVE-KEY": "v"}) == [
+            ("INVALID_NAME", "Invalid variable name: 'WAVE-KEY'", None, "env_vars")
+        ]
+
+    @pytest.mark.parametrize("name", ["GREETING", "_private", "a1", "WAVES", "count_2"])
+    def test_a_name_the_run_takes_is_saved(self, name: str) -> None:
+        assert saved(env_vars={name: "v"}) == []
 
 
 class TestTimeout:
