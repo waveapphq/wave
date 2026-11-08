@@ -17,6 +17,7 @@ from wavecore.plugins._file_paths import (
     resolve_plugin_path,
     scheme_relative_path,
 )
+from wavecore.plugins._ports import check_port
 from wavecore.plugins._shared_params import (
     blank,
     check_at_least,
@@ -117,9 +118,9 @@ def _check_types(params: dict[str, Any], operation: str, database_type: str) -> 
 
 
 def _check_bounds(params: dict[str, Any], operation: str, database_type: str) -> None:
-    port: Any = params.get("port")
-    if database_type != "sqlite" and is_integer_value(port) and not 1 <= port <= 65535:
-        raise ValueError("Port must be between 1 and 65535")
+    port = params.get("port")
+    if database_type != "sqlite" and is_integer_value(port):
+        check_port("port", port, 1)
     check_at_least(params, "timeout", 1, "Timeout must be at least 1")
     check_at_least(params, "connect_timeout", 1, "Connect timeout must be at least 1")
     if operation == "load_table":
