@@ -127,7 +127,7 @@ wavecore/
 ├── mcp/            # MCP server and its tools
 ├── models/         # Data models (controls, plugins)
 ├── plugins/        # Plugin implementations
-└── storage/        # Storage layer for persistence
+└── storage/        # Plugin definitions read from the data folder
 ```
 
 ## Configuration

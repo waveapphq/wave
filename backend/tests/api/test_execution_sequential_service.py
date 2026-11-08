@@ -195,7 +195,7 @@ def _held_stopped_child(exec_id: str) -> str:
     return child_id
 
 
-def test_a_stopped_childs_unwind_notice_stores_what_it_bound_since(tmp_storage: Any) -> None:
+def test_a_stopped_child_unwind_notice_stores_what_it_bound_since(tmp_storage: Any) -> None:
     from wavecore.api.services.workbench import _common as _wb_common
 
     exec_id, _ = _seed_suite_execution(tmp_storage)

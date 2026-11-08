@@ -69,7 +69,6 @@ def validate_test_name(name: str) -> None:
     """Validate test name length.
 
     No character restrictions - all characters allowed.
-    Future: REQ-6.4.1 will add proper sanitization for security.
 
     Args:
         name: Test name to validate

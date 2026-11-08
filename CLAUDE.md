@@ -260,9 +260,9 @@ wave/
 │   │   ├── core/                # Business logic (blocks, execution, expressions, variables, parallel, secrets)
 │   │   ├── logging/             # Logging infrastructure
 │   │   ├── mcp/                 # MCP server and its tools
-│   │   ├── models/              # Data models (controls, profiles)
+│   │   ├── models/              # Data models (blocks, controls, enums, plugins)
 │   │   ├── plugins/             # Plugin implementations
-│   │   └── storage/             # File-based storage layer
+│   │   └── storage/             # Plugin definition loading from the data folder
 │   ├── config/                  # config.example.yaml (copy to config.yaml)
 │   ├── tests/                   # Backend tests (pytest, 100% coverage)
 │   └── pyproject.toml           # Poetry config
