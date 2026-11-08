@@ -25,6 +25,8 @@ NON_ASCII_NAMES = ["café", "été", "名前", "x\u0661"]
 
 DUNDER_NAMES = ["__x", "__", "__init__", "___y"]
 
+DUNDER_NON_IDENTIFIERS = ["__a-b", "__café"]
+
 BAD_PATTERNS = ["(", "[", "*"]
 
 BLANK_INTERPRETERS = ["", "   ", "\t"]
@@ -163,10 +165,16 @@ class TestInputVariableNames:
 
     @pytest.mark.parametrize("name", DUNDER_NAMES)
     async def test_a_name_that_starts_with_a_double_underscore(self, name: str) -> None:
+        await refuses(f"Variable names may not start with __: '{name}'", input_vars={name: "value"})
+
+    @pytest.mark.parametrize("name", DUNDER_NON_IDENTIFIERS)
+    async def test_the_name_rule_is_checked_before_the_dunder_rule(self, name: str) -> None:
         await refuses(f"Invalid variable name: '{name}'", input_vars={name: "value"})
 
     async def test_the_dunder_rule_reports_the_first_bad_name(self) -> None:
-        await refuses("Invalid variable name: '__x'", input_vars={"__x": 1, "__z": 2})
+        await refuses(
+            "Variable names may not start with __: '__x'", input_vars={"__x": 1, "__z": 2}
+        )
 
     async def test_the_wave_prefix_rule_is_not_applied_to_input_variables(self) -> None:
         await PythonPlugin().validate(params_for(input_vars={"WAVE_X": "value"}))
@@ -221,10 +229,16 @@ def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
 class TestNamesAtSave:
     """The save refuses the names the run refuses, with the run's own message (PYRUN-5, PYRUN-6)."""
 
-    @pytest.mark.parametrize("name", [*NON_ASCII_NAMES, *NON_IDENTIFIERS, *DUNDER_NAMES])
+    @pytest.mark.parametrize("name", [*NON_ASCII_NAMES, *NON_IDENTIFIERS, *DUNDER_NON_IDENTIFIERS])
     def test_an_input_variable_name_the_run_refuses(self, name: str) -> None:
         assert saved(input_vars={name: 1}) == [
             ("INVALID_NAME", f"Invalid variable name: '{name}'", None, "input_vars")
+        ]
+
+    @pytest.mark.parametrize("name", DUNDER_NAMES)
+    def test_an_input_variable_name_with_a_double_underscore(self, name: str) -> None:
+        assert saved(input_vars={name: 1}) == [
+            ("INVALID_NAME", f"Variable names may not start with __: '{name}'", None, "input_vars")
         ]
 
     @pytest.mark.parametrize("name", [*NON_ASCII_NAMES, *NON_IDENTIFIERS, *DUNDER_NAMES])
@@ -246,7 +260,7 @@ class TestNamesAtSave:
     def test_every_refused_name_is_reported_in_order(self) -> None:
         assert saved(input_vars={"x": 1, "café": 2, "__y": 3}) == [
             ("INVALID_NAME", "Invalid variable name: 'café'", None, "input_vars"),
-            ("INVALID_NAME", "Invalid variable name: '__y'", None, "input_vars"),
+            ("INVALID_NAME", "Variable names may not start with __: '__y'", None, "input_vars"),
         ]
 
 
@@ -411,7 +425,9 @@ class TestValidationOrder:
 
     async def test_the_input_variable_names_run_before_the_export_names(self) -> None:
         await refuses(
-            "Invalid variable name: '__x'", input_vars={"__x": 1}, script_variables=["__y"]
+            "Variable names may not start with __: '__x'",
+            input_vars={"__x": 1},
+            script_variables=["__y"],
         )
 
     async def test_the_export_name_check_runs_before_the_clash_check(self) -> None:

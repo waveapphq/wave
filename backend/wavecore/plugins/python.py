@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from wavecore.api.services.storage_paths import get_local_process_storage_path
+from wavecore.core.execution.field_checks import name_rule_refusal
 from wavecore.core.expressions.errors import NullValueError
 from wavecore.core.table import Table
 from wavecore.core.variables.decimal_value import decimal_to_str, to_wave_decimal
@@ -66,8 +67,15 @@ CHANNEL_REDIRECT = 'exec 3>"$1"\nshift\nexec "$@"\n'
 BRIDGE_PATH = str(Path(__file__).with_name("_python_bridge.py"))
 _REASONS = "NonZeroExit, Exception, Timeout, FailPattern, StartFailed or OutputVariable"
 CHANNEL_POLL = 0.05
-# Shell Script's ASCII name that does not start with a double underscore (PYRUN-5, PYRUN-6).
+# Shell Script's ASCII name that does not start with a double underscore (PYRUN-6).
 PYTHON_NAME = re.compile(rf"(?!__){NAME_PATTERN.pattern}", re.ASCII)
+INPUT_NAME_RULE = {
+    "pattern": NAME_PATTERN.pattern,
+    "message": "Invalid variable name: '{name}'",
+    "blocked_prefixes": [
+        {"prefix": "__", "message": "Variable names may not start with __: '{name}'"}
+    ],
+}
 _LOG_METHODS = {
     "DEBUG": "debug",
     "INFO": "info",
@@ -84,8 +92,9 @@ def _is_python_name(name: Any) -> bool:
 
 def _check_input_names(params: Mapping[str, Any]) -> None:
     for name in setting(params, "input_vars", {}):
-        if not _is_python_name(name):
-            raise ValueError(f"Invalid variable name: '{name}'")
+        message = name_rule_refusal(INPUT_NAME_RULE, name)
+        if message is not None:
+            raise ValueError(message)
 
 
 def _check_export_shape(params: Mapping[str, Any]) -> None:
@@ -404,10 +413,7 @@ class PythonPlugin(PluginBase):
                     "type": "map",
                     "required": False,
                     "default": {},
-                    "name_rule": {
-                        "pattern": PYTHON_NAME.pattern,
-                        "message": "Invalid variable name: '{name}'",
-                    },
+                    "name_rule": INPUT_NAME_RULE,
                     "description": (
                         "Each entry becomes a global of the script before its first line "
                         "runs, as the Python type its WAVE type maps to: a float arrives as "

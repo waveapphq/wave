@@ -575,6 +575,33 @@ class TestBlockNameRulesAtSave:
             )
         ]
 
+    def test_create_test_refuses_a_python_input_variable_name_with_a_double_underscore(
+        self,
+    ) -> None:
+        node = _make_workflow_node(
+            "node-1",
+            "python",
+            "plugin",
+            "Python",
+            config={"values": {"script": "print(__x)", "input_vars": {"__x": 1}}},
+        )
+        data = {
+            "name": "Python Name With A Double Underscore",
+            "workflow": {"nodes": [node], "edges": []},
+            "variables": {},
+        }
+
+        with pytest.raises(SaveValidationError) as excinfo:
+            test_service.create_test(data)
+
+        assert [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors] == [
+            (
+                "INVALID_NAME",
+                "Variable names may not start with __: '__x'",
+                "nodes[0].data.config.values.input_vars",
+            )
+        ]
+
 
 class TestShellNameRulesAtSave:
     """Shell Script's name rules are the save's: a name its run refuses is never stored."""

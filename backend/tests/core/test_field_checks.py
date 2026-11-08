@@ -883,6 +883,11 @@ class TestBlockedNamePrefixes:
             ("INVALID_NAME", "Bad name: 'B1'", None, "names"),
         ]
 
+    def test_a_name_with_the_prefix_inside_it_is_accepted(self) -> None:
+        found = _check([self._NAMES], {"names": {"X_SYS_": 1, "_OS_": 2}})
+
+        assert found == []
+
 
 class TestStoredBlockValues:
     """Each literal number of a declared number field is stored in its wire form."""

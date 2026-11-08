@@ -65,8 +65,10 @@ def rename(
     """The edits that rename the symbol at the cursor everywhere in its scope."""
     _check_size(script)
     _check_line(script, line)
-    if not new_name.isidentifier() or keyword.iskeyword(new_name) or new_name.startswith("__"):
+    if not new_name.isidentifier() or keyword.iskeyword(new_name):
         raise ValidationException(f"Invalid variable name: '{new_name}'")
+    if new_name.startswith("__"):
+        raise ValidationException(f"Variable names may not start with __: '{new_name}'")
     with _LOCK:
         environment = resolve_environment(interpreter)
         script_object = jedi.Script(code=script, environment=environment)

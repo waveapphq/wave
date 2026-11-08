@@ -380,23 +380,25 @@ def _is_literal(
     return name in values and name not in expression_fields and name not in template_fields
 
 
-def _name_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
-    """The pattern's message for a name outside it, else the first blocked prefix's message."""
+def name_rule_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
+    """The rule's message for a name, or None: the pattern in full as ASCII, then the prefixes."""
     if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
-        return cast(str, rule["message"])
-    blocked = rule.get("blocked_prefixes", ())
-    return next((b["message"] for b in blocked if item.startswith(b["prefix"])), None)
+        message = rule["message"]
+    else:
+        blocked = rule.get("blocked_prefixes", ())
+        message = next((b["message"] for b in blocked if item.startswith(b["prefix"])), None)
+    return None if message is None else message.replace("{name}", str(item))
 
 
 def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
-    """Each map key or list item the field's name rule refuses, matched in full as ASCII."""
+    """Each map key or list item the field's name rule refuses."""
     rule = get_param_attr(field, "name_rule")
     if rule is None or not isinstance(value, dict | list):
         return
     for item in value:
-        message = _name_refusal(rule, item)
+        message = name_rule_refusal(rule, item)
         if message is not None:
-            yield FieldFinding("INVALID_NAME", message.replace("{name}", str(item)), None, name)
+            yield FieldFinding("INVALID_NAME", message, None, name)
 
 
 def check_block_fields(
