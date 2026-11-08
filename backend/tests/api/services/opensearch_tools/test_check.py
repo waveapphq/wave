@@ -30,6 +30,43 @@ FIELDS = [
     {"name": "service.version", "types": ["keyword"], "aggregatable": True},
 ]
 FIELD_DATA = {"indexes": [{"name": INDEX, "kind": "folded", "count": 412}], "fields": FIELDS}
+FIELD_NAMED_QUERIES = ["geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"]
+BOOST_PARAM = {"description": "Relevance score multiplier.", "kind": "number"}
+# The small extract plus geo queries, a geo aggregation, and bool clauses of any kind as packaged.
+WIDE_EXTRACT: dict[str, Any] = {
+    **EXTRACT,
+    "aggregations": {
+        **EXTRACT["aggregations"],
+        "geo_distance": {
+            "params": {
+                "field": {"description": "The geo point field.", "kind": "string"},
+                "origin": {"description": "The point distances are measured from.", "kind": "any"},
+                "ranges": {"description": "The distance buckets.", "kind": "array"},
+            }
+        },
+    },
+    "queries": {
+        **EXTRACT["queries"],
+        **{name: {"params": {"boost": BOOST_PARAM}} for name in FIELD_NAMED_QUERIES},
+        "bool": {
+            "params": {
+                clause: {**entry, "kind": "any"}
+                for clause, entry in EXTRACT["queries"]["bool"]["params"].items()
+            }
+        },
+        "geo_distance": {
+            "params": {
+                "boost": BOOST_PARAM,
+                "distance": {"description": "The radius around the point.", "kind": "string"},
+                "distance_type": {
+                    "description": "How the distance is computed.",
+                    "enum": ["arc", "plane"],
+                    "kind": "string",
+                },
+            }
+        },
+    },
+}
 END_OF_FIELD = 'Expected "(", "{", value, whitespace but end of input found.'
 END_OF_LIST = 'Expected ")", AND, OR, whitespace but end of input found.'
 
@@ -104,6 +141,13 @@ def field_list(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(catalog_jobs, "result", result)
     monkeypatch.setattr(check, "result", result, raising=False)
+
+
+@pytest.fixture
+def wide_spec(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The check reads WIDE_EXTRACT in place of the small extract."""
+    spec = api_spec.ApiSpec(WIDE_EXTRACT, WAVE_DESCRIPTIONS)
+    monkeypatch.setattr(api_spec, "load_extract", lambda: spec)
 
 
 @pytest.mark.usefixtures("field_list")
@@ -348,6 +392,125 @@ class TestQueryDslUnknownFields:
         text = '{"term": {"log.invalid": "ERROR"}}'
 
         assert issues("query_dsl", text, index="") == [unknown(text, "log.invalid", index="")]
+
+
+@pytest.mark.usefixtures("field_list", "wide_spec")
+class TestBoolClauses:
+    """Each query inside a bool clause is checked as a query at the root is."""
+
+    @pytest.mark.parametrize("clause", ["filter", "must", "must_not", "should"])
+    def test_an_unknown_query_type_in_a_clause_list_is_underlined(self, clause: str) -> None:
+        queries = '[{"term": {"log.level": "ERROR"}}, {"matchall": {}}]'
+        text = f'{{"bool": {{"{clause}": {queries}}}}}'
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type')
+        ]
+
+    def test_a_clause_holding_one_query_is_checked_too(self) -> None:
+        text = '{"bool": {"must": {"matchall": {}}}}'
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type')
+        ]
+
+    @pytest.mark.parametrize(
+        ("text", "token", "message"),
+        [
+            (
+                '{"bool": {"should": [{"match": {"message": {"query": "x", "operatr": "and"}}}]}}',
+                '"operatr"',
+                '"operatr" is not a parameter of match',
+            ),
+            (
+                '{"bool": {"must_not": [{"exists": {"field": 5}}]}}',
+                "5",
+                "field takes text, not a number",
+            ),
+            (
+                '{"bool": {"filter": {"match": {"message": {"query": "x", "operator": "xor"}}}}}',
+                '"xor"',
+                "operator takes one of: and, or",
+            ),
+            (
+                '{"bool": {"filter": [{"range": {"latency_ms": {"gtee": 500}}}]}}',
+                '"gtee"',
+                '"gtee" is not a parameter of range',
+            ),
+        ],
+    )
+    def test_the_parameters_of_a_query_in_a_clause_are_checked(
+        self, text: str, token: str, message: str
+    ) -> None:
+        assert issues("query_dsl", text) == [finding(text, token, message)]
+
+    def test_a_bool_inside_a_clause_is_checked_in_turn(self) -> None:
+        text = '{"bool": {"should": [{"bool": {"must_not": [{"matchall": {}}]}}]}}'
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type')
+        ]
+
+    def test_findings_in_several_clauses_come_in_text_order(self) -> None:
+        text = (
+            '{"bool": {"must": [{"matchall": {}}],\n'
+            '  "filter": [{"term": {"log.invalid": {"value": "x", "boots": 2}}}]}}'
+        )
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type'),
+            unknown(text, "log.invalid"),
+            finding(text, '"boots"', '"boots" is not a parameter of term'),
+        ]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '{"bool": {"must": {"term": {"log.level": "ERROR"}}}}',
+            '{"bool": {"should": [{"term": {"log.level": "ERROR"}}, '
+            '{"term": {"log.level": "WARN"}}], "minimum_should_match": 1}}',
+            '{"bool": {"filter": [{"bool": {"must_not": [{"exists": {"field": "message"}}]}}]}}',
+            '{"bool": {"filter": [{"geo_distance": {"distance": "12km", '
+            '"pin.location": {"lat": 40, "lon": -70}}}]}}',
+        ],
+    )
+    def test_clauses_of_known_queries_have_no_findings(self, text: str) -> None:
+        assert issues("query_dsl", text) == []
+
+
+@pytest.mark.usefixtures("field_list", "wide_spec")
+class TestGeoQueries:
+    """A geo query names its field as a key beside its parameters; that key is no parameter."""
+
+    @pytest.mark.parametrize("name", FIELD_NAMED_QUERIES)
+    def test_the_field_key_is_not_flagged(self, name: str) -> None:
+        text = f'{{"{name}": {{"pin.location": {{"lat": 40, "lon": -70}}, "boost": 2}}}}'
+
+        assert issues("query_dsl", text) == []
+
+    @pytest.mark.parametrize("name", FIELD_NAMED_QUERIES)
+    def test_the_parameters_beside_the_field_are_still_checked(self, name: str) -> None:
+        text = f'{{"{name}": {{"pin.location": {{"lat": 40, "lon": -70}}, "boost": "high"}}}}'
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"high"', "boost takes a number, not text")
+        ]
+
+    def test_an_enum_parameter_beside_the_field_is_checked(self) -> None:
+        text = (
+            '{"geo_distance": {"distance": "12km", "distance_type": "flat", "pin": "drm3btev3e86"}}'
+        )
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"flat"', "distance_type takes one of: arc, plane")
+        ]
+
+    def test_a_geo_aggregation_still_flags_an_unknown_parameter(self) -> None:
+        text = '{"geo_distance": {"field": "host.name", "origin": "52, 4", "radius": 5}}'
+
+        assert issues("aggregation", text) == [
+            finding(text, '"radius"', '"radius" is not a parameter of geo_distance')
+        ]
 
 
 @pytest.mark.usefixtures("field_list")

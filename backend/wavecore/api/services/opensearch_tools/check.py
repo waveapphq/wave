@@ -28,6 +28,11 @@ _KIND_WORDS = {
     "object": "an object",
     "array": "a list",
 }
+_BOOL_CLAUSES = frozenset({"filter", "must", "must_not", "should"})
+# Queries that name their field as a key beside their own parameters.
+_FIELD_NAMED_QUERIES = frozenset(
+    {"geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"}
+)
 
 # A finding before it is placed: start and end offsets in characters, and its message.
 Span = tuple[int, int, str]
@@ -100,7 +105,7 @@ def _json(language: str, source: str, known: FieldList | None, where: str) -> li
 
 
 def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
-    """Types and their parameters at the root: known names, value kinds, enum values."""
+    """Types and their parameters, at the root and in bool clauses: names, value kinds, enums."""
     types = set(spec.keys_at(language, []))
     spans: list[Span] = []
     # Sub-aggregations and meta may sit beside the one aggregation, as a run allows.
@@ -114,7 +119,20 @@ def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
                 spans += _params(spec, language, [name, field], options)
         else:
             spans += _params(spec, language, [name], node)
+            if language == "query_dsl" and name == "bool":
+                spans += _clauses(spec, node)
     return spans
+
+
+def _clauses(spec: ApiSpec, node: JsonNode) -> list[Span]:
+    """Each query in a bool's clauses, a clause holding one query or a list of them."""
+    return [
+        span
+        for clause, value in _members(node)
+        if clause in _BOOL_CLAUSES
+        for query in ([value] if value.kind == "object" else _children(value))
+        for span in _vocabulary(spec, "query_dsl", query)
+    ]
 
 
 def _members(node: JsonNode) -> list[tuple[str, JsonNode]]:
@@ -129,13 +147,14 @@ def _children(node: JsonNode) -> list[JsonNode]:
 
 def _params(spec: ApiSpec, language: str, path: list[str], node: JsonNode) -> list[Span]:
     spans: list[Span] = []
+    field_named = language == "query_dsl" and path[0] in _FIELD_NAMED_QUERIES
     for key, value in _members(node):
         param = spec.param(language, path, key)
-        if param is None:
+        if param is not None:
+            spans += _value_problem(key, param, value)
+        elif not field_named:
             start, end = node.keys[key]
             spans.append((start, end, f'"{key}" is not a parameter of {path[0]}'))
-        else:
-            spans += _value_problem(key, param, value)
     return spans
 
 
