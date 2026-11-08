@@ -160,14 +160,52 @@ time.sleep(999)
 """
 
 
-def detached_job(pid_file: Path) -> list[str]:
+def detached_job(pid_file: Path, tail: str = "echo before-kill\nwait") -> list[str]:
     """A shell whose child moves into a session of its own, keeps both pipes and outlives it."""
     child = shlex.join([sys.executable, "-I", "-c", DETACHED, str(pid_file)])
     return [
         "/bin/sh",
         "-c",
-        f'{child} &\nwhile [ ! -s "{pid_file}" ]; do sleep 0.01; done\necho before-kill\nwait\n',
+        f'{child} &\nwhile [ ! -s "{pid_file}" ]; do sleep 0.01; done\n{tail}\n',
     ]
+
+
+DETACHED_WRITER = """\
+import os, pathlib, sys, time
+os.setsid()
+pathlib.Path(sys.argv[1]).write_text(str(os.getpid()), encoding="utf-8")
+go = pathlib.Path(sys.argv[2])
+while not go.exists():
+    time.sleep(0.01)
+try:
+    for _ in range(64):
+        os.write(1, b"x" * 65536)
+    end = "open"
+except BrokenPipeError:
+    end = "closed"
+pathlib.Path(sys.argv[3]).write_text(end, encoding="utf-8")
+"""
+
+
+def detached_writer(pid_file: Path, go: Path, mark: Path, tail: str) -> list[str]:
+    """A shell whose detached child, once told to go, writes far more than a pipe holds."""
+    child = shlex.join(
+        [sys.executable, "-I", "-c", DETACHED_WRITER, str(pid_file), str(go), str(mark)]
+    )
+    return [
+        "/bin/sh",
+        "-c",
+        f'{child} &\nwhile [ ! -s "{pid_file}" ]; do sleep 0.01; done\n{tail}\n',
+    ]
+
+
+async def end_detached(pid_file: Path) -> None:
+    """Kill the detached program a test started, so no test leaves a process behind."""
+    if pid_file.exists():
+        detached = await pid_from(pid_file)
+        with suppress(ProcessLookupError):
+            os.kill(detached, signal.SIGKILL)
+        await wait_until_gone(detached)
 
 
 class TestGroupKillWhileRunning:
@@ -299,6 +337,96 @@ class TestDetachedProgram:
                 with suppress(ProcessLookupError):
                     os.kill(detached, signal.SIGKILL)
                 await wait_until_gone(detached)
+
+    async def test_a_script_that_ends_on_its_own_keeps_its_exit_code(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spec: Spec
+    ) -> None:
+        monkeypatch.setattr(_local_process, "PIPE_CLOSE_GRACE", 0.3)
+        pid_file = tmp_path / "detached.pid"
+        started = time.monotonic()
+        try:
+            outcome = await asyncio.wait_for(
+                run_local_process(spec(detached_job(pid_file, "echo before-exit\nexit 0"))),
+                timeout=5.0,
+            )
+
+            assert 0.3 <= time.monotonic() - started < 3.0
+            assert outcome == ProcessOutcome(
+                stdout="before-exit\nlate\n",
+                stderr="",
+                exit_code=0,
+                ended_on_own=True,
+                stop=None,
+                match_line=None,
+                match_stream=None,
+                start_error=None,
+            )
+            assert judge_outcome(outcome, "Script", 10, frozenset()) == (None, None)
+            assert alive(await pid_from(pid_file))
+        finally:
+            await end_detached(pid_file)
+
+    async def test_a_pattern_stop_ends_one_grace_after_the_script(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spec: Spec
+    ) -> None:
+        monkeypatch.setattr(_local_process, "PIPE_CLOSE_GRACE", 0.3)
+        pid_file = tmp_path / "detached.pid"
+        started = time.monotonic()
+        try:
+            outcome = await asyncio.wait_for(
+                run_local_process(
+                    spec(
+                        detached_job(pid_file, "echo MATCHME\nwait"), fail_re=re.compile("MATCHME")
+                    )
+                ),
+                timeout=5.0,
+            )
+
+            assert 0.3 <= time.monotonic() - started < 3.0
+            assert outcome == ProcessOutcome(
+                stdout="MATCHME\nlate\n",
+                stderr="",
+                exit_code=137,
+                ended_on_own=False,
+                stop="fail",
+                match_line="MATCHME",
+                match_stream="stdout",
+                start_error=None,
+            )
+            assert judge_outcome(outcome, "Script", 10, frozenset()) == (
+                "Output matched the fail pattern: MATCHME",
+                "FailPattern",
+            )
+        finally:
+            await end_detached(pid_file)
+
+    @pytest.mark.parametrize(
+        ("tail", "timeout"), [("exit 0", 10.0), ("wait", 0.5)], ids=["own-end", "timeout"]
+    )
+    async def test_the_output_pipes_close_once_the_grace_ends(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        spec: Spec,
+        tail: str,
+        timeout: float,
+    ) -> None:
+        monkeypatch.setattr(_local_process, "PIPE_CLOSE_GRACE", 0.3)
+        pid_file, go, mark = tmp_path / "detached.pid", tmp_path / "go", tmp_path / "mark"
+        try:
+            await asyncio.wait_for(
+                run_local_process(spec(detached_writer(pid_file, go, mark, tail), timeout=timeout)),
+                timeout=5.0,
+            )
+
+            go.touch()
+
+            deadline = time.monotonic() + 2.0
+            while not mark.exists() and time.monotonic() < deadline:
+                await asyncio.sleep(POLL)
+            assert (mark.read_text(encoding="utf-8") if mark.exists() else None) == "closed"
+        finally:
+            await end_detached(pid_file)
 
 
 class TestPatternStopIsGraceful:
