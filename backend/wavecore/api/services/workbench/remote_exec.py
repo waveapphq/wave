@@ -87,12 +87,14 @@ _NETCAT_ELEMENT = "netcat"
 _SQL_ELEMENT = "sql-client"
 
 
-@dataclass(frozen=True)
+@dataclass
 class BodyWorker:
     """The open worker of the innermost Remote Execution body that is running."""
 
     worker: Any
     host: str
+    # Set when a block at any depth of the body fails on the host.
+    failed_on_host: bool = False
 
 
 class _AdhocBodyWorker:
@@ -130,10 +132,6 @@ class _AdhocBodyWorker:
 
 class RemoteHostError(RuntimeError):
     """A remotable body block failed on the Execution Host; reads as the block's own error."""
-
-    def __init__(self, host: str, cause: Exception) -> None:
-        super().__init__(str(cause))
-        self.host = host
 
 
 _body_worker: ContextVar[BodyWorker | _AdhocBodyWorker | None] = ContextVar(
@@ -266,11 +264,12 @@ async def _registered_worker(
 @asynccontextmanager
 async def _held_body_worker(
     session: dict[str, Any], record: dict[str, Any], session_ref: Any
-) -> AsyncIterator[str]:
+) -> AsyncIterator[tuple[str, BodyWorker]]:
     """Open a worker on the session's remote host and hold it for everything run inside."""
     async with _registered_worker(session, record, session_ref) as (remote_session_id, worker):
-        with _body_worker_scope(BodyWorker(worker=worker, host=record["host"])):
-            yield remote_session_id
+        body_worker = BodyWorker(worker=worker, host=record["host"])
+        with _body_worker_scope(body_worker):
+            yield remote_session_id, body_worker
 
 
 @dataclass(frozen=True)
@@ -603,7 +602,8 @@ async def run_on_body_worker(
     try:
         return await _run_remote_plugin(opened.worker, nf, variables, session_id, block_id)
     except Exception as exc:
-        raise RemoteHostError(opened.host, exc) from exc
+        opened.failed_on_host = True
+        raise RemoteHostError(str(exc)) from exc
 
 
 def _bind_remote_session_id(
@@ -700,7 +700,7 @@ async def _walk_remote_body(
         body_chain = _trace_body_chain(body_target, adj, node_map, executed)
 
     failures: list[Exception] = []
-    async with _held_body_worker(session, record, session_ref) as remote_session_id:
+    async with _held_body_worker(session, record, session_ref) as (remote_session_id, body_worker):
         outcome = await _execute_body_chain_iteration(
             body_chain,
             node_map,
@@ -713,9 +713,9 @@ async def _walk_remote_body(
             adj=adj,
             failures=failures,
         )
-        if failures and isinstance(failures[0], RemoteHostError):
+        if failures and body_worker.failed_on_host:
             raise RuntimeError(
-                f"Remote Execution failed on host '{failures[0].host}': {failures[0]}"
+                f"Remote Execution failed on host '{body_worker.host}': {failures[0]}"
             ) from failures[0]
         if failures:
             raise failures[0]
