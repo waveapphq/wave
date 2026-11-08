@@ -28,7 +28,18 @@ _KIND_WORDS = {
     "object": "an object",
     "array": "a list",
 }
-_BOOL_CLAUSES = frozenset({"filter", "must", "must_not", "should"})
+# The parameters of compound queries that hold whole queries, one or a list of them.
+_QUERY_PARAMS = {
+    "bool": frozenset({"filter", "must", "must_not", "should"}),
+    "boosting": frozenset({"negative", "positive"}),
+    "constant_score": frozenset({"filter"}),
+    "dis_max": frozenset({"queries"}),
+    "function_score": frozenset({"query"}),
+    "has_child": frozenset({"query"}),
+    "has_parent": frozenset({"query"}),
+    "nested": frozenset({"query"}),
+    "script_score": frozenset({"query"}),
+}
 # Queries that name their field as a key beside their own parameters.
 _FIELD_NAMED_QUERIES = frozenset(
     {"geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"}
@@ -105,7 +116,7 @@ def _json(language: str, source: str, known: FieldList | None, where: str) -> li
 
 
 def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
-    """Types and their parameters, at the root and in bool clauses: names, value kinds, enums."""
+    """Types and their parameters, at the root and inside compound queries: names, kinds, enums."""
     types = set(spec.keys_at(language, []))
     spans: list[Span] = []
     # Sub-aggregations and meta may sit beside the one aggregation, as a run allows.
@@ -119,17 +130,18 @@ def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
                 spans += _params(spec, language, [name, field], options)
         else:
             spans += _params(spec, language, [name], node)
-            if language == "query_dsl" and name == "bool":
-                spans += _clauses(spec, node)
+            if language == "query_dsl":
+                spans += _held_queries(spec, name, node)
     return spans
 
 
-def _clauses(spec: ApiSpec, node: JsonNode) -> list[Span]:
-    """Each query in a bool's clauses, a clause holding one query or a list of them."""
+def _held_queries(spec: ApiSpec, name: str, node: JsonNode) -> list[Span]:
+    """Each query a compound query holds, a parameter holding one query or a list of them."""
+    held = _QUERY_PARAMS.get(name, frozenset())
     return [
         span
-        for clause, value in _members(node)
-        if clause in _BOOL_CLAUSES
+        for key, value in _members(node)
+        if key in held
         for query in ([value] if value.kind == "object" else _children(value))
         for span in _vocabulary(spec, "query_dsl", query)
     ]

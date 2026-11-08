@@ -5,12 +5,17 @@ characters, sorted by line then column. Unknown fields are found only against th
 list of a done Get fields job; the vocabulary comes from the pinned API specification extract.
 """
 
+import json
 import re
 from typing import Any
 
 import pytest
 
-from tests.api.services.opensearch_tools.test_api_spec import EXTRACT, WAVE_DESCRIPTIONS
+from tests.api.services.opensearch_tools.test_api_spec import (
+    EXTRACT,
+    WAVE_DESCRIPTIONS,
+    packaged_text,
+)
 from wavecore.api.exceptions import UnprocessableEntityException, ValidationException
 from wavecore.api.services import catalog_jobs
 from wavecore.api.services.opensearch_tools import api_spec, check
@@ -32,7 +37,18 @@ FIELDS = [
 FIELD_DATA = {"indexes": [{"name": INDEX, "kind": "folded", "count": 412}], "fields": FIELDS}
 FIELD_NAMED_QUERIES = ["geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"]
 BOOST_PARAM = {"description": "Relevance score multiplier.", "kind": "number"}
-# The small extract plus geo queries, a geo aggregation, and bool clauses of any kind as packaged.
+COMPOUND_QUERIES = [
+    "boosting",
+    "constant_score",
+    "dis_max",
+    "function_score",
+    "has_child",
+    "has_parent",
+    "nested",
+    "script_score",
+]
+PACKAGED_QUERIES: dict[str, Any] = json.loads(packaged_text())["queries"]
+# The small extract plus geo, bool and compound queries and a geo aggregation.
 WIDE_EXTRACT: dict[str, Any] = {
     **EXTRACT,
     "aggregations": {
@@ -54,6 +70,7 @@ WIDE_EXTRACT: dict[str, Any] = {
                 for clause, entry in EXTRACT["queries"]["bool"]["params"].items()
             }
         },
+        **{name: PACKAGED_QUERIES[name] for name in COMPOUND_QUERIES},
         "geo_distance": {
             "params": {
                 "boost": BOOST_PARAM,
@@ -476,6 +493,87 @@ class TestBoolClauses:
     )
     def test_clauses_of_known_queries_have_no_findings(self, text: str) -> None:
         assert issues("query_dsl", text) == []
+
+
+@pytest.mark.usefixtures("field_list", "wide_spec")
+class TestCompoundQueries:
+    """Each query a compound query holds is checked as a query at the root is."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '{"constant_score": {"filter": {"matchall": {}}, "boost": 1.2}}',
+            '{"nested": {"path": "obj", "query": {"matchall": {}}}}',
+            '{"has_child": {"type": "answer", "query": {"matchall": {}}}}',
+            '{"has_parent": {"parent_type": "question", "query": {"matchall": {}}}}',
+            '{"dis_max": {"queries": [{"term": {"log.level": "ERROR"}}, {"matchall": {}}]}}',
+            '{"boosting": {"positive": {"matchall": {}}, "negative": {"match_all": {}}, '
+            '"negative_boost": 0.5}}',
+            '{"boosting": {"positive": {"match_all": {}}, "negative": {"matchall": {}}, '
+            '"negative_boost": 0.5}}',
+            '{"function_score": {"query": {"matchall": {}}, "boost_mode": "sum"}}',
+            '{"script_score": {"query": {"matchall": {}}, "script": {"source": "_score"}}}',
+        ],
+    )
+    def test_an_unknown_query_type_inside_is_underlined(self, text: str) -> None:
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type')
+        ]
+
+    @pytest.mark.parametrize(
+        ("text", "token", "message"),
+        [
+            (
+                '{"constant_score": {"filter": {"exists": {"field": 5}}}}',
+                "5",
+                "field takes text, not a number",
+            ),
+            (
+                '{"dis_max": {"queries": '
+                '[{"match": {"message": {"query": "x", "operator": "xor"}}}]}}',
+                '"xor"',
+                "operator takes one of: and, or",
+            ),
+            (
+                '{"nested": {"path": "obj", "query": {"range": {"latency_ms": {"gtee": 500}}}}}',
+                '"gtee"',
+                '"gtee" is not a parameter of range',
+            ),
+        ],
+    )
+    def test_the_parameters_of_a_query_inside_are_checked(
+        self, text: str, token: str, message: str
+    ) -> None:
+        assert issues("query_dsl", text) == [finding(text, token, message)]
+
+    def test_compound_queries_and_bool_clauses_are_checked_at_any_depth(self) -> None:
+        text = (
+            '{"nested": {"path": "obj", "query": {"bool": {"must": '
+            '[{"constant_score": {"filter": {"matchall": {}}}}]}}}}'
+        )
+
+        assert issues("query_dsl", text) == [
+            finding(text, '"matchall"', '"matchall" is not a query type')
+        ]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '{"constant_score": {"filter": {"term": {"log.level": "ERROR"}}}}',
+            '{"nested": {"path": "obj", "query": {"match_all": {}}, "inner_hits": {"size": 3}}}',
+            '{"dis_max": {"queries": [{"term": {"log.level": "ERROR"}}, '
+            '{"exists": {"field": "message"}}], "tie_breaker": 0.7}}',
+            '{"script_score": {"query": {"match_all": {}}, "script": {"source": "_score"}}}',
+            '{"bool": {"filter": [{"has_parent": {"parent_type": "question", '
+            '"query": {"term": {"log.level": "ERROR"}}}}]}}',
+        ],
+    )
+    def test_known_queries_inside_have_no_findings(self, text: str) -> None:
+        assert issues("query_dsl", text) == []
+
+    def test_each_query_holding_parameter_is_one_the_packaged_extract_lists(self) -> None:
+        for name, held in check._QUERY_PARAMS.items():
+            assert held <= set(PACKAGED_QUERIES[name]["params"]), name
 
 
 @pytest.mark.usefixtures("field_list", "wide_spec")
