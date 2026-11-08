@@ -8,7 +8,8 @@ prefix, parses /version, and drives the TokenRequest API. Every connection
 is dialed through the proxy core, which tunnels it when a proxy route is in
 force (REQ-4.7.14). Sync by design - local plugins call it via a thread
 offload. Imports stdlib, the bundled TLS engine, WAVE's trust store, the
-proxy core and the web address parser only, so the module stays vendorable.
+proxy core, the web address parser and the count wording only, so the module
+stays vendorable.
 """
 
 import datetime
@@ -108,6 +109,14 @@ class _Wire:
 def wave_anchors() -> str:
     """The PEM a blank CA trusts: WAVE's trust set, read at each connection (REQ-4.5.16)."""
     return trust_store.anchors_pem(trust_store.active_spec())
+
+
+def seconds(count: float) -> str:
+    """A count of seconds as a K8s message names it, singular only for exactly one."""
+    # Imported on use: a top-level plugins import cycles back here via K8s Connect.
+    from wavecore.plugins._plural import plural
+
+    return plural(count, "second", "seconds")
 
 
 def tls_config(context: K8sContextLike) -> Any:
@@ -216,7 +225,7 @@ class K8sClient:
         except TimeoutError as exc:
             raise K8sApiError(
                 f"Kubernetes API request {method} {path} "
-                f"timed out after {self._timeout} seconds"
+                f"timed out after {seconds(self._timeout)}"
             ) from exc
         finally:
             wire.sock.close()

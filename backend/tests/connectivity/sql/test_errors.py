@@ -162,6 +162,9 @@ class TestTimeoutMessage:
     def test_another_timeout(self) -> None:
         assert timeout_message(5) == "Statement timed out after 5 seconds"
 
+    def test_a_one_second_timeout_is_named_in_the_singular(self) -> None:
+        assert timeout_message(1) == "Statement timed out after 1 second"
+
 
 class TestConnectUnreachable:
     """A connect that fails outside the database names the type, host and port (SQL-5)."""

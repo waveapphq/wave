@@ -56,6 +56,7 @@ import {
   reachedStubUrl,
   restTimeoutMessage,
   runTimeoutFixture,
+  secondsText,
   SESSION_VARIABLE,
   SHORT_TIMEOUT,
   stubConnectNode,
@@ -268,7 +269,7 @@ function timeoutLegs(): TimeoutLeg[] {
       key: 'exec',
       ids: ['TO-10'],
       what: 'Exec runs a command in a pod',
-      message: `Command execution timed out after ${SHORT_TIMEOUT} seconds`,
+      message: `Command execution timed out after ${secondsText(SHORT_TIMEOUT)}`,
       node: (slot) =>
         k8sExecNode({
           ...slot,
@@ -279,7 +280,7 @@ function timeoutLegs(): TimeoutLeg[] {
       key: 'script',
       ids: ['TO-11'],
       what: 'Script feeds an interpreter',
-      message: `Script execution timed out after ${SHORT_TIMEOUT} seconds`,
+      message: `Script execution timed out after ${secondsText(SHORT_TIMEOUT)}`,
       node: (slot) =>
         k8sScriptNode({
           ...slot,
@@ -296,7 +297,7 @@ function timeoutLegs(): TimeoutLeg[] {
       key: 'copy',
       ids: ['TO-12'],
       what: 'Copy pulls a file out of a pod',
-      message: `File copy timed out after ${SHORT_TIMEOUT} seconds`,
+      message: `File copy timed out after ${secondsText(SHORT_TIMEOUT)}`,
       node: (slot) =>
         k8sCopyNode({
           ...slot,

@@ -1655,6 +1655,16 @@ def _released_calls(process: MagicMock) -> list[str]:
     return [name for name in names if name in ("kill", "close")]
 
 
+class TestCommandTimedOut:
+    """The wording both SSH session Blocks report when a command outlives its Timeout."""
+
+    def test_a_one_second_bound_is_named_in_the_singular(self) -> None:
+        assert str(command_timed_out(1)) == "Command execution timed out after 1 second"
+
+    def test_any_other_bound_is_named_in_the_plural(self) -> None:
+        assert str(command_timed_out(2)) == "Command execution timed out after 2 seconds"
+
+
 class TestRunWithTimeout:
     """run_with_timeout - a real timeout must stop the remote command and free the slot."""
 

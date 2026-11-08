@@ -2,11 +2,11 @@
 
 Every module under wavecore/connectivity/k8s/ is copied verbatim onto the remote
 host, so each one may import the standard library, its own package, the
-bundled TLS engine, the stdlib file core, WAVE's trust store with its run
-log, the proxy core and the web address parser - nothing else, and nothing
-newer than the interpreter floor the runner accepts, keyword arguments
-included. The verb package carries the extra rule that it is synchronous and
-never reaches back into WAVE's own runtime.
+bundled TLS engine, the stdlib file core, the count wording, WAVE's trust
+store with its run log, the proxy core and the web address parser - nothing
+else, and nothing newer than the interpreter floor the runner accepts, keyword
+arguments included. The verb package carries the extra rule that it is
+synchronous and never reaches back into WAVE's own runtime.
 """
 
 import ast
@@ -34,6 +34,7 @@ _WAVECORE_ROOT = _PACKAGE_ROOT.parents[1]
 _ALLOWED_WAVECORE_IMPORTS = {
     "wavecore.plugins.http_tls",
     "wavecore.plugins._file_ops",
+    "wavecore.plugins._plural",
     "wavecore.connectivity.tls_capabilities",
     "wavecore.connectivity.trust_store",
     "wavecore.connectivity.run_log",
@@ -162,10 +163,14 @@ class TestEveryModuleIsVendorable:
 
         assert not roots & _FORBIDDEN_THIRD_PARTY
 
-    def test_only_the_tls_engine_and_the_file_core_come_from_the_plugins_package(
+    def test_only_the_tls_engine_the_file_core_and_the_count_wording_come_from_plugins(
         self, dotted: str, path: Path
     ) -> None:
-        allowed = {"wavecore.plugins.http_tls", "wavecore.plugins._file_ops"}
+        allowed = {
+            "wavecore.plugins.http_tls",
+            "wavecore.plugins._file_ops",
+            "wavecore.plugins._plural",
+        }
         for names in import_candidates(dotted, path):
             if not any(matches(name, "wavecore.plugins") for name in names):
                 continue

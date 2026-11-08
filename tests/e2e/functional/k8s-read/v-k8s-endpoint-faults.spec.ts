@@ -389,7 +389,7 @@ const GUARDED_CASES: readonly GuardedCase[] = [
     prefix: '/cfg/delay=3',
     elementType: 'k8s-get',
     values: { ...GET_LIST, timeout: 1, on_error: 'fail' },
-    message: `Kubernetes API request GET /api/v1/namespaces/${NAMESPACE}/pods timed out after 1 seconds`,
+    message: `Kubernetes API request GET /api/v1/namespaces/${NAMESPACE}/pods timed out after 1 second`,
   },
   {
     optionId: 'T-26',

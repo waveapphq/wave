@@ -1684,6 +1684,16 @@ class TestTimeout:
         ):
             _run(timeout=60)
 
+    def test_a_one_second_deadline_is_named_in_the_singular(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _wire(monkeypatch, [_Timeout()])
+
+        with pytest.raises(
+            ExecTimeout, match=_exact("Kubernetes exec channel timed out after 1 second")
+        ):
+            _run(timeout=1)
+
     def test_a_timeout_is_not_a_transport_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _wire(monkeypatch, [_Timeout()])
 
@@ -1988,6 +1998,17 @@ class TestStdoutStreamContract:
         ):
             stream.read(1)
 
+    def test_a_one_second_stream_deadline_is_named_in_the_singular(self) -> None:
+        def expire(_size: int) -> bytes:
+            raise TimeoutError("timed out")
+
+        stream = ws.ExecStdout(ws._Reader(expire), 1)
+
+        with pytest.raises(
+            ExecTimeout, match=_exact("Kubernetes exec channel timed out after 1 second")
+        ):
+            stream.read(1)
+
 
 class TestStdoutStreamRequest:
     """The upgrade a stream sends: the exec request with standard input never opened."""
@@ -2190,6 +2211,16 @@ class TestStdoutStreamHandshake:
 
         with pytest.raises(ExecTimeout, match=_exact(_STREAM_TIMED_OUT)):
             _drain()
+
+    def test_a_one_second_handshake_deadline_is_named_in_the_singular(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _wire(monkeypatch, [], lambda _key: _Timeout())
+
+        with pytest.raises(
+            ExecTimeout, match=_exact("Kubernetes exec channel timed out after 1 second")
+        ):
+            _drain(timeout=1)
 
     def test_the_socket_is_closed_after_a_refused_upgrade(
         self, monkeypatch: pytest.MonkeyPatch

@@ -22,6 +22,7 @@ import asyncssh
 from wavecore.core.ssh import trusted_hosts
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._file_paths import plain_path
+from wavecore.plugins._plural import plural
 from wavecore.plugins._shared_params import number_setting
 from wavecore.plugins._tls_material import is_pem
 
@@ -301,7 +302,8 @@ def host_key_target(params: dict[str, Any], identity: tuple[str, int] | None) ->
 
 def command_timed_out(timeout: float) -> TimeoutError:
     """The wording both SSH session plugins report when a remote command outlives its bound."""
-    return TimeoutError(f"Command execution timed out after {timeout} seconds")
+    within = plural(timeout, "second", "seconds")
+    return TimeoutError(f"Command execution timed out after {within}")
 
 
 def _trusted_keys(host: str, addr: str, port: int) -> list[asyncssh.SSHKey]:

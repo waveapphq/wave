@@ -47,6 +47,7 @@ WATCHDOG_MODULE = "wavecore.plugins._local_process_watchdog"
 BRIDGE_MODULE = "wavecore.plugins._python_bridge"
 PROCESS_GROUP_MODULE = "wavecore.plugins._process_group"
 USER_PATTERNS_MODULE = "wavecore.plugins._user_patterns"
+PLURAL_MODULE = "wavecore.plugins._plural"
 
 # By name: each case imports the module it reads.
 VENDORED = (
@@ -57,9 +58,9 @@ VENDORED = (
     USER_PATTERNS_MODULE,
 )
 
-# The runtime half is standard library only: these three are the whole wavecore budget (PYRUN-12).
+# The runtime half is standard library only: these four are the whole wavecore budget (PYRUN-12).
 RUNTIME_WAVECORE_BUDGET = frozenset(
-    {LOCAL_PROCESS_MODULE, PROCESS_GROUP_MODULE, USER_PATTERNS_MODULE}
+    {LOCAL_PROCESS_MODULE, PROCESS_GROUP_MODULE, USER_PATTERNS_MODULE, PLURAL_MODULE}
 )
 
 # The last line of the vendored-source loader; the worker is everything after it.
@@ -438,7 +439,7 @@ class TestTheVendoredRuntimeTravels:
         assert module in sources
         assert sources[module] == own_file.read_text(encoding="utf-8")
 
-    def test_the_runtime_imports_no_wavecore_module_beyond_the_three_allowed(self) -> None:
+    def test_the_runtime_imports_no_wavecore_module_beyond_the_four_allowed(self) -> None:
         source = _vendored_sources()[RUNTIME_MODULE]
 
         reached = {

@@ -14,6 +14,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .. import ws
+from ..rest import seconds
 from ._manifest import split_command
 from ._outputs import block_failure, block_success, empty_streams
 from ._resources import client_options, pod_exec
@@ -53,7 +54,7 @@ def run(params: dict[str, Any], log: Callable[[str, str], None]) -> dict[str, An
     except ws.ExecVersionUnsupported:
         return _failed(params, _NEEDS_V5, "UnsupportedVersion", log)
     except ws.ExecTimeout as exc:
-        raise ValueError(f"Script execution timed out after {target.timeout} seconds") from exc
+        raise ValueError(f"Script execution timed out after {seconds(target.timeout)}") from exc
     except ws.ExecTransportError as exc:
         raise ValueError(f"Could not run the script in {target.where()}: {exc}") from exc
     except ws.ExecRejected as exc:

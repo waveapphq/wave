@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import IO, Any, cast
 
 from .. import ws
+from ..rest import seconds
 from ..ws import ExecOutputTooLarge, ExecRejected, ExecTimeout, ExecTransportError
 from ._outputs import block_failure, block_success, summary_table
 from ._resources import PodExec, client_options, pod_exec
@@ -340,7 +341,7 @@ def run(params: dict[str, Any], log: Callable[[str, str], None]) -> dict[str, An
         else:
             rows = _push(plan, Path(source), target, no_preserve=bool(params.get("no_preserve")))
     except ExecTimeout as exc:
-        raise ValueError(f"File copy timed out after {plan.target.timeout} seconds") from exc
+        raise ValueError(f"File copy timed out after {seconds(plan.target.timeout)}") from exc
     except ExecTransportError as exc:
         raise ValueError(_copy_message(plan, str(exc))) from exc
     except _CopyRefused as exc:

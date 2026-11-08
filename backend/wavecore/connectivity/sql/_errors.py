@@ -30,7 +30,10 @@ class SqlFailure(Exception):
 
 
 def timeout_message(seconds: int) -> str:
-    return f"Statement timed out after {seconds} seconds"
+    # Imported on use: importing wavecore.plugins at load time would import the SQL block.
+    from wavecore.plugins._plural import plural
+
+    return f"Statement timed out after {plural(seconds, 'second', 'seconds')}"
 
 
 def _first_arg(exc: BaseException) -> Any:

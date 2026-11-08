@@ -668,7 +668,7 @@ class TestTimeoutOnTheBundleInterpreterFloor:
         assert outcome.exit_code == 137
         assert outcome.ended_on_own is False
         assert judge_outcome(outcome, "Script", 1, frozenset()) == (
-            "Script timed out after 1 seconds",
+            "Script timed out after 1 second",
             "Timeout",
         )
         await wait_until_gone(await pid_from(pid_file))

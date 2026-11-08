@@ -73,9 +73,13 @@ export const GENEROUS_TIMEOUT = 30
 // The sentences a block says when its Timeout runs out
 // ---------------------------------------------------------------------------
 
+/** A count of seconds as the block words it: singular only for exactly one. */
+export const secondsText = (seconds: number): string =>
+  `${seconds} ${seconds === 1 ? 'second' : 'seconds'}`
+
 /** A REST request the cluster never answered. */
 export const restTimeoutMessage = (method: string, path: string, seconds: number): string =>
-  `Kubernetes API request ${method} ${path} timed out after ${seconds} seconds`
+  `Kubernetes API request ${method} ${path} timed out after ${secondsText(seconds)}`
 
 /** K8s Connect's own version read, which never came back. */
 export const connectTimeoutMessage = (apiUrl: string, seconds: number): string =>
