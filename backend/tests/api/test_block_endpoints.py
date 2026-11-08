@@ -2711,3 +2711,36 @@ class TestABlockBatchItemOfTheWrongShape:
             "deleted": [block_id],
             "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
         }
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A block whose stored version is not MAJOR.MINOR.PATCH refuses a new version with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        "suffix", ["/versions", "/restore/1.0.0"], ids=["add-version", "restore"]
+    )
+    def test_refuses_the_change(self, client: TestClient, suffix: str) -> None:
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.api.services.blocks import service as block_service
+
+        block_id = block_service.create_block({"name": f"Short {uuid.uuid4().hex[:8]}"})["id"]
+        stored = block_storage._load_block(block_id)
+        assert stored is not None
+        stored["version"] = "1"
+        block_storage._save_block(stored)
+        history = block_storage._load_versions(block_id)
+
+        response = client.post(f"/blocks/{block_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert block_storage._load_block(block_id) == stored
+        assert block_storage._load_versions(block_id) == history

@@ -57,6 +57,29 @@ def _store_unvalidated_test(data: dict[str, Any]) -> dict[str, Any]:
     return test
 
 
+NOT_SEMANTIC_VERSIONS = ["1", "1.0", "1.0.0.0", "invalid"]
+
+
+def _not_semantic_message(version: str) -> str:
+    return (
+        f"Invalid version format '{version}': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+    )
+
+
+def _test_stored_with_version(
+    version: str,
+) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+    """Create a test and store ``version`` on it; returns its id, stored file and history."""
+    from tests.api.test_helpers import load_test_file, save_test_file
+
+    test_id = test_service.create_test({"name": f"Version {uuid.uuid4().hex[:8]}"})["id"]
+    stored = load_test_file(test_id)
+    assert stored is not None
+    stored["version"] = version
+    save_test_file(stored)
+    return test_id, stored, test_service._load_versions(test_id)
+
+
 class TestMaskSecretVariables:
     """The masker a Test read uses: the shared one, with the response-only masked flag."""
 
@@ -1026,49 +1049,19 @@ class TestUpdateTest:
 
         assert result is None
 
-    def test_update_test_handles_malformed_version(self) -> None:
-        """Test that update handles tests with malformed version strings."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_update_test_refuses_a_stored_version_that_is_not_semantic(self, stored: str) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses the update; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        # Update should handle malformed version gracefully
-        result = test_service.update_test(test_id, {"description": "Updated"})
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.update_test(test_id, {"description": "Updated"})
 
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_update_test_handles_short_version(self) -> None:
-        """Test that update handles tests with short (< 3 parts) version strings."""
-        from tests.api.test_helpers import save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        # Update should handle short version gracefully
-        result = test_service.update_test(test_id, {"description": "Updated"})
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
     def test_update_test_validates_etag(self) -> None:
         """Test that update validates ETag when provided."""
@@ -1822,47 +1815,24 @@ class TestVersionOperations:
         assert result is not None
         assert result["version"] == "1.0.1"
 
-    def test_add_test_version_handles_malformed_version(self) -> None:
-        """Test adding version when existing version is malformed."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("version_bump", ["major", "minor", "patch"])
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_add_test_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str, version_bump: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses every bump; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        result = test_service.add_test_version(test_id, {"version_bump": "minor"})
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.add_test_version(
+                test_id, {"version_bump": version_bump, "description": "next"}
+            )
 
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_add_test_version_handles_short_version(self) -> None:
-        """Test adding version when existing version has too few parts."""
-        from tests.api.test_helpers import save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        result = test_service.add_test_version(test_id, {"version_bump": "minor"})
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
     def test_delete_test_version_removes_version(self) -> None:
         """Test deleting a specific version."""
@@ -8123,66 +8093,21 @@ class TestRestoreVersion:
         with pytest.raises(ValidationException, match="not found"):
             test_service.restore_test_version(created["id"], "99.0.0")
 
-    def test_restore_version_handles_malformed_version(self) -> None:
-        """Test that restore handles tests with malformed version strings."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_restore_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses the restore; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        # Also need to set up version history by creating a versions.yaml file
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.restore_test_version(test_id, "1.0.0")
 
-        import yaml
-
-        from tests.api.test_helpers import get_test_dir
-
-        versions_file = get_test_dir(test_id) / "versions.yaml"
-        versions = [{"version": "invalid", "snapshot": {"name": "Original"}, "is_latest": True}]
-        with open(versions_file, "w", encoding="utf-8") as f:
-            yaml.dump(versions, f)
-
-        result = test_service.restore_test_version(test_id, "invalid")
-
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_restore_version_handles_short_version(self) -> None:
-        """Test that restore handles tests with short version strings."""
-        import yaml
-
-        from tests.api.test_helpers import get_test_dir, save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        # Set up version history
-        versions_file = get_test_dir(test_id) / "versions.yaml"
-        versions = [{"version": "1.0", "snapshot": {"name": "Original"}, "is_latest": True}]
-        with open(versions_file, "w", encoding="utf-8") as f:
-            yaml.dump(versions, f)
-
-        result = test_service.restore_test_version(test_id, "1.0")
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
 
 class TestClearStorage:

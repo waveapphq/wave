@@ -986,6 +986,7 @@ def update_test(
 
     Raises:
         ConflictException: If ETag mismatch or the new name is taken
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH
         SaveValidationError: If validation errors remain after autofix
     """
     test = _load_test(test_id)
@@ -1000,16 +1001,7 @@ def update_test(
 
     _refuse_taken_rename(test, data)
 
-    # Increment version (minor bump)
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
 
@@ -1254,21 +1246,7 @@ def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | Non
 
     # Determine version bump
     version_bump = data.get("version_bump", "minor")
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-    except (ValueError, AttributeError):
-        parts = [1, 0, 0]  # Default fallback
-
-    if version_bump == "major":
-        new_version = f"{parts[0] + 1}.0.0"
-    elif version_bump == "minor":
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    else:
-        new_version = f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), version_bump)
 
     # Update test
     now = datetime.now(UTC).isoformat()
@@ -4652,16 +4630,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
 
     now = datetime.now(UTC).isoformat()
 
-    # Create new version from restore
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     # Update test
     test["version"] = new_version

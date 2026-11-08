@@ -6,6 +6,7 @@ validation, and import/export.
 """
 
 import uuid
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,6 +15,26 @@ from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.blocks import _storage as _block_storage
 from wavecore.api.services.blocks import service as block_service
 from wavecore.api.services.blocks import version_service as _block_version_svc
+
+NOT_SEMANTIC_VERSIONS = ["1", "1.0", "1.0.0.0", "invalid"]
+
+
+def _not_semantic_message(version: str) -> str:
+    return (
+        f"Invalid version format '{version}': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+    )
+
+
+def _block_stored_with_version(
+    version: str,
+) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+    """Create a block and store ``version`` on it; returns its id, stored file and history."""
+    block_id = block_service.create_block({"name": f"Version {uuid.uuid4().hex[:8]}"})["id"]
+    stored = _block_storage._load_block(block_id)
+    assert stored is not None
+    stored["version"] = version
+    _block_storage._save_block(stored)
+    return block_id, stored, _block_storage._load_versions(block_id)
 
 
 class TestListBlocks:
@@ -532,6 +553,23 @@ class TestVersionOperations:
         result = _block_version_svc.add_block_version(str(uuid.uuid4()), {})
 
         assert result is None
+
+    @pytest.mark.parametrize("version_bump", ["major", "minor", "patch"])
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_add_block_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str, version_bump: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses every bump; nothing is saved."""
+        block_id, before, history = _block_stored_with_version(stored)
+
+        with pytest.raises(ValidationException) as exc_info:
+            _block_version_svc.add_block_version(
+                block_id, {"version_bump": version_bump, "description": "next"}
+            )
+
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert _block_storage._load_block(block_id) == before
+        assert _block_storage._load_versions(block_id) == history
 
     def test_get_block_version_returns_version(self) -> None:
         """Test that get_block_version returns specific version."""
@@ -1173,6 +1211,20 @@ class TestHistoryOperations:
 
         with pytest.raises(ValidationException, match="not found"):
             _block_version_svc.restore_block_version(created["id"], "99.0.0")
+
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_restore_block_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses the restore; nothing is saved."""
+        block_id, before, history = _block_stored_with_version(stored)
+
+        with pytest.raises(ValidationException) as exc_info:
+            _block_version_svc.restore_block_version(block_id, "1.0.0")
+
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert _block_storage._load_block(block_id) == before
+        assert _block_storage._load_versions(block_id) == history
 
 
 class TestGenerateEtag:

@@ -264,16 +264,6 @@ def _validate_param_bindings(plugin_id: str, params: dict[str, Any]) -> list[str
     return errors
 
 
-def _bump_version(current_version: str, version_bump: str) -> str:
-    """Compute the next semantic version string."""
-    parts = [int(x) for x in current_version.split(".")]
-    if version_bump == "major":
-        return f"{parts[0] + 1}.0.0"
-    if version_bump == "minor":
-        return f"{parts[0]}.{parts[1] + 1}.0"
-    return f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
-
-
 def _check_backward_compatibility(block: dict[str, Any], data: dict[str, Any]) -> None:
     """Raise ValueError if required parameters were removed in a non-major bump."""
     old_params = block.get("parameters", {})

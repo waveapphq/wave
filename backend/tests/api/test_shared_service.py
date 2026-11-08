@@ -18,6 +18,7 @@ Test Coverage:
 - One batch delete pass for Suites, Regressions, Tests and Blocks
 - One batch clone pass for Suites and Regressions
 - One minor version bump for Suites and Regressions, refused on a version that is not semantic
+- One next-version rule for Suites, Regressions, Tests and Blocks, refused when not semantic
 """
 
 import dataclasses
@@ -931,3 +932,24 @@ class TestBumpVersionAndRecord:
         )
         assert entity == {"version": stored}
         assert writes == []
+
+
+class TestNextSemanticVersion:
+    """shared.next_semantic_version: the next MAJOR.MINOR.PATCH for a bump, else refused."""
+
+    @pytest.mark.parametrize(
+        ("version_bump", "expected"),
+        [("major", "3.0.0"), ("minor", "2.4.0"), ("patch", "2.3.5")],
+    )
+    def test_bumps_the_named_part(self, version_bump: str, expected: str) -> None:
+        assert shared.next_semantic_version("2.3.4", version_bump) == expected
+
+    @pytest.mark.parametrize("version", ["1", "1.0", "1.0.0.0", "v1.0.0", "1.0.0-beta", ""])
+    def test_refuses_a_version_that_is_not_semantic(self, version: str) -> None:
+        with pytest.raises(ValidationException) as exc_info:
+            shared.next_semantic_version(version, "minor")
+
+        assert exc_info.value.message == (
+            f"Invalid version format '{version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )

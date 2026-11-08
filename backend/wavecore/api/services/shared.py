@@ -547,15 +547,19 @@ def validate_semantic_version(version: str) -> None:
         )
 
 
-def semantic_version_numbers(version: str) -> tuple[int, int, int]:
-    """The MAJOR, MINOR and PATCH numbers of a semantic version.
+def next_semantic_version(version: str, version_bump: str) -> str:
+    """The version after ``version`` for a ``major``, ``minor`` or any other (patch) bump.
 
     Raises:
         ValidationException: If ``version`` is not MAJOR.MINOR.PATCH.
     """
     validate_semantic_version(version)
     major, minor, patch = (int(part) for part in version.split("."))
-    return major, minor, patch
+    if version_bump == "major":
+        return f"{major + 1}.0.0"
+    if version_bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
 
 
 def bump_version_and_record(
@@ -592,8 +596,7 @@ def bump_version_and_record(
         ValidationException: If the stored version is not MAJOR.MINOR.PATCH;
             nothing is saved then.
     """
-    major, minor, _patch = semantic_version_numbers(str(entity.get("version", "1.0.0")))
-    new_version = f"{major}.{minor + 1}.0"
+    new_version = next_semantic_version(str(entity.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
     entity["version"] = new_version

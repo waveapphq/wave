@@ -3842,3 +3842,39 @@ class TestATestBatchItemOfTheWrongShape:
             "deleted": [test_id],
             "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
         }
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A test whose stored version is not MAJOR.MINOR.PATCH refuses a new version with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions"), ("POST", "/restore/1.0.0")],
+        ids=["update", "add-version", "restore"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.test_helpers import load_test_file, save_test_file
+        from wavecore.api.services.tests import service as test_service
+
+        created = client.post("/tests", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        test_id = created.json()["data"]["id"]
+        stored = load_test_file(test_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_test_file(stored)
+        history = test_service._load_versions(test_id)
+
+        response = client.request(method, f"/tests/{test_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_test_file(test_id) == stored
+        assert test_service._load_versions(test_id) == history
