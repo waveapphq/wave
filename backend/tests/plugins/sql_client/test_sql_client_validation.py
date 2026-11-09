@@ -369,7 +369,9 @@ class TestBounds:
     @ON_ERROR
     @pytest.mark.parametrize("value", [0, -1, 65536, 100000])
     async def test_port_out_of_range(self, value: int, on_error: str) -> None:
-        await refuses("Port must be between 1 and 65535", run_sql(port=value, on_error=on_error))
+        await refuses(
+            "Parameter 'port' must be between 1 and 65535", run_sql(port=value, on_error=on_error)
+        )
 
     @pytest.mark.parametrize("value", [1, 5432, 65535])
     async def test_port_in_range(self, value: int) -> None:

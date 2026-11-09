@@ -511,8 +511,9 @@ class TestAddTunnel:
         _register(registry, "s1", MagicMock())
         listener = MagicMock()
 
-        registry.add_tunnel("s1", "t1", listener, 19446, "127.0.0.1:9446")
+        assert registry.add_tunnel("s1", "t1", listener, 19446, "127.0.0.1:9446") is True
 
+        listener.close.assert_not_called()
         tunnels = registry.get("s1")["tunnels"]
         assert "t1" in tunnels
         assert tunnels["t1"]["listener"] is listener
@@ -528,12 +529,20 @@ class TestAddTunnel:
 
         assert set(registry.get("s1")["tunnels"]) == {"t1", "t2"}
 
-    def test_add_tunnel_to_an_unknown_session_is_a_no_op(self) -> None:
+    def test_add_tunnel_to_a_closed_session_closes_the_tunnel_and_returns_false(self) -> None:
+        """No listener outlives its session, even one bound while the session closed."""
         registry = SSHSessionRegistry()
+        _register(registry, "s1", MagicMock())
+        registry.close("s1")
+        listener = MagicMock()
+        held = _held_pair()
 
-        registry.add_tunnel("nope", "t1", MagicMock(), 1, "a:1")
+        assert registry.add_tunnel("s1", "t1", listener, 1, "a:1", held=held) is False
 
-        assert registry.get("nope") is None
+        listener.close.assert_called_once_with()
+        held[1].close.assert_called_once_with()
+        assert registry.get("s1") is None
+        assert registry.find_tunnel_by_local_port(1) is None
 
     def test_a_tunnel_holds_no_pair_by_default(self) -> None:
         registry = SSHSessionRegistry()

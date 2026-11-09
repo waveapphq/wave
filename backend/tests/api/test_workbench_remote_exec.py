@@ -1340,6 +1340,73 @@ class TestRemoteFailure:
 
         assert session["block_states"]["body-1"] == "failed"
 
+    @staticmethod
+    def _tunnel_session() -> dict[str, Any]:
+        """A run whose Execution Host session was opened on a tunnel's Local Port."""
+        registry = SSHSessionRegistry()
+        registry.register(
+            "host-sess-1",
+            MagicMock(),
+            None,
+            "127.0.0.1",
+            None,
+            None,
+            connect_timeout=30,
+            host_identity="node-2.internal",
+        )
+        return _make_session(registry)
+
+    @pytest.mark.asyncio
+    async def test_a_session_on_a_tunnel_names_the_far_host(self) -> None:
+        session = self._tunnel_session()
+        node_map = {
+            "rex-1": _make_remote_node("rex-1", session_id="host-sess-1"),
+            "body-1": _make_plugin_node("body-1", "http-client", dict(HTTP_BODY_CONFIG)),
+        }
+        adj: dict[str, list[tuple[str, str | None]]] = {"rex-1": [("body-1", "body")]}
+
+        with (
+            patch.object(_remote_exec, "open_worker", AsyncMock(return_value=MagicMock())),
+            patch.object(
+                _remote_exec, "run_on_worker", AsyncMock(side_effect=RuntimeError("boom"))
+            ),
+            patch.object(_remote_exec, "close_worker", AsyncMock()),
+        ):
+            with pytest.raises(
+                RuntimeError, match="^Remote Execution failed on host 'node-2.internal': boom$"
+            ):
+                await _run_container("rex-1", node_map, adj, session)
+
+    @pytest.mark.asyncio
+    async def test_the_worker_registry_records_the_far_host(self) -> None:
+        session = self._tunnel_session()
+        run_registry = RemoteWorkerRegistry()
+        session["remote_worker_registry"] = run_registry
+        registered: list[dict[str, Any]] = []
+        real_register = run_registry.register
+
+        def _record(remote_session_id: str, *args: Any, **kwargs: Any) -> None:
+            real_register(remote_session_id, *args, **kwargs)
+            registered.append(dict(run_registry.get(remote_session_id) or {}))
+
+        node_map = {
+            "rex-1": _make_remote_node("rex-1", session_id="host-sess-1"),
+            "body-1": _make_plugin_node("body-1", "http-client", dict(HTTP_BODY_CONFIG)),
+        }
+        adj: dict[str, list[tuple[str, str | None]]] = {"rex-1": [("body-1", "body")]}
+
+        with (
+            patch.object(run_registry, "register", side_effect=_record),
+            patch.object(_remote_exec, "open_worker", AsyncMock(return_value=MagicMock())),
+            patch.object(
+                _remote_exec, "run_on_worker", AsyncMock(return_value=_passing_run_result())
+            ),
+            patch.object(_remote_exec, "close_worker", AsyncMock()),
+        ):
+            await _run_container("rex-1", node_map, adj, session)
+
+        assert [record["host"] for record in registered] == ["node-2.internal"]
+
     @pytest.mark.asyncio
     async def test_non_serializable_variables_are_dropped_before_the_worker(self) -> None:
         registry, _ = _ssh_registry_with("host-sess-1")

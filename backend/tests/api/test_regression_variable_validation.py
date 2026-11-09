@@ -600,6 +600,129 @@ class TestRegressionUpdateCollisionValidation:
         assert result is not None
 
 
+class TestRegressionCreateCollisionValidation:
+    """create_regression runs the same variable type check as update_regression."""
+
+    def setup_method(self) -> None:
+        """Reset storage and the relation index before each test."""
+        from wavecore.api.services.relations import service as relation_service
+
+        clear_regression_storage()
+        clear_suite_storage()
+        relation_service._test_to_suites.clear()
+        relation_service._suite_to_regressions.clear()
+        relation_service._initialized = False
+
+    def _stored_regression_names(self) -> list[str]:
+        from wavecore.api.services.regressions import service as regression_service
+
+        return sorted(doc["name"] for doc, _ in regression_service.list_regression_documents())
+
+    def test_create_refuses_variables_that_collide_with_a_member_suite(self) -> None:
+        """A Regression variable typed unlike the same variable of a member Suite is refused."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.relations import service as relation_service
+        from wavecore.api.services.suites import service as suite_service
+
+        suite = suite_service.create_suite(
+            {"name": "Suite With Vars", "variables": {"env": {"type": "integer", "value": 1}}}
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' here but 'integer' "
+            r"in suite 'Suite With Vars'$",
+        ) as exc_info:
+            regression_service.create_regression(
+                {
+                    "name": "My Regression",
+                    "suites": [suite["id"]],
+                    "variables": {"env": {"type": "string", "value": "dev"}},
+                }
+            )
+
+        assert exc_info.value.details is not None
+        assert exc_info.value.details["conflicting_suite_ids"] == [suite["id"]]
+        assert self._stored_regression_names() == []
+        assert relation_service.get_regression_count_for_suite(suite["id"]) == 0
+
+    def test_create_refuses_member_suites_that_collide_with_each_other(self) -> None:
+        """Two member Suites that type one variable differently are refused."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.suites import service as suite_service
+
+        suite_a = suite_service.create_suite(
+            {"name": "Suite A", "variables": {"env": {"type": "integer", "value": 1}}}
+        )
+        suite_b = suite_service.create_suite(
+            {"name": "Suite B", "variables": {"env": {"type": "string", "value": "dev"}}}
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' in suite 'Suite B' "
+            r"but 'integer' in suite 'Suite A'$",
+        ):
+            regression_service.create_regression(
+                {"name": "My Regression", "suites": [suite_a["id"], suite_b["id"]]}
+            )
+
+        assert self._stored_regression_names() == []
+
+    def test_create_refuses_variables_that_collide_with_a_sibling_regression(self) -> None:
+        """A Regression sharing a Suite with one that types the variable differently is refused."""
+        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.suites import service as suite_service
+
+        shared_suite = suite_service.create_suite({"name": "Shared Suite"})
+        sibling = regression_service.create_regression(
+            {
+                "name": "Sibling Regression",
+                "suites": [shared_suite["id"]],
+                "variables": {"env": {"type": "integer", "value": 1}},
+            }
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=r"^Variable type collision: variable 'env' is 'string' here but 'integer' "
+            r"in regression 'Sibling Regression'$",
+        ) as exc_info:
+            regression_service.create_regression(
+                {
+                    "name": "Target Regression",
+                    "suites": [shared_suite["id"]],
+                    "variables": {"env": {"type": "string", "value": "dev"}},
+                }
+            )
+
+        assert exc_info.value.details is not None
+        assert exc_info.value.details["conflicting_regression_ids"] == [sibling["id"]]
+        assert self._stored_regression_names() == ["Sibling Regression"]
+
+    def test_create_with_matching_types_succeeds(self) -> None:
+        """The same type in the Regression and its member Suite is no collision."""
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.suites import service as suite_service
+
+        suite = suite_service.create_suite(
+            {"name": "Suite With Vars", "variables": {"env": {"type": "string", "value": "a"}}}
+        )
+
+        result = regression_service.create_regression(
+            {
+                "name": "My Regression",
+                "suites": [suite["id"]],
+                "variables": {"env": {"type": "string", "value": "b"}},
+            }
+        )
+
+        assert result["suites"] == [suite["id"]]
+
+
 # ============================================================================
 # Validation in add-suite path
 # ============================================================================
@@ -1099,7 +1222,7 @@ class TestSuitePairCollisions:
         assert result == []
 
     def test_skips_suite_with_non_dict_variables(self) -> None:
-        """Suites whose 'variables' field is a non-dict (legacy data) are skipped."""
+        """Suites whose 'variables' field is a non-dict (corrupt data) are skipped."""
         from unittest.mock import patch
 
         from wavecore.api.services.regressions.variable_validation import (
@@ -1131,7 +1254,7 @@ class TestSuitePairCollisions:
 
 
 class TestNonDictSuiteVariables:
-    """Edge cases where suite.variables is not a dict (corrupt/legacy data)."""
+    """Edge cases where suite.variables is not a dict (corrupt data)."""
 
     def test_non_dict_suite_variables_skipped(self) -> None:
         """check_variable_collisions_for_regression skips suites whose variables are not a dict."""
@@ -1141,7 +1264,7 @@ class TestNonDictSuiteVariables:
             check_variable_collisions_for_regression,
         )
 
-        # Legacy suite where 'variables' is a list instead of dict
+        # Corrupt suite where 'variables' is a list instead of dict
         bad_suite = {
             "id": "bad-suite",
             "name": "Bad Suite",
@@ -1258,22 +1381,12 @@ class TestDeltaOnlySkipWhenUnchanged:
                 {"suites": [suite_integer["id"]]},
             )
 
-    def test_update_regression_persists_tags_and_pads_legacy_single_integer_version(
-        self,
-    ) -> None:
-        """update_regression must persist 'tags' and pad legacy version 'N' to 'N.0.0'."""
-        from tests.api.regression_test_helpers import (
-            load_regression_file,
-            save_regression_file,
-        )
+    def test_update_regression_persists_tags(self) -> None:
+        """update_regression persists 'tags' and bumps the minor version."""
+        from tests.api.regression_test_helpers import load_regression_file
         from wavecore.api.services.regressions import service as regression_service
 
         regression = regression_service.create_regression({"name": "Tag Target"})
-        # Rewrite the on-disk copy to simulate a legacy single-integer version
-        stored = load_regression_file(regression["id"])
-        assert stored is not None
-        stored["version"] = "1"
-        save_regression_file(stored)
 
         result = regression_service.update_regression(
             regression["id"],
@@ -1282,8 +1395,33 @@ class TestDeltaOnlySkipWhenUnchanged:
 
         assert result is not None
         assert result["tags"] == ["nightly", "smoke"]
-        # Padded "1" -> "1.0.0" then bumped to "1.1.0"
         assert result["version"] == "1.1.0"
+        stored = load_regression_file(regression["id"])
+        assert stored is not None
+        assert stored["tags"] == ["nightly", "smoke"]
+
+    def test_update_regression_refuses_a_single_integer_version(self) -> None:
+        """update_regression refuses stored version '1' and keeps the stored regression."""
+        from tests.api.regression_test_helpers import (
+            load_regression_file,
+            save_regression_file,
+        )
+        from wavecore.api.exceptions import ValidationException
+        from wavecore.api.services.regressions import service as regression_service
+
+        regression = regression_service.create_regression({"name": "Tag Target"})
+        stored = load_regression_file(regression["id"])
+        assert stored is not None
+        stored["version"] = "1"
+        save_regression_file(stored)
+
+        with pytest.raises(ValidationException) as exc_info:
+            regression_service.update_regression(regression["id"], {"tags": ["nightly"]})
+
+        assert exc_info.value.message == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression["id"]) == stored
 
     def test_update_with_identical_variables_skips_collision_check(self) -> None:
         """Re-sending the same variables does not trigger collision validation."""

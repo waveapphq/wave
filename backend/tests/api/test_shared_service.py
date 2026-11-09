@@ -15,6 +15,10 @@ Test Coverage:
 - The export file name rule every export shares (REQ-4.6.9)
 - The first free numbered name and the match and target of an incoming item (REQ-5.2.4.9.5)
 - Variables as a save stores them: typed numbers in wire form (REQ-3.1.3.14)
+- One batch delete pass for Suites, Regressions, Tests and Blocks
+- One batch clone pass for Suites and Regressions
+- One minor version bump for Suites and Regressions, refused on a version that is not semantic
+- One next-version rule for Suites, Regressions, Tests and Blocks, refused when not semantic
 """
 
 import dataclasses
@@ -27,7 +31,14 @@ from typing import Any
 
 import pytest
 
-from wavecore.api.exceptions import ValidationException
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
+    NOT_AN_UPDATE_OBJECT,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_ITEMS,
+)
+from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import shared
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import service as execution_service
@@ -777,3 +788,192 @@ class TestStoredVariableValues:
             "count": {"type": "integer", "value": 30},
             "loose": 1e-07,
         }
+
+
+class TestBatchDelete:
+    """shared.batch_delete: one pass over the IDs, each refusal kept by its index."""
+
+    def test_deletes_each_id_in_order(self) -> None:
+        seen: list[str] = []
+
+        def delete(item_id: str) -> bool:
+            seen.append(item_id)
+            return True
+
+        assert shared.batch_delete(["a", "b"], delete, "Suite") == {
+            "deleted": ["a", "b"],
+            "failed": [],
+        }
+        assert seen == ["a", "b"]
+
+    def test_names_a_missing_id_by_kind_and_index(self) -> None:
+        result = shared.batch_delete(["here", "gone"], lambda item_id: item_id == "here", "Test")
+
+        assert result == {
+            "deleted": ["here"],
+            "failed": [{"index": 1, "error": "Test with ID 'gone' not found"}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_keeps_an_item_that_is_not_an_id_and_goes_on(self, item: Any) -> None:
+        seen: list[str] = []
+
+        def delete(item_id: str) -> bool:
+            seen.append(item_id)
+            return True
+
+        assert shared.batch_delete([item, "free"], delete, "Block") == {
+            "deleted": ["free"],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+        assert seen == ["free"]
+
+    @pytest.mark.parametrize("error", [ConflictException("Busy"), ValueError("Busy")])
+    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+        def delete(item_id: str) -> bool:
+            if item_id == "busy":
+                raise error
+            return True
+
+        assert shared.batch_delete(["busy", "free"], delete, "Regression") == {
+            "deleted": ["free"],
+            "failed": [{"index": 0, "error": "Busy"}],
+        }
+
+
+class TestBatchUpdateProblem:
+    """shared.batch_update_problem: why a batch update item is malformed, or None."""
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_item_that_is_not_an_object(self, item: Any) -> None:
+        assert shared.batch_update_problem(item) == NOT_AN_OBJECT_ITEM
+
+    @pytest.mark.parametrize("update", NOT_OBJECT_ITEMS)
+    def test_an_update_that_is_not_an_object(self, update: Any) -> None:
+        assert shared.batch_update_problem({"id": "x", "update": update}) == NOT_AN_UPDATE_OBJECT
+
+    @pytest.mark.parametrize("item", [{"id": "x"}, {"id": "x", "update": {"name": "Renamed"}}])
+    def test_an_object_with_no_update_or_an_object_update_has_none(
+        self, item: dict[str, Any]
+    ) -> None:
+        assert shared.batch_update_problem(item) is None
+
+
+class TestBatchClone:
+    """shared.batch_clone: one pass over the IDs, each refusal kept by its index."""
+
+    def test_clones_each_id_in_order(self) -> None:
+        seen: list[str] = []
+
+        def clone(item_id: str) -> dict[str, Any]:
+            seen.append(item_id)
+            return {"id": f"{item_id}-copy", "name": "Copy"}
+
+        assert shared.batch_clone(["a", "b"], clone, "Suite") == {
+            "cloned": [
+                {"original_id": "a", "cloned_id": "a-copy"},
+                {"original_id": "b", "cloned_id": "b-copy"},
+            ],
+            "failed": [],
+        }
+        assert seen == ["a", "b"]
+
+    def test_names_a_missing_id_by_kind_and_index(self) -> None:
+        def clone(item_id: str) -> dict[str, Any] | None:
+            return {"id": "here-copy"} if item_id == "here" else None
+
+        assert shared.batch_clone(["here", "gone"], clone, "Regression") == {
+            "cloned": [{"original_id": "here", "cloned_id": "here-copy"}],
+            "failed": [{"index": 1, "error": "Regression with ID 'gone' not found"}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_keeps_an_item_that_is_not_an_id_and_goes_on(self, item: Any) -> None:
+        seen: list[str] = []
+
+        def clone(item_id: str) -> dict[str, Any]:
+            seen.append(item_id)
+            return {"id": f"{item_id}-copy"}
+
+        assert shared.batch_clone([item, "free"], clone, "Suite") == {
+            "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+        assert seen == ["free"]
+
+    @pytest.mark.parametrize("error", [ConflictException("Taken"), ValueError("Taken")])
+    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+        def clone(item_id: str) -> dict[str, Any]:
+            if item_id == "taken":
+                raise error
+            return {"id": f"{item_id}-copy"}
+
+        assert shared.batch_clone(["taken", "free"], clone, "Suite") == {
+            "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
+            "failed": [{"index": 0, "error": "Taken"}],
+        }
+
+
+class TestBumpVersionAndRecord:
+    """shared.bump_version_and_record: a MINOR bump of a MAJOR.MINOR.PATCH version, else refused."""
+
+    def test_bumps_minor_and_records_the_change(self) -> None:
+        entity: dict[str, Any] = {"version": "2.3.4"}
+        saved: list[dict[str, Any]] = []
+        history: list[list[dict[str, Any]]] = []
+
+        shared.bump_version_and_record(
+            entity,
+            "ent-1",
+            "Change",
+            save_entity=saved.append,
+            load_versions=lambda _entity_id: [],
+            save_versions=lambda _entity_id, versions: history.append(versions),
+        )
+
+        assert entity["version"] == "2.4.0"
+        assert saved == [entity]
+        assert [row["version"] for row in history[0]] == ["2.4.0"]
+
+    @pytest.mark.parametrize("stored", ["1", "1.0", "1.0.0.0", "v1.0.0", "1.0.0-beta"])
+    def test_refuses_a_stored_version_that_is_not_semantic(self, stored: str) -> None:
+        entity: dict[str, Any] = {"version": stored}
+        writes: list[str] = []
+
+        with pytest.raises(ValidationException) as exc_info:
+            shared.bump_version_and_record(
+                entity,
+                "ent-1",
+                "Change",
+                save_entity=lambda _entity: writes.append("entity"),
+                load_versions=lambda _entity_id: [],
+                save_versions=lambda _entity_id, _versions: writes.append("history"),
+            )
+
+        assert exc_info.value.message == (
+            f"Invalid version format '{stored}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert entity == {"version": stored}
+        assert writes == []
+
+
+class TestNextSemanticVersion:
+    """shared.next_semantic_version: the next MAJOR.MINOR.PATCH for a bump, else refused."""
+
+    @pytest.mark.parametrize(
+        ("version_bump", "expected"),
+        [("major", "3.0.0"), ("minor", "2.4.0"), ("patch", "2.3.5")],
+    )
+    def test_bumps_the_named_part(self, version_bump: str, expected: str) -> None:
+        assert shared.next_semantic_version("2.3.4", version_bump) == expected
+
+    @pytest.mark.parametrize("version", ["1", "1.0", "1.0.0.0", "v1.0.0", "1.0.0-beta", ""])
+    def test_refuses_a_version_that_is_not_semantic(self, version: str) -> None:
+        with pytest.raises(ValidationException) as exc_info:
+            shared.next_semantic_version(version, "minor")
+
+        assert exc_info.value.message == (
+            f"Invalid version format '{version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )

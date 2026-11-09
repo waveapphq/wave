@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.regressions import _storage
 from wavecore.api.services.regressions._storage import (
     _batch_regression_counts,
@@ -26,8 +26,11 @@ from wavecore.api.services.regressions._storage import (
     _validate_name,
 )
 from wavecore.api.services.shared import (
+    batch_clone,
+    batch_delete,
     bump_version_and_record,
     read_secret_variables,
+    refuse_unknown_members,
     resolve_entities_by_ids,
     restore_masked_secrets,
 )
@@ -102,13 +105,16 @@ def create_regression(data: dict[str, Any]) -> dict[str, Any]:
             raise ConflictException(f"Regression with name '{name}' already exists")
 
     suites = data.get("suites", [])
-    for suite_id in suites:
-        if not _suite_exists(suite_id):
-            raise ValidationException(f"Suite with ID '{suite_id}' not found")
-    refuse_value_problems(data.get("variables") or {})
+    refuse_unknown_members(suites, (), "Suite", _suite_exists)
+    variables = data.get("variables", {})
+    refuse_value_problems(variables or {})
 
     regression_id = str(uuid.uuid4())
     now = datetime.now(UTC).isoformat()
+    # A new Regression is checked as an update of an empty one.
+    _check_regression_variable_collisions(
+        {}, regression_id, {"suites": suites, "variables": variables}
+    )
 
     regression = {
         "id": regression_id,
@@ -117,7 +123,7 @@ def create_regression(data: dict[str, Any]) -> dict[str, Any]:
         "description": data.get("description", ""),
         "suites": suites,
         "tags": data.get("tags", []),
-        "variables": data.get("variables", {}),
+        "variables": variables,
         "metadata": data.get("metadata", {}),
         "created_at": now,
         "updated_at": now,
@@ -380,6 +386,10 @@ def update_regression(regression_id: str, data: dict[str, Any]) -> dict[str, Any
         }
 
     _validate_update_name_uniqueness(regression_id, data)
+    if "suites" in data:
+        refuse_unknown_members(
+            data["suites"], regression.get("suites") or [], "Suite", _suite_exists
+        )
     if "variables" in data:
         refuse_value_problems(data["variables"])
     _check_regression_variable_collisions(regression, regression_id, data)
@@ -503,41 +513,16 @@ def delete_regression(regression_id: str) -> bool:
     return True
 
 
-def batch_delete_regressions(regression_ids: list[str]) -> dict[str, Any]:
+def batch_delete_regressions(regression_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple regressions in a batch."""
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-    for idx, regression_id in enumerate(regression_ids):
-        try:
-            if delete_regression(regression_id):
-                deleted.append(regression_id)
-            else:
-                failed.append(
-                    {"index": idx, "error": f"Regression with ID '{regression_id}' not found"}
-                )
-        except (ValueError, ConflictException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"deleted": deleted, "failed": failed}
+    return batch_delete(regression_ids, delete_regression, "Regression")
 
 
-def batch_clone_regressions(regression_ids: list[str]) -> dict[str, Any]:
+def batch_clone_regressions(regression_ids: list[Any]) -> dict[str, Any]:
     """Clone multiple regressions in a batch."""
     from wavecore.api.services.regressions import version_service
 
-    cloned: list[dict[str, str]] = []
-    failed: list[dict[str, Any]] = []
-    for idx, regression_id in enumerate(regression_ids):
-        try:
-            result = version_service.clone_regression(regression_id)
-            if result is None:
-                failed.append(
-                    {"index": idx, "error": f"Regression with ID '{regression_id}' not found"}
-                )
-            else:
-                cloned.append({"original_id": regression_id, "cloned_id": result["id"]})
-        except (ValueError, ConflictException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"cloned": cloned, "failed": failed}
+    return batch_clone(regression_ids, version_service.clone_regression, "Regression")
 
 
 # ===========================================================================

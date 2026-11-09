@@ -15,11 +15,13 @@ from fastapi import APIRouter, Request, Response
 from fastapi import status as http_status
 from fastapi.responses import JSONResponse
 
+from wavecore.api.exceptions import WaveException
 from wavecore.api.routes.regressions.routes import (
     _ERR_ALREADY_EXISTS,
     validate_regression_name,
     validate_uuid,
 )
+from wavecore.api.routes.shared import read_json_object
 from wavecore.api.services.regressions import service as regression_service
 from wavecore.api.services.regressions import version_service as _reg_version_svc
 
@@ -82,7 +84,7 @@ async def clone_regression(
     """Clone a regression with a new name."""
     try:
         validate_uuid(regression_id, "regression_id")
-        body = await request.json()
+        body = await read_json_object(request)
         new_name = body.get("name")
         if new_name:
             validate_regression_name(new_name)
@@ -113,6 +115,8 @@ async def clone_regression(
                 "error": {"message": error_message, "code": "VALIDATION_ERROR"},
             },
         )
+    except WaveException:
+        raise
     except Exception:
         correlation_id = str(uuid.uuid4())
         return JSONResponse(

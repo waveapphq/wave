@@ -464,6 +464,21 @@ class TestParseText:
         assert error.message == "Certificate 3: not a CA certificate"
 
 
+class TestPemBlocks:
+    def test_blocks_in_text_order_without_the_text_around_them(self, pki: _Pki) -> None:
+        text = (
+            "# Issuer: CN=Corp Root CA 2031\n" + _pem(pki.root) + "\n# Label\n" + _pem(pki.issuing)
+        )
+
+        assert certificate_facts.pem_blocks(text) == [
+            _pem(pki.root).strip(),
+            _pem(pki.issuing).strip(),
+        ]
+
+    def test_text_without_a_block_has_none(self) -> None:
+        assert certificate_facts.pem_blocks("# no certificate here\n") == []
+
+
 class TestParseFile:
     def test_a_der_file_yields_one_certificate(self, pki: _Pki) -> None:
         assert certificate_facts.parse_file("root.cer", _der(pki.root)) == ([pki.root], [])

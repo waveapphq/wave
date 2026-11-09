@@ -132,6 +132,16 @@ class TestTransportMessages:
             "Unreachable",
         )
 
+    def test_a_one_second_connect_timeout_is_named_in_the_singular(self) -> None:
+        failure = connect_timeout("192.0.2.1:9200", 1)
+
+        _assert_failure(
+            failure,
+            "Could not connect to OpenSearch at 192.0.2.1:9200: "
+            "no answer within 1 second (Connect timeout)",
+            "Unreachable",
+        )
+
     def test_a_close_before_the_status_line(self) -> None:
         error = RemoteDisconnected("Remote end closed connection without response")
 
@@ -160,6 +170,12 @@ class TestTransportMessages:
     def test_the_whole_block_deadline_message(self, seconds: int) -> None:
         assert timeout_message(seconds) == (
             f"Timed out after {seconds} seconds; the connection was shut down, "
+            "so OpenSearch ends the search"
+        )
+
+    def test_a_one_second_deadline_is_named_in_the_singular(self) -> None:
+        assert timeout_message(1) == (
+            "Timed out after 1 second; the connection was shut down, "
             "so OpenSearch ends the search"
         )
 

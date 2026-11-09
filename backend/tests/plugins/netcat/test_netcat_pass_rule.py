@@ -116,6 +116,14 @@ SINGLE_FAILURES = [
         "Timeout",
         id="timed-out-integer-timeout",
     ),
+    pytest.param(
+        7,
+        {"timeout": 1},
+        {"opener": gone},
+        "Port 7 on 127.0.0.1 timed out after 1 second",
+        "Timeout",
+        id="timed-out-one-second-timeout",
+    ),
 ]
 
 

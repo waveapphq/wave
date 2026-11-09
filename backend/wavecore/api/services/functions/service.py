@@ -24,6 +24,7 @@ from wavecore.api.exceptions import (
 from wavecore.api.services.block_schema import block_schema
 from wavecore.api.services.functions import _storage, _versioning
 from wavecore.api.services.functions.import_export import circle_path, circle_text
+from wavecore.api.services.shared import batch_id, batch_object
 from wavecore.core.functions.references import referenced_function_ids
 from wavecore.core.secrets.sealing import (
     mask_definition_function_secrets,
@@ -38,9 +39,6 @@ def _clear_in_memory_cache() -> None:
 
 def _now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-_MISSING_REFERENCE_CODES = ("MISSING_FUNCTION_ID", "MISSING_FUNCTION_VERSION")
 
 
 def _normalize_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -398,7 +396,8 @@ def add_function_version(
 
     Test-independent edit-mode publish: validates the draft against its source
     version (changelog required, valid semver, source exists, target not a
-    duplicate, target is an allowed bump) then persists via save_new_version.
+    duplicate, target is an allowed bump, body passes the create checks) then
+    persists via save_new_version.
     Returns ``{function_id, version}``.
     """
     if not changelog.strip():
@@ -449,14 +448,7 @@ def add_function_version(
         )
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
 
-    _refuse_circle(function_id, draft_definition)
-    _refuse_errors(
-        issue
-        for issue in _storage._validate_references(
-            draft_definition, function_registry=load_library_index()
-        )
-        if issue.code in _MISSING_REFERENCE_CODES
-    )
+    refuse_invalid_body(function_id, draft_definition)
 
     metadata = {
         "description": description or "",
@@ -540,25 +532,26 @@ def _collect_errors(exc: WaveException) -> list[str]:
     return [exc.message]
 
 
-def batch_create_functions(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def batch_create_functions(items: Sequence[Any]) -> dict[str, Any]:
     created: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         try:
-            definition, _etag = create_function(item)
+            definition, _etag = create_function(batch_object(item))
             created.append(definition)
         except WaveException as exc:
             failed.append({"index": index, "errors": _collect_errors(exc)})
     return {"created": created, "failed": failed}
 
 
-def batch_delete_functions(ids: Sequence[str], *, cascade: bool = False) -> dict[str, Any]:
+def batch_delete_functions(ids: Sequence[Any], *, cascade: bool = False) -> dict[str, Any]:
     deleted: list[str] = []
     failed: list[dict[str, Any]] = []
-    for function_id in ids:
+    for item in ids:
         try:
+            function_id = batch_id(item)
             delete_function(function_id, cascade=cascade)
             deleted.append(function_id)
         except WaveException as exc:
-            failed.append({"id": function_id, "errors": _collect_errors(exc)})
+            failed.append({"id": item, "errors": _collect_errors(exc)})
     return {"deleted": deleted, "failed": failed}

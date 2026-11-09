@@ -8,7 +8,6 @@ import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.blocks._storage import (
-    _bump_version,
     _check_backward_compatibility,
     _generate_etag,
     _list_all_blocks,
@@ -22,7 +21,7 @@ from wavecore.api.services.blocks._storage import (
     _validate_required_fields,
     get_block_dependents,
 )
-from wavecore.api.services.shared import refuse_unencodable_file
+from wavecore.api.services.shared import next_semantic_version, refuse_unencodable_file
 from wavecore.core.utf8_text import load_yaml
 
 
@@ -43,8 +42,7 @@ def add_block_version(block_id: str, data: dict[str, Any]) -> dict[str, Any] | N
 
     versions = _load_versions(block_id)
     version_bump = data.get("version_bump", "minor")
-    current_version = block.get("version", "1.0.0")
-    new_version = _bump_version(current_version, version_bump)
+    new_version = next_semantic_version(str(block.get("version", "1.0.0")), version_bump)
 
     if version_bump != "major":
         _check_backward_compatibility(block, data)
@@ -284,9 +282,7 @@ def restore_block_version(block_id: str, version: str) -> dict[str, Any] | None:
         raise ValidationException(f"Version '{version}' not found for block '{block_id}'")
 
     now = datetime.now(UTC).isoformat()
-    current_version = block.get("version", "1.0.0")
-    parts = [int(x) for x in current_version.split(".")]
-    new_version = f"{parts[0]}.{parts[1] + 1}.0"
+    new_version = next_semantic_version(str(block.get("version", "1.0.0")), "minor")
 
     block["version"] = new_version
     block["updated_at"] = now

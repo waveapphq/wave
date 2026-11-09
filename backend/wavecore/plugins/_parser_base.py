@@ -6,9 +6,13 @@ Provides common validation methods for queries, output modes, query output types
 and type coercion methods for converting parsed values to WAVE types.
 """
 
+import sys
+from decimal import Decimal
 from typing import Any
 
 from wavecore.core.execution.plugin_executor import check_entry_nulls
+from wavecore.core.variables.decimal_value import WaveDecimal, to_wave_decimal
+from wavecore.core.variables.print_form import value_text
 from wavecore.plugins.base import PluginBase
 
 OUTPUT_MODE_PARAM: dict[str, Any] = {
@@ -41,6 +45,18 @@ PARSER_OUTPUT_SCHEMA: list[dict[str, str]] = [
     {"name": "errors", "type": "array"},
     {"name": "results", "type": "map"},
 ]
+
+
+def _whole_number(value: float | Decimal | str) -> int | None:
+    """The exact int a finite whole number names, or None (REQ-3.1.3.14)."""
+    number = to_wave_decimal(value)
+    if not isinstance(number, Decimal) or not number.is_finite():
+        return None
+    # A number Python could not print as an int is not converted.
+    if number.adjusted() >= sys.int_info.default_max_str_digits:
+        return None
+    whole = int(number)
+    return whole if whole == number else None
 
 
 def queries_param(expression_kind: str) -> dict[str, Any]:
@@ -201,39 +217,37 @@ class QueryParserBase(PluginBase):
             raise TypeError(f"Cannot convert array to {target_type}")
 
     def _coerce_to_string(self, value: Any) -> str:
-        """Coerce value to string."""
+        """Coerce value to string; a map or a float is written in WAVE's print form."""
         self._reject_array(value, "string")
+        if isinstance(value, dict | float):
+            return value_text(value)
         return str(value)
 
     def _coerce_to_integer(self, value: Any) -> int:
-        """Coerce value to integer."""
+        """Coerce value to an exact integer; a fractional value is refused."""
         self._reject_array(value, "integer")
         if isinstance(value, bool):
             return int(value)
         if isinstance(value, int):
             return value
-        if isinstance(value, float):
-            return int(value)
-        if isinstance(value, str):
-            try:
-                return int(float(value))
-            except (ValueError, OverflowError) as e:
-                raise ValueError(f"Cannot convert '{value}' to integer") from e
-        raise TypeError(f"Cannot convert {type(value).__name__} to integer")  # pragma: no cover
+        if isinstance(value, float | Decimal | str):
+            whole = _whole_number(value)
+            if whole is None:
+                raise ValueError(f"Cannot convert '{value}' to integer")
+            return whole
+        raise TypeError(f"Cannot convert {type(value).__name__} to integer")
 
-    def _coerce_to_float(self, value: Any) -> float:
-        """Coerce value to float."""
+    def _coerce_to_float(self, value: Any) -> Decimal:
+        """Coerce value to an exact float (REQ-3.1.3.14)."""
         self._reject_array(value, "float")
-        if isinstance(value, bool):
-            return float(value)
-        if isinstance(value, int | float):
-            return float(value)
-        if isinstance(value, str):
-            try:
-                return float(value)
-            except ValueError as e:
-                raise ValueError(f"Cannot convert '{value}' to float") from e
-        raise TypeError(f"Cannot convert {type(value).__name__} to float")  # pragma: no cover
+        if isinstance(value, int):
+            return WaveDecimal(value)
+        if isinstance(value, float | Decimal | str):
+            number = to_wave_decimal(value)
+            if isinstance(number, Decimal) and number.is_finite():
+                return number
+            raise ValueError(f"Cannot convert '{value}' to float")
+        raise TypeError(f"Cannot convert {type(value).__name__} to float")
 
     def _coerce_to_boolean(self, value: Any) -> bool:
         """Coerce value to boolean."""
@@ -242,9 +256,9 @@ class QueryParserBase(PluginBase):
             return value
         if isinstance(value, str):
             return self._string_to_boolean(value)
-        if isinstance(value, int | float):
+        if isinstance(value, int | float | Decimal):
             return bool(value)
-        raise TypeError(f"Cannot convert {type(value).__name__} to boolean")  # pragma: no cover
+        raise TypeError(f"Cannot convert {type(value).__name__} to boolean")
 
     @staticmethod
     def _string_to_boolean(value: str) -> bool:
@@ -282,10 +296,11 @@ class QueryParserBase(PluginBase):
         if isinstance(value, int):
             return {"type": "integer", "value": value}
 
-        if isinstance(value, float):
-            if value.is_integer():
-                return {"type": "integer", "value": int(value)}
-            return {"type": "float", "value": value}
+        if isinstance(value, float | Decimal):
+            whole = _whole_number(value)
+            if whole is None:
+                return {"type": "float", "value": value}
+            return {"type": "integer", "value": whole}
 
         if isinstance(value, str):
             return {"type": "string", "value": value}

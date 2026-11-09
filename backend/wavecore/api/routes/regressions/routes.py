@@ -33,9 +33,6 @@ from wavecore.api.services.regressions import service as regression_service
 # Create router for regression endpoints
 router = APIRouter(tags=["Regressions"])
 
-# Semantic version pattern
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-
 # Name pattern: alphanumeric, spaces, hyphens, underscores, periods, parentheses
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9 ._()-]+$")
 

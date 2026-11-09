@@ -115,7 +115,7 @@ _add_test() {
         local IFS=","
         metadata="{${metadata_parts[*]}}"
     fi
-    _bulk tests "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata}}]"
+    _bulk tests "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1.0.0\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata}}]"
 }
 
 # _add_suite <id> <name> [parent_regression_name] [tests_json_array]
@@ -133,7 +133,7 @@ _add_suite() {
     if [[ -n "$tests" ]]; then
         tests_json="$tests"
     fi
-    _bulk suites "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata,\"tests\":$tests_json}}]"
+    _bulk suites "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1.0.0\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata,\"tests\":$tests_json}}]"
 }
 
 # _add_regression <id> <name>
@@ -141,7 +141,7 @@ _add_suite() {
 # Note: ID is auto-prefixed with namespace (NS) if set
 _add_regression() {
     local id="$(_ns_id "$1")" name="$2" ts="$(_ts)"
-    _bulk regressions "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":{}}}]"
+    _bulk regressions "[{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1.0.0\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":{}}}]"
 }
 
 # _add_exec <id> <entity_id> <status> <progress> [timestamp] [tests_total] [tests_selected] [entity_type]
@@ -291,7 +291,7 @@ _batch_test() {
         local IFS=","
         metadata="{${metadata_parts[*]}}"
     fi
-    _BATCH_TESTS+=("{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata}}")
+    _BATCH_TESTS+=("{\"op\":\"add\",\"entity\":{\"id\":\"$id\",\"name\":\"$name\",\"version\":\"1.0.0\",\"created_at\":\"$ts\",\"updated_at\":\"$ts\",\"metadata\":$metadata}}")
 }
 
 # _batch_link <profile_id> <test_id>

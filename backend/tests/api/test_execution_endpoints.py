@@ -29,6 +29,12 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_ID_LIST_FIELDS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 from tests.api.download_name_helpers import EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
@@ -1630,88 +1636,6 @@ class TestStopExecutionInvalidStates:
             assert response.status_code == 409
 
 
-class TestEntityExecutionHistoryEndpoints:
-    """Test suite for entity-specific execution history endpoints."""
-
-    @pytest.fixture
-    def client(self) -> TestClient:
-        """Create FastAPI test client."""
-        from wavecore.api.app import app
-
-        return TestClient(app)
-
-    def test_get_test_executions_returns_200_with_history(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns execution history."""
-        test_id = str(uuid.uuid4())
-        execution_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.tests.routes.test_service.get_test_executions"
-        ) as mock_history:
-            mock_history.return_value = {
-                "executions": [
-                    {
-                        "id": execution_id,
-                        "type": "test",
-                        "entity_id": test_id,
-                        "status": "passed",
-                        "started_at": "2024-01-01T00:00:00Z",
-                        "ended_at": "2024-01-01T00:01:00Z",
-                    }
-                ],
-                "total": 1,
-                "page": 1,
-                "per_page": 20,
-                "total_pages": 1,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True
-            assert len(data["data"]) == 1
-            assert data["data"][0]["entity_id"] == test_id
-            mock_history.assert_called_once()
-
-    def test_get_test_executions_returns_404_for_unknown_test(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns 404 for unknown test."""
-        test_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.tests.routes.test_service.get_test_executions"
-        ) as mock_history:
-            mock_history.return_value = None
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-
-    def test_get_test_executions_supports_pagination(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions supports pagination."""
-        test_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.tests.routes.test_service.get_test_executions"
-        ) as mock_history:
-            mock_history.return_value = {
-                "executions": [],
-                "total": 100,
-                "page": 2,
-                "per_page": 10,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions?page=2&per_page=10")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["pagination"]["page"] == 2
-            assert data["pagination"]["per_page"] == 10
-            assert data["pagination"]["total"] == 100
-
-
 class TestListExecutionsSortOrdering:
     """Test suite for list executions sort ordering."""
 
@@ -2528,6 +2452,14 @@ class TestBulkExportExecutionsEndpoint:
         assert response.status_code == 400
         assert response.json()["error"]["message"] == "execution_ids must be a non-empty list"
 
+    @pytest.mark.parametrize("execution_ids", NOT_ID_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_of_strings_are_refused(
+        self, client: TestClient, execution_ids: Any
+    ) -> None:
+        response = client.post("/executions/export", json={"execution_ids": execution_ids})
+
+        assert_refused(response, "'execution_ids' must be a list of ID strings")
+
     def test_invalid_format_returns_400(self, client: TestClient) -> None:
         """Invalid format returns 400 with exact message."""
         response = client.post(
@@ -2597,3 +2529,17 @@ class TestExportKeepsTheWholeFileName:
             response = client.post("/executions/export", json={"execution_ids": [execution_id]})
 
         assert_whole_name(response, name)
+
+
+class TestAnExecutionExportBodyThatIsNotAJsonObject:
+    """An execution export whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(self, client: TestClient, text: str, message: str) -> None:
+        assert_refused(send_text(client, "POST", "/executions/export", text), message)

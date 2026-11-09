@@ -17,7 +17,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import id_list_field, read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.suites import import_export as suite_import_export
@@ -31,8 +31,8 @@ VALID_EXPORT_FORMATS = {"yaml", "json"}
 @router.post("/suites/export")
 async def export_suites_bulk(request: Request) -> Response:
     """Export multiple suites as single file or ZIP archive."""
-    body = await request.json()
-    suite_ids = body.get("suite_ids", [])
+    body = await read_json_object(request)
+    suite_ids = id_list_field(body, "suite_ids")
     fmt = body.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))
 

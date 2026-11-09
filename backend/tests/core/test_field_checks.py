@@ -143,6 +143,16 @@ class TestRequiredFields:
     def test_a_required_field_holding_null_is_missing(self) -> None:
         assert _check([_URL], {"url": None}) == [_missing("url")]
 
+    def test_a_required_secret_holding_null_is_owed_not_missing(self) -> None:
+        field = {"name": "password", "type": "string", "required": True, "secret": True}
+
+        assert _check([field], {"password": None}) == []
+
+    def test_a_required_secret_left_out_is_missing(self) -> None:
+        field = {"name": "password", "type": "string", "required": True, "secret": True}
+
+        assert _check([field], {}) == [_missing("password")]
+
     def test_a_declared_default_fills_a_required_field_left_out(self) -> None:
         field = {**_URL, "default": "http://example.com"}
 
@@ -779,6 +789,197 @@ class TestBlankExpressionEntries:
             {"message": "'hi'"},
             expression_fields={"message", "headers.0.value", "message.deep", "missing"},
         )
+
+        assert found == []
+
+
+class TestNameRules:
+    """A field's name rule holds for every map key and list item, ASCII only, with its message."""
+
+    _RULE = {"pattern": "[a-z]+", "message": "Bad name: '{name}'"}
+    _NAMES_MAP = {"name": "names", "type": "map", "name_rule": _RULE}
+    _NAMES_LIST = {"name": "listed", "type": "array", "name_rule": _RULE}
+
+    def test_a_map_key_outside_the_rule_is_refused(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": {"ok": 1, "Bad": 2}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'Bad'", None, "names")]
+
+    def test_a_list_item_outside_the_rule_is_refused(self) -> None:
+        found = _check([self._NAMES_LIST], {"listed": ["ok", "no1"]})
+
+        assert found == [("INVALID_NAME", "Bad name: 'no1'", None, "listed")]
+
+    def test_a_list_item_that_is_not_text_is_named_by_its_text(self) -> None:
+        found = _check([self._NAMES_LIST], {"listed": [7]})
+
+        assert found == [("INVALID_NAME", "Bad name: '7'", None, "listed")]
+
+    def test_every_name_outside_the_rule_is_refused_in_order(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": {"B": 1, "ok": 2, "C": 3}})
+
+        assert found == [
+            ("INVALID_NAME", "Bad name: 'B'", None, "names"),
+            ("INVALID_NAME", "Bad name: 'C'", None, "names"),
+        ]
+
+    def test_a_word_class_in_the_rule_matches_ascii_only(self) -> None:
+        field = {"name": "names", "type": "map", "name_rule": {**self._RULE, "pattern": r"\w+"}}
+
+        found = _check([field], {"names": {"ok_1": 1, "café": 2}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'café'", None, "names")]
+
+    def test_names_inside_the_rule_are_accepted(self) -> None:
+        found = _check([self._NAMES_MAP, self._NAMES_LIST], {"names": {"a": 1}, "listed": ["b"]})
+
+        assert found == []
+
+    def test_a_whole_field_expression_has_no_names_to_check(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": "Bad"}, expression_fields={"names"})
+
+        assert found == []
+
+    def test_a_field_set_to_null_has_no_names_to_check(self) -> None:
+        found = _check([self._NAMES_MAP], {"names": None})
+
+        assert found == []
+
+    def test_a_field_without_a_rule_takes_any_name(self) -> None:
+        found = _check([{"name": "names", "type": "map"}], {"names": {"Any Name!": 1}})
+
+        assert found == []
+
+
+class TestBlockedNamePrefixes:
+    """A name that fits the pattern is refused when it starts with a blocked prefix, with the
+    prefix's own message; a name outside the pattern gets only the pattern's message."""
+
+    _RULE = {
+        "pattern": "[A-Za-z_]+",
+        "message": "Bad name: '{name}'",
+        "blocked_prefixes": [
+            {"prefix": "SYS_", "message": "Names may not start with SYS_: '{name}'"},
+            {"prefix": "OS_", "message": "Names may not start with OS_: '{name}'"},
+        ],
+    }
+    _NAMES = {"name": "names", "type": "map", "name_rule": _RULE}
+
+    def test_a_name_that_starts_with_a_blocked_prefix_is_refused(self) -> None:
+        found = _check([self._NAMES], {"names": {"SYS_X": 1}})
+
+        assert found == [("INVALID_NAME", "Names may not start with SYS_: 'SYS_X'", None, "names")]
+
+    def test_each_prefix_carries_its_own_message(self) -> None:
+        found = _check([self._NAMES], {"names": {"OS_X": 1}})
+
+        assert found == [("INVALID_NAME", "Names may not start with OS_: 'OS_X'", None, "names")]
+
+    def test_the_pattern_is_checked_before_the_prefixes(self) -> None:
+        found = _check([self._NAMES], {"names": {"SYS_1": 1}})
+
+        assert found == [("INVALID_NAME", "Bad name: 'SYS_1'", None, "names")]
+
+    def test_a_prefix_matches_its_case_only(self) -> None:
+        found = _check([self._NAMES], {"names": {"sys_x": 1, "SYSX": 2}})
+
+        assert found == []
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        found = _check([self._NAMES], {"names": {"ok": 1, "SYS_A": 2, "B1": 3}})
+
+        assert found == [
+            ("INVALID_NAME", "Names may not start with SYS_: 'SYS_A'", None, "names"),
+            ("INVALID_NAME", "Bad name: 'B1'", None, "names"),
+        ]
+
+    def test_a_name_with_the_prefix_inside_it_is_accepted(self) -> None:
+        found = _check([self._NAMES], {"names": {"X_SYS_": 1, "_OS_": 2}})
+
+        assert found == []
+
+
+class TestReservedAndRepeatedNames:
+    """A name that passes the pattern and the prefixes is refused when it is reserved, then when
+    it is listed again, each with the rule's own message; each refusal is reported once."""
+
+    _RULE = {
+        "pattern": "[A-Za-z_]+",
+        "message": "Bad name: '{name}'",
+        "blocked_prefixes": [{"prefix": "SYS_", "message": "No SYS_: '{name}'"}],
+        "reserved_names": ["out", "SYS_OUT", "OUT1"],
+        "reserved_message": "Name '{name}' is taken",
+        "repeated_message": "Name '{name}' is listed again",
+    }
+    _LISTED = {"name": "listed", "type": "array", "name_rule": _RULE}
+
+    def test_a_reserved_name_is_refused(self) -> None:
+        found = _check([self._LISTED], {"listed": ["ok", "out"]})
+
+        assert found == [("INVALID_NAME", "Name 'out' is taken", None, "listed")]
+
+    def test_a_reserved_map_key_is_refused(self) -> None:
+        field = {"name": "names", "type": "map", "name_rule": self._RULE}
+
+        found = _check([field], {"names": {"out": 1}})
+
+        assert found == [("INVALID_NAME", "Name 'out' is taken", None, "names")]
+
+    def test_a_reserved_name_matches_exactly(self) -> None:
+        found = _check([self._LISTED], {"listed": ["OUT", "outs", "ou"]})
+
+        assert found == []
+
+    def test_the_pattern_is_checked_before_the_reserved_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["OUT1"]})
+
+        assert found == [("INVALID_NAME", "Bad name: 'OUT1'", None, "listed")]
+
+    def test_the_prefixes_are_checked_before_the_reserved_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["SYS_OUT"]})
+
+        assert found == [("INVALID_NAME", "No SYS_: 'SYS_OUT'", None, "listed")]
+
+    @pytest.mark.parametrize("listed", [["a", "a"], ["a", "b", "a"], ["b", "a", "a"]])
+    def test_a_name_listed_again_is_refused(self, listed: list[str]) -> None:
+        found = _check([self._LISTED], {"listed": listed})
+
+        assert found == [("INVALID_NAME", "Name 'a' is listed again", None, "listed")]
+
+    def test_names_that_differ_in_case_are_two_names(self) -> None:
+        found = _check([self._LISTED], {"listed": ["a", "A"]})
+
+        assert found == []
+
+    @pytest.mark.parametrize(
+        ("listed", "message"),
+        [
+            (["a", "a", "a"], "Name 'a' is listed again"),
+            (["out", "out"], "Name 'out' is taken"),
+            (["1", "1"], "Bad name: '1'"),
+            ([[], []], "Bad name: '[]'"),
+        ],
+    )
+    def test_a_refusal_is_reported_once(self, listed: list[Any], message: str) -> None:
+        found = _check([self._LISTED], {"listed": listed})
+
+        assert found == [("INVALID_NAME", message, None, "listed")]
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        found = _check([self._LISTED], {"listed": ["b", "b", "1", "out", "a", "a"]})
+
+        assert found == [
+            ("INVALID_NAME", "Name 'b' is listed again", None, "listed"),
+            ("INVALID_NAME", "Bad name: '1'", None, "listed"),
+            ("INVALID_NAME", "Name 'out' is taken", None, "listed"),
+            ("INVALID_NAME", "Name 'a' is listed again", None, "listed"),
+        ]
+
+    def test_a_rule_without_a_repeated_message_takes_a_name_listed_again(self) -> None:
+        rule = {"pattern": "[a-z]+", "message": "Bad name: '{name}'"}
+        field = {"name": "listed", "type": "array", "name_rule": rule}
+
+        found = _check([field], {"listed": ["a", "a"]})
 
         assert found == []
 

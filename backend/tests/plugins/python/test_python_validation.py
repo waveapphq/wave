@@ -1,9 +1,10 @@
 """Python block parameter validation (REQ-3.4.1.2, REQ-3.4.2.2).
 
 Every rejection carries the exact pinned message and raises ValueError, whatever On error
-says. Names follow Python's own identifier rule and may not start with a double underscore
-(PYRUN-5, PYRUN-6). An empty Interpreter row is WAVE's own interpreter, never an error
-(PYRUN-3). One parameter set gives one message: the first failing rule wins.
+says. A name is an ASCII letter or underscore, then ASCII letters, digits or underscores, and
+may not start with a double underscore (PYRUN-5, PYRUN-6); the save refuses the same names.
+An empty Interpreter row is WAVE's own interpreter, never an error (PYRUN-3). One parameter
+set gives one message: the first failing rule wins.
 """
 
 import re
@@ -11,15 +12,20 @@ from typing import Any
 
 import pytest
 
+from wavecore.core.execution.field_checks import check_block_fields
 from wavecore.plugins.python import PythonPlugin
 
 RESERVED_OUTPUTS = ["stdout", "stderr", "exit_code", "success", "error", "reason"]
 
-VALID_NAMES = ["x", "_x", "COUNT", "A1", "_", "a_b_9", "x__", "café"]
+VALID_NAMES = ["x", "_x", "COUNT", "A1", "_", "a_b_9", "x__"]
 
 NON_IDENTIFIERS = ["1x", "a-b", "a b", "", "a.b", "x!"]
 
+NON_ASCII_NAMES = ["café", "été", "名前", "x\u0661"]
+
 DUNDER_NAMES = ["__x", "__", "__init__", "___y"]
+
+DUNDER_NON_IDENTIFIERS = ["__a-b", "__café"]
 
 BAD_PATTERNS = ["(", "[", "*"]
 
@@ -153,12 +159,22 @@ class TestInputVariableNames:
     async def test_a_name_that_is_not_an_identifier(self, name: str) -> None:
         await refuses(f"Invalid variable name: '{name}'", input_vars={name: "value"})
 
+    @pytest.mark.parametrize("name", NON_ASCII_NAMES)
+    async def test_a_name_with_a_letter_outside_ascii(self, name: str) -> None:
+        await refuses(f"Invalid variable name: '{name}'", input_vars={name: "value"})
+
     @pytest.mark.parametrize("name", DUNDER_NAMES)
     async def test_a_name_that_starts_with_a_double_underscore(self, name: str) -> None:
+        await refuses(f"Variable names may not start with __: '{name}'", input_vars={name: "value"})
+
+    @pytest.mark.parametrize("name", DUNDER_NON_IDENTIFIERS)
+    async def test_the_name_rule_is_checked_before_the_dunder_rule(self, name: str) -> None:
         await refuses(f"Invalid variable name: '{name}'", input_vars={name: "value"})
 
     async def test_the_dunder_rule_reports_the_first_bad_name(self) -> None:
-        await refuses("Invalid variable name: '__x'", input_vars={"__x": 1, "__z": 2})
+        await refuses(
+            "Variable names may not start with __: '__x'", input_vars={"__x": 1, "__z": 2}
+        )
 
     async def test_the_wave_prefix_rule_is_not_applied_to_input_variables(self) -> None:
         await PythonPlugin().validate(params_for(input_vars={"WAVE_X": "value"}))
@@ -178,6 +194,10 @@ class TestScriptVariableNames:
     async def test_a_name_that_is_not_an_identifier(self, name: str) -> None:
         await refuses(f"Invalid script variable name: '{name}'", script_variables=[name])
 
+    @pytest.mark.parametrize("name", NON_ASCII_NAMES)
+    async def test_a_name_with_a_letter_outside_ascii(self, name: str) -> None:
+        await refuses(f"Invalid script variable name: '{name}'", script_variables=[name])
+
     @pytest.mark.parametrize("name", DUNDER_NAMES)
     async def test_a_name_that_starts_with_a_double_underscore(self, name: str) -> None:
         await refuses(f"Invalid script variable name: '{name}'", script_variables=[name])
@@ -191,6 +211,110 @@ class TestScriptVariableNames:
 
     async def test_the_wave_prefix_rule_is_not_applied_to_exports(self) -> None:
         await PythonPlugin().validate(params_for(script_variables=["WAVE_X"]))
+
+
+def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
+    """The save's findings for a valid Source-mode Block with the overrides applied."""
+    findings = check_block_fields(
+        PythonPlugin().metadata["parameters"],
+        params_for(**overrides),
+        block_id="python",
+        expression_fields=set(),
+        template_fields=set(),
+        check_required=True,
+    )
+    return [(f.code, f.message, f.fix, f.field) for f in findings]
+
+
+class TestNamesAtSave:
+    """The save refuses the names the run refuses, with the run's own message (PYRUN-5, PYRUN-6)."""
+
+    @pytest.mark.parametrize("name", [*NON_ASCII_NAMES, *NON_IDENTIFIERS, *DUNDER_NON_IDENTIFIERS])
+    def test_an_input_variable_name_the_run_refuses(self, name: str) -> None:
+        assert saved(input_vars={name: 1}) == [
+            ("INVALID_NAME", f"Invalid variable name: '{name}'", None, "input_vars")
+        ]
+
+    @pytest.mark.parametrize("name", DUNDER_NAMES)
+    def test_an_input_variable_name_with_a_double_underscore(self, name: str) -> None:
+        assert saved(input_vars={name: 1}) == [
+            ("INVALID_NAME", f"Variable names may not start with __: '{name}'", None, "input_vars")
+        ]
+
+    @pytest.mark.parametrize("name", [*NON_ASCII_NAMES, *NON_IDENTIFIERS, *DUNDER_NAMES])
+    def test_an_export_name_the_run_refuses(self, name: str) -> None:
+        assert saved(script_variables=[name]) == [
+            ("INVALID_NAME", f"Invalid script variable name: '{name}'", None, "script_variables")
+        ]
+
+    @pytest.mark.parametrize(("item", "shown"), [(3, "3"), (None, "None"), (True, "True")])
+    def test_an_export_that_is_not_text_is_named_by_its_text(self, item: Any, shown: str) -> None:
+        assert saved(script_variables=[item]) == [
+            ("INVALID_NAME", f"Invalid script variable name: '{shown}'", None, "script_variables")
+        ]
+
+    @pytest.mark.parametrize("name", VALID_NAMES)
+    def test_a_name_the_run_takes_is_saved(self, name: str) -> None:
+        assert saved(input_vars={name: 1}, script_variables=[name]) == []
+
+    @pytest.mark.parametrize("name", RESERVED_OUTPUTS)
+    async def test_an_export_that_takes_a_block_output_name(self, name: str) -> None:
+        message = f"Script variable '{name}' has the name of a block output"
+
+        assert saved(script_variables=[name]) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        await refuses(message, script_variables=[name])
+
+    @pytest.mark.parametrize("names", [["a", "a"], ["a", "b", "a"], ["b", "a", "a"]])
+    async def test_an_export_listed_more_than_once(self, names: list[str]) -> None:
+        message = "Script variable 'a' is listed more than once"
+
+        assert saved(script_variables=names) == [
+            ("INVALID_NAME", message, None, "script_variables")
+        ]
+        await refuses(message, script_variables=names)
+
+    def test_an_export_listed_three_times_is_reported_once(self) -> None:
+        assert saved(script_variables=["a", "a", "a"]) == [
+            (
+                "INVALID_NAME",
+                "Script variable 'a' is listed more than once",
+                None,
+                "script_variables",
+            )
+        ]
+
+    def test_exports_that_differ_from_an_output_or_each_other_in_case_are_saved(self) -> None:
+        assert saved(script_variables=["STDOUT", "Stdout", "exit_code_2", "A", "a"]) == []
+
+    async def test_every_refused_export_is_reported_in_order_and_the_run_refuses_the_first(
+        self,
+    ) -> None:
+        names = ["__y", "reason", "a", "a"]
+
+        assert saved(script_variables=names) == [
+            ("INVALID_NAME", "Invalid script variable name: '__y'", None, "script_variables"),
+            (
+                "INVALID_NAME",
+                "Script variable 'reason' has the name of a block output",
+                None,
+                "script_variables",
+            ),
+            (
+                "INVALID_NAME",
+                "Script variable 'a' is listed more than once",
+                None,
+                "script_variables",
+            ),
+        ]
+        await refuses("Invalid script variable name: '__y'", script_variables=names)
+
+    def test_every_refused_name_is_reported_in_order(self) -> None:
+        assert saved(input_vars={"x": 1, "café": 2, "__y": 3}) == [
+            ("INVALID_NAME", "Invalid variable name: 'café'", None, "input_vars"),
+            ("INVALID_NAME", "Variable names may not start with __: '__y'", None, "input_vars"),
+        ]
 
 
 class TestScriptVariableClashes:
@@ -354,7 +478,9 @@ class TestValidationOrder:
 
     async def test_the_input_variable_names_run_before_the_export_names(self) -> None:
         await refuses(
-            "Invalid variable name: '__x'", input_vars={"__x": 1}, script_variables=["__y"]
+            "Variable names may not start with __: '__x'",
+            input_vars={"__x": 1},
+            script_variables=["__y"],
         )
 
     async def test_the_export_name_check_runs_before_the_clash_check(self) -> None:

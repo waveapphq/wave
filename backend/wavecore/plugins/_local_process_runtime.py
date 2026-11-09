@@ -1,8 +1,9 @@
 """The standard-library half of the local-process core (REQ-3.4.1.1, PYRUN-12).
 
 Vendored verbatim into the Remote Execution bundle, so nothing here imports from
-wavecore beyond _local_process, _process_group and _user_patterns, and no WAVE
-Table or Decimal value ever reaches it: the WAVE half renders those before the call.
+wavecore beyond _local_process, _process_group, _user_patterns and _plural, and no
+WAVE Table or Decimal value ever reaches it: the WAVE half renders those before the
+call.
 """
 
 import os
@@ -14,6 +15,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from wavecore.plugins._local_process import LaunchSpec, ProcessOutcome, match_message
+from wavecore.plugins._plural import plural
 from wavecore.plugins._user_patterns import compile_user_pattern
 
 FAIL_MATCH = "Output matched the fail pattern"
@@ -155,7 +157,7 @@ def judge_outcome(
     if outcome.start_error is not None:
         return f"Could not start the {noun.lower()}: {outcome.start_error}", "StartFailed"
     if outcome.stop == "timeout":
-        return f"{noun} timed out after {timeout} seconds", "Timeout"
+        return f"{noun} timed out after {plural(timeout, 'second', 'seconds')}", "Timeout"
     if outcome.stop == "fail":
         message = match_message(
             FAIL_MATCH, outcome.match_line, outcome.match_stream, secret_streams

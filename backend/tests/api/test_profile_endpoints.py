@@ -1,20 +1,19 @@
 """Unit tests for connection profile endpoints (REQ-5.2.4.8).
 
 This module tests the connection profile endpoints providing lifecycle operations
-for connection profiles enabling creation, modification, connectivity testing,
-type discovery, and schema retrieval.
+for connection profiles enabling creation, modification, type discovery, and
+schema retrieval.
 
 Test Coverage:
 - Profile CRUD: Create, read, update, delete profile operations
 - Profile listing: List all profiles with metadata
 - Profile types: Enumerate supported profile types with descriptions
 - Type schemas: JSON Schema retrieval for type-specific configuration
-- Connectivity testing: Verify profile configuration correctness
 - Secret handling: Credential masking in responses (password, api_key, private_key, token,
   client_key)
 - Validation: Type validation, configuration schema validation with field paths
 - Error handling: Not found, conflict with referencing entities, bad request
-- Caching and performance: Cache headers, connectivity test caching
+- Caching and performance: Cache headers
 - Description field: Optional documentation field support
 - External credentials: Environment variable and Kubernetes secret references
 """
@@ -27,6 +26,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
 from wavecore.api.exceptions import ConflictException, ValidationException
 
 # Valid profile types as defined in OpenAPI spec
@@ -841,6 +841,25 @@ class TestUpdateProfileEndpoint:
             call_kwargs = mock_update.call_args[1]
             assert "description" not in call_kwargs
 
+    def test_update_profile_returns_409_for_a_name_another_profile_holds(
+        self, client: TestClient
+    ) -> None:
+        """PUT /profiles/{profile_id} refuses a rename onto another Profile's name."""
+        client.post("/profiles", json={"name": "Taken DB", "type": "database", "config": {}})
+        own_id = client.post(
+            "/profiles", json={"name": "Own DB", "type": "database", "config": {}}
+        ).json()["data"]["id"]
+
+        response = client.put(f"/profiles/{own_id}", json={"name": "Taken DB"})
+
+        assert response.status_code == 409
+        error = response.json()["error"]
+        assert (error["code"], error["message"]) == (
+            "CONFLICT",
+            "Profile with name 'Taken DB' already exists",
+        )
+        assert client.get(f"/profiles/{own_id}").json()["data"]["name"] == "Own DB"
+
 
 class TestDeleteProfileEndpoint:
     """Test suite for DELETE /profiles/{profile_id} endpoint."""
@@ -934,8 +953,8 @@ class TestDeleteProfileEndpoint:
         assert "Invalid UUID format" in data["error"]["message"]
 
 
-class TestTestProfileConnectivityEndpoint:
-    """Test suite for POST /profiles/{profile_id}/test endpoint."""
+class TestProfileConnectivityRouteAbsent:
+    """No connectivity test route exists for profiles."""
 
     @pytest.fixture
     def client(self) -> TestClient:
@@ -944,126 +963,26 @@ class TestTestProfileConnectivityEndpoint:
 
         return TestClient(app)
 
-    def test_test_connectivity_returns_200_on_success(self, client: TestClient) -> None:
-        """Test that POST /profiles/{profile_id}/test returns success result."""
+    def test_profile_test_path_not_registered(self) -> None:
+        """The profiles router has no /profiles/{profile_id}/test route."""
+        from wavecore.api.routes.profiles.routes import router
+
+        registered_paths = {getattr(route, "path", "") for route in router.routes}
+        assert "/profiles/{profile_id}" in registered_paths
+        assert "/profiles/{profile_id}/test" not in registered_paths
+
+    def test_post_profile_test_returns_fastapi_not_found(self, client: TestClient) -> None:
+        """POST /profiles/{profile_id}/test gets FastAPI's default 404, not a WAVE envelope."""
         profile_id = str(uuid.uuid4())
 
         with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = {
-                "connected": True,
-                "latency": 15,
-            }
-
+            "wavecore.api.services.profiles.service._cached_profile",
+            return_value={"id": profile_id, "name": "my-database", "type": "database"},
+        ):
             response = client.post(f"/profiles/{profile_id}/test")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True
-            assert data["data"]["connected"] is True
-            assert data["data"]["latency"] == 15
-            mock_test.assert_called_once_with(profile_id)
-
-    def test_test_connectivity_returns_failure_result(self, client: TestClient) -> None:
-        """Test that POST /profiles/{profile_id}/test returns failure details."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = {
-                "connected": False,
-                "error": "Connection refused: host unreachable",
-            }
-
-            response = client.post(f"/profiles/{profile_id}/test")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True  # API call succeeded
-            assert data["data"]["connected"] is False
-            assert "Connection refused" in data["data"]["error"]
-
-    def test_test_connectivity_returns_404_when_profile_not_found(self, client: TestClient) -> None:
-        """Test that POST /profiles/{profile_id}/test returns 404 when not found."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = None
-
-            response = client.post(f"/profiles/{profile_id}/test")
-
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-
-    def test_test_connectivity_validates_uuid_format(self, client: TestClient) -> None:
-        """Test that POST /profiles/{profile_id}/test validates UUID format."""
-        response = client.post("/profiles/bad-uuid/test")
-
-        assert response.status_code == 400
-        data = response.json()
-        assert data["success"] is False
-        assert "Invalid UUID format" in data["error"]["message"]
-
-    def test_test_connectivity_includes_latency_measurement(self, client: TestClient) -> None:
-        """Test that connectivity test includes latency measurement (REQ-5.2.4.8)."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = {
-                "connected": True,
-                "latency": 42,
-            }
-
-            response = client.post(f"/profiles/{profile_id}/test")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert "latency" in data["data"]
-            assert isinstance(data["data"]["latency"], int)
-
-    def test_test_connectivity_is_non_destructive(self, client: TestClient) -> None:
-        """Test that connectivity test is read-only operation (REQ-5.2.4.8)."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = {"connected": True, "latency": 10}
-
-            # Multiple calls should be safe
-            response1 = client.post(f"/profiles/{profile_id}/test")
-            response2 = client.post(f"/profiles/{profile_id}/test")
-
-            assert response1.status_code == 200
-            assert response2.status_code == 200
-            assert mock_test.call_count == 2
-
-    def test_test_connectivity_returns_501_when_not_implemented(self, client: TestClient) -> None:
-        """Test that POST /profiles/{profile_id}/test returns 501 when not implemented."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.side_effect = NotImplementedError(
-                "Connectivity testing for 'database' profiles requires "
-                "plugin implementations (planned for future phase)"
-            )
-
-            response = client.post(f"/profiles/{profile_id}/test")
-
-            assert response.status_code == 501
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "NOT_IMPLEMENTED"
-            assert "plugin implementations" in data["error"]["message"]
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Not Found"}
 
 
 class TestListProfileTypesEndpoint:
@@ -1702,28 +1621,8 @@ class TestCachingAndPerformance:
             assert response.status_code == 204
             assert "X-Cache-Invalidated" in response.headers
 
-    def test_connectivity_test_sets_brief_cache_headers(self, client: TestClient) -> None:
-        """Test that POST /profiles/{id}/test sets brief cache headers (REQ-5.2.4.8)."""
-        profile_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.test_connectivity"
-        ) as mock_test:
-            mock_test.return_value = {"connected": True, "latency": 15}
-
-            response = client.post(f"/profiles/{profile_id}/test")
-
-            assert response.status_code == 200
-            # Connectivity test results should have brief cache duration
-            assert "Cache-Control" in response.headers
-            # Brief cache (e.g., max-age <= 60 seconds)
-            cache_control = response.headers["Cache-Control"]
-            assert "max-age=" in cache_control
-
-    def test_connectivity_test_cache_invalidated_on_profile_update(
-        self, client: TestClient
-    ) -> None:
-        """Test that profile update invalidates connectivity test cache (REQ-5.2.4.8)."""
+    def test_update_profile_invalidates_only_profiles_cache(self, client: TestClient) -> None:
+        """PUT /profiles/{profile_id} names only the profiles cache as invalidated."""
         profile_id = str(uuid.uuid4())
 
         with patch(
@@ -1744,13 +1643,7 @@ class TestCachingAndPerformance:
             )
 
             assert response.status_code == 200
-            # Cache invalidation header should indicate connectivity test cache cleared
-            assert "X-Cache-Invalidated" in response.headers
-            cache_invalidated = response.headers["X-Cache-Invalidated"]
-            assert (
-                "connectivity" in cache_invalidated.lower()
-                or "profiles" in cache_invalidated.lower()
-            )
+            assert response.headers["X-Cache-Invalidated"] == "profiles"
 
 
 class TestRouteOrdering:
@@ -3288,3 +3181,38 @@ class TestProfileConcurrencyControl:
             response = client.delete(f"/profiles/{profile_id}")
 
             assert response.status_code == 204
+
+
+class TestAProfileBodyThatIsNotAJsonObject:
+    """A Profile write whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/profiles", id="create"),
+            pytest.param("PUT", "/profiles/{id}", id="update"),
+            pytest.param("POST", "/profiles/export", id="export"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+    @pytest.mark.parametrize("text", ['"new_name"', '["new_name"]', "5"])
+    def test_a_duplicate_takes_it_as_no_body(self, client: TestClient, text: str) -> None:
+        missing_id = str(uuid.uuid4())
+
+        response = send_text(client, "POST", f"/profiles/{missing_id}/duplicate", text)
+
+        assert response.status_code == 404, response.json()
+        assert response.json()["error"]["message"] == f"Profile with ID '{missing_id}' not found"

@@ -678,13 +678,13 @@ class TestStatusTransitionValidation:
             store._validate_state_transition("running", "passed", "finish")
 
 
-class TestNameHeuristicMaskingDeleted:
+class TestNoNameHeuristicMasking:
     """No name-guessing anywhere; the secret flag is the only authority."""
 
-    def test_mask_secrets_helper_is_deleted(self) -> None:
+    def test_there_is_no_mask_secrets_helper(self) -> None:
         assert not hasattr(store, "_mask_secrets")
 
-    def test_secret_field_patterns_constant_is_deleted(self) -> None:
+    def test_there_is_no_secret_field_patterns_constant(self) -> None:
         assert not hasattr(store, "SECRET_FIELD_PATTERNS")
 
 

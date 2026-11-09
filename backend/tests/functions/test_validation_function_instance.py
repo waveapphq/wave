@@ -998,7 +998,7 @@ def _without_default(declared: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in declared.items() if key != "default"}
 
 
-_OLD_ARRAY_ENUM = {
+_ARRAY_ENUM = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -1070,8 +1070,8 @@ class TestEnumInputRules:
         assert _declaration_errors(errors) == expected
 
     @pytest.mark.parametrize("surface", _SAVE_SURFACES)
-    def test_an_old_array_enum_is_refused_without_per_value_findings(self, surface: str) -> None:
-        errors = _function_save_errors(surface, _declaring([_OLD_ARRAY_ENUM]))
+    def test_an_array_enum_is_refused_without_per_value_findings(self, surface: str) -> None:
+        errors = _function_save_errors(surface, _declaring([_ARRAY_ENUM]))
 
         assert _declaration_errors(errors) == sorted([_ENUM_INPUT_TYPE, _ENUM_INPUT_NO_DEFAULT])
 
@@ -1299,7 +1299,7 @@ class TestDeclarationIssuesAtTestSave:
         assert found[0]["function_path"] == []
 
     def test_a_nested_local_function_issue_carries_the_function_path(self) -> None:
-        inner = _local_function_block("fn-inner", _declaring([_OLD_ARRAY_ENUM]))
+        inner = _local_function_block("fn-inner", _declaring([_ARRAY_ENUM]))
         outer = _local_function_block(
             "outer-1",
             make_function_payload(

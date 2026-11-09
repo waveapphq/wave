@@ -1,6 +1,8 @@
 """Plugin and control execution for workbench sessions."""
 
-from collections.abc import Container, Mapping
+from collections.abc import Container, Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from typing import Any
@@ -22,6 +24,19 @@ from wavecore.logging.session_logger import SessionLogger
 from wavecore.models.plugins import get_param_attr
 
 _IO_VALUE_LIMIT = 2048
+
+_stop_outputs: ContextVar[dict[str, Any] | None] = ContextVar("wave_stop_outputs", default=None)
+
+
+@contextmanager
+def holding_stop_outputs() -> Iterator[dict[str, Any]]:
+    """A holder the plugin block run inside fills with its outputs so far when a stop ends it."""
+    holder: dict[str, Any] = {}
+    token = _stop_outputs.set(holder)
+    try:
+        yield holder
+    finally:
+        _stop_outputs.reset(token)
 
 
 @dataclass(frozen=True)
@@ -692,6 +707,8 @@ def _build_plugin_context(
     if artifacts_dir is not None:
         context["artifacts_dir"] = artifacts_dir
     context.update(variables)
+    # After the variables, so a variable of the same name never stands in for the holder.
+    context["stop_outputs"] = _stop_outputs.get()
     return context
 
 
@@ -841,7 +858,7 @@ async def _execute_plugin(
     output_secret_fields: list[str] | None = None,
     output_bindings: dict[str, str] | None = None,
 ) -> Any:
-    """Execute a plugin (e.g., Log)."""
+    """Execute a plugin (e.g., Log); a stop leaves its outputs so far in the stop holder."""
     from wavecore.core.plugin_registry import get_plugin
 
     plugin = get_plugin(plugin_type, version)

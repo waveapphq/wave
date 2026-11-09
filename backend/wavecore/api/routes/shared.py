@@ -6,7 +6,6 @@ consistent request handling, validation, and response formatting.
 Routes should use these instead of implementing their own copies.
 """
 
-import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -17,19 +16,48 @@ from wavecore import __version__
 from wavecore.api.exceptions import ValidationException
 from wavecore.core.variables.return_values import ReturnValueType
 
-# Semantic version pattern: MAJOR.MINOR.PATCH
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+NOT_A_JSON_ARRAY = "The request body must be a JSON array"
+
+
+async def read_json(request: Request) -> Any:
+    """The request body as any JSON value; a body that is not JSON is a bad request."""
+    try:
+        return await request.json()
+    except ValueError:
+        raise ValidationException("The request body is not valid JSON") from None
 
 
 async def read_json_object(request: Request) -> dict[str, Any]:
     """The request body as a JSON object; any other body is a bad request, never a server error."""
-    try:
-        body = await request.json()
-    except ValueError:
-        raise ValidationException("The request body is not valid JSON") from None
+    body = await read_json(request)
     if not isinstance(body, dict):
         raise ValidationException("The request body must be a JSON object")
     return body
+
+
+async def read_json_array(request: Request) -> list[Any]:
+    """The request body as a JSON array; any other body is a bad request, never a server error."""
+    body = await read_json(request)
+    if not isinstance(body, list):
+        raise ValidationException(NOT_A_JSON_ARRAY)
+    return body
+
+
+def list_field(body: dict[str, Any], field: str, message: str) -> list[Any]:
+    """The body's `field` as a list, empty when absent; any other value is a bad request."""
+    value = body.get(field, [])
+    if not isinstance(value, list):
+        raise ValidationException(message)
+    return value
+
+
+def id_list_field(body: dict[str, Any], field: str) -> list[str]:
+    """The body's `field` as a list of ID strings, empty when absent; else a bad request."""
+    message = f"'{field}' must be a list of ID strings"
+    ids = list_field(body, field, message)
+    if not all(isinstance(item, str) for item in ids):
+        raise ValidationException(message)
+    return ids
 
 
 def envelope(payload: dict[str, Any]) -> dict[str, Any]:
@@ -55,22 +83,6 @@ def validate_uuid(value: str, field_name: str = "id") -> str:
         return value
     except ValueError as err:
         raise ValidationException(f"Invalid UUID format for {field_name}: '{value}'") from err
-
-
-def validate_semantic_version(version: str) -> None:
-    """Validate semantic version format (MAJOR.MINOR.PATCH).
-
-    Args:
-        version: Version string to validate.
-
-    Raises:
-        ValueError: If version format is invalid.
-    """
-    if not SEMVER_PATTERN.match(version):
-        raise ValueError(
-            f"Invalid version format '{version}': "
-            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
-        )
 
 
 def build_response_meta(request: Request) -> dict[str, Any]:

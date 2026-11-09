@@ -21,11 +21,20 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 from wavecore.api.exceptions import ConflictException, ValidationException
 
 
@@ -2256,3 +2265,116 @@ class TestASuiteBodyThatIsNotAJsonObject:
         assert response.status_code == 400, response.json()
         assert response.json()["error"]["message"] == message
         update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/suites/{id}/tests", id="add-test"),
+            pytest.param("PUT", "/suites/{id}/variables", id="variables"),
+            pytest.param("POST", "/suites/{id}/clone", id="clone"),
+            pytest.param("POST", "/suites/export", id="export"),
+            pytest.param("POST", "/suites/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/suites/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestASuiteBatchBodyThatIsNotAJsonArray:
+    """A Suite batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("DELETE", "/suites/batch", id="delete"),
+            pytest.param("POST", "/suites/batch/clone", id="clone"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)
+
+
+class TestASuiteBatchItemThatIsNotAnId:
+    """A Suite batch item that is not an ID string fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/suites", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.request("DELETE", "/suites/batch", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [suite_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_clone_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.post("/suites/batch/clone", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
+        assert [entry["original_id"] for entry in body["cloned"]] == [suite_id]
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A suite whose stored version is not MAJOR.MINOR.PATCH refuses a change with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create FastAPI test client."""
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions")],
+        ids=["update", "add-version"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.suite_test_helpers import load_suite_file, save_suite_file
+
+        created = client.post("/suites", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        suite_id = created.json()["data"]["id"]
+        stored = load_suite_file(suite_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_suite_file(stored)
+
+        response = client.request(method, f"/suites/{suite_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_suite_file(suite_id) == stored

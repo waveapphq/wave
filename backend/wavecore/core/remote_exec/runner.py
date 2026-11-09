@@ -231,8 +231,8 @@ async def _stopped_message(process: Any) -> str:
     return _stopped_text(await process.stderr.read())
 
 
-async def open_worker(connection: Any, interpreter: str = "python3") -> WorkerHandle:
-    """Validate the interpreter, push the bundle over stdin, start the worker.
+async def open_worker(connection: Any, host: str, interpreter: str = "python3") -> WorkerHandle:
+    """Validate the interpreter, push the bundle over stdin, start the worker named ``host``.
 
     The vendored worker payload is too large for a command-line argument, so
     it rides stdin behind a tiny bootstrap: a byte-count line, then the source.
@@ -248,7 +248,6 @@ async def open_worker(connection: Any, interpreter: str = "python3") -> WorkerHa
     except OSError as exc:
         # A worker that died mid-push breaks the pipe with no message of its own.
         raise RuntimeError(await _stopped_message(process)) from exc
-    host = connection.get_extra_info("host") or ""
     return WorkerHandle(process=process, host=host, interpreter=interpreter, probe=found)
 
 

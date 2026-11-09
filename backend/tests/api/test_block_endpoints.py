@@ -23,10 +23,25 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
+
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
+    NOT_AN_UPDATE_OBJECT,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    NOT_OBJECT_ITEMS,
+    assert_refused,
+    send_text,
+)
 
 
 class TestListBlocksEndpoint:
@@ -731,6 +746,25 @@ class TestBatchBlockOperationsEndpoint:
             data = response.json()
             assert len(data["deleted"]) == 2
             assert data["failed"] == []
+
+    def test_batch_delete_an_id_walking_back_into_the_folder_is_not_found(
+        self, client: TestClient
+    ) -> None:
+        """Test an ID that reaches a stored block through its folder deletes nothing."""
+        from wavecore.api.services.blocks import _storage as block_storage
+
+        block_id = str(uuid.uuid4())
+        block_storage._save_block({"id": block_id, "name": "kept_block", "dependencies": []})
+        crafted = f"../api_blocks/{block_id}"
+
+        response = client.request("DELETE", "/blocks/batch", json=[crafted])
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "deleted": [],
+            "failed": [{"index": 0, "error": f"Block with ID '{crafted}' not found"}],
+        }
+        assert block_storage._load_block(block_id) is not None
 
 
 class TestListBlockVersionsEndpoint:
@@ -1584,6 +1618,29 @@ class TestValidateBlockEndpoint:
             assert data["success"] is True
             assert data["data"]["valid"] is False
             assert len(data["data"]["errors"]) == 2
+
+    def test_validate_block_plugin_id_reaching_another_folder_is_not_found(
+        self, client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test a plugin_id that walks into another category reads no plugin there."""
+        from tests.conftest import create_test_plugin
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.storage import FileBasedStorage
+
+        plugin = create_test_plugin(id="stored-plugin", category="network")
+        plugin_file = tmp_path / "plugins" / "network" / "stored-plugin" / "1.0.0.yaml"
+        plugin_file.parent.mkdir(parents=True)
+        plugin_file.write_text(yaml.safe_dump(plugin.model_dump(mode="json")), encoding="utf-8")
+        monkeypatch.setattr(block_storage, "_storage", FileBasedStorage(tmp_path))
+        plugin_id = "../network/stored-plugin"
+
+        response = client.post(
+            "/blocks/validate",
+            json={"name": "Probe", "plugin_id": plugin_id, "description": "Probe"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["errors"] == [f"Plugin reference '{plugin_id}' not found"]
 
     def test_validate_block_detects_circular_dependencies(self, client: TestClient) -> None:
         """Test that POST /blocks/validate detects circular dependencies (REQ-5.2.4.2)."""
@@ -2541,3 +2598,149 @@ class TestBlockEndpointIntegration:
         assert response.status_code == 404
         data = response.json()
         assert "not found" in data["error"]["message"]
+
+
+class TestABlockBodyOfTheWrongShape:
+    """A Block request whose body is not the JSON shape the route takes is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/blocks", id="create"),
+            pytest.param("POST", "/blocks/validate", id="validate"),
+            pytest.param("POST", "/blocks/validate-dependencies", id="validate-dependencies"),
+            pytest.param("POST", "/blocks/{id}/clone", id="clone"),
+            pytest.param("POST", "/blocks/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/blocks/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_a_body_that_is_not_an_object_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+    @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_a_batch_body_that_is_not_an_array_is_refused(
+        self, client: TestClient, method: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, "/blocks/batch", text), message)
+
+
+class TestABlockBatchItemOfTheWrongShape:
+    """A Block batch item of the wrong shape fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self) -> str:
+        from wavecore.api.services.blocks import service as block_service
+
+        return str(block_service.create_block({"name": f"Batch Item {uuid.uuid4().hex[:8]}"})["id"])
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_a_create_item_that_is_not_an_object_fails(self, client: TestClient, item: Any) -> None:
+        response = client.post("/blocks/batch", json=[item, {"name": "Batch Created"}])
+
+        assert response.status_code == 201, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_OBJECT_ITEM}]
+        assert len(body["created"]) == 1
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_update_item_that_is_not_an_object_fails(
+        self, client: TestClient, item: Any
+    ) -> None:
+        block_id = self._create()
+
+        response = client.patch(
+            "/blocks/batch", json=[item, {"id": block_id, "update": {"description": "Updated"}}]
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [block_id],
+            "failed": [{"index": 0, "error": NOT_AN_OBJECT_ITEM}],
+        }
+        assert client.get(f"/blocks/{block_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("update", NOT_OBJECT_ITEMS)
+    def test_an_update_item_whose_update_is_not_an_object_fails(
+        self, client: TestClient, update: Any
+    ) -> None:
+        kept_id = self._create()
+        block_id = self._create()
+        before = client.get(f"/blocks/{kept_id}").json()["data"]
+
+        response = client.patch(
+            "/blocks/batch",
+            json=[
+                {"id": kept_id, "update": update},
+                {"id": block_id, "update": {"description": "Updated"}},
+            ],
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [block_id],
+            "failed": [{"index": 0, "error": NOT_AN_UPDATE_OBJECT}],
+        }
+        assert client.get(f"/blocks/{kept_id}").json()["data"] == before
+        assert client.get(f"/blocks/{block_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_that_is_not_an_id_fails(self, client: TestClient, item: Any) -> None:
+        block_id = self._create()
+
+        response = client.request("DELETE", "/blocks/batch", json=[item, block_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [block_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A block whose stored version is not MAJOR.MINOR.PATCH refuses a new version with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        "suffix", ["/versions", "/restore/1.0.0"], ids=["add-version", "restore"]
+    )
+    def test_refuses_the_change(self, client: TestClient, suffix: str) -> None:
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.api.services.blocks import service as block_service
+
+        block_id = block_service.create_block({"name": f"Short {uuid.uuid4().hex[:8]}"})["id"]
+        stored = block_storage._load_block(block_id)
+        assert stored is not None
+        stored["version"] = "1"
+        block_storage._save_block(stored)
+        history = block_storage._load_versions(block_id)
+
+        response = client.post(f"/blocks/{block_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert block_storage._load_block(block_id) == stored
+        assert block_storage._load_versions(block_id) == history

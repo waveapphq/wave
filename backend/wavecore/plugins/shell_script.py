@@ -18,8 +18,8 @@ from wavecore.plugins._local_process_common import (
     build_environment,
     check_on_error,
     check_script_variables,
-    environment_parameter,
     execution_parameters,
+    export_name_rule,
     fail_or_record,
     failure_parameter,
     local_output_core,
@@ -27,9 +27,11 @@ from wavecore.plugins._local_process_common import (
     resolve_script_file,
     resolve_shell,
     resolve_working_dir,
+    shell_environment_parameter,
     shell_parameter,
     start_line,
     stop_on_pattern_parameters,
+    stop_reporter,
     stream_outputs,
 )
 from wavecore.plugins._local_process_runtime import (
@@ -60,6 +62,7 @@ from wavecore.plugins.base import PluginBase
 NOUN = "Script"
 DEFAULT_SHELL = "/bin/bash"
 _REASONS = "NonZeroExit, Timeout, FailPattern, StartFailed or OutputVariable"
+_EXPORT_NAME_RULE = export_name_rule(NAME_PATTERN.pattern)
 
 
 def _list_rows(params: Mapping[str, Any], name: str) -> list[Any]:
@@ -80,11 +83,6 @@ def _check_shapes(params: Mapping[str, Any]) -> None:
     for name in _list_rows(params, "script_variables"):
         if not isinstance(name, str):
             raise bad_script_variable_name(name)
-
-
-def _is_shell_name(name: str) -> bool:
-    """A shell variable name stays ASCII, unlike a Python one."""
-    return NAME_PATTERN.fullmatch(name) is not None
 
 
 def _make_private_dir() -> Path:
@@ -210,13 +208,14 @@ class ShellScriptPlugin(PluginBase):
                         "is passed as an empty argument."
                     ),
                 },
-                environment_parameter("input_vars", NOUN),
+                shell_environment_parameter("input_vars", NOUN),
                 {
                     "name": "script_variables",
                     "type": "array",
                     "required": False,
                     "default": [],
                     "declares_outputs": True,
+                    "name_rule": _EXPORT_NAME_RULE,
                     "description": (
                         "Shell variables the script sets, each bound to one WAVE variable "
                         "and read as that variable's type."
@@ -243,7 +242,7 @@ class ShellScriptPlugin(PluginBase):
         check_shell(params)
         require_positive(params, "timeout")
         check_environment_names(params, "input_vars")
-        check_script_variables(setting(params, "script_variables", []), _is_shell_name)
+        check_script_variables(setting(params, "script_variables", []), _EXPORT_NAME_RULE)
         compile_patterns(params)
 
     async def execute(self, context: dict[str, Any]) -> dict[str, Any]:
@@ -289,7 +288,7 @@ class ShellScriptPlugin(PluginBase):
                 *arguments,
             ]
             spec = launch_spec(params, context, argv, cwd, env, patterns)
-            outcome = await run_local_process(spec)
+            outcome = await run_local_process(spec, stop_reporter(context))
             outputs = stream_values(outcome)
             timeout = setting(params, "timeout", 300)
             message, reason = judge_outcome(outcome, NOUN, timeout, spec.secret_streams)

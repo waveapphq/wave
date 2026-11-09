@@ -300,7 +300,7 @@ def _looked_in(*paths: Path) -> str:
 class TestThePluginKeepsNoTrustOfItsOwn:
     """trust_store is the one reader of WAVE's built-in list on the WAVE host."""
 
-    def test_the_bundled_trust_helper_is_gone(self) -> None:
+    def test_there_is_no_bundled_trust_helper(self) -> None:
         assert not hasattr(http_client, "_bundled_trust")
 
     def test_the_plugin_never_imports_certifi(self) -> None:

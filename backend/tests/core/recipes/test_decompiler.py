@@ -912,20 +912,14 @@ class TestRoundTripFidelity:
         )
 
     def test_k8s_copy_from_pod_with_both_limits_set(self) -> None:
-        # REQ-5.2.7.3, K8SEXEC-10: the limit rows read back as written; secret rows never do.
+        # REQ-5.2.7.3, K8SEXEC-10: the limit rows read back as written.
         variables = {"k8s_session": {"type": "string", "secret": True}}
-        settings = {
-            name: value
-            for name, value in K8S_COPY_FROM_POD_STEP["settings"].items()
-            if name != "session"
-        }
 
         readback = readback_flow([K8S_COPY_FROM_POD_STEP], variables)[0]
 
-        assert readback == {
-            **K8S_COPY_FROM_POD_STEP,
-            "settings": {**settings, "no_preserve": False, "on_error": "fail"},
-        }
+        assert readback == with_creation_values(
+            K8S_COPY_FROM_POD_STEP, {"no_preserve": False, "on_error": "fail"}
+        )
 
 
 SFTP_DOWNLOAD_STEP: dict[str, Any] = {
@@ -1357,6 +1351,78 @@ class TestSecretOmission:
         assert step == {"function": "login", "settings": {"url": "http://a"}}
         assert "t0k-classified" not in readback
         assert stored is None or stored not in readback
+
+    def test_a_secret_setting_written_as_an_expression_reads_back_as_written(self) -> None:
+        step = {
+            "block": "sql-client",
+            "settings": {
+                "host": "db",
+                "database": "wave",
+                "username": "wave",
+                "password": {"expr": "db_password"},
+                "sql": "SELECT 1",
+            },
+        }
+        variables = {"db_password": {"type": "string", "secret": True, "value": "pw-classified"}}
+
+        readback = decompile(compile_clean(make_recipe([step], variables=variables))["test_data"])
+
+        assert yaml.safe_load(readback["recipe"])["flow"] == [
+            with_creation_values(step, SQL_CREATION_VALUES)
+        ]
+        assert "pw-classified" not in readback["recipe"]
+        assert_round_trip(make_recipe([step], variables=variables))
+
+    def test_a_k8s_step_reads_back_with_its_session_and_rebuilds(self) -> None:
+        variables = {"k8s_session": {"type": "string", "secret": True}}
+        recipe = make_recipe([K8S_COPY_FROM_POD_STEP], variables=variables)
+
+        readback = decompile(compile_clean(recipe)["test_data"])["recipe"]
+
+        assert yaml.safe_load(readback)["flow"][0]["settings"]["session"] == {"expr": "k8s_session"}
+        assert compile_recipe(readback)["findings"] == []
+
+    def test_a_secret_input_written_as_an_expression_reads_back_as_written(self) -> None:
+        functions = [
+            {
+                "name": "login",
+                "inputs": [
+                    {"name": "url", "type": "string", "required": True},
+                    {"name": "token", "type": "string", "required": True, "secret": True},
+                ],
+                "outputs": [],
+                "flow": [LOG_STEP],
+            }
+        ]
+        settings = {"url": "http://a", "token": {"expr": "api_token"}}
+        variables = {"api_token": {"type": "string", "secret": True, "value": "t0k-classified"}}
+        recipe = make_recipe(
+            [{"function": "login", "settings": settings}], variables=variables, functions=functions
+        )
+
+        readback = decompile(compile_clean(recipe)["test_data"])["recipe"]
+
+        (step,) = yaml.safe_load(readback)["flow"]
+        assert step == {"function": "login", "settings": settings}
+        assert "t0k-classified" not in readback
+
+    def test_a_canvas_secret_setting_in_expression_mode_reads_back_as_an_expression(self) -> None:
+        node = make_node(
+            "node-1",
+            element_type="k8s-get",
+            values={"session": "k8s_session", "kind": "Pod", "name": "web-0"},
+        )
+        node["data"]["expressionFields"] = ["session"]
+
+        recipe = yaml.safe_load(
+            decompile(make_test_data([node], [make_edge("start-node", "node-1")]))["recipe"]
+        )
+
+        assert recipe["flow"][0]["settings"] == {
+            "session": {"expr": "k8s_session"},
+            "kind": "Pod",
+            "name": "web-0",
+        }
 
 
 class TestExpressibility:

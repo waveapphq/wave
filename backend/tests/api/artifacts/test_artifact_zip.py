@@ -266,7 +266,7 @@ class TestZipBuildsThroughSharedExportZip:
 class TestActiveExecutionStatusSource:
     """The in-progress guard reads the executions storage constant, not a copy."""
 
-    def test_the_duplicate_constant_is_gone(self) -> None:
+    def test_artifact_service_has_no_status_tuple_of_its_own(self) -> None:
         """artifact_service declares no status tuple of its own."""
         assert not hasattr(artifact_service, "_IN_PROGRESS_STATUSES")
 

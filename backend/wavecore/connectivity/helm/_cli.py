@@ -25,13 +25,10 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from wavecore.connectivity import proxy, run_log
+from wavecore.connectivity.block_outputs import summary_table
 from wavecore.connectivity.k8s.rest import wave_anchors
 from wavecore.connectivity.k8s.verbs._context import require_context
-from wavecore.connectivity.k8s.verbs._outputs import (
-    empty_read_result,
-    render_read_result,
-    summary_table,
-)
+from wavecore.connectivity.k8s.verbs._outputs import empty_read_result, render_read_result
 
 DEFAULT_TIMEOUT = 300
 STATUS_TIMEOUT = 30
@@ -275,10 +272,13 @@ def _bracketed(host: str) -> str:
 
 def _helm_executable(helm_path: str) -> str:
     """A bare name for the PATH lookup; a path with a folder starts at the home folder (HELM-1)."""
+    # Imported here: the plugins package loads every plugin, and the Helm ones import this module.
+    from wavecore.plugins._tls_material import from_home
+
     value = helm_path.strip()
     if "/" not in value:
         return value or "helm"
-    return os.path.join(os.path.expanduser("~"), os.path.expanduser(value))
+    return from_home(os.path.expanduser(value))
 
 
 def _stream(value: Any) -> str:

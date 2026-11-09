@@ -12,7 +12,7 @@ No ``/executions/{execution_id}/...`` debug route exists:
     POST   /executions/{id}/re-execute
     POST   /executions/{id}/skip-block
 
-These tests prove the surface is gone at three levels:
+These tests check three levels:
     1. The ``debug_routes`` module does not exist.
     2. ``app.routes`` contains no path matching these patterns.
     3. Live HTTP calls return 404 with FastAPI's default ``detail`` body
@@ -26,7 +26,7 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-_LEGACY_METHOD_PATHS: list[tuple[str, str]] = [
+_DEBUG_METHOD_PATHS: list[tuple[str, str]] = [
     ("GET", "/executions/{execution_id}/breakpoints"),
     ("POST", "/executions/{execution_id}/breakpoints"),
     ("DELETE", "/executions/{execution_id}/breakpoints/{breakpoint_id}"),
@@ -39,15 +39,15 @@ _LEGACY_METHOD_PATHS: list[tuple[str, str]] = [
 ]
 
 
-class TestLegacyDebugModulesGone:
-    """``debug_routes`` and ``debug_actions`` modules are entirely removed."""
+class TestDebugModulesDoNotExist:
+    """The ``debug_routes`` and ``debug_actions`` modules do not exist."""
 
-    def test_debug_routes_module_no_longer_importable(self) -> None:
+    def test_debug_routes_module_is_not_importable(self) -> None:
         """``wavecore.api.routes.executions.debug_routes`` must not exist."""
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module("wavecore.api.routes.executions.debug_routes")
 
-    def test_debug_actions_module_no_longer_importable(self) -> None:
+    def test_debug_actions_module_is_not_importable(self) -> None:
         """``wavecore.api.services.executions.debug_actions`` must not exist."""
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module("wavecore.api.services.executions.debug_actions")
@@ -59,19 +59,19 @@ class TestLegacyDebugModulesGone:
         assert "debug_router" not in getattr(executions_pkg, "__all__", [])
 
 
-class TestLegacyDebugRoutesNotRegistered:
-    """``app.routes`` contains none of the legacy debug paths."""
+class TestDebugRoutesNotRegistered:
+    """``app.routes`` contains none of these debug paths."""
 
-    def test_no_legacy_debug_path_registered(self) -> None:
-        """Scan ``app.routes`` and confirm no legacy debug route remains."""
+    def test_no_debug_path_registered(self) -> None:
+        """Scan ``app.routes`` and confirm no debug route is registered."""
         from wavecore.api.app import app
 
         registered_paths = {getattr(route, "path", "") for route in app.routes}
-        for _method, path in _LEGACY_METHOD_PATHS:
-            assert path not in registered_paths, f"legacy route {path!r} must not be registered"
+        for _method, path in _DEBUG_METHOD_PATHS:
+            assert path not in registered_paths, f"debug route {path!r} must not be registered"
 
 
-class TestLegacyDebugRoutesReturn404:
+class TestDebugRoutesReturn404:
     """Live HTTP calls to these paths return a non-WAVE 404."""
 
     @pytest.fixture
@@ -80,8 +80,8 @@ class TestLegacyDebugRoutesReturn404:
 
         return TestClient(app)
 
-    @pytest.mark.parametrize("method,path_template", _LEGACY_METHOD_PATHS)
-    def test_legacy_debug_route_returns_fastapi_not_found(
+    @pytest.mark.parametrize("method,path_template", _DEBUG_METHOD_PATHS)
+    def test_debug_route_returns_fastapi_not_found(
         self, client: TestClient, method: str, path_template: str
     ) -> None:
         """These endpoints return FastAPI's default 404, not a WAVE 404."""
@@ -92,7 +92,6 @@ class TestLegacyDebugRoutesReturn404:
         response = client.request(method, path)
         assert response.status_code == 404
         # FastAPI's default 404 shape: ``{"detail": "Not Found"}``.
-        # A WAVE route handler returns ``{"success": false, ...}`` - seeing
-        # that envelope would mean a route is still registered.
+        # A WAVE route handler would answer with its ``{"success": false, ...}`` envelope.
         body = response.json()
         assert body == {"detail": "Not Found"}

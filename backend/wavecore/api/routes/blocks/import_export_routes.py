@@ -22,10 +22,15 @@ from fastapi import APIRouter, File, Form, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_semantic_version, validate_uuid
+from wavecore.api.routes.shared import (
+    read_json_array,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services.blocks import _storage as _block_storage
 from wavecore.api.services.blocks import service as block_service
 from wavecore.api.services.blocks import version_service as _block_version_svc
+from wavecore.api.services.shared import validate_semantic_version
 
 # Create router for block import/export endpoints
 router = APIRouter(tags=["Blocks"], prefix="/blocks")
@@ -41,7 +46,7 @@ async def batch_create_blocks(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with created IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = block_service.batch_create_blocks(body)
     return result
 
@@ -56,7 +61,7 @@ async def batch_update_blocks(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with updated IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = block_service.batch_update_blocks(body)
     return result
 
@@ -71,7 +76,7 @@ async def batch_delete_blocks(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = block_service.batch_delete_blocks(body)
     return result
 
@@ -129,7 +134,7 @@ async def validate_block(request: Request) -> dict[str, Any]:
     Returns:
         Validation result with errors and warnings
     """
-    body = await request.json()
+    body = await read_json_object(request)
     return _block_version_svc.validate_block(body)
 
 
@@ -143,7 +148,7 @@ async def validate_dependencies(request: Request) -> dict[str, Any] | JSONRespon
     Returns:
         Validation result with errors
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     if "block_id" not in body:
         return JSONResponse(
@@ -300,7 +305,7 @@ async def clone_block(block_id: str, request: Request) -> dict[str, Any] | JSONR
     try:
         validate_uuid(block_id, "block_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         if "new_name" not in body:
             raise ValueError("Field 'new_name' is required")

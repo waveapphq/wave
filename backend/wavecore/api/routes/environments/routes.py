@@ -25,7 +25,7 @@ from wavecore.api.exceptions import (
     NotFoundException,
     ValidationException,
 )
-from wavecore.api.routes.shared import build_response_meta, validate_uuid
+from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
 from wavecore.api.services.environments import service as environment_service
 
 # Create router for environment endpoints
@@ -164,7 +164,7 @@ async def list_environments(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_environment(request: Request, response: Response) -> dict[str, Any]:
     """Create a new environment."""
-    body = await request.json()
+    body = await read_json_object(request)
     if "name" not in body:
         raise ValidationException("Field 'name' is required")
 
@@ -222,7 +222,7 @@ async def update_environment(
 ) -> dict[str, Any]:
     """Update an environment."""
     validate_uuid(environment_id, "environment_id")
-    body = await request.json()
+    body = await read_json_object(request)
 
     if "name" not in body and "description" not in body and "tags" not in body:
         raise ValidationException("At least one field (name, description, or tags) is required")

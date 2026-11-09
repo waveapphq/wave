@@ -51,7 +51,16 @@ def _load(path: Path) -> list[dict[str, Any]]:
 
 @functools.lru_cache(maxsize=1)
 def _builtin_certificates(pem: str) -> tuple[x509.Certificate, ...]:
-    return tuple(x509.load_pem_x509_certificates(pem.encode("utf-8")))
+    """The built-in authorities cryptography can read; each one it refuses is logged and skipped."""
+    readable = []
+    for number, block in enumerate(certificate_facts.pem_blocks(pem), start=1):
+        try:
+            readable.append(x509.load_pem_x509_certificate(block.encode("utf-8")))
+        except ValueError as exc:
+            logger.warning(
+                "Built-in certificate %d cannot be read and is left out: %s", number, exc
+            )
+    return tuple(readable)
 
 
 def _builtin() -> tuple[x509.Certificate, ...]:

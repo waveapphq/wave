@@ -19,6 +19,7 @@ from wavecore.api.services.blocks._storage import (
     _validate_plugin_exists,
     get_block_dependents,
 )
+from wavecore.api.services.shared import batch_delete, batch_object, batch_update_problem
 
 # ===========================================================================
 # CRUD
@@ -140,31 +141,34 @@ def delete_block(block_id: str, cascade: bool = False) -> bool:
     return True
 
 
-def batch_create_blocks(blocks: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_create_blocks(blocks: list[Any]) -> dict[str, Any]:
     """Create multiple blocks in a batch."""
     created: list[str] = []
     failed: list[dict[str, Any]] = []
     for idx, block_data in enumerate(blocks):
         try:
-            block = create_block(block_data)
+            block = create_block(batch_object(block_data))
             created.append(block["id"])
         except (ValueError, WaveException) as e:
             failed.append({"index": idx, "error": str(e)})
     return {"created": created, "failed": failed}
 
 
-def batch_update_blocks(updates: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_update_blocks(updates: list[Any]) -> dict[str, Any]:
     """Update multiple blocks in a batch."""
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
-    for idx, update in enumerate(updates):
-        block_id = str(update.get("id", ""))
-        update_data = update.get("update", {})
+    for idx, item in enumerate(updates):
+        problem = batch_update_problem(item)
+        if problem is not None:
+            failed.append({"index": idx, "error": problem})
+            continue
+        block_id = str(item.get("id", ""))
         block = _load_block(block_id)
         if block is None:
             failed.append({"index": idx, "error": f"Block with ID '{block_id}' not found"})
             continue
-        for key, value in update_data.items():
+        for key, value in item.get("update", {}).items():
             if key not in ("id", "created_at"):
                 block[key] = value
         block["updated_at"] = datetime.now(UTC).isoformat()
@@ -173,16 +177,6 @@ def batch_update_blocks(updates: list[dict[str, Any]]) -> dict[str, Any]:
     return {"updated": updated, "failed": failed}
 
 
-def batch_delete_blocks(block_ids: list[str]) -> dict[str, Any]:
+def batch_delete_blocks(block_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple blocks in a batch."""
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-    for idx, block_id in enumerate(block_ids):
-        try:
-            if delete_block(block_id):
-                deleted.append(block_id)
-            else:
-                failed.append({"index": idx, "error": f"Block with ID '{block_id}' not found"})
-        except (ValueError, WaveException) as e:
-            failed.append({"index": idx, "error": str(e)})
-    return {"deleted": deleted, "failed": failed}
+    return batch_delete(block_ids, delete_block, "Block")

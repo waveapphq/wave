@@ -460,7 +460,7 @@ def _level(**fields: Any) -> dict[str, Any]:
     }
 
 
-_OLD_ARRAY_ENUM = {
+_ARRAY_ENUM = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -473,7 +473,7 @@ _ENUM_INPUT_TYPE = (
 )
 
 _DECLARATION_CASES = [
-    pytest.param({"inputs": [_OLD_ARRAY_ENUM]}, _ENUM_INPUT_TYPE, id="old-array-enum"),
+    pytest.param({"inputs": [_ARRAY_ENUM]}, _ENUM_INPUT_TYPE, id="array-enum"),
     pytest.param(
         {"inputs": [_level(required=False)]},
         ("ENUM_INPUT_NOT_REQUIRED", "Enum input 'level' must be required"),
@@ -704,11 +704,11 @@ class TestDeclarationRulesReachEverySave:
             "Function input '_id' has invalid name; must match pattern '^[a-zA-Z][a-zA-Z0-9_]*$'"
         )
 
-    def test_promoting_a_stored_old_array_enum_is_refused(self, client: TestClient) -> None:
+    def test_promoting_a_stored_array_enum_is_refused(self, client: TestClient) -> None:
         from wavecore.api.services.tests import service as test_service
 
         test_id = str(uuid.uuid4())
-        stored = _test_holding(_declaring_body(inputs=[_OLD_ARRAY_ENUM]), {})
+        stored = _test_holding(_declaring_body(inputs=[_ARRAY_ENUM]), {})
         # Written straight to storage: the Test save itself would refuse it.
         test_service._save_test({**stored, "id": test_id, "metadata": {}})
 

@@ -112,7 +112,7 @@ def _tunnel_routes(
         log(
             "INFO",
             f"SSH tunnel detected on local port {port}: testing {route.far_host}:{route.far_port} "
-            f"from {route.record['host']}",
+            f"from {route.record['host_identity']}",
         )
         routes[port] = partial(
             open_tunnel_stream, route.record, route.far_host, route.far_port, tunnel=route.tunnel

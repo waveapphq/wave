@@ -1,8 +1,8 @@
 """Connection profile endpoints (REQ-5.2.4.8).
 
 This module implements connection profile endpoints providing lifecycle operations
-for connection profiles enabling creation, modification, connectivity testing,
-type discovery, and schema retrieval.
+for connection profiles enabling creation, modification, type discovery, and
+schema retrieval.
 
 Endpoints:
 - GET /profiles: List all profiles
@@ -14,7 +14,6 @@ Endpoints:
 - GET /profiles/{profile_id}: Get profile
 - PUT /profiles/{profile_id}: Update profile
 - DELETE /profiles/{profile_id}: Delete profile
-- POST /profiles/{profile_id}/test: Test connectivity
 - POST /profiles/{profile_id}/duplicate: Duplicate profile
 """
 
@@ -28,7 +27,7 @@ from wavecore.api.exceptions import (
     NotFoundException,
     ValidationException,
 )
-from wavecore.api.routes.shared import build_response_meta, validate_uuid
+from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
 from wavecore.api.services.profiles import service as profile_service
 
 # Create router for profile endpoints
@@ -312,7 +311,7 @@ async def create_profile(request: Request, response: Response) -> dict[str, Any]
     Returns:
         Created profile with masked secrets
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "name" not in body:
@@ -404,7 +403,7 @@ async def update_profile(
     """
     validate_uuid(profile_id, "profile_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Build kwargs for update - only include fields if explicitly provided
     update_kwargs: dict[str, Any] = {
@@ -437,7 +436,7 @@ async def update_profile(
         raise NotFoundException(f"Profile with ID '{profile_id}' not found")
 
     # Set cache invalidation header
-    response.headers["X-Cache-Invalidated"] = f"profiles,connectivity_{profile_id}"
+    response.headers["X-Cache-Invalidated"] = "profiles"
 
     # Set new ETag header
     response.headers["ETag"] = _generate_etag(result)
@@ -499,48 +498,6 @@ async def delete_profile(
     return response
 
 
-@router.post("/profiles/{profile_id}/test", response_model=None)
-async def test_profile_connectivity(
-    profile_id: str,
-    request: Request,
-    response: Response,
-) -> dict[str, Any] | JSONResponse:
-    """Test connectivity for a connection profile.
-
-    Args:
-        profile_id: Profile UUID
-        request: HTTP request for meta info
-        response: HTTP response for setting cache headers
-
-    Returns:
-        Connectivity test result
-    """
-    validate_uuid(profile_id, "profile_id")
-
-    try:
-        result = profile_service.test_connectivity(profile_id)
-    except NotImplementedError as e:
-        return JSONResponse(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "NOT_IMPLEMENTED"},
-            },
-        )
-
-    if result is None:
-        raise NotFoundException(f"Profile with ID '{profile_id}' not found")
-
-    # Brief cache for connectivity test results
-    response.headers["Cache-Control"] = "max-age=30"
-
-    return {
-        "success": True,
-        "data": result,
-        "meta": build_response_meta(request),
-    }
-
-
 def _validate_duplicate_name(raw_name: Any) -> str:
     """Validate and normalize a duplicate profile name from request body.
 
@@ -576,12 +533,12 @@ async def _resolve_duplicate_name(request: Request, profile_id: str) -> str:
         ValidationException: If provided name is invalid
     """
     try:
-        body = await request.json()
-        if "new_name" in body:
-            return _validate_duplicate_name(body["new_name"])
-    except ValueError:
-        # No body or invalid JSON - fall through to auto-generate name
-        pass
+        body = await read_json_object(request)
+    except ValidationException:
+        # No body, or one that is not a JSON object: generate the name
+        body = {}
+    if "new_name" in body:
+        return _validate_duplicate_name(body["new_name"])
 
     original = profile_service.get_profile(profile_id)
     if original is None:

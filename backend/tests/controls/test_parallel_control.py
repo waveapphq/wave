@@ -202,7 +202,7 @@ class TestParallelControlValidation:
         ):
             asyncio.run(control.validate(params))
 
-    def test_validate_rejects_the_removed_wait_any_strategy(self) -> None:
+    def test_validate_rejects_wait_any_as_a_join_mode(self) -> None:
         """Verify the wait-any strategy is not accepted as a join mode."""
         # Guard: a wait_strategy value is not a join value.
         control = ParallelControl()

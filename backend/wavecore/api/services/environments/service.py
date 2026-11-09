@@ -30,7 +30,11 @@ from wavecore.api.services.shared import (
     parse_file,
     parse_zip_file,
 )
-from wavecore.api.services.storage_paths import get_environments_storage_path
+from wavecore.api.services.storage_paths import (
+    entity_dir,
+    get_environments_storage_path,
+    is_entity_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +64,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_env_dir(env_id: str) -> Path:
     """Get directory path for an environment."""
-    return get_environments_storage_path() / env_id
+    return entity_dir(get_environments_storage_path(), env_id)
 
 
 def _load_environment(env_id: str) -> dict[str, Any] | None:
     """Load environment from file storage, forgetting the cached entry when gone."""
+    if not is_entity_id(env_id):
+        return None
     env_file = _get_env_dir(env_id) / _ENVIRONMENT_FILENAME
     if not env_file.exists():
         _environment_directory.forget(env_id)

@@ -478,7 +478,7 @@ export const ranTestsLine = (hooks: number, release: string): string =>
 export const readReleaseLine = (release: string, revision: number): string =>
   `Read release '${release}' at revision ${revision}`
 
-/** The WARN line a recorded failure writes (verbs/_outputs._recorded_failure_line). */
+/** The WARN line a recorded failure writes (connectivity/block_outputs._recorded_failure_line). */
 export const recordedLine = (action: string, reason: string, message: string): string =>
   reason ? `${action} failed (${reason}): ${message}` : `${action} failed: ${message}`
 

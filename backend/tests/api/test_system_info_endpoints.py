@@ -303,7 +303,7 @@ class TestSystemServiceGetInfo:
 
         assert system_service.get_system_info() == as_production
 
-    def test_the_environment_reader_is_gone(self) -> None:
+    def test_system_service_has_no_environment_reader(self) -> None:
         from wavecore.api.services import system_service
 
         assert not hasattr(system_service, "_get_environment")

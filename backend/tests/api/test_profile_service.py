@@ -1,15 +1,14 @@
 """Unit tests for profile service layer (REQ-5.2.4.8).
 
 This module tests the profile service layer that provides business logic
-for connection profile operations including CRUD operations, connectivity
-testing, type discovery, and schema retrieval.
+for connection profile operations including CRUD operations, type discovery,
+and schema retrieval.
 
 Test Coverage:
 - Profile CRUD: Create, read, update, delete profile operations
 - Profile listing: List all profiles
 - Profile types: Enumerate supported profile types with descriptions
 - Type schemas: JSON Schema retrieval for type-specific configuration
-- Connectivity testing: Verify profile configuration correctness
 - Secret handling: Credential masking (password, api_key, private_key, token, client_key,
   bearer_token)
 - Validation: Type validation, configuration schema validation with field paths
@@ -318,7 +317,7 @@ class TestCreateProfile:
         assert "Invalid profile type" in str(exc_info.value)
 
     def test_create_profile_rejects_ldap_type(self) -> None:
-        """Test that create_profile rejects the removed ldap type (REQ-4.7.3)."""
+        """Test that create_profile rejects the ldap type (REQ-4.7.3)."""
         from wavecore.api.services.profiles import service as profile_service
 
         with pytest.raises(ValidationException, match=LDAP_TYPE_REJECTED):
@@ -329,7 +328,7 @@ class TestCreateProfile:
             )
 
     def test_create_profile_rejects_sftp_type(self) -> None:
-        """Test that create_profile rejects the removed sftp type (REQ-4.7.3)."""
+        """Test that create_profile rejects the sftp type (REQ-4.7.3)."""
         from wavecore.api.services.profiles import service as profile_service
 
         with (
@@ -1036,6 +1035,94 @@ class TestUpdateProfile:
             assert result is not None
             assert result["description"] == "New description for database"
 
+    def test_update_profile_refuses_a_name_another_profile_holds(self) -> None:
+        """Renaming onto another Profile's name is refused and nothing is saved."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        taken_id = str(uuid.uuid4())
+        own_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {
+                taken_id: {"id": taken_id, "name": "Taken DB", "type": "database", "config": {}},
+                own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}},
+            },
+        ):
+            with pytest.raises(
+                ConflictException, match=r"^Profile with name 'Taken DB' already exists$"
+            ):
+                profile_service.update_profile(own_id, name="Taken DB", description="New")
+
+            stored = yaml.safe_load(
+                (get_profiles_storage_path() / own_id / "profile.yaml").read_text()
+            )
+            cached = _profile_common._profile_storage[own_id]
+            assert (stored["name"], cached["name"]) == ("Own DB", "Own DB")
+            assert "description" not in stored and "description" not in cached
+
+    def test_update_profile_refuses_a_name_only_the_storage_directory_holds(self) -> None:
+        """A Profile on disk but not yet in the cache still holds its name."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        own_id = str(uuid.uuid4())
+        disk_only_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}}},
+        ):
+            disk_only_dir = get_profiles_storage_path() / disk_only_id
+            disk_only_dir.mkdir(parents=True)
+            (disk_only_dir / "profile.yaml").write_text(
+                yaml.safe_dump(
+                    {"id": disk_only_id, "name": "Disk DB", "type": "database", "config": {}}
+                )
+            )
+            try:
+                with pytest.raises(
+                    ConflictException, match=r"^Profile with name 'Disk DB' already exists$"
+                ):
+                    profile_service.update_profile(own_id, name="Disk DB")
+            finally:
+                shutil.rmtree(disk_only_dir, ignore_errors=True)
+
+    def test_update_profile_keeps_a_name_it_already_shares(self) -> None:
+        """A save that keeps the current name passes even when another Profile shares it."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        first_id = str(uuid.uuid4())
+        twin_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {
+                first_id: {"id": first_id, "name": "Shared DB", "type": "database", "config": {}},
+                twin_id: {"id": twin_id, "name": "Shared DB", "type": "database", "config": {}},
+            },
+        ):
+            result = profile_service.update_profile(twin_id, name="Shared DB", description="Kept")
+
+            assert result is not None
+            assert (result["name"], result["description"]) == ("Shared DB", "Kept")
+
+    def test_a_refused_update_changes_nothing_a_later_read_sees(self) -> None:
+        """A save the config check refuses leaves the cached Profile as stored."""
+        from wavecore.api.services.profiles import service as profile_service
+
+        own_id = str(uuid.uuid4())
+
+        with _patch_profile_storage(
+            {own_id: {"id": own_id, "name": "Own DB", "type": "database", "config": {}}},
+        ):
+            with pytest.raises(
+                ValidationException, match=_refusal("port", "must be between 1 and 65535")
+            ):
+                profile_service.update_profile(
+                    own_id, name="Renamed DB", config={"port": 70000}, description="New"
+                )
+
+            reread = profile_service.get_profile(own_id)
+            assert reread is not None
+            assert (reread["name"], "description" in reread) == ("Own DB", False)
+
 
 class TestDeleteProfile:
     """Test suite for delete_profile function."""
@@ -1549,91 +1636,6 @@ class TestUpdateProfileStructuralLock:
         assert result == {"p-meta", "p-from-node"}
 
 
-class TestTestConnectivity:
-    """Test suite for test_connectivity function."""
-
-    def test_test_connectivity_returns_success_result(self) -> None:
-        """Test that test_connectivity returns success result."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "localhost", "port": 5432},
-                }
-            },
-        ):
-            mock_rv = {"connected": True, "latency": 15}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert result["connected"] is True
-                assert result["latency"] == 15
-
-    def test_test_connectivity_returns_failure_result(self) -> None:
-        """Test that test_connectivity returns failure with error details."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "unreachable", "port": 5432},
-                }
-            },
-        ):
-            mock_rv = {"connected": False, "error": "Connection refused"}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert result["connected"] is False
-                assert "Connection refused" in result["error"]
-
-    def test_test_connectivity_returns_none_when_not_found(self) -> None:
-        """Test that test_connectivity returns None when profile not found."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        with _patch_profile_storage({}):
-            result = profile_service.test_connectivity(str(uuid.uuid4()))
-
-            assert result is None
-
-    def test_test_connectivity_includes_latency(self) -> None:
-        """Test that test_connectivity includes latency measurement."""
-        from wavecore.api.services.profiles import service as profile_service
-
-        profile_id = str(uuid.uuid4())
-
-        with _patch_profile_storage(
-            {
-                profile_id: {
-                    "id": profile_id,
-                    "name": "my-database",
-                    "type": "database",
-                    "config": {"host": "localhost"},
-                }
-            },
-        ):
-            mock_rv = {"connected": True, "latency": 42}
-            with patch.object(profile_service, "_perform_connectivity_test", return_value=mock_rv):
-                result = profile_service.test_connectivity(profile_id)
-
-                assert result is not None
-                assert "latency" in result
-                assert isinstance(result["latency"], int)
-
-
 class TestListProfileTypes:
     """Test suite for list_profile_types function."""
 
@@ -1721,8 +1723,8 @@ class TestListProfileTypes:
         assert opensearch_type["description"] == OPENSEARCH_TYPE_DESCRIPTION
 
 
-class TestLdapProfileTypeRemoved:
-    """Test suite for the removal of the ldap profile type (REQ-4.7.3)."""
+class TestLdapIsNotAProfileType:
+    """Test suite showing ldap is not a profile type (REQ-4.7.3)."""
 
     def test_get_type_schema_returns_none_for_ldap(self) -> None:
         """Test that ldap has no type schema."""
@@ -1737,7 +1739,7 @@ class TestLdapProfileTypeRemoved:
         assert "ldap" not in profile_service.list_profile_types()
 
     def test_ldap_has_no_type_description(self) -> None:
-        """Test that no ldap description remains."""
+        """Test that PROFILE_TYPE_DESCRIPTIONS has no ldap entry."""
 
         assert "ldap" not in _profile_common.PROFILE_TYPE_DESCRIPTIONS
 
@@ -1750,13 +1752,13 @@ class TestLdapProfileTypeRemoved:
         assert all(item["type"] != "ldap" for item in result)
 
     def test_ldap_has_no_type_schema_entry(self) -> None:
-        """Test that the ldap TYPE_SCHEMAS entry is gone."""
+        """Test that TYPE_SCHEMAS has no ldap entry."""
 
         assert "ldap" not in _profile_common.TYPE_SCHEMAS
 
 
-class TestSftpProfileTypeRemoved:
-    """Test suite for the removal of the sftp profile type (REQ-4.7.3, REQ-4.7.5)."""
+class TestSftpIsNotAProfileType:
+    """Test suite showing sftp is not a profile type (REQ-4.7.3, REQ-4.7.5)."""
 
     def test_get_type_schema_returns_none_for_sftp(self) -> None:
         """Test that sftp has no type schema."""
@@ -1765,7 +1767,7 @@ class TestSftpProfileTypeRemoved:
         assert profile_service.get_type_schema("sftp") is None
 
     def test_sftp_has_no_type_description(self) -> None:
-        """Test that no sftp description remains."""
+        """Test that PROFILE_TYPE_DESCRIPTIONS has no sftp entry."""
 
         assert "sftp" not in _profile_common.PROFILE_TYPE_DESCRIPTIONS
 
@@ -1785,7 +1787,7 @@ class TestSftpProfileTypeRemoved:
         ]
 
     def test_sftp_has_no_type_schema_entry(self) -> None:
-        """Test that the sftp TYPE_SCHEMAS entry is gone."""
+        """Test that TYPE_SCHEMAS has no sftp entry."""
 
         assert "sftp" not in _profile_common.TYPE_SCHEMAS
 
@@ -1895,8 +1897,8 @@ class TestDatabaseTypeSchema:
         assert fields["driver_options"]["default"] == {}
 
     @pytest.mark.parametrize("field_name", ["failover", "timeout"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the failover list and the timeout field are gone."""
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
+        """Test that the database schema has no failover list and no timeout field."""
 
         assert field_name not in _schema_field_names("database")
 
@@ -1941,8 +1943,8 @@ class TestOpensearchTypeSchema:
         assert [name for name, field in fields.items() if "default" in field] == ["verify_ssl"]
 
     @pytest.mark.parametrize("field_name", ["host", "port", "use_ssl", "index", "timeout"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the host, port, TLS switch, index default and timeout fields are gone."""
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
+        """Test that the opensearch schema has no host, port, TLS switch, index or timeout field."""
 
         assert field_name not in _schema_field_names("opensearch")
 
@@ -2017,8 +2019,8 @@ class TestKubernetesTypeSchema:
         assert _schema_fields("kubernetes")["api_url"]["type"] == "string"
 
     @pytest.mark.parametrize("field_name", ["kubeconfig", "context", "api_server"])
-    def test_removed_fields_are_absent(self, field_name: str) -> None:
-        """Test that the kubeconfig-era fields are gone."""
+    def test_field_is_not_in_the_schema(self, field_name: str) -> None:
+        """Test that the kubernetes schema has no kubeconfig, context or api_server field."""
 
         assert field_name not in _schema_field_names("kubernetes")
 
@@ -2027,7 +2029,7 @@ class TestSshTypeSchema:
     """Test suite for the ssh profile type schema (REQ-4.7.3)."""
 
     def test_field_list_is_exact_and_ordered(self) -> None:
-        """Test that ssh keeps its six fields and ends with connect_timeout."""
+        """Test that ssh declares its seven fields, ending with connect_timeout."""
 
         assert _schema_field_names("ssh") == [
             "host",
@@ -2052,8 +2054,8 @@ class TestSshTypeSchema:
 
         assert "timeout" not in _schema_field_names("ssh")
 
-    def test_remaining_fields_are_unchanged(self) -> None:
-        """Test that the rename touched nothing else in the ssh schema."""
+    def test_other_field_types_secret_flags_and_port_default(self) -> None:
+        """Test the types, secret flags and port default of the other ssh fields."""
 
         fields = _schema_fields("ssh")
 
@@ -2912,27 +2914,6 @@ class TestImportedProfileNumbers:
         stored = storage[result["imported"][0]["id"]]
         assert stored["config"]["r"]["value"] == "0.00001"
         assert stored["environment_values"]["env-1"]["r"]["value"] == "30.0"
-
-
-class TestPerformConnectivityTest:
-    """Test suite for _perform_connectivity_test internal function."""
-
-    def test_perform_connectivity_test_raises_not_implemented(self) -> None:
-        """Test that _perform_connectivity_test raises NotImplementedError."""
-
-        # Direct call to internal function should raise NotImplementedError
-        with pytest.raises(NotImplementedError) as exc_info:
-            _profile_common._perform_connectivity_test(
-                {
-                    "id": "test-id",
-                    "name": "test-profile",
-                    "type": "database",
-                    "config": {"host": "localhost", "port": 5432},
-                }
-            )
-
-        assert "database" in str(exc_info.value)
-        assert "plugin implementations" in str(exc_info.value)
 
 
 class TestCreateProfileTags:

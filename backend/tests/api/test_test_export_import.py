@@ -25,6 +25,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_ID_LIST_FIELDS, assert_refused
 from tests.api.download_name_helpers import ENTITY_NAME, EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.storage_paths import get_test_testdata_path
@@ -463,6 +464,14 @@ class TestExportBulkTests:
             json={"test_ids": [], "format": "yaml", "secrets": "mask"},
         )
         assert response.status_code == 400
+
+    @pytest.mark.parametrize("test_ids", NOT_ID_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_of_strings_are_refused(
+        self, client: TestClient, test_ids: Any
+    ) -> None:
+        response = client.post("/tests/export", json={"test_ids": test_ids, "format": "yaml"})
+
+        assert_refused(response, "'test_ids' must be a list of ID strings")
 
     def test_nonexistent_test_returns_404(self, client: TestClient) -> None:
         """Exporting non-existent test returns 404."""

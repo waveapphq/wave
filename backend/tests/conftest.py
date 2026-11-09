@@ -126,6 +126,29 @@ def restore_log_levels() -> Generator[None, None, None]:
         target.setLevel(level)
 
 
+class _RecordList(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(logging.DEBUG)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+@pytest.fixture
+def wavecore_log() -> Generator[list[logging.LogRecord], None, None]:
+    """Every record a wavecore logger emits in the test, DEBUG included."""
+    # Held on the wavecore logger: the app import resets the root handlers caplog uses.
+    target = logging.getLogger("wavecore")
+    handler = _RecordList()
+    level = target.level
+    target.setLevel(logging.DEBUG)
+    target.addHandler(handler)
+    yield handler.records
+    target.removeHandler(handler)
+    target.setLevel(level)
+
+
 @pytest.fixture
 def non_utf8_child_env() -> dict[str, str]:
     """The environment of a child Python on a host whose encoding is not UTF-8 (REQ-4.6.9)."""

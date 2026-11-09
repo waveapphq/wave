@@ -24,10 +24,10 @@ from wavecore.api.services.tests import testdata_service
 from wavecore.core.secrets.sealing import unseal_all
 
 
-def _create_test_with_legacy_data(data: dict[str, Any]) -> dict[str, Any]:
-    """Create a test bypassing the save pipeline variable validation.
+def _store_unvalidated_test(data: dict[str, Any]) -> dict[str, Any]:
+    """Write a test straight to storage, skipping the save pipeline validation.
 
-    Used to simulate legacy data that may have undeclared variables.
+    Models stored data that may have undeclared variables.
     """
     test_id = str(uuid.uuid4())
     now = datetime.now(UTC).isoformat()
@@ -55,6 +55,29 @@ def _create_test_with_legacy_data(data: dict[str, Any]) -> dict[str, Any]:
         ],
     )
     return test
+
+
+NOT_SEMANTIC_VERSIONS = ["1", "1.0", "1.0.0.0", "invalid"]
+
+
+def _not_semantic_message(version: str) -> str:
+    return (
+        f"Invalid version format '{version}': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+    )
+
+
+def _test_stored_with_version(
+    version: str,
+) -> tuple[str, dict[str, Any], list[dict[str, Any]]]:
+    """Create a test and store ``version`` on it; returns its id, stored file and history."""
+    from tests.api.test_helpers import load_test_file, save_test_file
+
+    test_id = test_service.create_test({"name": f"Version {uuid.uuid4().hex[:8]}"})["id"]
+    stored = load_test_file(test_id)
+    assert stored is not None
+    stored["version"] = version
+    save_test_file(stored)
+    return test_id, stored, test_service._load_versions(test_id)
 
 
 class TestMaskSecretVariables:
@@ -714,7 +737,7 @@ class TestCreateTest:
             "metadata": {"author": "test"},
         }
 
-        result = _create_test_with_legacy_data(data)
+        result = _store_unvalidated_test(data)
 
         assert result["name"] == "Login Test"
         assert result["description"] == "Tests login flow"
@@ -1026,49 +1049,19 @@ class TestUpdateTest:
 
         assert result is None
 
-    def test_update_test_handles_malformed_version(self) -> None:
-        """Test that update handles tests with malformed version strings."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_update_test_refuses_a_stored_version_that_is_not_semantic(self, stored: str) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses the update; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        # Update should handle malformed version gracefully
-        result = test_service.update_test(test_id, {"description": "Updated"})
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.update_test(test_id, {"description": "Updated"})
 
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_update_test_handles_short_version(self) -> None:
-        """Test that update handles tests with short (< 3 parts) version strings."""
-        from tests.api.test_helpers import save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        # Update should handle short version gracefully
-        result = test_service.update_test(test_id, {"description": "Updated"})
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
     def test_update_test_validates_etag(self) -> None:
         """Test that update validates ETag when provided."""
@@ -1076,6 +1069,40 @@ class TestUpdateTest:
 
         with pytest.raises(ConflictException, match="Precondition failed"):
             test_service.update_test(created["id"], {"name": "Updated"}, etag='"wrong-etag"')
+
+    def test_update_test_refuses_a_name_another_test_holds(self) -> None:
+        """Renaming onto another Test's name is refused and nothing is saved."""
+        test_service.create_test({"name": "Taken Name"})
+        created = test_service.create_test({"name": "Own Name"})
+
+        with pytest.raises(
+            ConflictException, match=r"^Test with name 'Taken Name' already exists$"
+        ):
+            test_service.update_test(created["id"], {"name": "Taken Name", "description": "New"})
+
+        stored = test_service._load_test(created["id"])
+        assert stored is not None
+        assert (stored["name"], stored["description"], stored["version"]) == (
+            "Own Name",
+            "",
+            "1.0.0",
+        )
+        assert [v["version"] for v in test_service._load_versions(created["id"])] == ["1.0.0"]
+
+    def test_update_test_keeps_a_name_it_already_shares(self) -> None:
+        """A save that keeps the current name passes even when another Test shares it."""
+        test_service.create_test({"name": "Shared Name"})
+        twin = test_service.create_test({"name": "Twin Name"})
+        stored_twin = test_service._load_test(twin["id"])
+        assert stored_twin is not None
+        test_service._save_test({**stored_twin, "name": "Shared Name"})
+
+        result = test_service.update_test(
+            twin["id"], {"name": "Shared Name", "description": "Kept"}
+        )
+
+        assert result is not None
+        assert (result["name"], result["description"]) == ("Shared Name", "Kept")
 
     def test_update_test_adds_version_history(self) -> None:
         """Test that update adds to version history."""
@@ -1221,30 +1248,14 @@ class TestDeleteTest:
         # Version file is removed with the test directory
         assert test_service._load_versions(test_id) == []
 
-    def test_delete_test_removes_executions(self) -> None:
-        """Test that delete also removes execution history."""
-        created = test_service.create_test({"name": "Exec Test"})
-        test_id = created["id"]
-        # Add some executions
-        test_service._save_executions(test_id, [{"id": "exec-1", "status": "passed"}])
-
-        test_service.delete_test(test_id)
-
-        executions = test_service.get_test_executions(test_id)
-        assert executions is None
-
 
 class TestDeleteTestPreservesTrackedExecutions:
     """Test suite for the preserve-history contract on test deletion.
 
-    Tracked executions (entities managed by wavecore.api.services.executions)
-    are distinct from the per-test local `executions.yaml` stored inside the
-    test directory. When a test is deleted, the per-test local log is removed
-    alongside the test directory (existing behavior) BUT every tracked
-    execution that ran against that test must remain on disk and reachable
-    through the Executions API. The workflow snapshot persisted on each
-    execution record is what keeps the Historical Test Canvas viewable after
-    deletion.
+    When a test is deleted, every tracked execution that ran against that
+    test must remain on disk and reachable through the Executions API. The
+    workflow snapshot persisted on each execution record is what keeps the
+    Historical Test Canvas viewable after deletion.
     """
 
     @pytest.fixture(autouse=True)
@@ -1439,6 +1450,60 @@ class TestDeleteTestPreservesTrackedExecutions:
         assert test_service.delete_test(test_id) is True
         assert test_service.get_test(test_id) is None
 
+    @pytest.mark.parametrize("entity_type", ["suite", "regression"])
+    def test_delete_test_raises_conflict_when_a_suite_or_regression_run_carries_it(
+        self, entity_type: str
+    ) -> None:
+        """A running Suite or Regression execution that dispatched the test blocks delete."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+
+        created = test_service.create_test({"name": f"carried-by-{entity_type}"})
+        test_id = created["id"]
+
+        execution_id = str(uuid.uuid4())
+        _exec_storage._execution_storage[execution_id] = {
+            "id": execution_id,
+            "entity_type": entity_type,
+            "entity_id": str(uuid.uuid4()),
+            "status": "running",
+        }
+        _exec_storage._record_run_dispatched(execution_id, "run-1", test_id, None)
+
+        with pytest.raises(
+            ConflictException,
+            match=rf"^Cannot delete test '{test_id}': execution is running or paused$",
+        ) as exc_info:
+            test_service.delete_test(test_id)
+
+        assert exc_info.value.details == {"execution_ids": [execution_id]}
+        assert test_service.get_test(test_id) is not None
+
+    @pytest.mark.parametrize("status", ["running", "paused"])
+    def test_delete_test_raises_conflict_when_a_workbench_session_runs_it(
+        self, status: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A workbench session running or paused on the test blocks delete."""
+        from wavecore.api.services.workbench import _common as workbench_common
+
+        created = test_service.create_test({"name": f"workbench-{status}"})
+        test_id = created["id"]
+
+        session_id = str(uuid.uuid4())
+        monkeypatch.setitem(
+            workbench_common._workbench_sessions,
+            session_id,
+            {"session_id": session_id, "test_id": test_id, "status": status},
+        )
+
+        with pytest.raises(
+            ConflictException,
+            match=rf"^Cannot delete test '{test_id}': execution is running or paused$",
+        ) as exc_info:
+            test_service.delete_test(test_id)
+
+        assert exc_info.value.details == {"execution_ids": [session_id]}
+        assert test_service.get_test(test_id) is not None
+
 
 class TestDeleteTestRemovesTestData:
     """The test's own files are removed with the test (REQ-3.4.3.2)."""
@@ -1531,6 +1596,18 @@ class TestDeleteTestRemovesTestData:
         assert document_gone == [True]
 
 
+_CHANGING_VARIABLES = {
+    "rows": {"type": "array", "value": [1]},
+    "first": {"type": "string", "value": "rows.append(9)", "isExpression": True},
+    "second": {"type": "string", "value": "rows.pop()", "isExpression": True},
+}
+_FIRST_CHANGING_FINDING = (
+    "The append method changes data. An expression can only read data, "
+    "not change it. To change a variable, add a Variable Setter Block. "
+    "Variable: first."
+)
+
+
 class TestBatchOperations:
     """Test suite for batch service functions."""
 
@@ -1563,6 +1640,33 @@ class TestBatchOperations:
         assert len(result["created"]) == 1
         assert len(result["failed"]) == 1
         assert "already exists" in result["failed"][0]["error"]
+
+    def test_batch_create_tests_reports_a_refused_save_by_its_first_finding(self) -> None:
+        tests = [
+            {"name": "Clean Test"},
+            {"name": "Changing Test", "variables": _CHANGING_VARIABLES},
+        ]
+
+        result = test_service.batch_create_tests(tests)
+
+        assert result["failed"] == [{"index": 1, "error": _FIRST_CHANGING_FINDING}]
+        assert [t["name"] for t in test_service._list_all_tests()] == ["Clean Test"]
+        assert result["created"] == [test_service._list_all_tests()[0]["id"]]
+
+    def test_batch_update_tests_reports_a_refused_save_by_its_first_finding(self) -> None:
+        created = test_service.create_test({"name": "Clean Test"})
+
+        result = test_service.batch_update_tests(
+            [{"id": created["id"], "update": {"variables": _CHANGING_VARIABLES}}]
+        )
+
+        assert result == {
+            "updated": [],
+            "failed": [{"index": 0, "error": _FIRST_CHANGING_FINDING}],
+        }
+        reloaded = test_service.get_test(created["id"])
+        assert reloaded is not None
+        assert reloaded["variables"] == {}
 
     def test_batch_update_tests_updates_multiple(self) -> None:
         """Test batch updating multiple tests."""
@@ -1711,47 +1815,24 @@ class TestVersionOperations:
         assert result is not None
         assert result["version"] == "1.0.1"
 
-    def test_add_test_version_handles_malformed_version(self) -> None:
-        """Test adding version when existing version is malformed."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("version_bump", ["major", "minor", "patch"])
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_add_test_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str, version_bump: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses every bump; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        result = test_service.add_test_version(test_id, {"version_bump": "minor"})
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.add_test_version(
+                test_id, {"version_bump": version_bump, "description": "next"}
+            )
 
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_add_test_version_handles_short_version(self) -> None:
-        """Test adding version when existing version has too few parts."""
-        from tests.api.test_helpers import save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        result = test_service.add_test_version(test_id, {"version_bump": "minor"})
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
     def test_delete_test_version_removes_version(self) -> None:
         """Test deleting a specific version."""
@@ -1797,7 +1878,7 @@ class TestWorkflowOperations:
     def test_get_test_workflow_returns_workflow(self) -> None:
         """Test getting test workflow."""
         workflow = {"nodes": [{"id": "1", "type": "start"}], "edges": []}
-        created = _create_test_with_legacy_data({"name": "Workflow Test", "workflow": workflow})
+        created = _store_unvalidated_test({"name": "Workflow Test", "workflow": workflow})
 
         result = test_service.get_test_workflow(created["id"])
 
@@ -1888,9 +1969,9 @@ class TestNodeSizingFieldsRoundTrip:
         assert "height" not in nodes[0]
         assert "nameCollapsed" not in nodes[0]["data"]
 
-    def test_node_with_legacy_measured_field_round_trips(self) -> None:
-        """Nodes carrying the legacy 'measured' field still load and the field round-trips."""
-        created = test_service.create_test({"name": "Legacy Measured"})
+    def test_node_measured_field_round_trips(self) -> None:
+        """A node's 'measured' field round-trips through save and load."""
+        created = test_service.create_test({"name": "Measured Field"})
 
         node = self._make_workflow_node(
             node_id="node-1",
@@ -2158,7 +2239,7 @@ class TestValidateTest:
         edges: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         """Every error with the code, for a stored Test with this workflow."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {"name": "Block wording", "workflow": {"nodes": nodes, "edges": edges or []}}
         )
         result = test_service.validate_test(created["id"])
@@ -2176,7 +2257,7 @@ class TestValidateTest:
 
     def test_validate_test_returns_valid_for_good_workflow(self) -> None:
         """Test that validation passes for valid workflow with workflowNode nodes."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Valid Test",
                 "variables": {"my_var": {"type": "string", "value": ""}},
@@ -2210,7 +2291,7 @@ class TestValidateTest:
         Only 'workflowNode' is valid in stored data. The execution engine finds
         entry points from graph topology, so no special start/end nodes are needed.
         """
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Start End Test",
                 "workflow": {
@@ -2232,7 +2313,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_invalid_node_type(self) -> None:
         """Test that unknown node types produce INVALID_NODE_TYPE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Node Type Test",
                 "workflow": {
@@ -2263,7 +2344,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_unknown_element_type(self) -> None:
         """Test that an unknown elementType produces UNKNOWN_BLOCK_TYPE error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Unknown Block Test",
                 "workflow": {
@@ -2297,7 +2378,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_node_type_mismatch(self) -> None:
         """Test elementType is control but nodeType says 'plugin' produces NODE_TYPE_MISMATCH."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Mismatch Test",
                 "workflow": {
@@ -2327,7 +2408,7 @@ class TestValidateTest:
 
     def test_validate_test_accepts_function_nodetype_on_non_control(self) -> None:
         """nodeType='function' on a non-control element is accepted (no NODE_TYPE_MISMATCH)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Function NodeType Test",
                 "workflow": {
@@ -2363,9 +2444,7 @@ class TestValidateTest:
         for this combination, otherwise the persist-stage autofix strips the
         node and the user silently loses their work on save.
         """
-        # Use the real create_test path (which exercises _validate_for_persist
-        # + autofix), not the legacy bypass helper. This is the contract that
-        # the drag-to-create flow depends on.
+        # create_test runs the persist validation and autofix the drag-to-create flow relies on.
         created = test_service.create_test(
             {
                 "name": "Function ElementType Test",
@@ -2416,7 +2495,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_required_param_empty(self) -> None:
         """Test Variable Setter with empty variables dict produces REQUIRED_PARAM_EMPTY."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Empty Param Test",
                 "workflow": {
@@ -2444,7 +2523,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_required_param_missing(self) -> None:
         """Test missing required string parameter produces REQUIRED_PARAM_MISSING."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Missing Param Test",
                 "workflow": {
@@ -2472,7 +2551,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_missing_position(self) -> None:
         """Test that missing node position produces an error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Position Test",
                 "workflow": {
@@ -2511,7 +2590,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_invalid_variable_name(self) -> None:
         """Test that invalid variable names produce INVALID_VARIABLE error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Variable Test",
                 "variables": {
@@ -2572,7 +2651,7 @@ class TestValidateTest:
                 "profileBindings": [{"profileId": "p1", "alias": "cpr"}],
             },
         )
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Alias Conflict Test",
                 "variables": {"cpr": {"type": "string", "value": "v"}},
@@ -2590,7 +2669,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_invalid_variable_type(self) -> None:
         """Test that invalid variable type produces INVALID_VARIABLE_TYPE error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Variable Type Test",
                 "variables": {
@@ -2637,7 +2716,7 @@ class TestValidateTest:
         self, name: str, code: str, reason: str
     ) -> None:
         """One declaration rule for Test variables and Function declarations (REQ-3.1.3.1)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Refused Variable Name Test",
                 "variables": {name: {"type": "string", "value": "v"}},
@@ -2655,7 +2734,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_invalid_element_types(self) -> None:
         """A variable's element-type sidecar must fit its value (REQ-3.1.3.19)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Element Types Test",
                 "variables": {
@@ -2679,7 +2758,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_dangling_edge(self) -> None:
         """Test that edge referencing non-existent node produces DANGLING_EDGE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Dangling Edge Test",
                 "workflow": {
@@ -2709,7 +2788,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_self_loop_edge(self) -> None:
         """Test that self-loop edge produces SELF_LOOP_EDGE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Self Loop Test",
                 "workflow": {
@@ -2732,7 +2811,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_invalid_edge_type(self) -> None:
         """Test that edge with invalid type produces INVALID_EDGE_TYPE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Invalid Edge Type Test",
                 "workflow": {
@@ -2762,7 +2841,7 @@ class TestValidateTest:
     def test_validate_test_accepts_valid_edge_types(self) -> None:
         """Test that valid edge types do not produce errors."""
         for edge_type in ("default", "smoothstep", "step", "straight"):
-            created = _create_test_with_legacy_data(
+            created = _store_unvalidated_test(
                 {
                     "name": f"Valid Edge Type {edge_type}",
                     "workflow": {
@@ -2797,7 +2876,7 @@ class TestValidateTest:
 
     def test_validate_test_accepts_edge_without_type(self) -> None:
         """Test that edges without a type field do not produce INVALID_EDGE_TYPE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Edge Type Test",
                 "workflow": {
@@ -2829,7 +2908,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_multiple_outgoing_edges(self) -> None:
         """Test that node with >1 outgoing edge produces MULTIPLE_EDGES."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Multi Out Test",
                 "workflow": {
@@ -2858,7 +2937,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_convergence_with_named_handles(self) -> None:
         """Test that node with multiple incoming edges on different handles is valid."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Convergence Test",
                 "workflow": {
@@ -2885,7 +2964,7 @@ class TestValidateTest:
 
     def test_validate_test_rejects_duplicate_incoming_on_same_handle(self) -> None:
         """Test that two edges on the same target handle produce MULTIPLE_EDGES."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Duplicate Handle Test",
                 "workflow": {
@@ -2938,7 +3017,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_dynamic_branches_from_config(self) -> None:
         """Test that If/Else with configured branches allows matching outgoing edge count."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Dynamic Branch Test",
                 "workflow": {
@@ -3012,7 +3091,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_remote_execution_body_and_then_edges(self) -> None:
         """Remote Execution is a container: its body + then egress (2 edges) is allowed."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Remote Execution Edges",
                 "workflow": {
@@ -3058,7 +3137,7 @@ class TestValidateTest:
 
     def test_validate_test_self_loop_does_not_trigger_multiple_edges(self) -> None:
         """Test that a self-loop alone does not produce MULTIPLE_EDGES."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Self Loop Only Test",
                 "workflow": {
@@ -3084,7 +3163,7 @@ class TestValidateTest:
 
     def test_validate_test_start_node_multiple_outputs(self) -> None:
         """Test that start-node with >1 outgoing edge produces MULTIPLE_EDGES."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Start Multi Out Test",
                 "workflow": {
@@ -3110,7 +3189,7 @@ class TestValidateTest:
 
     def test_validate_test_self_loop_and_multiple_edges_both_fire(self) -> None:
         """Test that self-loop + multi-edge on same node reports both errors."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Loop + Multi Test",
                 "workflow": {
@@ -3142,7 +3221,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_branching_control_multiple_outgoing(self) -> None:
         """Branching controls (e.g. Assert) may have one outgoing edge per branch."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Branching Assert Test",
                 "variables": {
@@ -3201,7 +3280,7 @@ class TestValidateTest:
 
     def test_validate_test_branching_control_exceeds_branch_count(self) -> None:
         """Branching control with more outgoing edges than branches is an error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Too Many Branches Test",
                 "variables": {
@@ -3254,7 +3333,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_scoped_control_multiple_outgoing(self) -> None:
         """Scoped controls (try-catch-finally) allow edges per branch handle."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Scoped TryCatch Test",
                 "workflow": {
@@ -3296,7 +3375,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_cross_scope_edge(self) -> None:
         """Cross-scope edge: try-path node connecting to catch-path node."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Cross Scope Test",
                 "workflow": {
@@ -3367,7 +3446,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_scope_to_outer_edge(self) -> None:
         """Cross-scope edge: try-path node connecting to outer-flow (then target)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Scope To Outer Test",
                 "workflow": {
@@ -3410,7 +3489,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_outer_to_inner_edge(self) -> None:
         """Then-path (outer flow) node connecting INTO try-path is rejected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Outer To Inner Test",
                 "workflow": {
@@ -3453,7 +3532,7 @@ class TestValidateTest:
 
     def test_validate_test_allows_intra_scope_edges(self) -> None:
         """Edges within the same try-catch path are allowed."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Intra Scope Test",
                 "workflow": {
@@ -3497,7 +3576,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_multiple_errors(self) -> None:
         """Test that multiple errors across multiple nodes are all reported."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Multi Error Test",
                 "variables": {
@@ -3537,7 +3616,7 @@ class TestValidateTest:
 
     def test_validate_test_detects_cycles(self) -> None:
         """Test that validation detects cycles in workflow."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Cyclic Test",
                 "workflow": {
@@ -3574,7 +3653,7 @@ class TestValidateTest:
 
     def test_validate_test_empty_workflow_is_valid(self) -> None:
         """Test that empty workflow (no nodes) is valid - new tests start empty."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Empty Workflow Test",
                 "workflow": {"nodes": [], "edges": []},
@@ -3589,7 +3668,7 @@ class TestValidateTest:
 
     def test_validate_test_invalid_nodes_type(self) -> None:
         """Test that non-list nodes produces INVALID_NODES error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Nodes Test",
                 "workflow": {"nodes": [], "edges": []},
@@ -3608,7 +3687,7 @@ class TestValidateTest:
         assert "INVALID_NODES" in error_codes
 
     def test_validate_test_invalid_nodes_message_says_blocks(self) -> None:
-        created = _create_test_with_legacy_data({"name": "Bad Nodes Wording"})
+        created = _store_unvalidated_test({"name": "Bad Nodes Wording"})
         test_service._update_raw_test(
             created["id"], {"workflow": {"nodes": "not-a-list", "edges": []}}
         )
@@ -3621,7 +3700,7 @@ class TestValidateTest:
 
     def test_validate_test_error_structure(self) -> None:
         """Test that error objects have the expected structure."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Structure Test",
                 "workflow": {
@@ -3652,7 +3731,7 @@ class TestValidateTest:
 
     def test_validate_test_missing_label(self) -> None:
         """Test that missing node label is detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Label Test",
                 "workflow": {
@@ -3699,7 +3778,7 @@ class TestValidateTest:
 
     def test_validate_test_missing_element_type(self) -> None:
         """Test that missing elementType is detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Block Type Test",
                 "workflow": {
@@ -3752,7 +3831,7 @@ class TestValidateTest:
         clear_registry()
         register_plugin(LogPlugin())
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Plugin Param Test",
                 "workflow": {
@@ -3788,7 +3867,7 @@ class TestValidateTest:
 
         clear_registry()
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Unregistered Plugin Test",
                 "workflow": {
@@ -3816,7 +3895,7 @@ class TestValidateTest:
 
     def test_validate_test_invalid_position_values(self) -> None:
         """Test that non-numeric position values produce INVALID_POSITION error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Position Test",
                 "workflow": {
@@ -3855,7 +3934,7 @@ class TestValidateTest:
 
     def test_validate_test_dangling_edge_source(self) -> None:
         """Test that edge with non-existent source produces DANGLING_EDGE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Dangling Source Test",
                 "workflow": {
@@ -3885,7 +3964,7 @@ class TestValidateTest:
 
     def test_validate_test_valid_variables_pass(self) -> None:
         """Test that valid variables pass validation."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Valid Variables Test",
                 "variables": {
@@ -3909,7 +3988,7 @@ class TestValidateTest:
 
     def test_validate_test_missing_workflow(self) -> None:
         """Test that test with no workflow produces MISSING_WORKFLOW error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Workflow Test",
             }
@@ -3926,7 +4005,7 @@ class TestValidateTest:
 
     def test_validate_test_invalid_edges_type(self) -> None:
         """Test that non-list edges are silently treated as empty (no error)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Edges Test",
                 "variables": {"my_var": {"type": "string", "value": ""}},
@@ -3947,7 +4026,7 @@ class TestValidateTest:
 
     def test_validate_test_missing_node_id(self) -> None:
         """Test that node without ID produces MISSING_NODE_ID error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Node ID Test",
                 "workflow": {
@@ -3988,7 +4067,7 @@ class TestValidateTest:
         Node ids are the load-bearing key for block_states, log
         attribution, breakpoints, and React Flow rendering.
         """
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Dup Node ID Test",
                 "workflow": {
@@ -4027,7 +4106,7 @@ class TestValidateTest:
 
     def test_validate_test_invalid_version(self) -> None:
         """Test that invalid semver version produces INVALID_VERSION error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Bad Version Test",
                 "workflow": {
@@ -4055,7 +4134,7 @@ class TestValidateTest:
 
     def test_validate_test_cycle_in_disconnected_component(self) -> None:
         """Test cycle detection in a disconnected graph component."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Disconnected Cycle Test",
                 "workflow": {
@@ -4093,7 +4172,7 @@ class TestValidateTest:
 
     def test_validate_test_control_version_not_registered(self) -> None:
         """Test that control with unregistered version skips param validation."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Unregistered Version Test",
                 "workflow": {
@@ -4127,7 +4206,7 @@ class TestValidateTest:
         clear_registry()
         register_plugin(LogPlugin())
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Plugin Empty Param Test",
                 "workflow": {
@@ -4163,7 +4242,7 @@ class TestValidateTest:
         clear_registry()
         register_plugin(LogPlugin())
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Non-String Any Type Test",
                 "workflow": {
@@ -4246,7 +4325,7 @@ class TestValidateTest:
 
     def test_validate_test_control_with_only_optional_params(self) -> None:
         """Test that control with all optional params passes validation."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Optional Params Test",
                 "workflow": {
@@ -4272,7 +4351,7 @@ class TestValidateTest:
 
     def test_validate_test_control_required_param_provided(self) -> None:
         """Test that required param with a provided value passes validation."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Param Provided Test",
                 "workflow": {
@@ -4357,7 +4436,7 @@ class TestValidateTest:
 
     def test_validate_test_non_dict_variable_info(self) -> None:
         """Test that non-dict variable info is handled (skips type/scope check)."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Non-Dict Var Test",
                 "variables": {
@@ -4382,7 +4461,7 @@ class TestValidateTest:
 
     def test_validate_detects_undeclared_variable_in_output_binding(self) -> None:
         """Test that variable in outputBinding but not in variables dict is detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Undeclared OutputBinding Test",
                 "variables": {},
@@ -4415,7 +4494,7 @@ class TestValidateTest:
 
     def test_validate_detects_undeclared_variable_in_a_template_field(self) -> None:
         """A '{{ }}' marker names a variable exactly as an expression does."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Undeclared Template Var Test",
                 "variables": {},
@@ -4443,7 +4522,7 @@ class TestValidateTest:
         assert undeclared["path"] == "variables.ghost_var"
 
     def test_validate_accepts_a_declared_variable_in_a_template_field(self) -> None:
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Declared Template Var Test",
                 "variables": {"known": {"type": "string", "value": "x"}},
@@ -4470,7 +4549,7 @@ class TestValidateTest:
 
     def test_validate_detects_binding_targeting_namespace_prefix(self) -> None:
         """Test that outputBinding targeting system.timeout produces namespace error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Binding Namespace Prefix Test",
                 "variables": {},
@@ -4507,7 +4586,7 @@ class TestValidateTest:
 
     def test_validate_detects_binding_targeting_bare_namespace(self) -> None:
         """Test that outputBinding targeting bare 'system' produces namespace error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Binding Bare Namespace Test",
                 "variables": {},
@@ -4541,7 +4620,7 @@ class TestValidateTest:
 
     def test_validate_detects_binding_targeting_suite_and_regression(self) -> None:
         """Test that outputBindings targeting suite.x and regression.y produce errors."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Binding Suite Regression Test",
                 "variables": {},
@@ -4586,7 +4665,7 @@ class TestValidateTest:
 
     def test_validate_detects_undeclared_variable_in_expression(self) -> None:
         """Test that variable in expression field but not in variables dict is detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Undeclared Expression Test",
                 "variables": {
@@ -4659,7 +4738,7 @@ class TestValidateTest:
                 }
             )
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Dedup Test",
                 "variables": {},
@@ -4680,7 +4759,7 @@ class TestValidateTest:
 
     def test_validate_detects_undeclared_variable_in_setter_target(self) -> None:
         """Test that var_setter targeting undeclared variable is detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Setter Undeclared Target Test",
                 "variables": {},
@@ -4716,7 +4795,7 @@ class TestValidateTest:
 
     def test_validate_namespace_keyword_not_flagged_as_undeclared(self) -> None:
         """Namespace keywords (system, suite, regression) should not be flagged as undeclared."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Namespace Expression Test",
                 "variables": {
@@ -4758,7 +4837,7 @@ class TestValidateTest:
 
     def test_validate_setter_targeting_namespace_variable(self) -> None:
         """Test that var_setter targeting namespace variables produces error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Setter Namespace Target Test",
                 "variables": {},
@@ -4795,7 +4874,7 @@ class TestValidateTest:
 
     def test_validate_setter_targeting_bare_reserved_keyword(self) -> None:
         """Test that var_setter targeting bare 'system' keyword produces error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Setter Bare Keyword Test",
                 "variables": {},
@@ -4832,7 +4911,7 @@ class TestValidateTest:
 
     def test_validate_setter_targeting_suite_and_regression_namespace(self) -> None:
         """Test that var_setter targeting suite.x and regression.y produces errors."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Setter Suite Reg Namespace Test",
                 "variables": {},
@@ -4875,7 +4954,7 @@ class TestValidateTest:
 
     def test_validate_setter_targeting_test_scoped_variable_passes(self) -> None:
         """Test that var_setter targeting test-scoped variable produces no error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Setter Test Scoped Test",
                 "variables": {
@@ -4916,7 +4995,7 @@ class TestValidateTest:
 
     def test_validate_ignores_words_inside_string_literals(self) -> None:
         """Test that words inside string literals in expressions are not treated as variables."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "String Literal Expression Test",
                 "variables": {
@@ -4957,7 +5036,7 @@ class TestValidateTest:
 
     def test_validate_ignores_fstring_prefix(self) -> None:
         """Test that f-string prefix 'f' is not treated as a variable reference."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "F-String Prefix Test",
                 "variables": {
@@ -4998,7 +5077,7 @@ class TestValidateTest:
 
     def test_validate_ignores_declared_variables(self) -> None:
         """Test that variables that ARE declared produce no UNDECLARED_VARIABLE error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Declared Var Test",
                 "variables": {
@@ -5030,7 +5109,7 @@ class TestValidateTest:
 
     def test_validate_ignores_profile_alias_dotted_access(self) -> None:
         """Test that profile alias.field expressions are not flagged as undeclared."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Profile Alias Dotted Access Test",
                 "variables": {},
@@ -5077,7 +5156,7 @@ class TestValidateTest:
 
     def test_validate_assert_missing_assertion_ids(self) -> None:
         """Test that assert node with assertion items missing IDs produces MISSING_ASSERTION_ID."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Assert Missing IDs Test",
                 "workflow": {
@@ -5121,7 +5200,7 @@ class TestValidateTest:
 
     def test_validate_assert_missing_ids_in_nested_groups(self) -> None:
         """Test that assertion items nested in groups without IDs are detected."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Assert Nested Missing IDs",
                 "workflow": {
@@ -5177,7 +5256,7 @@ class TestValidateTest:
 
     def test_validate_assert_with_all_ids_passes(self) -> None:
         """Test that assert node with all assertion IDs present does not produce error."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Assert All IDs Present",
                 "workflow": {
@@ -5224,7 +5303,7 @@ class TestValidateTest:
 
     def test_validate_disabled_assert_skips_assertion_id_check(self) -> None:
         """Test that disabled assert node is not checked for missing assertion IDs."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Disabled Assert Test",
                 "workflow": {
@@ -5271,7 +5350,7 @@ class TestSetterValidationEdgeCases:
 
     def test_setter_with_non_dict_variables_skips_validation(self) -> None:
         """Test that non-dict setter variables value is safely skipped."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Non-Dict Setter Vars",
                 "workflow": {
@@ -5304,7 +5383,7 @@ class TestSetterValidationEdgeCases:
 
     def test_setter_with_empty_target_name_skips_validation(self) -> None:
         """Test that empty string target name in setter is safely skipped."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Empty Target Name",
                 "variables": {"real_var": {"type": "string", "value": "x"}},
@@ -5527,7 +5606,7 @@ class TestRunContextValidation:
 
     def test_run_context_escalates_required_param_missing_to_error(self) -> None:
         """Test that REQUIRED_PARAM_MISSING becomes an error on run context."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Run Context Test",
                 "workflow": {
@@ -5560,7 +5639,7 @@ class TestRunContextValidation:
 
     def test_run_context_escalates_required_param_empty_to_error(self) -> None:
         """Test that REQUIRED_PARAM_EMPTY becomes an error on run context."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Run Context Empty Test",
                 "workflow": {
@@ -5622,7 +5701,7 @@ class TestValidateUnsavedTest:
 
     def _stored_pause_test(self) -> str:
         """A stored test whose Delay reads the integer variable pause_ms it declares."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Pause",
                 "variables": {"pause_ms": {"type": "integer", "value": 5}},
@@ -5970,7 +6049,7 @@ class TestFixTest:
 
     def test_fix_test_generates_node_id(self) -> None:
         """Test that fix_test generates ID for nodes missing one."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Missing ID Fix",
                 "workflow": {
@@ -6556,7 +6635,7 @@ class TestFixTest:
         clear_registry()
         register_plugin(HTTPClientPlugin())
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Fix Undeclared Inferred Type",
                 "variables": {},
@@ -6597,7 +6676,7 @@ class TestFixTest:
 
     def test_fix_creates_undeclared_variable_string_default(self) -> None:
         """Test that fix creates undeclared variable as string when no type info."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Fix Undeclared String Default",
                 "variables": {},
@@ -6642,7 +6721,7 @@ class TestFixTest:
         clear_registry()
         register_plugin(HTTPClientPlugin())
 
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Fix Undeclared Type Conflict",
                 "variables": {},
@@ -7058,7 +7137,7 @@ class TestDependencyGraph:
     def test_get_dependency_graph_extracts_block_refs(self) -> None:
         """Test that dependency graph extracts block references."""
         block_id = str(uuid.uuid4())
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Deps Test",
                 "workflow": {
@@ -7084,44 +7163,6 @@ class TestDependencyGraph:
         result = test_service.get_test_dependency_graph("nonexistent-id")
 
         assert result is None
-
-
-class TestExecutions:
-    """Test suite for get_test_executions service function."""
-
-    def setup_method(self) -> None:
-        """Reset test storage before each test."""
-        test_service._clear_storage()
-
-    def test_get_executions_returns_empty_list(self) -> None:
-        """Test getting executions for a test with no history."""
-        created = test_service.create_test({"name": "Exec Test"})
-
-        result = test_service.get_test_executions(created["id"])
-
-        assert result is not None
-        assert result["executions"] == []
-        assert result["total"] == 0
-
-    def test_get_executions_returns_none_when_not_found(self) -> None:
-        """Test that get_executions returns None when not found."""
-        result = test_service.get_test_executions("nonexistent-id")
-
-        assert result is None
-
-    def test_get_executions_supports_pagination(self) -> None:
-        """Test that executions support pagination."""
-        created = test_service.create_test({"name": "Exec Test"})
-        # Add some executions
-        test_service._save_executions(
-            created["id"], [{"id": f"exec-{i}", "status": "passed"} for i in range(25)]
-        )
-
-        result = test_service.get_test_executions(created["id"], page=2, per_page=10)
-
-        assert result is not None
-        assert len(result["executions"]) == 10
-        assert result["total"] == 25
 
 
 class TestHistory:
@@ -7223,7 +7264,7 @@ class TestFixTestStaleTargetHandle:
 
     def test_validate_detects_stale_target_handle(self) -> None:
         """Edge with ingress_1 targetHandle but only 1 incoming edge is STALE."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Stale Handle Test",
                 "workflow": {
@@ -7271,7 +7312,7 @@ class TestFixTestStaleTargetHandle:
             },
         }
         edge = {"id": "e1", "source": "start-node", "target": "node-1", "targetHandle": "ingress_1"}
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {"name": "Stale Handle Wording", "workflow": {"nodes": [node], "edges": [edge]}}
         )
 
@@ -7719,7 +7760,7 @@ def _later_try_catch_graph() -> tuple[list[dict[str, Any]], list[dict[str, Any]]
 
 
 def _cross_scope_edge_ids(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> list[str]:
-    created = _create_test_with_legacy_data(
+    created = _store_unvalidated_test(
         {"name": f"Scope {uuid.uuid4()}", "workflow": {"nodes": nodes, "edges": edges}}
     )
     result = test_service.validate_test(created["id"], context="import")
@@ -8052,66 +8093,21 @@ class TestRestoreVersion:
         with pytest.raises(ValidationException, match="not found"):
             test_service.restore_test_version(created["id"], "99.0.0")
 
-    def test_restore_version_handles_malformed_version(self) -> None:
-        """Test that restore handles tests with malformed version strings."""
-        from tests.api.test_helpers import save_test_file
+    @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
+    def test_restore_version_refuses_a_stored_version_that_is_not_semantic(
+        self, stored: str
+    ) -> None:
+        """A stored version that is not MAJOR.MINOR.PATCH refuses the restore; nothing is saved."""
+        from tests.api.test_helpers import load_test_file
 
-        # Create a test with malformed version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Malformed Version Test",
-                "version": "invalid",  # Not semver format
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
+        test_id, before, history = _test_stored_with_version(stored)
 
-        # Also need to set up version history by creating a versions.yaml file
+        with pytest.raises(ValidationException) as exc_info:
+            test_service.restore_test_version(test_id, "1.0.0")
 
-        import yaml
-
-        from tests.api.test_helpers import get_test_dir
-
-        versions_file = get_test_dir(test_id) / "versions.yaml"
-        versions = [{"version": "invalid", "snapshot": {"name": "Original"}, "is_latest": True}]
-        with open(versions_file, "w", encoding="utf-8") as f:
-            yaml.dump(versions, f)
-
-        result = test_service.restore_test_version(test_id, "invalid")
-
-        assert result is not None
-        # Should default to 1.1.0 when version can't be parsed
-        assert result["version"] == "1.1.0"
-
-    def test_restore_version_handles_short_version(self) -> None:
-        """Test that restore handles tests with short version strings."""
-        import yaml
-
-        from tests.api.test_helpers import get_test_dir, save_test_file
-
-        # Create a test with short version directly
-        test_id = str(uuid.uuid4())
-        save_test_file(
-            {
-                "id": test_id,
-                "name": "Short Version Test",
-                "version": "1.0",  # Only 2 parts
-                "workflow": {"nodes": [], "edges": []},
-            }
-        )
-
-        # Set up version history
-        versions_file = get_test_dir(test_id) / "versions.yaml"
-        versions = [{"version": "1.0", "snapshot": {"name": "Original"}, "is_latest": True}]
-        with open(versions_file, "w", encoding="utf-8") as f:
-            yaml.dump(versions, f)
-
-        result = test_service.restore_test_version(test_id, "1.0")
-
-        assert result is not None
-        # Should default to 1.1.0 when version is too short
-        assert result["version"] == "1.1.0"
+        assert exc_info.value.message == _not_semantic_message(stored)
+        assert load_test_file(test_id) == before
+        assert test_service._load_versions(test_id) == history
 
 
 class TestClearStorage:
@@ -8303,7 +8299,7 @@ class TestCreateTestVariableCleanup:
         test_service._clear_storage()
 
     def test_create_test_allows_declared_vars(self) -> None:
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Declared Vars Test",
                 "variables": {
@@ -8374,7 +8370,7 @@ class TestGetTestVariableResolution:
 
     def test_get_test_does_not_warn_for_an_unset_variable(self) -> None:
         """An unset declaration is a legitimate state, not a warning."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "No Value Warn Test",
                 "variables": {
@@ -8388,7 +8384,7 @@ class TestGetTestVariableResolution:
         assert "value" not in result["variables"]["orphaned_var"]
 
     def test_get_test_does_not_warn_for_an_unset_secret(self) -> None:
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Unset Secret Test",
                 "variables": {
@@ -8417,7 +8413,7 @@ class TestGetTestVariableResolution:
 
     def test_get_test_passes_through_non_dict_variable(self) -> None:
         """Test that non-dict variable entries pass through unchanged."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "Non-Dict Var Test",
                 "variables": {
@@ -8653,7 +8649,7 @@ class TestInMemoryCache:
 
     def test_full_test_load_includes_workflow(self) -> None:
         """_load_test still returns full data including workflow."""
-        created = _create_test_with_legacy_data(
+        created = _store_unvalidated_test(
             {
                 "name": "FullTest",
                 "workflow": {"nodes": [{"id": "n1"}], "edges": []},
@@ -8667,7 +8663,7 @@ class TestInMemoryCache:
 
     def test_list_all_tests_full_includes_workflow(self) -> None:
         """_list_all_tests_full returns tests with workflow for backup."""
-        _create_test_with_legacy_data(
+        _store_unvalidated_test(
             {
                 "name": "BackupTest",
                 "workflow": {"nodes": [{"id": "n1"}], "edges": []},
@@ -8989,7 +8985,7 @@ class TestListTestDocuments:
 
     def test_every_stored_test_comes_back_with_its_history_rows(self) -> None:
         """One pair per Test: the stored document whole, then its history rows."""
-        first = _create_test_with_legacy_data(
+        first = _store_unvalidated_test(
             {
                 "name": "First",
                 "workflow": {"nodes": [{"id": "n1"}], "edges": []},

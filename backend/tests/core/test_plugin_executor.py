@@ -8,10 +8,13 @@ Tests requirements:
 import datetime
 import json
 import re
+import time
 from typing import Any
 
 import pytest
 import yaml
+
+from wavecore.core.table import Table
 
 
 class TestPluginExecutor:
@@ -2278,6 +2281,25 @@ class TestTemplateReadOnlyViolation:
 
         assert template_read_only_violation("plain text") is None
 
+    def test_a_long_unclosed_run_of_braces_is_scanned_in_linear_time(self) -> None:
+        from wavecore.core.execution.plugin_executor import template_read_only_violation
+
+        start = time.perf_counter()
+        violation = template_read_only_violation("{" * 50_000)
+        elapsed = time.perf_counter() - start
+
+        assert violation is None
+        assert elapsed < 1.0
+
+
+class TestTemplateFillMarkers:
+    """Block settings find ``{{ }}`` markers by the one shared marker rule."""
+
+    def test_a_second_opening_starts_the_marker_over(self) -> None:
+        from wavecore.core.execution.plugin_executor import _evaluate_template
+
+        assert _evaluate_template("{{ a {{ b }}", {"b": 7}, setting="body") == "{{ a 7"
+
 
 _QUERY_ESCAPE = {
     "by": "query_language",
@@ -2285,8 +2307,12 @@ _QUERY_ESCAPE = {
     "default": "dql",
 }
 
+_SECRET_TABLE = Table.from_list([{"name": "alpha", "qty": 1}])
 
-def _resolve_query(parameters, variables, **kwargs):
+
+def _resolve_query(
+    parameters: dict[str, Any], variables: dict[str, Any], **kwargs: Any
+) -> dict[str, Any]:
     """The Query row as a template field carrying its escape spec (REQ-3.3.2.6)."""
     from wavecore.core.execution.plugin_executor import resolve_parameters
 
@@ -2536,6 +2562,127 @@ class TestTemplateEscapeSecretForms:
         )
 
         assert registry.registered == [('"s3cretvalue"', "template escape")]
+
+    def test_a_secret_inside_a_quoted_dql_value_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(('p"w0rd',))
+
+        result = _resolve_query(
+            {"query": 'msg: "{{ prefix + token }}"'},
+            {"prefix": "id ", "token": 'p"w0rd'},
+            registry=registry,
+        )
+
+        assert result["query"] == r'msg: "id p\"w0rd"'
+        assert registry.registered == [(r"p\"w0rd", "template escape")]
+
+    def test_a_secret_inside_a_bare_dql_value_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(("pass(word)",))
+
+        result = _resolve_query(
+            {"query": "msg: {{ prefix + token }}"},
+            {"prefix": "id ", "token": "pass(word)"},
+            registry=registry,
+        )
+
+        assert result["query"] == r"msg: id pass\(word\)"
+        assert registry.registered == [(r"pass\(word\)", "template escape")]
+
+    def test_a_secret_inside_a_json_string_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(("a\\b\fc",))
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"match": {"m": "{{ prefix + token }}"}}'},
+            {"prefix": "id ", "token": "a\\b\fc"},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"match": {"m": "id a\\b\fc"}}'
+        assert registry.registered == [(r"a\\b\fc", "template escape")]
+
+    def test_a_secret_inside_a_standing_alone_json_text_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(('s3"cret',))
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"term": {"user": {{ prefix + token }}}}'},
+            {"prefix": "id ", "token": 's3"cret'},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"term": {"user": "id s3\"cret"}}'
+        assert registry.registered == [(r"s3\"cret", "template escape")]
+
+    def test_the_run_registry_scrubs_a_secret_escaped_inside_a_larger_value(self) -> None:
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("token", "pass(word)", "variable")
+
+        _resolve_query(
+            {"query": "msg: {{ prefix + token }}"},
+            {"prefix": "id ", "token": "pass(word)"},
+            registry=registry,
+        )
+
+        assert r"pass\(word\)" in registry.scan_values()
+
+    def test_the_run_registry_scrubs_a_secret_leaf_in_a_standing_alone_json_map(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("keys", ["pa\bss\fw0rd", "second-k3y"], "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"match": {{ filter }}}'},
+            {"filter": {"pw": "pa\bss\fw0rd"}},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"match": {"pw":"pa\bss\fw0rd"}}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"match": {"pw":"********"}}'
+
+    @pytest.mark.parametrize(
+        ("value", "filled"),
+        [
+            (_SECRET_TABLE, '[{"name":"alpha","qty":1}]'),
+            (["alpha", 1e-07], '["alpha",1e-07]'),
+            ({"host": "db.internal", "rate": 1e-07}, '{"host":"db.internal","rate":1e-07}'),
+        ],
+        ids=["table", "list", "map"],
+    )
+    def test_the_run_registry_scrubs_a_secret_container_standing_alone_in_json(
+        self, value: Any, filled: str
+    ) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", value, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"terms": {{ rows }}}'},
+            {"rows": value},
+            registry=registry,
+        )
+
+        assert result["query"] == '{"terms": ' + filled + "}"
+        assert mask_text(result["query"], registry.scan_values()) == '{"terms": ********}'
+
+    def test_the_run_registry_scrubs_a_secret_table_filled_inside_a_json_string(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", _SECRET_TABLE, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"m": "{{ rows }}"}'},
+            {"rows": _SECRET_TABLE},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"m": "[{\"name\":\"alpha\",\"qty\":1}]"}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"m": "********"}'
 
     def test_a_value_that_is_no_secret_registers_nothing(self) -> None:
         registry = _SpyRegistry(("hunter2secret",))

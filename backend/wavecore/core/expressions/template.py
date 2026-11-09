@@ -5,8 +5,8 @@ Single braces {} are not markers (safe for JSON, YAML, XML).
 
 import re
 
-# Matches {{...}} but NOT single braces {..}
-_TEMPLATE_PATTERN = re.compile(r"\{\{(.+?)\}\}")
+# Matches {{...}} but NOT single braces {..}; the body holds no {{, so a scan stays linear.
+_TEMPLATE_PATTERN = re.compile(r"\{\{((?:[^{\n]|\{(?!\{))+?)\}\}")
 
 
 def template_expressions(template: str) -> list[str]:

@@ -8,7 +8,7 @@ On-disk layout (v2 - append-only):
       runs.yaml            append-only; one entry per dispatched test
       status.yaml          append-only; one entry per test state transition
       logs/<run_id>.yaml   append-only; per-test console output
-      snapshots/<run_id>.yaml  per-test terminal snapshot; written once
+      snapshots/<run_id>.yaml  per-test terminal snapshot; a Stop writes it again on unwind
       variables.yaml       (test-type executions only) end-of-run variables
 
 No file that grows with the size of a run is ever rewritten. Every live write
@@ -30,7 +30,7 @@ import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.entity_cache import DirectoryCache
-from wavecore.api.services.storage_paths import get_executions_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_executions_storage_path
 from wavecore.core.namespace_base import is_engine_injected
 from wavecore.core.secrets.masking import mask_structure
 from wavecore.core.secrets.registry import SecretRegistry
@@ -121,7 +121,7 @@ def _ensure_storage_dir() -> None:
 
 
 def _get_execution_dir(execution_id: str) -> Path:
-    return get_executions_storage_path() / execution_id
+    return entity_dir(get_executions_storage_path(), execution_id)
 
 
 def _logs_dir(execution_id: str) -> Path:
@@ -933,8 +933,8 @@ def get_active_tracked_executions(entity_type: str, entity_id: str) -> list[str]
 
     An execution "holds" the entity when its ``entity_type`` and ``entity_id``
     match and its ``status`` is non-terminal (``running`` or ``paused``). The
-    three entity delete services call this to decide whether to reject the
-    delete with a ``409 Conflict`` and surface the blocking IDs to the caller.
+    Suite and Regression delete services call this to decide whether to reject
+    the delete with a ``409 Conflict`` and surface the blocking IDs to the caller.
     """
     _ensure_cache_loaded()
     return [

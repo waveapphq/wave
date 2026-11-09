@@ -962,6 +962,45 @@ class TestBulkExecutionOperationsAdd:
         assert response.status_code == 400
         assert "entity_id" in response.json()["detail"].lower()
 
+    def test_add_several_suite_executions_before_the_store_was_read(
+        self, client_admin_active: TestClient
+    ) -> None:
+        from wavecore.api.services.executions import _storage as exec_storage
+
+        suites = [SUITE_UUID_1, SUITE_UUID_2]
+        client_admin_active.post(
+            "/admin/bulk/suites",
+            json={
+                "operations": [
+                    {"op": "add", "entity": {"id": s, "name": f"Suite {s[:4]}", "version": "1.0.0"}}
+                    for s in suites
+                ]
+            },
+        )
+        exec_storage._clear_in_memory_cache()
+
+        response = client_admin_active.post(
+            "/admin/bulk/executions",
+            json={
+                "operations": [
+                    {
+                        "op": "add",
+                        "entity": {
+                            "id": exec_id,
+                            "entity_type": "suite",
+                            "entity_id": suite_id,
+                            "status": "failed",
+                        },
+                    }
+                    for exec_id, suite_id in zip([EXEC_UUID_1, EXEC_UUID_2], suites, strict=True)
+                ]
+            },
+        )
+
+        assert response.status_code == 200
+        assert [r["status"] for r in response.json()["results"]] == ["created", "created"]
+        assert {EXEC_UUID_1, EXEC_UUID_2} <= set(exec_storage._execution_storage)
+
 
 class TestBulkExecutionOperationsModify:
     """Test suite for bulk execution MODIFY operations (REQ-5.2.6.4.1)."""

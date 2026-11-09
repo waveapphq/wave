@@ -8,8 +8,10 @@ import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.storage_paths import (
+    entity_dir,
     get_base_path,
     get_blocks_storage_path,
+    is_entity_id,
 )
 from wavecore.storage import FileBasedStorage
 
@@ -59,11 +61,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_block_dir(block_id: str) -> Path:
     """Get directory path for a block."""
-    return get_blocks_storage_path() / block_id
+    return entity_dir(get_blocks_storage_path(), block_id)
 
 
 def _load_block(block_id: str) -> dict[str, Any] | None:
     """Load block from file storage."""
+    if not is_entity_id(block_id):
+        return None
     block_file = _get_block_dir(block_id) / "block.yaml"
     if not block_file.exists():
         return None
@@ -258,16 +262,6 @@ def _validate_param_bindings(plugin_id: str, params: dict[str, Any]) -> list[str
     except FileNotFoundError:
         pass
     return errors
-
-
-def _bump_version(current_version: str, version_bump: str) -> str:
-    """Compute the next semantic version string."""
-    parts = [int(x) for x in current_version.split(".")]
-    if version_bump == "major":
-        return f"{parts[0] + 1}.0.0"
-    if version_bump == "minor":
-        return f"{parts[0]}.{parts[1] + 1}.0"
-    return f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
 
 
 def _check_backward_compatibility(block: dict[str, Any], data: dict[str, Any]) -> None:

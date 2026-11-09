@@ -147,7 +147,7 @@ class TestParseManifest:
             _SECRET_DOCUMENT,
         ]
 
-    def test_yaml_text_is_no_longer_a_manifest(self) -> None:
+    def test_yaml_text_is_not_a_manifest(self) -> None:
         with pytest.raises(ValueError, match=exact(_PARSE_PREFIX + _NO_VALUE_DETAIL)):
             parse_manifest(_YAML_TEXT)
 

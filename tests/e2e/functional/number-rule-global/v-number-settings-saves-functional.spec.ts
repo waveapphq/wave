@@ -51,10 +51,10 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/** One whole ERROR log line; a line written while a request is served carries the request's short id. */
-function errorLine(message: string): RegExp {
+/** One whole FATAL log line; a line written while a request is served carries the request's short id. */
+function fatalLine(message: string): RegExp {
   return new RegExp(
-    `^\\d{2}:\\d{2}:\\d{2}\\.\\d{3} ERROR (?:\\[[0-9a-f]{8}\\] )?${escapeRegExp(message)}$`,
+    `^\\d{2}:\\d{2}:\\d{2}\\.\\d{3} FATAL (?:\\[[0-9a-f]{8}\\] )?${escapeRegExp(message)}$`,
     'm',
   )
 }
@@ -184,7 +184,7 @@ test.describe('V-NUMBER-SETTINGS-SAVES: Settings writes and the config file', ()
 
     expect(backend.exitCode, `the backend should have exited:\n${backend.output()}`).toBe(1)
     expect(backend.output()).toMatch(
-      errorLine(`Config file ${backend.configFile}: mcp.port must be a whole number from 1024 to 65535`),
+      fatalLine(`Config file ${backend.configFile}: mcp.port must be a whole number from 1024 to 65535`),
     )
   })
 

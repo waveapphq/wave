@@ -290,7 +290,11 @@ def _restore_writable(root: Path) -> None:
 
 @asynccontextmanager
 async def _endpoint(
-    root: Path, wave: WaveDirs, server_class: type[WaveSFTPServer], subsystem: bool
+    root: Path,
+    wave: WaveDirs,
+    server_class: type[WaveSFTPServer],
+    subsystem: bool,
+    host_identity: str | None,
 ) -> AsyncIterator[SFTPEndpoint]:
     (root / HOME.lstrip("/")).mkdir(parents=True)
     state = ServerState(root)
@@ -311,7 +315,16 @@ async def _endpoint(
         )
         connection = opened.connection
         registry = SSHSessionRegistry()
-        registry.register(SESSION_ID, connection, None, SFTP_HOST, None, None, connect_timeout=30)
+        registry.register(
+            SESSION_ID,
+            connection,
+            None,
+            SFTP_HOST,
+            None,
+            None,
+            connect_timeout=30,
+            host_identity=host_identity,
+        )
         try:
             yield SFTPEndpoint(port, root, state, registry, connection, wave, tracked)
         finally:
@@ -357,16 +370,20 @@ def log() -> LogRecorder:
 
 @pytest.fixture
 async def sftp_server(tmp_path: Path, wave_dirs: WaveDirs) -> AsyncIterator[SFTPServerStarter]:
-    """Start endpoints: `await sftp_server(server_class=WaveSFTPServer, subsystem=True)`."""
+    """Start endpoints: `await sftp_server(server_class, subsystem=True, host_identity=None)`."""
     started = 0
 
     async def start(
-        server_class: type[WaveSFTPServer] = WaveSFTPServer, *, subsystem: bool = True
+        server_class: type[WaveSFTPServer] = WaveSFTPServer,
+        *,
+        subsystem: bool = True,
+        host_identity: str | None = None,
     ) -> SFTPEndpoint:
         nonlocal started
         started += 1
         root = tmp_path / ("server" if started == 1 else f"server{started}")
-        return await stack.enter_async_context(_endpoint(root, wave_dirs, server_class, subsystem))
+        endpoint = _endpoint(root, wave_dirs, server_class, subsystem, host_identity)
+        return await stack.enter_async_context(endpoint)
 
     async with AsyncExitStack() as stack:
         yield start

@@ -635,22 +635,21 @@ class TestFieldExpressionRestrictions:
             ), f"Read-only method incorrectly blocked: {method}"
 
 
-class TestRetiredCredentialHelpers:
-    """The credential expression helpers are deleted: auth is
-    the HTTP plugin's Auth config section, not an expression-language feature."""
+class TestNoCredentialHelpersInExpressions:
+    """Auth is the HTTP plugin's Auth config section, not an expression-language feature."""
 
-    def test_retired_helper_names_are_not_whitelisted(self) -> None:
+    def test_credential_helper_names_are_not_whitelisted(self) -> None:
         """basic_auth / bearer / secret must not exist in the eval sandbox."""
         for name in ("basic_auth", "bearer", "secret"):
             assert name not in SAFE_BUILTINS
 
-    def test_secret_result_builtins_surface_is_deleted(self) -> None:
-        """The secret-result metadata surface is gone with the helpers."""
+    def test_security_module_has_no_secret_result_builtins(self) -> None:
+        """The security module has no SECRET_RESULT_BUILTINS."""
         import wavecore.core.expressions.security as security
 
         assert not hasattr(security, "SECRET_RESULT_BUILTINS")
 
-    def test_retired_helpers_fail_evaluation_as_unknown_functions(self) -> None:
+    def test_credential_helpers_fail_evaluation_as_unknown_functions(self) -> None:
         from wavecore.core.execution.plugin_executor import evaluate_expression
         from wavecore.core.expressions.errors import InvalidExpressionError
 

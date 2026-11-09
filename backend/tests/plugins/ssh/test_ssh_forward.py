@@ -23,6 +23,7 @@ from tests.plugins.ssh.conftest import (
     channel_connection,
     tunnel_session,
 )
+from wavecore.core.errors.error_handling import ErrorClassifier
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._ssh_forward import cause_phrase, start_forwarder, validate_target
 
@@ -738,6 +739,25 @@ class TestValidateTarget:
         async with forwarding_ssh(refuse=refuse) as conn:
             with pytest.raises(ConnectionError, match=exact(check_failed(cause))):
                 await validate_target(session_record(conn), DB, DB_PORT)
+
+    @pytest.mark.parametrize(
+        ("code", "reason", "retryable"),
+        [
+            (asyncssh.OPEN_ADMINISTRATIVELY_PROHIBITED, "open failed", False),
+            (asyncssh.OPEN_CONNECT_FAILED, "Connection refused", True),
+            (asyncssh.OPEN_RESOURCE_SHORTAGE, "resource shortage", True),
+        ],
+        ids=["code 1", "code 2", "code 4"],
+    )
+    async def test_only_a_policy_refusal_is_not_worth_retrying(
+        self, code: int, reason: str, retryable: bool
+    ) -> None:
+        connection = channel_connection(refuse=reason, code=code)
+
+        with pytest.raises(ConnectionError) as failed:
+            await validate_target(session_record(connection), DB, DB_PORT)
+
+        assert ErrorClassifier().classify(failed.value).is_retryable is retryable
 
     async def test_an_unknown_channel_type_fails_the_check_with_the_host_reason(self) -> None:
         connection = channel_connection(refuse="Unknown channel type", code=3)

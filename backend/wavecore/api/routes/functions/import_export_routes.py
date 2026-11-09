@@ -17,6 +17,7 @@ from fastapi import APIRouter, Body, File, Form, Query, UploadFile
 from fastapi.responses import Response
 
 from wavecore.api.exceptions import ValidationException
+from wavecore.api.routes.shared import id_list_field
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.functions import import_export
@@ -30,7 +31,7 @@ def _content_type(fmt: str) -> str:
 
 @router.post("/export", response_model=None)
 async def export_functions(payload: Annotated[dict[str, Any], Body(...)]) -> Response:
-    ids = payload.get("ids") or []
+    ids = id_list_field(payload, "ids")
     fmt = payload.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(payload.get("secrets"))
     if not ids:

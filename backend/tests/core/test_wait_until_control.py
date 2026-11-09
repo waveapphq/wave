@@ -139,16 +139,16 @@ class TestWaitUntilMetadata:
         }
 
 
-class TestWaitUntilRemovedSchema:
-    """Section 4.6 deletions - no compat shim, WAVE is v1."""
+class TestWaitUntilAbsentFields:
+    """The schema has no condition string, poll interval or timedOut output."""
 
-    def test_the_bare_condition_string_parameter_is_gone(self) -> None:
+    def test_there_is_no_bare_condition_string_parameter(self) -> None:
         assert "condition" not in [param.name for param in parameters()]
 
-    def test_poll_interval_is_gone(self) -> None:
+    def test_there_is_no_poll_interval_parameter(self) -> None:
         assert "poll_interval" not in [param.name for param in parameters()]
 
-    def test_the_timed_out_output_is_gone(self) -> None:
+    def test_there_is_no_timed_out_output(self) -> None:
         assert "timedOut" not in [out["name"] for out in metadata()["output_schema"]]
 
 

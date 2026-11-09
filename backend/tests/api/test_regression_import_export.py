@@ -28,6 +28,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_ID_LIST_FIELDS, assert_refused
 from tests.api.download_name_helpers import EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 from wavecore.core.secrets.cipher import SecretCipher, is_secret_envelope
@@ -1019,6 +1020,16 @@ class TestExportBulkRegressionsEndpoint:
         """Bulk export with empty regression_ids returns 400."""
         response = client.post("/regressions/export", json={"regression_ids": [], "format": "yaml"})
         assert response.status_code == 400
+
+    @pytest.mark.parametrize("regression_ids", NOT_ID_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_of_strings_are_refused(
+        self, client: TestClient, regression_ids: Any
+    ) -> None:
+        response = client.post(
+            "/regressions/export", json={"regression_ids": regression_ids, "format": "yaml"}
+        )
+
+        assert_refused(response, "'regression_ids' must be a list of ID strings")
 
     def test_invalid_format_returns_400(self, client: TestClient) -> None:
         """Bulk export with invalid format returns 400."""

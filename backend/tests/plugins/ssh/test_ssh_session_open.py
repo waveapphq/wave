@@ -135,7 +135,7 @@ class TestMetadata:
 
         assert names == EXPECTED_PARAM_ORDER
 
-    def test_obsolete_profile_model_is_gone(self) -> None:
+    def test_there_is_no_profile_or_keep_alive_parameter(self) -> None:
         names = [p["name"] for p in SSHSessionOpenPlugin().metadata["parameters"]]
 
         assert "profile" not in names
@@ -152,6 +152,17 @@ class TestMetadata:
             if name in ("host", "port", "username"):
                 continue
             assert params[name].get("required") is False
+
+    def test_parent_session_alone_is_required_by_a_mode(self) -> None:
+        params = _params_by_name(SSHSessionOpenPlugin())
+
+        conditional = {
+            name: param.get("required_when") or param.get("required_when_all")
+            for name, param in params.items()
+            if param.get("required_when") or param.get("required_when_all")
+        }
+
+        assert conditional == {"parent_session_id": {"field": "use_parent", "values": ["true"]}}
 
     def test_parameter_types(self) -> None:
         params = _params_by_name(SSHSessionOpenPlugin())
@@ -236,7 +247,7 @@ class TestMetadata:
         for output in SSHSessionOpenPlugin().metadata["output_schema"]:
             assert output.get("description")
 
-    def test_obsolete_outputs_are_gone(self) -> None:
+    def test_there_is_no_remote_host_or_connection_status_output(self) -> None:
         names = [o["name"] for o in SSHSessionOpenPlugin().metadata["output_schema"]]
 
         assert "remote_host" not in names
@@ -290,9 +301,8 @@ class TestTheBlocksThatReferenceTheSession:
         outputs = {o["name"]: o for o in SSHSessionOpenPlugin().metadata["output_schema"]}
 
         assert outputs["session_id"]["description"] == (
-            "Handle for this session: bind it to a variable and reference it from SSH "
-            "Session Exec, SSH Session Script, SSH Session Close, SSH Tunnel Open, SFTP, "
-            "Remote Execution, or a chained Open's Parent Session"
+            "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+            "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
         )
 
     def test_the_module_docstring_names_every_consumer(self) -> None:
@@ -1474,6 +1484,26 @@ class TestHostKeyUnderTheTunnelsFarHost:
             pass
 
         assert trusted_entries() == [_entry(SSH_HOST, port)]
+
+    async def test_a_loopback_far_end_on_a_session_through_a_tunnel_records_its_far_host(
+        self, ssh_endpoint: SSHEndpoint
+    ) -> None:
+        registry = _through_tunnel(f"{FAR_HOST}:22", ssh_endpoint)
+        params = _tunnel_params(ssh_endpoint, "accept-new")
+        logger = MagicMock()
+
+        async with _opened_session(registry, params) as first:
+            registry.close_tunnel(f"t{ssh_endpoint.port}")
+            registry.add_tunnel(
+                first["session_id"], "t-inner", MagicMock(), ssh_endpoint.port, "127.0.0.1:2200"
+            )
+            async with _opened_session(registry, params, logger) as second:
+                record = registry.get(second["session_id"])
+                assert record is not None
+                assert record["host_identity"] == FAR_HOST
+
+        assert _tunnel_line(ssh_endpoint.port, f"{FAR_HOST}:2200") in _info(logger)
+        assert trusted_entries() == [_entry(FAR_HOST, 22), _entry(FAR_HOST, 2200)]
 
     async def test_accept_new_reuses_the_far_host_record_on_the_next_session(
         self, ssh_endpoint: SSHEndpoint

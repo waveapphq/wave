@@ -11,12 +11,12 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
+
 from ..rest import K8sClient, K8sResource
 from ._context import require_context
 from ._errors import K8sReadRejected, map_api_error
 from ._outputs import (
-    block_failure,
-    block_success,
     empty_read_result,
     read_formatted,
     read_objects,

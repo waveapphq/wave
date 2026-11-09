@@ -408,6 +408,43 @@ class TestAddVersionReferenceChecks:
         ), details[0]["message"]
 
 
+class TestAddVersionBodyChecks:
+    def test_a_block_missing_a_required_parameter_returns_422_and_publishes_nothing(
+        self, client: TestClient
+    ) -> None:
+        fn_id = _seed_library_function()
+        draft = _draft_description_change()
+        draft["workflow"] = {
+            "nodes": [
+                {
+                    "id": "log-1",
+                    "type": "workflowNode",
+                    "data": {
+                        "label": "Log_1",
+                        "elementType": "log",
+                        "nodeType": "plugin",
+                        "version": "1.0.0",
+                        "config": {"values": {}, "outputBindings": {}, "profileBindings": []},
+                    },
+                }
+            ],
+            "edges": [{"source": "start-node", "target": "log-1"}],
+        }
+
+        response = client.post(
+            f"/functions/{fn_id}/versions", json=_add_version_body(draft_definition=draft)
+        )
+
+        assert response.status_code == 422, response.text
+        error = response.json()["error"]
+        assert error["code"] == "VALIDATION_ERROR"
+        assert error["message"] == "Function has 1 validation error(s)"
+        assert [(d["code"], d["message"], d["node_label"]) for d in error["details"]] == [
+            ("REQUIRED_PARAM_MISSING", "Required parameter 'message' is missing", "Log_1")
+        ]
+        assert client.get(f"/functions/{fn_id}/versions").json()["data"]["latest"] == "1.0.0"
+
+
 # ===========================================================================
 # 422 - malformed declarations (REQ-3.1.2.4, REQ-3.1.2.10, REQ-3.1.2.11)
 # ===========================================================================
@@ -434,7 +471,7 @@ def _draft_declaring(**declarations: Any) -> dict[str, Any]:
     return draft
 
 
-_OLD_ARRAY_ENUM = {
+_ARRAY_ENUM = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -445,9 +482,9 @@ _LOCAL_ID = {"name": "id", "type": "string", "value": "x"}
 
 _MALFORMED_DECLARATIONS = [
     pytest.param(
-        {"inputs": [_OLD_ARRAY_ENUM]},
+        {"inputs": [_ARRAY_ENUM]},
         ("ENUM_INPUT_TYPE", "Enum input 'level' must be of type string, integer or float"),
-        id="old-array-enum",
+        id="array-enum",
     ),
     pytest.param(
         {"inputs": [_level(required=False)]},

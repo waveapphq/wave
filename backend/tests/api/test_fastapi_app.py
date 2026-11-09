@@ -657,8 +657,8 @@ class TestShutdownCleanup:
                 delattr(app.state, "ws_manager")
 
 
-class TestAsyncImportExportEndpointsRemoved:
-    """The dead async import/export scaffold is unregistered (REQ-5.2.4.9).
+class TestAsyncImportExportEndpointsAnswer404:
+    """No async import/export endpoint is registered (REQ-5.2.4.9).
 
     Every job-based import/export endpoint must return 404: the synchronous
     per-entity import/export routes are the only import/export surface.
@@ -674,44 +674,46 @@ class TestAsyncImportExportEndpointsRemoved:
         "entity",
         ["plugin", "block", "test", "suite", "regression", "profile"],
     )
-    def test_async_entity_export_endpoints_removed(self, client: TestClient, entity: str) -> None:
+    def test_async_entity_export_endpoint_answers_404(
+        self, client: TestClient, entity: str
+    ) -> None:
         """POST /export/{entity}/{id} does not exist."""
         entity_id = "00000000-0000-0000-0000-000000000001"
         response = client.post(f"/export/{entity}/{entity_id}", json={})
 
         assert response.status_code == 404
 
-    def test_async_workspace_export_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_workspace_export_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /export/workspace does not exist."""
         response = client.post("/export/workspace", json={})
 
         assert response.status_code == 404
 
-    def test_async_export_status_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_export_status_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /export/{export_id}/status does not exist."""
         response = client.get("/export/00000000-0000-0000-0000-000000000001/status")
 
         assert response.status_code == 404
 
-    def test_async_export_download_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_export_download_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /export/{export_id}/download does not exist."""
         response = client.get("/export/00000000-0000-0000-0000-000000000001/download")
 
         assert response.status_code == 404
 
-    def test_async_workspace_import_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_workspace_import_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /import/workspace does not exist."""
         response = client.post("/import/workspace", json={})
 
         assert response.status_code == 404
 
-    def test_async_import_validate_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_import_validate_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /import/validate does not exist."""
         response = client.post("/import/validate", json={})
 
         assert response.status_code == 404
 
-    def test_async_import_status_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_import_status_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /import/{import_id}/status does not exist."""
         response = client.get("/import/00000000-0000-0000-0000-000000000001/status")
 

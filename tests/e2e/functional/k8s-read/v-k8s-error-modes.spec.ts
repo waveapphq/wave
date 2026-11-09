@@ -81,7 +81,7 @@ const GROUPS_WITHOUT_USER =
  *  the operating system's own text and is never asserted. */
 const NO_CONNECT = `Could not connect to the Kubernetes API at ${CLOSED_PORT_URL}`
 
-/** verbs/_outputs._recorded_failure_line. Its absence is what proves a leg did not
+/** connectivity/block_outputs._recorded_failure_line. Its absence is what proves a leg did not
  *  take the Record and continue path. */
 const RECORDED_WARN = 'Read failed'
 

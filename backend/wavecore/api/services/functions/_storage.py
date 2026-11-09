@@ -6,7 +6,6 @@ import ast
 import copy
 import hashlib
 import json
-import os
 import re
 import shutil
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, MutableMapping
@@ -17,6 +16,7 @@ from typing import Any
 import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.services import settings_file
 from wavecore.api.services.block_node_checks import (
     block_type_registered,
     validate_node_element_type,
@@ -26,8 +26,11 @@ from wavecore.api.services.block_node_checks import (
 from wavecore.api.services.block_schema import block_schema
 from wavecore.api.services.functions import _versioning
 from wavecore.api.services.storage_paths import (
+    entity_dir,
     get_functions_storage_path,
     get_tests_storage_path,
+    is_entity_id,
+    path_under,
 )
 from wavecore.api.services.typed_numbers import store_definition_numbers
 from wavecore.core.execution.field_checks import check_block_fields
@@ -77,7 +80,7 @@ def _functions_dir() -> Path:
 
 
 def _function_dir(function_id: str) -> Path:
-    return _functions_dir() / function_id
+    return entity_dir(_functions_dir(), function_id)
 
 
 def _index_file(function_id: str) -> Path:
@@ -89,7 +92,8 @@ def _versions_dir(function_id: str) -> Path:
 
 
 def _version_file(function_id: str, version: str) -> Path:
-    return _versions_dir(function_id) / f"{version}.yaml"
+    _validate_version_str(version)
+    return path_under(_versions_dir(function_id), f"{version}.yaml")
 
 
 def compute_etag(definition: Mapping[str, Any]) -> str:
@@ -108,14 +112,13 @@ def _load_yaml(path: Path) -> Any:
         return yaml.load(f, Loader=_YAML_LOADER)
 
 
-def _atomic_write_yaml(path: Path, payload: Any) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        yaml.safe_dump(payload, f, sort_keys=False)
-    os.replace(tmp, path)
+def _write_yaml(path: Path, payload: Any) -> None:
+    settings_file.write_text_atomic(path, yaml.safe_dump(payload, sort_keys=False))
 
 
 def _read_index(function_id: str) -> dict[str, Any] | None:
+    if not is_entity_id(function_id):
+        return None
     path = _index_file(function_id)
     if not path.exists():
         return None
@@ -124,10 +127,12 @@ def _read_index(function_id: str) -> dict[str, Any] | None:
 
 
 def _write_index(function_id: str, index: dict[str, Any]) -> None:
-    _atomic_write_yaml(_index_file(function_id), index)
+    _write_yaml(_index_file(function_id), index)
 
 
 def _read_version_payload(function_id: str, version: str) -> dict[str, Any] | None:
+    if not _versioning.is_valid_version(version):
+        return None
     path = _version_file(function_id, version)
     if not path.exists():
         return None
@@ -280,10 +285,9 @@ def _persist_version(
     name: str,
     allow_replace: bool,
 ) -> str:
-    _validate_version_str(version)
-    _versions_dir(function_id).mkdir(parents=True, exist_ok=True)
-
     version_path = _version_file(function_id, version)
+    version_path.parent.mkdir(parents=True, exist_ok=True)
+
     if not allow_replace and version_path.exists():
         msg = f"Function '{function_id}' version '{version}' already exists"
         raise ConflictException(message=msg, details={"errors": [{"message": msg}]})
@@ -294,7 +298,7 @@ def _persist_version(
         "definition": _build_version_body(definition),
         "metadata": metadata_block,
     }
-    _atomic_write_yaml(version_path, version_payload)
+    _write_yaml(version_path, version_payload)
     _upsert_version_index(function_id, name, version, metadata_block["published_at"])
     return compute_etag(version_payload)
 
@@ -431,10 +435,9 @@ def load_function(function_id: str) -> tuple[dict[str, Any], str]:
 
 def delete_function_file(function_id: str) -> None:
     """Remove the Function directory; raise LookupError if missing."""
-    fn_dir = _function_dir(function_id)
-    if not fn_dir.exists():
+    if not is_entity_id(function_id) or not _function_dir(function_id).exists():
         raise LookupError(function_id)
-    shutil.rmtree(fn_dir)
+    shutil.rmtree(_function_dir(function_id))
 
 
 def delete_version(function_id: str, version: str) -> None:

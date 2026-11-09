@@ -268,7 +268,7 @@ export const rolloutLine = (operation: string, target: string): string =>
 export const readLine = (kind: string, count: number, path: string): string =>
   `Read ${count} ${kind} object(s) from ${path}`
 
-/** The WARN line a recorded failure writes (verbs/_outputs._recorded_failure_line). */
+/** The WARN line a recorded failure writes (connectivity/block_outputs._recorded_failure_line). */
 export function recordedLine(action: WriteAction, reason: string, message: string): string {
   return reason ? `${action} failed (${reason}): ${message}` : `${action} failed: ${message}`
 }

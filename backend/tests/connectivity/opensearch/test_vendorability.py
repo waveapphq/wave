@@ -2,9 +2,9 @@
 
 Every module under wavecore/connectivity/opensearch/ is copied verbatim onto the remote
 host, so each one may import the standard library, its own package, the promoted TLS
-context, the held cancel, the typed-table helpers, the proxy core and the web address
-parser - nothing else, and nothing newer than the interpreter floor the runner accepts.
-No OpenSearch or HTTP client library.
+context, the held cancel, the count wording, the typed-table helpers, the proxy core and
+the web address parser - nothing else, and nothing newer than the interpreter floor the
+runner accepts. No OpenSearch or HTTP client library.
 """
 
 from pathlib import Path
@@ -29,8 +29,9 @@ _WAVECORE_ROOT = _PACKAGE_ROOT.parents[1]
 
 _ALLOWED_WAVECORE_IMPORTS = {
     "wavecore.connectivity.tls_context",
-    "wavecore.connectivity.k8s.verbs._outputs",
+    "wavecore.connectivity.block_outputs",
     "wavecore.plugins._held_run",
+    "wavecore.plugins._plural",
     "wavecore.connectivity.proxy",
     "wavecore.connectivity.web_address",
 }
@@ -95,7 +96,7 @@ class TestTheWalkCoversTheWholePackage:
 
 @pytest.mark.parametrize(("dotted", "path"), _MODULES, ids=_MODULE_NAMES)
 class TestEveryModuleIsVendorable:
-    """Stdlib, the package itself and the five WAVE modules the bundle carries beside it."""
+    """Stdlib, the package itself and the six WAVE modules the bundle carries beside it."""
 
     def test_every_import_is_stdlib_or_an_allowed_wave_module(
         self, dotted: str, path: Path
@@ -170,8 +171,9 @@ class TestTheImportRulesSeeAViolation:
         [
             "import http.client\nimport ssl\nfrom decimal import Decimal\n",
             "from wavecore.connectivity.tls_context import build_context\n",
-            "from wavecore.connectivity.k8s.verbs._outputs import typed_table\n",
+            "from wavecore.connectivity.block_outputs import typed_table\n",
             "from wavecore.plugins._held_run import Live\n",
+            "from wavecore.plugins._plural import plural\n",
             "from wavecore.connectivity.proxy import connect\n",
             "from wavecore.connectivity import proxy\n",
             "from wavecore.connectivity.web_address import basic_authorization\n",

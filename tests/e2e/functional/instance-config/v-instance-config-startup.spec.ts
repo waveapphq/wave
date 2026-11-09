@@ -7,7 +7,7 @@
  *
  * Each test starts its own backend (`helpers/spawn-backend.ts`) on a free port, with a config
  * file and a data folder in a new folder under the temp folder. The stack's backend, config
- * file and data folder are never used. A refused start is proven by exit code 1 and the ERROR
+ * file and data folder are never used. A refused start is proven by exit code 1 and the FATAL
  * line in the output; a setting by its route's answer and by the config file's own text.
  *
  * Pass Criteria:
@@ -59,7 +59,7 @@
  *     base64): exit 1 and exactly `Secret encryption key must be a base64-encoded 32-byte value.
  *     Check WAVE_SECRET_KEY / security.secret_key.`
  * 18. STARTUP-15: another 32-byte key on a data folder that holds the key sentinel: exit 1 and
- *     an ERROR line holding `does not decrypt existing sealed data`.
+ *     a FATAL line holding `does not decrypt existing sealed data`.
  * 19. STARTUP-16: no data folder set (no `storage` section, no `WAVE_STORAGE_BASE_PATH`): exit 1
  *     and exactly `Data folder not set: add storage.base_path to the config file or set
  *     WAVE_STORAGE_BASE_PATH`; no data folder is made.
@@ -121,7 +121,7 @@ function escapeRegExp(text: string): string {
 }
 
 /** One whole log line; a line written while a request is served carries the request's short id. */
-function logLine(level: 'INFO' | 'ERROR', message: string | RegExp): RegExp {
+function logLine(level: 'INFO' | 'FATAL', message: string | RegExp): RegExp {
   const body = typeof message === 'string' ? escapeRegExp(message) : message.source
   return new RegExp(
     `^\\d{2}:\\d{2}:\\d{2}\\.\\d{3} ${level.padEnd(5)} (?:\\[[0-9a-f]{8}\\] )?${body}$`,
@@ -131,7 +131,7 @@ function logLine(level: 'INFO' | 'ERROR', message: string | RegExp): RegExp {
 
 function expectRefusal(backend: SpawnedBackend, message: string | RegExp): void {
   expect(backend.exitCode, `the backend should have exited:\n${backend.output()}`).toBe(1)
-  expect(backend.output()).toMatch(logLine('ERROR', message))
+  expect(backend.output()).toMatch(logLine('FATAL', message))
 }
 
 function expectRunning(backend: SpawnedBackend): void {

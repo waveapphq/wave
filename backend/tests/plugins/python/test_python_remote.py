@@ -47,6 +47,7 @@ WATCHDOG_MODULE = "wavecore.plugins._local_process_watchdog"
 BRIDGE_MODULE = "wavecore.plugins._python_bridge"
 PROCESS_GROUP_MODULE = "wavecore.plugins._process_group"
 USER_PATTERNS_MODULE = "wavecore.plugins._user_patterns"
+PLURAL_MODULE = "wavecore.plugins._plural"
 
 # By name: each case imports the module it reads.
 VENDORED = (
@@ -57,9 +58,9 @@ VENDORED = (
     USER_PATTERNS_MODULE,
 )
 
-# The runtime half is standard library only: these three are the whole wavecore budget (PYRUN-12).
+# The runtime half is standard library only: these four are the whole wavecore budget (PYRUN-12).
 RUNTIME_WAVECORE_BUDGET = frozenset(
-    {LOCAL_PROCESS_MODULE, PROCESS_GROUP_MODULE, USER_PATTERNS_MODULE}
+    {LOCAL_PROCESS_MODULE, PROCESS_GROUP_MODULE, USER_PATTERNS_MODULE, PLURAL_MODULE}
 )
 
 # The last line of the vendored-source loader; the worker is everything after it.
@@ -67,7 +68,10 @@ LOADER_END = "_sys.meta_path.insert(0, _WaveFinder())"
 
 HOST_FAILED = f"Remote Execution failed on host '{HOST}': "
 REMOTE_START_LINE = "Running the script under WAVE's own interpreter on the remote host"
-REMOTE_SCHEME_REFUSED = "testdata:// paths are not available on the remote host"
+REMOTE_SCHEME_REFUSED = (
+    "{scheme} paths are not available on the remote host - "
+    "use an absolute or relative path on the remote host"
+)
 INTERPRETER_MISSING = "Interpreter not found on the remote host: nosuchpython"
 
 READINGS_SCRIPT = "label = readings[0]['sensor']\ntotal = threshold * 2\nprint(label)\n"
@@ -210,6 +214,7 @@ def _registered_plugins() -> Iterator[None]:
     register_all_core_controls(_registry)
     clear_registry()
     register_plugin(PythonPlugin())
+    log_streaming_service._session_logs.clear()
     yield
     clear_registry()
     wb_common._workbench_sessions.clear()
@@ -435,7 +440,7 @@ class TestTheVendoredRuntimeTravels:
         assert module in sources
         assert sources[module] == own_file.read_text(encoding="utf-8")
 
-    def test_the_runtime_imports_no_wavecore_module_beyond_the_three_allowed(self) -> None:
+    def test_the_runtime_imports_no_wavecore_module_beyond_the_four_allowed(self) -> None:
         source = _vendored_sources()[RUNTIME_MODULE]
 
         reached = {
@@ -606,19 +611,21 @@ class TestTheRemoteDefaultWorkingDirectory:
 class TestTheRemoteHostRefusesWaveSidePaths:
     """A folder only WAVE can resolve fails the block on the remote host (PYRUN-11)."""
 
-    async def test_a_testdata_working_directory_fails_with_start_failed(self) -> None:
+    @pytest.mark.parametrize("scheme", ["testdata://", "artifact://"])
+    async def test_a_wave_side_working_directory_fails_with_start_failed(self, scheme: str) -> None:
         variables = await _run_python_body(
             {
                 "script_type": "source",
                 "script": "print('never')",
-                "working_dir": "testdata://data",
+                "working_dir": f"{scheme}data",
                 "on_error": "record",
             },
             worker=_bundle_worker,
             bindings={"error": "err", "reason": "why", "success": "ok", "stdout": "out"},
         )
 
-        assert re.match(exact(REMOTE_SCHEME_REFUSED), variables["err"]) is not None
+        refused = REMOTE_SCHEME_REFUSED.format(scheme=scheme)
+        assert re.match(exact(refused), variables["err"]) is not None
         assert variables["why"] == "StartFailed"
         assert variables["ok"] is False
         assert variables["out"] == ""

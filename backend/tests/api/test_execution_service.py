@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.api.suite_test_helpers import make_test_ids
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
 # Valid execution states
@@ -37,6 +38,14 @@ VALID_ENTITY_TYPES = ["test", "suite", "regression"]
 
 # Shared test environment ID (must match conftest.py seed_test_environment fixture)
 TEST_ENV_ID = "env-test-00000000-0000-0000-0000-000000000001"
+
+
+@pytest.fixture(autouse=True)
+def _empty_run_list() -> None:
+    """Each test starts from an empty run list, whatever ran before it on the worker."""
+    from wavecore.api.services.executions import _storage as _exec_storage
+
+    _exec_storage._clear_storage()
 
 
 class TestStartExecution:
@@ -797,7 +806,7 @@ class TestStopExecution:
             assert result is not None
 
 
-class TestCancelExecutionRemoved:
+class TestThereIsNoCancelExecution:
     """There is no cancel_execution service function; only stop_execution exists."""
 
     def test_cancel_execution_not_exported(self) -> None:
@@ -982,7 +991,7 @@ class TestStateValidation:
             with pytest.raises(ConflictException, match=r"Cannot"):
                 _exec_storage._validate_state_transition(invalid_source, "stopped", "stop")
 
-    def test_validate_state_transition_cancel_op_removed(self) -> None:
+    def test_state_transitions_have_no_cancel_op(self) -> None:
         """There is no `cancel` transition op in STATE_TRANSITIONS."""
         from wavecore.api.services.executions import _storage as _exec_storage
 
@@ -2041,7 +2050,7 @@ class TestGetEntityServiceWiring:
         suite_data = {
             "name": "Executable Suite",
             "description": "A suite that can be executed",
-            "tests": [str(uuid.uuid4())],
+            "tests": make_test_ids(1),
         }
         created_suite = suite_service.create_suite(suite_data)
         suite_id = created_suite["id"]
@@ -2068,7 +2077,7 @@ class TestGetEntityServiceWiring:
         # Create a real regression over a real suite (membership is existence-checked)
         clear_regression_storage()
         member_suite = suite_service.create_suite(
-            {"name": "Regression Member Suite", "tests": [str(uuid.uuid4())]}
+            {"name": "Regression Member Suite", "tests": make_test_ids(1)}
         )
         regression_data = {
             "name": "Executable Regression",
@@ -2464,6 +2473,8 @@ class TestExecutionTerminalBridge:
         ``_yaml_safe`` boundary, the terminal callback must log and
         continue so the status update and variable persistence still land.
         """
+        # Load the driver first so its by-name import binds the real function, not the mock.
+        from wavecore.api.services.executions import _sequential  # noqa: F401
         from wavecore.api.services.executions import _storage as _exec_storage
         from wavecore.api.services.executions import service as execution_service
 
@@ -3249,6 +3260,109 @@ class TestOnWorkbenchSessionTerminatedHelpers:
         execution_service._on_workbench_session_terminated(exec_id, "failed", None)
         # Already-terminal executions are not rewritten.
         assert _exec_storage._execution_storage[exec_id]["status"] == "passed"
+
+    @staticmethod
+    def _tracked_run(session_id: str) -> dict[str, Any]:
+        """A running test execution and the live session of its own tracked run."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _exec_storage._clear_storage()
+        _exec_storage._execution_storage[session_id] = {
+            "id": session_id,
+            "status": "running",
+            "entity_type": "test",
+            "entity_id": str(uuid.uuid4()),
+            "started_at": "2026-04-22T00:00:00+00:00",
+            "run_id": session_id,
+        }
+        _exec_storage._save_execution(_exec_storage._execution_storage[session_id])
+        session: dict[str, Any] = {
+            "session_id": session_id,
+            "execution_id": session_id,
+            "block_states": {"b1": "stopped"},
+            "variables": {"x": 1},
+        }
+        _wb_common._workbench_sessions[session_id] = session
+        return session
+
+    def test_a_second_stopped_notice_stores_what_the_run_bound_since(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        session = self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+            ended = dict(_exec_storage._execution_storage[session_id])
+            session["variables"]["out"] = "tail"
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["variables"] == {"x": 1, "out": "tail"}
+        assert _exec_storage._load_variables(session_id) == {"x": 1, "out": "tail"}
+        record = _exec_storage._execution_storage[session_id]
+        assert (record["status"], record["ended_at"]) == ("stopped", ended["ended_at"])
+
+    def test_a_stopped_notice_from_another_run_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+            _wb_common._workbench_sessions[session_id] = {
+                "session_id": session_id,
+                "execution_id": None,
+                "block_states": {},
+                "variables": {"x": 2},
+            }
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["variables"] == {"x": 1}
+        assert _exec_storage._load_variables(session_id) == {"x": 1}
+
+    def test_a_stopped_notice_after_the_session_closed_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        self._tracked_run(session_id)
+        execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        _wb_common._workbench_sessions.pop(session_id, None)
+
+        execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert snapshot["block_states"] == {"b1": "stopped"}
+        assert snapshot["variables"] == {"x": 1}
+
+    def test_a_stopped_notice_after_a_finished_run_leaves_the_stored_record(self) -> None:
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        session = self._tracked_run(session_id)
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "passed", None)
+            session["variables"]["x"] = 2
+            execution_service._on_workbench_session_terminated(session_id, "stopped", None)
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+        snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+        assert (snapshot["status"], snapshot["variables"]) == ("passed", {"x": 1})
+        assert _exec_storage._execution_storage[session_id]["status"] == "passed"
 
     def test_callback_persists_snapshot_and_variables_for_test_execution(self) -> None:
         from wavecore.api.services.executions import _storage as _exec_storage

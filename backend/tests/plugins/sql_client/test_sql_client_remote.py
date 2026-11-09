@@ -22,7 +22,7 @@ import apsw
 import pytest
 
 from tests.core.remote_exec.test_bundle import _REGISTRY_PROBE, _run_bundle_lines
-from tests.core.remote_exec.test_runner import local_probe
+from tests.core.remote_exec.test_runner import _fake_connection, local_probe, probe_line
 from tests.core.remote_exec.test_wheel_carry import (
     any_platform,
     wheel_cache,
@@ -54,6 +54,7 @@ from wavecore.api.services.workbench.remote_exec import execute_remote_container
 from wavecore.core.remote_exec import runner
 from wavecore.core.remote_exec.bundle import build_bundle
 from wavecore.core.remote_exec.materialize import materialize
+from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.core.table import Table
 from wavecore.plugins.sql_client import needs_wheels
 
@@ -73,6 +74,13 @@ UNSUPPORTED_TEXT = (
 )
 UNSUPPORTED_SQLITE_TEXT = (
     "sshd cannot run SQLite: it has Python 3.15 on x86_64 / glibc; "
+    "WAVE carries Python 3.10-3.14 on x86_64 / glibc"
+)
+# A session opened on a tunnel's Local Port: the loopback it connects to, the far host it names.
+LOOPBACK = "127.0.0.1"
+FAR_HOST = "node-2.internal"
+FAR_HOST_SQLITE_TEXT = (
+    "node-2.internal cannot run SQLite: it has Python 3.15 on x86_64 / glibc; "
     "WAVE carries Python 3.10-3.14 on x86_64 / glibc"
 )
 ORACLE_WHEELS = [
@@ -96,7 +104,10 @@ ORDERS = (
 
 
 def _refusal(scheme: str) -> str:
-    return f"{scheme} paths are not available on the remote host"
+    return (
+        f"{scheme} paths are not available on the remote host - "
+        "use an absolute or relative path on the remote host"
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -647,6 +658,47 @@ class TestTheBlockInsideARemoteExecutionBody:
             )
 
         assert not database.exists()
+
+    async def test_a_session_on_a_tunnel_names_the_far_host_in_the_refusal(
+        self, tmp_path: Path, wheels: Path
+    ) -> None:
+        connection = _fake_connection(stdout=probe_line("3.15"))
+        connection.get_extra_info.return_value = LOOPBACK
+        session = _session()
+        registry = SSHSessionRegistry()
+        registry.register(
+            HOST_SESSION,
+            connection,
+            None,
+            LOOPBACK,
+            None,
+            None,
+            connect_timeout=30,
+            host_identity=FAR_HOST,
+        )
+        session["ssh_session_registry"] = registry
+
+        with (
+            patch.object(_remote_exec, "run_on_worker", _bundle_worker),
+            patch.object(_remote_exec, "close_worker", AsyncMock()),
+            pytest.raises(
+                RuntimeError,
+                match=exact(
+                    f"Remote Execution failed on host '{FAR_HOST}': {FAR_HOST_SQLITE_TEXT}"
+                ),
+            ),
+        ):
+            await execute_remote_container(
+                "rex-1",
+                {"rex-1": [("body-1", "body")]},
+                _body(sqlite_params(tmp_path / "t.db")),
+                {},
+                session,
+                session["session_id"],
+                set(),
+                [],
+                None,
+            )
 
     async def test_an_oracle_block_pushes_its_wheels_before_its_request(self, wheels: Path) -> None:
         values = sql_params(database_type="oracle", sql="SELECT 1 FROM dual")

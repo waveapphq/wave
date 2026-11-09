@@ -1,7 +1,7 @@
 """
 WAVE Model Enumerations
 
-Enums for execution states, log levels, and control identifiers.
+Enums for log levels and control identifiers.
 """
 
 from enum import Enum, IntEnum
@@ -21,20 +21,6 @@ class LogLevel(IntEnum):
     ERROR = 40
     FATAL = 50
     NONE = 100  # Most restrictive - no logs
-
-
-class ExecutionState(IntEnum):
-    """
-    Execution state enumeration for tracking entity lifecycle (REQ-3.2.1.1).
-
-    Represents the current state of an executing entity (regression, suite, test, block, plugin).
-    Entities progress through states: PENDING -> RUNNING -> (COMPLETED | FAILED).
-    """
-
-    PENDING = 1  # Created but not yet started
-    RUNNING = 2  # Currently executing
-    COMPLETED = 3  # Successfully completed
-    FAILED = 4  # Failed due to error
 
 
 class ControlCategory(str, Enum):

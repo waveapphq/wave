@@ -44,10 +44,13 @@ from wavecore.core.artifacts import store
 from wavecore.core.execution.plugin_executor import check_entry_nulls
 from wavecore.core.number_rule import is_number_value
 from wavecore.core.secrets.masking import structural_mask
+from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins import http_tls
 from wavecore.plugins._content_types import content_type_for
 from wavecore.plugins._executor_base import validate_enum_from_schema
 from wavecore.plugins._file_paths import plain_path, resolve_plugin_path
+from wavecore.plugins._shared_params import gate
+from wavecore.plugins._ssh_session import resolve_tunnel
 from wavecore.plugins._tls_material import is_pem, read_pem
 from wavecore.plugins._verb_bridge import log_via
 from wavecore.plugins.base import PluginBase
@@ -89,6 +92,7 @@ _STREAM_CHUNK = 65536
 _FALLBACK_DOWNLOAD_NAME = "response"
 
 _AUTH_SECRET_FIELDS = {"basic": "auth_password", "bearer": "auth_token", "api_key": "auth_key"}
+_AUTH_ON = gate("auth_enabled", "true")
 
 _TLS_VERSION_CHOICES = ["1.0", "1.1", "1.2", "1.3"]
 _TLS_DEFAULT_MIN = "1.2"
@@ -200,10 +204,13 @@ class _PlainStream(httpcore.AsyncNetworkStream):
         sock: socket.socket,
         config: http_tls.TLSClientConfig,
         endpoint: proxy.ProxyEndpoint | None = None,
+        server_name: str | None = None,
     ) -> None:
         self._sock = sock
         self._config = config
         self._endpoint = endpoint
+        # Set when the dial reached an SSH tunnel: the certificate names its far host.
+        self._server_name = server_name
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         return await asyncio.to_thread(self._read, max_bytes, timeout)
@@ -245,7 +252,8 @@ class _PlainStream(httpcore.AsyncNetworkStream):
                 # Read on the loop thread at each connection, so the trust line reaches the console.
                 anchors = trust_store.anchors_pem(trust_store.active_spec())
                 config = replace(config, anchors_pem=anchors)
-            result = await asyncio.to_thread(self._handshake, config, server_hostname, timeout)
+            name = self._server_name or server_hostname
+            result = await asyncio.to_thread(self._handshake, config, name, timeout)
         except BaseException:
             # httpcore drops a stream whose upgrade failed without closing it.
             self._sock.close()
@@ -274,11 +282,15 @@ class _TlsliteBackend(httpcore.AsyncNetworkBackend):
     """httpcore backend whose sockets do TLS via the pure-Python engine."""
 
     def __init__(
-        self, config: http_tls.TLSClientConfig, endpoint: proxy.ProxyEndpoint | None = None
+        self,
+        config: http_tls.TLSClientConfig,
+        endpoint: proxy.ProxyEndpoint | None = None,
+        tunnels: SSHSessionRegistry | None = None,
     ) -> None:
         self._config = config
         # Set under a proxied pool, whose every dial is the proxy itself.
         self._endpoint = endpoint
+        self._tunnels = tunnels
 
     async def connect_tcp(
         self,
@@ -295,7 +307,9 @@ class _TlsliteBackend(httpcore.AsyncNetworkBackend):
             raise httpcore.ConnectTimeout(self._dial_failure(exc)) from exc
         except OSError as exc:
             raise httpcore.ConnectError(self._dial_failure(exc)) from exc
-        return _PlainStream(sock, self._config, self._endpoint)
+        route = resolve_tunnel(host, port, self._tunnels)
+        far_host = None if route is None else route.far_host
+        return _PlainStream(sock, self._config, self._endpoint, far_host)
 
     def _dial_failure(self, error: OSError) -> str:
         """The system's own words for a failed dial, naming the proxy when it was the proxy."""
@@ -328,9 +342,11 @@ class _ProxyRoutingTransport(httpx.AsyncBaseTransport):
         endpoints = {endpoint for endpoint in (spec.https, spec.http) if endpoint is not None}
         self._proxied = {endpoint: _proxied_transport(endpoint) for endpoint in endpoints}
 
-    def install_backend(self, config: http_tls.TLSClientConfig) -> None:
+    def install_backend(
+        self, config: http_tls.TLSClientConfig, tunnels: SSHSessionRegistry | None
+    ) -> None:
         """Put the pure-Python TLS backend under the direct pool and every proxied pool."""
-        self._direct._pool._network_backend = _TlsliteBackend(config)
+        self._direct._pool._network_backend = _TlsliteBackend(config, tunnels=tunnels)
         for endpoint, transport in self._proxied.items():
             transport._pool._network_backend = _TlsliteBackend(config, endpoint)
 
@@ -410,6 +426,7 @@ class HTTPRequestConfig:
     reveal_fields: set[str] = field(default_factory=set)
     headers_output_secret: bool = False
     trace_output_secret: bool = False
+    ssh_session_registry: SSHSessionRegistry | None = None
 
 
 def _validate_positive_number(params: dict[str, Any], name: str, label: str) -> None:
@@ -666,12 +683,14 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_username",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "basic")],
                     "description": "Username for Basic auth",
                 },
                 {
                     "name": "auth_password",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "basic")],
                     "secret": True,
                     "description": "Password for Basic auth",
                 },
@@ -679,6 +698,7 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_token",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "bearer")],
                     "secret": True,
                     "description": "Token for Bearer token auth",
                 },
@@ -687,6 +707,7 @@ class HTTPClientPlugin(PluginBase):
                     "type": "string",
                     "trim": True,
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "api_key")],
                     "default": "X-API-Key",
                     "description": "Header name carrying the API key",
                 },
@@ -694,6 +715,7 @@ class HTTPClientPlugin(PluginBase):
                     "name": "auth_key",
                     "type": "string",
                     "required": False,
+                    "required_when_all": [_AUTH_ON, gate("auth_mode", "api_key")],
                     "secret": True,
                     "description": "API key sent under the configured header name",
                 },
@@ -735,6 +757,7 @@ class HTTPClientPlugin(PluginBase):
                     "type": "string",
                     "trim": True,
                     "required": False,
+                    "required_when": gate("body_mode", "file"),
                     "description": (
                         "File sent as the request body (file body mode): "
                         "artifact://, testdata://, or an absolute or relative path"
@@ -1145,6 +1168,7 @@ class HTTPClientPlugin(PluginBase):
             reveal_fields=reveal,
             headers_output_secret="headers" in output_secret,
             trace_output_secret="trace" in output_secret,
+            ssh_session_registry=context.get("ssh_session_registry"),
         )
 
         self._coerce_string_maps(req)
@@ -1383,7 +1407,7 @@ class HTTPClientPlugin(PluginBase):
 
         try:
             async with httpx.AsyncClient(**self._build_client_kwargs(req)) as client:
-                self._install_tls_backend(client, tls_config)
+                self._install_tls_backend(client, tls_config, req.ssh_session_registry)
                 response, response_time = await self._retry_loop(
                     client, method, request_kwargs, req, run
                 )
@@ -1411,15 +1435,17 @@ class HTTPClientPlugin(PluginBase):
         )
 
     @staticmethod
-    def _install_tls_backend(client: Any, tls_config: http_tls.TLSClientConfig) -> None:
+    def _install_tls_backend(
+        client: Any, tls_config: http_tls.TLSClientConfig, tunnels: SSHSessionRegistry | None
+    ) -> None:
         """Swap the pure-Python TLS backend under httpx's pools (direct and proxied)."""
         if not isinstance(client, _ASYNC_CLIENT_TYPE):
             return
         transport: Any = client._transport
         if isinstance(transport, _ProxyRoutingTransport):
-            transport.install_backend(tls_config)
+            transport.install_backend(tls_config, tunnels)
         else:
-            transport._pool._network_backend = _TlsliteBackend(tls_config)
+            transport._pool._network_backend = _TlsliteBackend(tls_config, tunnels=tunnels)
 
     def _resolve_file_source(self, source: str, req: HTTPRequestConfig) -> Path:
         """Resolve an artifact:// / testdata:// / plain file source to a real file."""

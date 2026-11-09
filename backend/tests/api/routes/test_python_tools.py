@@ -358,11 +358,19 @@ class TestRename:
 
         assert_validation_error(response, "Cannot rename: no symbol at the cursor")
 
-    @pytest.mark.parametrize("new_name", ["1bad", "__secret"])
+    @pytest.mark.parametrize("new_name", ["1bad", "class", "__1-bad"])
     def test_an_invalid_new_name_is_refused(self, client: TestClient, new_name: str) -> None:
         response = post_rename(client, SCOPE_SCRIPT, 2, 4, new_name)
 
         assert_validation_error(response, f"Invalid variable name: '{new_name}'")
+
+    @pytest.mark.parametrize("new_name", ["__secret", "__"])
+    def test_a_new_name_with_a_double_underscore_is_refused(
+        self, client: TestClient, new_name: str
+    ) -> None:
+        response = post_rename(client, SCOPE_SCRIPT, 2, 4, new_name)
+
+        assert_validation_error(response, f"Variable names may not start with __: '{new_name}'")
 
 
 class TestSyntaxCheck:

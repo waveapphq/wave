@@ -9,7 +9,11 @@ import yaml
 from wavecore.api.exceptions import ValidationException
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.shared import stored_variable_values
-from wavecore.api.services.storage_paths import get_regressions_storage_path
+from wavecore.api.services.storage_paths import (
+    entity_dir,
+    get_regressions_storage_path,
+    is_entity_id,
+)
 from wavecore.core.secrets.sealing import seal_variables
 
 # Name validation pattern
@@ -23,11 +27,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_regression_dir(regression_id: str) -> Path:
     """Get directory path for a regression."""
-    return get_regressions_storage_path() / regression_id
+    return entity_dir(get_regressions_storage_path(), regression_id)
 
 
 def _load_regression(regression_id: str) -> dict[str, Any] | None:
     """Load regression from file storage."""
+    if not is_entity_id(regression_id):
+        return None
     regression_file = _get_regression_dir(regression_id) / "regression.yaml"
     if not regression_file.exists():
         return None

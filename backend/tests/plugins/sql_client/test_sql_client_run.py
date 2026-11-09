@@ -2205,7 +2205,10 @@ class TestChecksBeforeConnecting:
     ) -> None:
         monkeypatch.setattr(_sql_core, "REMOTE_HOST", "sshd")
         fake = use_fake("sqlite", FakeConnection())
-        message = f"{scheme}:// paths are not available on the remote host"
+        message = (
+            f"{scheme}:// paths are not available on the remote host - "
+            "use an absolute or relative path on the remote host"
+        )
         params = sqlite_params(
             Path("unused"), file=f"{scheme}://ref.db", sql="SELECT :missing", on_error="record"
         )

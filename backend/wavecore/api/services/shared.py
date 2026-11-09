@@ -8,6 +8,7 @@ entity resolution, and file parsing for import/export.
 import copy
 import io
 import json
+import re
 import unicodedata
 import uuid
 import zipfile
@@ -18,7 +19,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, BinaryIO, overload
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
 from wavecore.core.functions.declarations import declaration_numbers, value_problems
 from wavecore.core.secrets import masking_settings
 from wavecore.core.secrets.cipher import SecretDecryptionError, is_secret_envelope
@@ -526,6 +527,41 @@ def read_secret_variables(variables: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# Semantic version pattern: MAJOR.MINOR.PATCH
+SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def validate_semantic_version(version: str) -> None:
+    """Validate semantic version format (MAJOR.MINOR.PATCH).
+
+    Args:
+        version: Version string to validate.
+
+    Raises:
+        ValidationException: If version format is invalid.
+    """
+    if not SEMVER_PATTERN.match(version):
+        raise ValidationException(
+            f"Invalid version format '{version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+
+
+def next_semantic_version(version: str, version_bump: str) -> str:
+    """The version after ``version`` for a ``major``, ``minor`` or any other (patch) bump.
+
+    Raises:
+        ValidationException: If ``version`` is not MAJOR.MINOR.PATCH.
+    """
+    validate_semantic_version(version)
+    major, minor, patch = (int(part) for part in version.split("."))
+    if version_bump == "major":
+        return f"{major + 1}.0.0"
+    if version_bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
 def bump_version_and_record(
     entity: dict[str, Any],
     entity_id: str,
@@ -555,13 +591,12 @@ def bump_version_and_record(
 
     Returns:
         The ISO-formatted timestamp of the update.
+
+    Raises:
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH;
+            nothing is saved then.
     """
-    current_version = str(entity.get("version", "1.0.0"))
-    parts = [int(x) for x in current_version.split(".")]
-    # Pad to at least MAJOR.MINOR.PATCH
-    while len(parts) < 3:
-        parts.append(0)
-    new_version = f"{parts[0]}.{parts[1] + 1}.0"
+    new_version = next_semantic_version(str(entity.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
     entity["version"] = new_version
@@ -606,6 +641,95 @@ def resolve_entities_by_ids(
         if entity:
             results.append({"id": entity["id"], "name": entity.get("name", "")})
     return results
+
+
+def refuse_unknown_members(
+    proposed: Iterable[Any],
+    held: Collection[str],
+    kind: str,
+    exists: Callable[[str], bool],
+) -> None:
+    """Refuse the first member a save adds that matches nothing; a held member is not re-checked."""
+    for member_id in proposed:
+        if not isinstance(member_id, str) or (member_id not in held and not exists(member_id)):
+            raise ValidationException(f"{kind} with ID '{member_id}' not found")
+
+
+_NOT_AN_OBJECT_ITEM = "The item must be a JSON object"
+_NOT_AN_UPDATE_OBJECT = "'update' must be a JSON object"
+
+
+def batch_object(item: Any) -> dict[str, Any]:
+    """A batch item as a JSON object; any other item fails on its own."""
+    if not isinstance(item, dict):
+        raise ValidationException(_NOT_AN_OBJECT_ITEM)
+    return item
+
+
+def batch_update_problem(item: Any) -> str | None:
+    """Why a batch update item fails: not an object, or an 'update' that is not one; else None."""
+    if not isinstance(item, dict):
+        return _NOT_AN_OBJECT_ITEM
+    if not isinstance(item.get("update", {}), dict):
+        return _NOT_AN_UPDATE_OBJECT
+    return None
+
+
+def batch_update_fields(item: dict[str, Any]) -> dict[str, Any]:
+    """A batch item's 'update' as a JSON object, empty when absent; else the item fails."""
+    problem = batch_update_problem(item)
+    if problem is not None:
+        raise ValidationException(problem)
+    fields: dict[str, Any] = item.get("update", {})
+    return fields
+
+
+def batch_id(item: Any) -> str:
+    """A batch item as an ID string; any other item fails on its own."""
+    if not isinstance(item, str):
+        raise ValidationException("The item must be an ID string")
+    return item
+
+
+def _batch_each[
+    Done
+](ids: Sequence[Any], act: Callable[[str], Done | None], kind: str) -> tuple[
+    list[Done], list[dict[str, Any]]
+]:
+    """Act on each ID in turn; a malformed, missing (None) or refused one fails by its index."""
+    done: list[Done] = []
+    failed: list[dict[str, Any]] = []
+    for idx, item in enumerate(ids):
+        try:
+            item_id = batch_id(item)
+            result = act(item_id)
+        except (ValueError, WaveException) as e:
+            failed.append({"index": idx, "error": str(e)})
+            continue
+        if result is None:
+            failed.append({"index": idx, "error": f"{kind} with ID '{item_id}' not found"})
+        else:
+            done.append(result)
+    return done, failed
+
+
+def batch_delete(ids: Sequence[Any], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
+    """Delete each ID in turn; a missing, refused or malformed one goes to ``failed``."""
+    deleted, failed = _batch_each(ids, lambda item_id: item_id if delete(item_id) else None, kind)
+    return {"deleted": deleted, "failed": failed}
+
+
+def batch_clone(
+    ids: Sequence[Any], clone: Callable[[str], dict[str, Any] | None], kind: str
+) -> dict[str, Any]:
+    """Clone each ID in turn; a missing, refused or malformed one goes to ``failed``."""
+
+    def clone_one(item_id: str) -> dict[str, str] | None:
+        copied = clone(item_id)
+        return None if copied is None else {"original_id": item_id, "cloned_id": copied["id"]}
+
+    cloned, failed = _batch_each(ids, clone_one, kind)
+    return {"cloned": cloned, "failed": failed}
 
 
 ZipContent = str | bytes | Path

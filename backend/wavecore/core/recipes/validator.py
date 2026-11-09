@@ -59,6 +59,7 @@ from wavecore.plugins._file_paths import (
     resolve_plugin_matches,
     resolve_plugin_path,
 )
+from wavecore.plugins._ssh_session import SESSION_ID_DESCRIPTION
 
 _LIST_ALL = 10_000
 _JOIN_MODES = ("all", "first")
@@ -93,9 +94,24 @@ REMOTE_EXECUTION_ENTRY: dict[str, Any] = {
     "kind": "plugin",
     "version": "1.0.0",
     "parameters": {
-        "session_id": {"name": "session_id", "type": "string", "required": True, "default": None}
+        "session_id": {
+            "name": "session_id",
+            "type": "string",
+            "required": True,
+            "default": None,
+            "description": SESSION_ID_DESCRIPTION,
+        }
     },
-    "outputs": {"remote_session_id": "string"},
+    "outputs": {
+        "remote_session_id": {
+            "name": "remote_session_id",
+            "type": "string",
+            "description": (
+                "Handle to the persistent remote worker opened on the SSH session host "
+                "for this container"
+            ),
+        }
+    },
     "stub": False,
 }
 
@@ -252,7 +268,7 @@ def remote_execution_entry() -> BlockEntry:
         kind=entry["kind"],
         version=entry["version"],
         parameters=dict(entry["parameters"]),
-        outputs=dict(entry["outputs"]),
+        outputs={name: str(out["type"]) for name, out in entry["outputs"].items()},
     )
 
 

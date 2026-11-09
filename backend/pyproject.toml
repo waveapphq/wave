@@ -74,6 +74,8 @@ python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# Seconds per test, setup and teardown included: a hang fails by name instead of stalling the run
+timeout = 60
 # Coverage disabled by default due to pytest-cov memory issues with large async test suites
 addopts = [
     "-v",
@@ -135,6 +137,7 @@ ignore = []
 "wavecore/connectivity/run_log.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/connectivity/proxy.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/connectivity/web_address.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
+"wavecore/connectivity/block_outputs.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 "wavecore/plugins/_user_patterns.py" = ["UP017", "UP036", "UP041", "UP042", "UP043"]
 
 [tool.mypy]

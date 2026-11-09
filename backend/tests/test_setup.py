@@ -2,10 +2,20 @@
 Test to verify that the test infrastructure is set up correctly.
 """
 
+import signal
 import sys
 from pathlib import Path
 
 import pytest
+
+SHIPPED_TEST_TIME_CAP_S = 60
+
+
+def test_each_test_runs_under_the_shipped_time_cap(pytestconfig: pytest.Config) -> None:
+    """A test that hangs fails by name at the cap instead of stalling the run."""
+    assert pytestconfig.getini("timeout") == str(SHIPPED_TEST_TIME_CAP_S)
+    remaining_s, _interval_s = signal.getitimer(signal.ITIMER_REAL)
+    assert 0 < remaining_s <= SHIPPED_TEST_TIME_CAP_S
 
 
 def test_python_version() -> None:

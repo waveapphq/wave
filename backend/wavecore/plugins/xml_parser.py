@@ -199,7 +199,7 @@ class XMLParserPlugin(QueryParserBase):
         if isinstance(xpath_result, bool):
             return {"type": "bool", "value": xpath_result}
 
-        if isinstance(xpath_result, int | float):
+        if isinstance(xpath_result, float):
             return self._convert_numeric(xpath_result)
 
         if isinstance(xpath_result, str):
@@ -218,12 +218,11 @@ class XMLParserPlugin(QueryParserBase):
         return {"type": "string", "value": str(xpath_result)}  # pragma: no cover
 
     @staticmethod
-    def _convert_numeric(value: int | float) -> dict[str, Any]:
-        """Convert a numeric XPath result, preferring int for whole numbers."""
-        numeric_value = float(value)
-        if numeric_value.is_integer():
-            return {"type": "int", "value": int(numeric_value)}
-        return {"type": "float", "value": numeric_value}
+    def _convert_numeric(value: float) -> dict[str, Any]:
+        """Convert an XPath number, an IEEE float by the spec, preferring int for whole numbers."""
+        if value.is_integer():
+            return {"type": "int", "value": int(value)}
+        return {"type": "float", "value": value}
 
     @staticmethod
     def _node_to_string(node: Any) -> str:

@@ -110,7 +110,7 @@ async function publishReferencingVersion(
         dependencies: { functions: [], plugins: [] },
         workflow: {
           nodes: [sharedNode('cycle-inner', { functionId: bodyFunctionId, functionVersion: '1.0.0', label: bodyLabel })],
-          edges: [],
+          edges: [startEdge('cycle-inner')],
         },
       },
       changelog: 'compose cycle (test seed)',

@@ -13,9 +13,19 @@ error strings in the `errors` list.
 
 import re
 import uuid
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
+    NOT_ID_ITEMS,
+    NOT_LIST_FIELDS,
+    NOT_OBJECT_ITEMS,
+    assert_refused,
+)
 
 from .conftest import make_function_payload, make_input
 
@@ -83,6 +93,21 @@ class TestBatchCreate:
         names = {row["name"] for row in listed["data"]}
         assert "bc_keeper" in names
 
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_item_that_is_not_an_object_fails(self, client: TestClient, item: Any) -> None:
+        items = [item, make_function_payload(name="bc_after_bad_item")]
+        response = client.post("/functions/batch", json={"items": items})
+        assert response.status_code == 200, response.json()
+        data = response.json()["data"]
+        assert data["failed"] == [{"index": 0, "errors": [NOT_AN_OBJECT_ITEM]}]
+        assert [definition["name"] for definition in data["created"]] == ["bc_after_bad_item"]
+
+    @pytest.mark.parametrize("items", NOT_LIST_FIELDS)
+    def test_items_that_are_not_a_list_are_refused(self, client: TestClient, items: Any) -> None:
+        response = client.post("/functions/batch", json={"items": items})
+        assert_refused(response, "'items' must be a list")
+        assert client.get("/functions").json()["data"] == []
+
     def test_duplicate_name_within_batch_fails_second(self, client: TestClient) -> None:
         items = [
             make_function_payload(name="bc_dup"),
@@ -129,6 +154,27 @@ class TestBatchDelete:
         data = response.json()["data"]
         assert b_id in data["deleted"]
         assert any(failure["id"] == a_id for failure in data["failed"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_an_item_that_is_not_an_id_fails(self, client: TestClient, item: Any) -> None:
+        created = client.post("/functions", json=make_function_payload(name="bd_after_bad_item"))
+        function_id = created.json()["data"]["id"]
+        response = client.request(
+            "DELETE", "/functions/batch", json={"ids": [item, function_id], "cascade": False}
+        )
+        assert response.status_code == 200, response.json()
+        assert response.json()["data"] == {
+            "deleted": [function_id],
+            "failed": [{"id": item, "errors": [NOT_AN_ID_ITEM]}],
+        }
+
+    @pytest.mark.parametrize("ids", NOT_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_are_refused(self, client: TestClient, ids: Any) -> None:
+        created = client.post("/functions", json=make_function_payload(name="bd_kept"))
+        function_id = created.json()["data"]["id"]
+        response = client.request("DELETE", "/functions/batch", json={"ids": ids, "cascade": False})
+        assert_refused(response, "'ids' must be a list of ID strings")
+        assert client.get(f"/functions/{function_id}").status_code == 200
 
     def test_missing_item_appears_in_failed(self, client: TestClient) -> None:
         missing_id = str(uuid.uuid4())

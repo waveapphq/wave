@@ -19,7 +19,7 @@ from fastapi import APIRouter, Header, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.blocks import version_service as _block_version_svc
 
 # Create router for block version endpoints
@@ -79,7 +79,7 @@ async def add_block_version(block_id: str, request: Request) -> dict[str, Any] |
     try:
         validate_uuid(block_id, "block_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         result = _block_version_svc.add_block_version(block_id, body)
 
@@ -184,7 +184,7 @@ async def update_block_version(
     try:
         validate_uuid(block_id, "block_id")
 
-        body = await request.json()
+        body = await read_json_object(request)
 
         result = _block_version_svc.update_block_version(block_id, version, body, etag=if_match)
 

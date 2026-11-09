@@ -1008,7 +1008,7 @@ class TestScopedPreRunSeed:
         assert session["function_scopes"][("fn-1",)]["who"] == "fn-who"
         assert session["variables"].get("who") != "fn-who"
 
-    def test_a_flat_variables_entry_no_longer_seeds_a_function_input(
+    def test_a_flat_variables_entry_does_not_seed_a_function_input(
         self, client: TestClient
     ) -> None:
         node = _who_function_node()

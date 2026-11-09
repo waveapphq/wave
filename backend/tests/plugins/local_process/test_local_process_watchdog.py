@@ -116,19 +116,12 @@ class PopenAfterHandler(PopenRecorder):
         return super().__call__(*args, **kwargs)
 
 
-class FakeStream:
-    async def read(self, limit: int) -> bytes:
-        return b""
-
-
 class FakeProcess:
-    """A watchdog that ends at once with nothing on either stream."""
+    """A watchdog that ends at once without writing to either stream."""
 
     def __init__(self) -> None:
         self.pid = -1
         self.returncode = 0
-        self.stdout = FakeStream()
-        self.stderr = FakeStream()
 
     async def wait(self) -> int:
         return 0

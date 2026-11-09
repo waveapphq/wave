@@ -7,13 +7,10 @@ status updates, and system notifications.
 
 import asyncio
 import json
-import time
 import uuid
-import zlib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
 from typing import Any
 
 from fastapi import FastAPI, WebSocket
@@ -95,94 +92,6 @@ class ConnectionNotFound(NotFoundException):
         super().__init__(message)
 
 
-class AcknowledgmentTimeout(WaveException):
-    """Raised when acknowledgment is not received within timeout."""
-
-    status_code = 408
-    error_code = "ACKNOWLEDGMENT_TIMEOUT"
-
-    def __init__(self, message: str = "Acknowledgment timeout") -> None:
-        super().__init__(message)
-
-
-class SubscriptionError(ValidationException):
-    """Raised for subscription-related errors."""
-
-    error_code = "SUBSCRIPTION_ERROR"
-
-    def __init__(self, code: "WebSocketErrorCode", message: str) -> None:
-        self.code = code
-        super().__init__(message)
-
-
-# ============================================================================
-# Enums
-# ============================================================================
-
-
-class WebSocketErrorCode(Enum):
-    """Error codes for WebSocket operations."""
-
-    CONNECTION_LIMIT_EXCEEDED = "CONNECTION_LIMIT_EXCEEDED"
-    INVALID_TOPIC = "INVALID_TOPIC"
-    INVALID_MESSAGE = "INVALID_MESSAGE"
-    SEND_FAILED = "SEND_FAILED"
-    ACKNOWLEDGMENT_TIMEOUT = "ACKNOWLEDGMENT_TIMEOUT"
-    CONNECTION_NOT_FOUND = "CONNECTION_NOT_FOUND"
-
-
-class SubscriptionCategory(Enum):
-    """Subscription topic categories."""
-
-    EXECUTION = "execution"
-    SYSTEM = "system"
-    DEBUG = "debug"
-    ERROR = "error"
-    VARIABLE = "variable"
-
-
-class EventType(Enum):
-    """Types of WebSocket events."""
-
-    # Plugin events
-    PLUGIN_START = "plugin_start"
-    PLUGIN_COMPLETE = "plugin_complete"
-    PLUGIN_ERROR = "plugin_error"
-
-    # Block events
-    BLOCK_START = "block_start"
-    BLOCK_COMPLETE = "block_complete"
-    BLOCK_ERROR = "block_error"
-
-    # Execution events
-    EXECUTION_START = "execution_start"
-    EXECUTION_PROGRESS = "execution_progress"
-    EXECUTION_COMPLETE = "execution_complete"
-
-    # Variable events
-    VARIABLE_CREATE = "variable_create"
-    VARIABLE_UPDATE = "variable_update"
-    VARIABLE_DELETE = "variable_delete"
-
-    # Debug events
-    DEBUG_BREAKPOINT_HIT = "debug_breakpoint_hit"
-    DEBUG_STEP_COMPLETE = "debug_step_complete"
-    DEBUG_WATCH_CHANGE = "debug_watch_change"
-
-    # System events
-    SYSTEM_STATUS = "system_status"
-    SYSTEM_CONFIG_CHANGE = "system_config_change"
-    SYSTEM_RESOURCE_WARNING = "system_resource_warning"
-
-    # Error events
-    ERROR_EXECUTION_FAILURE = "error_execution_failure"
-    ERROR_CONNECTION = "error_connection"
-    ERROR_SUBSCRIPTION = "error_subscription"
-
-    # Log events (V-CANVAS-01d)
-    LOG = "log"
-
-
 # ============================================================================
 # Dataclasses
 # ============================================================================
@@ -199,15 +108,6 @@ class ConnectionMetadata:
     last_activity: datetime = field(default_factory=lambda: datetime.now(UTC))
     ip: str = "unknown"
     client_label: str = "Browser"
-
-
-@dataclass
-class ConnectionHealth:
-    """Health status for a WebSocket connection."""
-
-    is_healthy: bool
-    last_ping_latency_ms: float | None = None
-    missed_heartbeats: int = 0
 
 
 @dataclass
@@ -229,110 +129,8 @@ class QueuedMessage:
 
 
 # ============================================================================
-# Global Sequence Counter
-# ============================================================================
-
-_sequence_counter = 0
-
-
-def _get_next_sequence() -> int:
-    """Get the next sequence number."""
-    global _sequence_counter
-    _sequence_counter += 1
-    return _sequence_counter
-
-
-# ============================================================================
 # Helper Functions
 # ============================================================================
-
-
-def create_event(event_type: EventType, **kwargs: Any) -> dict[str, Any]:
-    """Create an event with standard envelope fields.
-
-    Args:
-        event_type: The type of event.
-        **kwargs: Event-specific payload fields.
-
-    Returns:
-        Dictionary with event type, timestamp, sequence, and payload fields.
-    """
-    event: dict[str, Any] = {
-        "type": event_type.value,
-        "timestamp": datetime.now(UTC).isoformat().replace(_TZ_UTC_SUFFIX, "Z"),
-        "sequence": _get_next_sequence(),
-    }
-    event.update(kwargs)
-    return event
-
-
-def calculate_reconnect_delay(attempt: int, max_delay: float = 60.0) -> float:
-    """Calculate exponential backoff delay for reconnection.
-
-    Args:
-        attempt: The reconnection attempt number (1-indexed).
-        max_delay: Maximum delay in seconds.
-
-    Returns:
-        Delay in seconds.
-    """
-    # Base delay is 1 second, doubles each attempt
-    delay = float(min(2 ** (attempt - 1), max_delay))
-    return delay
-
-
-def compress_message(message: str) -> bytes:
-    """Compress a message using zlib.
-
-    Args:
-        message: JSON string to compress.
-
-    Returns:
-        Compressed bytes.
-    """
-    return zlib.compress(message.encode("utf-8"))
-
-
-def decompress_message(data: bytes) -> str:
-    """Decompress a zlib-compressed message.
-
-    Args:
-        data: Compressed bytes.
-
-    Returns:
-        Original JSON string.
-    """
-    return zlib.decompress(data).decode("utf-8")
-
-
-def should_compress(message: str, threshold: int = 1024) -> bool:
-    """Check if a message should be compressed.
-
-    Args:
-        message: JSON string to check.
-        threshold: Size threshold in bytes.
-
-    Returns:
-        True if message should be compressed.
-    """
-    return len(message.encode("utf-8")) > threshold
-
-
-def wrap_compressed_message(data: bytes) -> dict[str, Any]:
-    """Wrap compressed data in a message envelope.
-
-    Args:
-        data: Compressed bytes.
-
-    Returns:
-        Dictionary with compression indicator and base64-encoded data.
-    """
-    import base64
-
-    return {
-        "compressed": True,
-        "data": base64.b64encode(data).decode("ascii"),
-    }
 
 
 def create_error_response(
@@ -361,36 +159,6 @@ def create_error_response(
     return response
 
 
-class SequenceTracker:
-    """Tracks received message sequences and detects gaps."""
-
-    def __init__(self) -> None:
-        """Initialize the sequence tracker."""
-        self._received: set[int] = set()
-        self._max_received: int = 0
-
-    def record_received(self, sequence: int) -> None:
-        """Record a received sequence number.
-
-        Args:
-            sequence: The sequence number received.
-        """
-        self._received.add(sequence)
-        if sequence > self._max_received:
-            self._max_received = sequence
-
-    def get_gaps(self) -> list[int]:
-        """Get missing sequence numbers.
-
-        Returns:
-            List of missing sequence numbers.
-        """
-        if not self._received:
-            return []
-        expected = set(range(1, self._max_received + 1))
-        return sorted(expected - self._received)
-
-
 # ============================================================================
 # WebSocket Manager
 # ============================================================================
@@ -405,11 +173,9 @@ class WebSocketManager:
         heartbeat_timeout: float = 60.0,
         max_connections: int = 1000,
         session_expiration_seconds: float = 300.0,
-        rate_limit_per_second: int = 100,
         enable_message_queue: bool = False,
         queue_max_size: int = 1000,
         queue_expiration_seconds: float = 60.0,
-        compression_threshold: int = 1024,
     ) -> None:
         """Initialize the WebSocket manager.
 
@@ -418,28 +184,22 @@ class WebSocketManager:
             heartbeat_timeout: Seconds before connection is considered stale.
             max_connections: Maximum number of concurrent connections.
             session_expiration_seconds: Session expiration time in seconds.
-            rate_limit_per_second: Maximum messages per second per connection.
             enable_message_queue: Whether to queue messages for disconnected clients.
             queue_max_size: Maximum messages to queue per session.
             queue_expiration_seconds: Time before queued messages expire.
-            compression_threshold: Size threshold for compression in bytes.
         """
         self.websocket_path = "/ws"
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
         self.max_connections = max_connections
         self.session_expiration_seconds = session_expiration_seconds
-        self.rate_limit_per_second = rate_limit_per_second
         self.enable_message_queue = enable_message_queue
         self.queue_max_size = queue_max_size
         self.queue_expiration_seconds = queue_expiration_seconds
-        self.compression_threshold = compression_threshold
 
         # Connection tracking
         self.active_connections: dict[str, WebSocket] = {}
         self._metadata: dict[str, ConnectionMetadata] = {}
-        self._ping_times: dict[str, float] = {}
-        self._health: dict[str, ConnectionHealth] = {}
 
         # Session management
         self._sessions: dict[str, SessionData] = {}
@@ -448,13 +208,6 @@ class WebSocketManager:
 
         # Message queuing
         self._message_queues: dict[str, list[QueuedMessage]] = {}
-
-        # Rate limiting
-        self._rate_limit_tokens: dict[str, float] = {}
-        self._rate_limit_last_update: dict[str, float] = {}
-
-        # Acknowledgment tracking
-        self._pending_acks: dict[str, asyncio.Event] = {}
 
         # Log subscription levels: conn_id -> session_id -> level
         self._log_subscription_levels: dict[str, dict[str, str]] = {}
@@ -541,11 +294,6 @@ class WebSocketManager:
             ip=self._client_host(websocket),
             client_label=derive_client_label(self._user_agent(websocket)),
         )
-        self._health[conn_id] = ConnectionHealth(is_healthy=True)
-
-        # Rate limiting initialization
-        self._rate_limit_tokens[conn_id] = float(self.rate_limit_per_second)
-        self._rate_limit_last_update[conn_id] = time.monotonic()
 
         # Link session to connection
         if session_id:
@@ -626,10 +374,6 @@ class WebSocketManager:
         """
         self.active_connections.pop(conn_id, None)
         self._metadata.pop(conn_id, None)
-        self._ping_times.pop(conn_id, None)
-        self._health.pop(conn_id, None)
-        self._rate_limit_tokens.pop(conn_id, None)
-        self._rate_limit_last_update.pop(conn_id, None)
         self._log_subscription_levels.pop(conn_id, None)
         self._connection_pages.pop(conn_id, None)
         holder_id = self._connection_holders.pop(conn_id, None)
@@ -669,28 +413,6 @@ class WebSocketManager:
         """
         return self._metadata.get(conn_id)
 
-    def get_connection_health(self, conn_id: str) -> ConnectionHealth:
-        """Get health status for a connection.
-
-        Args:
-            conn_id: The connection ID.
-
-        Returns:
-            ConnectionHealth for the connection.
-        """
-        if conn_id not in self._health:
-            return ConnectionHealth(is_healthy=False)
-
-        health = self._health[conn_id]
-        metadata = self._metadata.get(conn_id)
-
-        if metadata:
-            time_since_activity = (datetime.now(UTC) - metadata.last_activity).total_seconds()
-            if time_since_activity > self.heartbeat_timeout:
-                health.is_healthy = False
-
-        return health
-
     def get_stale_connections(self) -> list[str]:
         """Get list of stale connection IDs.
 
@@ -715,7 +437,6 @@ class WebSocketManager:
         if websocket is None:
             return
 
-        self._ping_times[conn_id] = time.monotonic()
         await websocket.send_json({"type": "ping"})
 
     def handle_pong(self, conn_id: str) -> None:
@@ -727,15 +448,6 @@ class WebSocketManager:
         metadata = self._metadata.get(conn_id)
         if metadata:
             metadata.last_activity = datetime.now(UTC)
-
-        # Calculate latency
-        if conn_id in self._ping_times:
-            latency_seconds = time.monotonic() - self._ping_times[conn_id]
-            latency_ms = latency_seconds * 1000
-            if conn_id in self._health:
-                self._health[conn_id].last_ping_latency_ms = latency_ms
-                self._health[conn_id].is_healthy = True
-                self._health[conn_id].missed_heartbeats = 0
 
     async def cleanup_stale_connections(self) -> None:
         """Clean up all stale connections."""
@@ -1063,68 +775,9 @@ class WebSocketManager:
             return None
         return self._log_subscription_levels[conn_id].get(session_id)
 
-    def create_event(self, event_type: EventType, **kwargs: Any) -> dict[str, Any]:
-        """Create an event with standard envelope fields.
-
-        Args:
-            event_type: The type of event.
-            **kwargs: Event-specific payload fields.
-
-        Returns:
-            Dictionary with event type, timestamp, sequence, and payload fields.
-        """
-        event: dict[str, Any] = {
-            "type": event_type.value,
-            "timestamp": datetime.now(UTC).isoformat().replace(_TZ_UTC_SUFFIX, "Z"),
-            "sequence": _get_next_sequence(),
-        }
-        event.update(kwargs)
-        return event
-
     # ========================================================================
     # Broadcasting
     # ========================================================================
-
-    def _check_rate_limit(self, conn_id: str) -> bool:
-        """Check if a message can be sent (rate limiting).
-
-        Args:
-            conn_id: The connection ID.
-
-        Returns:
-            True if message can be sent, False if rate limited.
-        """
-        now = time.monotonic()
-        last_update = self._rate_limit_last_update.get(conn_id, now)
-        elapsed = now - last_update
-
-        # Replenish tokens
-        tokens = self._rate_limit_tokens.get(conn_id, 0.0)
-        tokens = min(
-            float(self.rate_limit_per_second),
-            tokens + elapsed * self.rate_limit_per_second,
-        )
-
-        self._rate_limit_last_update[conn_id] = now
-
-        if tokens >= 1.0:
-            self._rate_limit_tokens[conn_id] = tokens - 1.0
-            return True
-        else:
-            self._rate_limit_tokens[conn_id] = tokens
-            return False
-
-    async def broadcast_all(self, message: dict[str, Any]) -> None:
-        """Broadcast a message to all connected clients.
-
-        Args:
-            message: The message to broadcast.
-        """
-        for websocket in self.active_connections.values():
-            try:
-                await websocket.send_json(message)
-            except Exception:
-                pass
 
     async def broadcast_to_topic(self, topic: str, message: dict[str, Any]) -> None:
         """Broadcast a message to all subscribers of a topic.
@@ -1197,88 +850,6 @@ class WebSocketManager:
             if topic in session.subscriptions:
                 self._queue_message(session_id, message)
 
-    async def unicast(
-        self,
-        conn_id: str,
-        message: dict[str, Any],
-        compress_if_large: bool = False,
-    ) -> bool:
-        """Send a message to a specific connection.
-
-        Args:
-            conn_id: The connection ID.
-            message: The message to send.
-            compress_if_large: Whether to compress large messages.
-
-        Returns:
-            True if sent, False if rate limited or failed.
-        """
-        if not self._check_rate_limit(conn_id):
-            return False
-
-        websocket = self.active_connections.get(conn_id)
-        if websocket is None:
-            return False
-
-        try:
-            if compress_if_large:
-                json_str = json.dumps(message)
-                if should_compress(json_str, self.compression_threshold):
-                    compressed = compress_message(json_str)
-                    wrapped = wrap_compressed_message(compressed)
-                    wrapped_json = json.dumps(wrapped)
-                    await websocket.send_bytes(wrapped_json.encode("utf-8"))
-                    return True
-
-            await websocket.send_json(message)
-            return True
-        except Exception:
-            return False
-
-    async def send_with_ack(
-        self,
-        conn_id: str,
-        message: dict[str, Any],
-        timeout_seconds: float = 5.0,
-    ) -> None:
-        """Send a message and wait for acknowledgment.
-
-        Args:
-            conn_id: The connection ID.
-            message: The message to send.
-            timeout_seconds: Timeout in seconds.
-
-        Raises:
-            AcknowledgmentTimeout: If ack not received within timeout.
-        """
-        ack_id = str(uuid.uuid4())
-        message["ack_id"] = ack_id
-
-        event = asyncio.Event()
-        self._pending_acks[ack_id] = event
-
-        websocket = self.active_connections.get(conn_id)
-        if websocket is not None:
-            await websocket.send_json(message)
-
-        try:
-            async with asyncio.timeout(timeout_seconds):
-                await event.wait()
-        except TimeoutError:
-            raise AcknowledgmentTimeout("Acknowledgment timeout") from None
-        finally:
-            self._pending_acks.pop(ack_id, None)
-
-    def handle_ack(self, ack_id: str) -> None:
-        """Handle an acknowledgment from a client.
-
-        Args:
-            ack_id: The acknowledgment ID.
-        """
-        event = self._pending_acks.get(ack_id)
-        if event:
-            event.set()
-
     async def handle_message(self, conn_id: str, raw_message: str) -> None:
         """Handle an incoming message from a client.
 
@@ -1308,8 +879,6 @@ class WebSocketManager:
 
         if msg_type == "pong":
             self.handle_pong(conn_id)
-        elif msg_type == "ack" and "ack_id" in message:
-            self.handle_ack(message["ack_id"])
         elif msg_type in ("subscribe", "unsubscribe", "request_history") and "topic" in message:
             await self._dispatch_topic_frame(conn_id, websocket, msg_type, message)
         else:
@@ -1718,10 +1287,6 @@ class WebSocketManager:
         # Clean up all connection data
         self.active_connections.clear()
         self._metadata.clear()
-        self._ping_times.clear()
-        self._health.clear()
-        self._rate_limit_tokens.clear()
-        self._rate_limit_last_update.clear()
         self._log_subscription_levels.clear()
 
         # Clear session mappings
@@ -1731,11 +1296,6 @@ class WebSocketManager:
         # Clear sessions and queues (they won't be needed after shutdown)
         self._sessions.clear()
         self._message_queues.clear()
-
-        # Clear pending acknowledgments
-        for event in self._pending_acks.values():
-            event.set()  # Unblock any waiting coroutines
-        self._pending_acks.clear()
 
 
 # ============================================================================

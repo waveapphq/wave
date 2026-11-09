@@ -25,7 +25,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile,
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import build_response_meta, validate_uuid
+from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services import variable_service
 from wavecore.api.services.file_tree import content_disposition
@@ -127,7 +127,7 @@ async def set_system_variables(request: Request, response: Response) -> dict[str
     Returns:
         Set variables with metadata
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     if "variables" not in body:
         raise ValidationException(_ERR_VARIABLES_REQUIRED)
@@ -320,7 +320,7 @@ async def set_entity_variables(
     validate_scope(scope)
     validate_uuid(entity_id, "entity_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "variables" not in body:
@@ -356,7 +356,7 @@ async def update_entity_variables(
     validate_scope(scope)
     validate_uuid(entity_id, "entity_id")
 
-    body = await request.json()
+    body = await read_json_object(request)
 
     # Validate required fields
     if "variables" not in body:

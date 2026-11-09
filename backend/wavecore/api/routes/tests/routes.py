@@ -18,7 +18,6 @@ Endpoints:
 - POST /tests/{test_id}/fix: Apply automatic fixes
 - POST /tests/{test_id}/clone: Clone test
 - GET /tests/{test_id}/dependency-graph: Get dependency graph
-- GET /tests/{test_id}/executions: Get execution history
 - POST /workflows/validate: Validate workflow structure
 """
 
@@ -31,10 +30,10 @@ from fastapi.responses import JSONResponse
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.routes.shared import (
     read_json_object,
-    validate_semantic_version,
     validate_uuid,
 )
 from wavecore.api.services import workflow_service
+from wavecore.api.services.shared import validate_semantic_version
 from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests.service import SaveValidationError
 
@@ -66,11 +65,31 @@ def _save_validation_response(error: SaveValidationError) -> JSONResponse:
     )
 
 
+def _conflict_response(error: ConflictException) -> JSONResponse:
+    """409 for a conflicting save; 412 when the If-Match ETag no longer matches."""
+    message = error.message
+    if _ERR_PRECONDITION in message:
+        status_code = status.HTTP_412_PRECONDITION_FAILED
+    else:
+        status_code = status.HTTP_409_CONFLICT
+    return JSONResponse(
+        status_code=status_code,
+        content={"success": False, "error": {"message": message, "code": "CONFLICT"}},
+    )
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    """400 for a request the save refuses before it runs."""
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"success": False, "error": {"message": str(error), "code": "VALIDATION_ERROR"}},
+    )
+
+
 def validate_test_name(name: str) -> None:
     """Validate test name length.
 
     No character restrictions - all characters allowed.
-    Future: REQ-6.4.1 will add proper sanitization for security.
 
     Args:
         name: Test name to validate
@@ -383,33 +402,9 @@ async def update_test(
     except SaveValidationError as e:
         return _save_validation_response(e)
     except ConflictException as e:
-        error_message = e.message
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_409_CONFLICT
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+        return _conflict_response(e)
     except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+        return _bad_request_response(e)
 
 
 @router.patch("/tests/{test_id}/metadata", response_model=None)
@@ -461,33 +456,9 @@ async def update_test_metadata(
         return {"success": True, "data": result}
 
     except ConflictException as e:
-        error_message = e.message
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_409_CONFLICT
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+        return _conflict_response(e)
     except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+        return _bad_request_response(e)
 
 
 @router.delete("/tests/{test_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -909,53 +880,6 @@ async def get_test_dependency_graph(test_id: str) -> dict[str, Any] | JSONRespon
             )
 
         return {"success": True, "data": result, "nodes": result["nodes"], "edges": result["edges"]}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
-
-
-@router.get("/tests/{test_id}/executions", response_model=None)
-async def get_test_executions(
-    test_id: str,
-    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
-    per_page: Annotated[int, Query(ge=1, le=100, description="Results per page")] = 20,
-) -> dict[str, Any] | JSONResponse:
-    """Get test execution history.
-
-    Links to past runs enabling trend analysis and regression detection.
-
-    Args:
-        test_id: Test UUID
-        page: Page number
-        per_page: Results per page
-
-    Returns:
-        Paginated execution history
-    """
-    try:
-        validate_uuid(test_id, "test_id")
-
-        result = test_service.get_test_executions(test_id, page=page, per_page=per_page)
-
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return {"success": True, "data": result["executions"], "pagination": result}
 
     except (ValueError, ValidationException) as e:
         return JSONResponse(

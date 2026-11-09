@@ -17,8 +17,7 @@ Blocklist is Content-Length ONLY: Transfer-Encoding is forwarded
 to the transport (rejection there = node failure), and Host and Connection
 stay allowed (vhost + keep-alive testing). The blocked-key sentence renders
 the key in canonical casing regardless of how the user typed it; the wrapper
-keeps the key as typed. Content-Type is an ordinary header; the
-mode-conflict rejection is RETIRED - when a body mode
+keeps the key as typed. Content-Type is an ordinary header; when a body mode
 generates a Content-Type, the generated header silently wins at runtime
 (pinned in test_http_body_modes.py).
 """
@@ -132,7 +131,7 @@ class TestContentTypeIsAnOrdinaryHeader:
         assert sent["Content-Type"] == "application/json"
 
     @pytest.mark.asyncio
-    async def test_generating_modes_no_longer_reject_content_type_rows(self):
+    async def test_generating_modes_do_not_reject_content_type_rows(self):
         """A form-mode Content-Type row executes - the generated header wins silently."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 

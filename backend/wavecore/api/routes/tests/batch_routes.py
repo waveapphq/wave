@@ -13,6 +13,8 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from wavecore.api.exceptions import ValidationException
+from wavecore.api.routes.shared import NOT_A_JSON_ARRAY, read_json, read_json_array
 from wavecore.api.services.tests import service as test_service
 
 # Create router for test batch endpoints
@@ -29,7 +31,7 @@ async def batch_create_tests(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with created IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = test_service.batch_create_tests(body)
     return result
 
@@ -44,7 +46,7 @@ async def batch_update_tests(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with updated IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = test_service.batch_update_tests(body)
     return result
 
@@ -59,8 +61,9 @@ async def batch_delete_tests(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    body = await request.json()
-    # Support both {ids: [...]} and [...] formats
-    test_ids = body.get("ids", body) if isinstance(body, dict) else body
+    body = await read_json(request)
+    test_ids = body.get("ids") if isinstance(body, dict) else body
+    if not isinstance(test_ids, list):
+        raise ValidationException(NOT_A_JSON_ARRAY)
     result = test_service.batch_delete_tests(test_ids)
     return result

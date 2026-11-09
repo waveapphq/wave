@@ -7,7 +7,7 @@ This test module verifies:
 - Request logging (method, path, headers, body, timestamp, client info)
 - Response logging (status code, headers, body, duration, metrics)
 - Sensitive data handling (authentication headers, passwords, PII redaction)
-- Performance considerations (size limits, sampling)
+- Performance considerations (size limits)
 - Filtering and configuration (endpoint-specific rules)
 - Audit trail capabilities (compliance tracking, user action logging)
 - Correlation and tracing (unique correlation IDs, propagation to downstream services)
@@ -552,6 +552,35 @@ class TestSensitiveDataHandling:
         assert not any("super_secret_pass" in record.message for record in caplog.records)
 
     @pytest.mark.asyncio
+    async def test_masks_password_sent_as_an_object_in_request_body(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that a password field holding an object is masked whole."""
+        app = FastAPI()
+        add_request_response_logging_middleware(app)
+
+        @app.post("/login")
+        async def login(body: dict[str, Any]) -> dict[str, str]:
+            return {"status": "ok"}
+
+        client = TestClient(app)
+
+        with caplog.at_level(logging.DEBUG):
+            response = client.post(
+                "/login",
+                json={"username": "alice", "password": {"value": "super_secret_pass"}},
+            )
+
+        assert response.status_code == 200
+        bodies = [
+            record.getMessage().split("req body: ", 1)[1]
+            for record in caplog.records
+            if "req body: " in record.getMessage()
+        ]
+        assert bodies == ['{"username": "alice", "password": "***REDACTED***"}']
+        assert "super_secret_pass" not in caplog.text
+
+    @pytest.mark.asyncio
     async def test_filters_cookie_header(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test that Cookie header is filtered/masked in logs."""
         app = FastAPI()
@@ -848,47 +877,23 @@ class TestPerformanceConsiderations:
                     # If we see part of the response, there should be a truncation marker
                     assert "truncated" in record.message.lower() or "..." in record.message
 
-    @pytest.mark.asyncio
-    async def test_supports_sampling_for_high_volume_endpoints(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that sampling can be configured for high-volume endpoints."""
-        app = FastAPI()
-        # Configure sampling: 50% sampling rate
-        add_request_response_logging_middleware(app, sampling_rate=0.5)
-
-        @app.get("/high-volume")
-        async def high_volume_endpoint() -> dict[str, str]:
-            return {"status": "ok"}
-
-        client = TestClient(app)
-
-        # Make multiple requests
-        request_count = 20
-        _log_count_before = len(caplog.records)
-
-        with caplog.at_level(logging.INFO):
-            for _ in range(request_count):
-                response = client.get("/high-volume")
-                assert response.status_code == 200
-
-        # Count logs related to this endpoint (only from our middleware, not httpx)
-        endpoint_logs = [
-            r
-            for r in caplog.records
-            if "/high-volume" in r.message and r.name == "wavecore.api.middleware"
-        ]
-
-        # With 50% sampling, we expect roughly half the requests to be logged
-        # Unified format logs once per request (response only)
-        # So 20 requests with 50% sampling should give us ~10 log records
-        # Allow wide variance due to randomness (between 5% and 95% of total)
-        assert len(endpoint_logs) >= 1
-        assert len(endpoint_logs) <= request_count - 1
-
 
 class TestFilteringAndConfiguration:
     """Test suite for logging filtering and configuration options."""
+
+    def test_logging_config_holds_only_the_options_the_middleware_reads(self) -> None:
+        """Test that every logging option is one the middleware acts on."""
+        from wavecore.api.middleware import _logging_config
+
+        assert sorted(_logging_config) == [
+            "exclude_paths",
+            "log_request_body",
+            "log_request_headers",
+            "log_response_body",
+            "log_response_headers",
+            "max_body_size",
+            "sensitive_field_patterns",
+        ]
 
     @pytest.mark.asyncio
     async def test_can_disable_request_body_logging(self, caplog: pytest.LogCaptureFixture) -> None:
@@ -1483,15 +1488,49 @@ class TestLoggingMiddlewareHelperFunctions:
 
         filtered = _filter_sensitive_body(body)
 
-        # Nested sensitive fields should be masked
-        assert (
-            "***" in filtered["user"]["credentials"]["password"]
-            or "REDACTED" in filtered["user"]["credentials"]["password"]
-        )
-        assert (
-            "***" in filtered["user"]["credentials"]["api_key"]
-            or "REDACTED" in filtered["user"]["credentials"]["api_key"]
-        )
+        assert filtered == {"user": {"username": "alice", "credentials": "***REDACTED***"}}
+
+    @pytest.mark.parametrize(
+        "value",
+        ["secret_value", 5, None, ["secret_value"], {"value": "secret_value"}],
+        ids=["text", "number", "null", "list", "object"],
+    )
+    def test_filter_sensitive_body_masks_a_sensitive_key_whatever_its_value(
+        self, value: Any
+    ) -> None:
+        """Test that a sensitive key is masked whatever type its value has."""
+        from wavecore.api.middleware import _filter_sensitive_body
+
+        with patch.dict(
+            "wavecore.api.middleware.middleware_module._logging_config",
+            {"sensitive_field_patterns": ["password"]},
+        ):
+            filtered = _filter_sensitive_body({"username": "alice", "password": value})
+
+        assert filtered == {"username": "alice", "password": "***REDACTED***"}
+
+    def test_filter_sensitive_body_looks_inside_lists(self) -> None:
+        """Test that sensitive keys inside lists of objects are masked."""
+        from wavecore.api.middleware import _filter_sensitive_body
+
+        body = [
+            {"name": "first", "password": "secret_one"},
+            {"name": "second", "items": [{"token": "secret_two", "count": 2}, "plain"]},
+        ]
+
+        with patch.dict(
+            "wavecore.api.middleware.middleware_module._logging_config",
+            {"sensitive_field_patterns": ["password", "token"]},
+        ):
+            filtered = _filter_sensitive_body(body)
+
+        assert filtered == [
+            {"name": "first", "password": "***REDACTED***"},
+            {
+                "name": "second",
+                "items": [{"token": "***REDACTED***", "count": 2}, "plain"],
+            },
+        ]
 
     def test_truncate_body_enforces_size_limit(self) -> None:
         """Test that body truncation enforces size limits."""
@@ -1615,20 +1654,6 @@ class TestLoggingMiddlewareHelperFunctions:
         # Should return original body unmodified
         assert result == small_body
 
-    def test_should_sample_request_respects_sampling_rate(self) -> None:
-        """Test that sampling function respects configured sampling rate."""
-        from wavecore.api.middleware import _should_sample_request, update_logging_config
-
-        # Set sampling to 0% - should never sample
-        update_logging_config(sampling_rate=0.0)
-        samples = [_should_sample_request() for _ in range(100)]
-        assert not any(samples), "With 0% sampling, no requests should be sampled"
-
-        # Set sampling to 100% - should always sample
-        update_logging_config(sampling_rate=1.0)
-        samples = [_should_sample_request() for _ in range(100)]
-        assert all(samples), "With 100% sampling, all requests should be sampled"
-
     @pytest.mark.asyncio
     async def test_middleware_logs_debug_for_1xx_status(
         self, caplog: pytest.LogCaptureFixture
@@ -1689,7 +1714,7 @@ class TestFailedRequestLogging:
             with (
                 patch.dict(
                     "wavecore.api.middleware.middleware_module._logging_config",
-                    {"sampling_rate": 1.0, "exclude_paths": []},
+                    {"exclude_paths": []},
                 ),
                 caplog.at_level(logging.DEBUG, logger=_MIDDLEWARE_LOGGER),
             ):

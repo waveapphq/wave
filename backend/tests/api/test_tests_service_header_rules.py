@@ -7,7 +7,7 @@ HTTP-node value rules, with exact design-time messages:
   rows duplicating an earlier one AND for rows colliding with a header the
   saved config generates at send time (Auth section; body_auto_headers +
   mode-implied Content-Type; multipart ALWAYS generates - the checkbox is
-  forced). Key rendered as typed. The mode-conflict message is RETIRED.
+  forced). Key rendered as typed.
 - `Header "Content-Length" cannot be set manually - the HTTP stack blocks
   length overrides` (canonical casing regardless of typed casing;
   Transfer-Encoding rows are allowed - the transport arbitrates)
@@ -715,7 +715,7 @@ class TestRemoteBodyPathSchemesAreNotSaveFindings:
 
         assert _node_errors(result, "copy-body") == []
 
-    def test_the_finding_code_is_gone(self) -> None:
+    def test_the_service_has_no_remote_host_path_scheme_code(self) -> None:
         import inspect
 
         assert "REMOTE_HOST_PATH_SCHEME" not in inspect.getsource(test_service)
@@ -747,7 +747,7 @@ class TestProxyChoiceHasNoSaveRule:
         assert _proxy_url_findings(residual) == []
         assert [n["id"] for n in test["workflow"]["nodes"]] == ["http-1"]
 
-    def test_the_finding_code_is_gone(self) -> None:
+    def test_the_service_has_no_proxy_url_required_code(self) -> None:
         import inspect
 
         assert "PROXY_URL_REQUIRED" not in inspect.getsource(test_service)

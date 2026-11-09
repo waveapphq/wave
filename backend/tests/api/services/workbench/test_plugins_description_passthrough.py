@@ -294,7 +294,7 @@ class TestAControlBlocksLines:
         assert [line["source"] for line in lines if LONG_DESCRIPTION in line["source"]] == []
 
 
-class TestNoLegacyDisplayNameSymbol:
+class TestNoDisplayNameSymbol:
     """Negative: the plugins module exports no `display_name` named parameters."""
 
     def test_plugins_module_does_not_expose_display_name_param(self) -> None:

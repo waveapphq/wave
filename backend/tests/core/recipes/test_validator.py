@@ -54,7 +54,8 @@ def validate(text: str) -> list[dict[str, Any]]:
 def compile_findings(text: str) -> list[dict[str, Any]]:
     from wavecore.core.recipes.compiler import compile_recipe
 
-    return compile_recipe(text)["findings"]
+    findings: list[dict[str, Any]] = compile_recipe(text)["findings"]
+    return findings
 
 
 def http_step(**settings: Any) -> dict[str, Any]:
@@ -109,7 +110,7 @@ class TestBlockCatalog:
         )
         assert finding["fix"] == "Choose an implemented block or accept the runtime failure"
 
-    def test_the_removed_ldap_block_is_an_unknown_block(self) -> None:
+    def test_ldap_client_is_an_unknown_block(self) -> None:
         findings = validate(make_recipe([{"block": "ldap-client"}]))
         finding = find_finding(findings, "UNKNOWN_BLOCK")
         assert finding["severity"] == "error"
@@ -126,6 +127,11 @@ class TestBlockCatalog:
 
         assert load_block_catalog()["delay"].output_type_when == {}
         assert remote_execution_entry().output_type_when == {}
+
+    def test_the_remote_execution_entry_maps_its_output_to_its_type(self) -> None:
+        from wavecore.core.recipes.validator import remote_execution_entry
+
+        assert remote_execution_entry().outputs == {"remote_session_id": "string"}
 
     def test_a_block_with_output_type_rules_carries_them(self) -> None:
         from wavecore.core.recipes.validator import load_block_catalog
@@ -226,7 +232,7 @@ class TestHttpProxyChoice:
         )
 
     @pytest.mark.parametrize("choice", ["system", "explicit"])
-    def test_a_removed_choice_is_refused(self, choice: str) -> None:
+    def test_a_system_or_explicit_proxy_mode_is_refused(self, choice: str) -> None:
         findings = validate(make_recipe([http_step(proxy_mode=choice)]))
         finding = find_finding(findings, "INVALID_ENUM_VALUE")
         assert finding["severity"] == "error"
@@ -584,15 +590,12 @@ class TestWaitUntilConstruct:
         )
         assert "UNKNOWN_BLOCK" in codes(findings)
 
-    def test_the_removed_leaf_form_is_refused(self) -> None:
-        # Section 4.6: `- wait_until: {condition: ..., timeout: ...}` compiled to
-        # a node that did nothing. The format rejects it rather than accepting a
-        # definition the platform silently discards.
+    def test_the_condition_leaf_form_is_refused(self) -> None:
         findings = self._findings({"condition": "pod_phase == 'Running'", "timeout": 30000})
         finding = find_finding(findings, "UNKNOWN_STEP_KEY")
         assert finding["problem"] == "Unknown key 'condition' on a 'wait_until' construct"
 
-    def test_the_removed_poll_interval_key_is_refused(self) -> None:
+    def test_a_poll_interval_key_is_refused(self) -> None:
         findings = self._findings(
             {"that": ["pod_phase == 'Running'"], "timeout": 1, "poll_interval": 1000}
         )
@@ -1121,7 +1124,7 @@ class TestDeclaredOutputs:
         assert "INVALID_DECLARED_OUTPUT" not in codes(findings)
         assert find_finding(findings, "UNKNOWN_CAPTURE_OUTPUT")["step"] == "flow[0].capture.COUNT"
 
-    def test_a_removed_setting_is_an_unknown_setting(self) -> None:
+    def test_a_command_setting_is_an_unknown_setting(self) -> None:
         step = shell_script_step(command="uname -a")
         finding = find_finding(validate(make_recipe([step])), "UNKNOWN_SETTING")
         assert finding["step"] == "flow[0].settings.command"
@@ -1921,7 +1924,7 @@ class TestEnumInputDeclarations:
             )
         ]
 
-    def test_an_old_array_enum_gets_no_per_item_findings(self) -> None:
+    def test_an_array_enum_gets_no_per_item_findings(self) -> None:
         item = enum_input(type="array", required=_ABSENT, enumValues=["low", 5], default="mid")
         found = codes(findings_at(function_with([item]), ENUM_PATH))
         assert sorted(found) == ["ENUM_INPUT_NOT_REQUIRED", "ENUM_INPUT_TYPE"]
@@ -2615,7 +2618,7 @@ class TestFunctionStepSettings:
             )
         ]
 
-    def test_the_function_input_codes_are_gone(self) -> None:
+    def test_a_function_step_reports_no_function_input_code(self) -> None:
         findings = probe_findings(probe_step(nope=1), {"function": "probe"})
         assert {"UNKNOWN_FUNCTION_INPUT", "MISSING_REQUIRED_FUNCTION_INPUT"}.isdisjoint(
             codes(findings)

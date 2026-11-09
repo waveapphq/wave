@@ -282,7 +282,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `backend/wavecore/mcp/` | The MCP server that runs inside the backend. |
 | `backend/wavecore/models/` | The data models. |
 | `backend/wavecore/plugins/` | The plugins, one file each, such as HTTP, SSH, SQL, Kubernetes and Helm. |
-| `backend/wavecore/storage/` | The file storage of tests, profiles and run history. |
+| `backend/wavecore/storage/` | The loading of plugin definitions from the data folder. |
 | `backend/tests/` | The backend tests, which run with pytest. |
 | `backend/config/` | The example config file, `config.example.yaml`, and its README. |
 | `backend/vendor/` | `wheels.lock`, which pins the wheels that Remote Execution carries to a remote host. `./scripts/build-ci-image.sh` fetches them into `wheels/`. |

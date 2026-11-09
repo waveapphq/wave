@@ -24,7 +24,6 @@ Request/Response Logging Middleware provides:
 import contextvars
 import json
 import logging
-import secrets
 import time
 import traceback
 import uuid
@@ -476,7 +475,6 @@ _logging_config: dict[str, Any] = {
     "log_request_headers": True,
     "log_response_headers": True,
     "max_body_size": 10000,  # 10KB default
-    "sampling_rate": 1.0,  # 100% by default
     "exclude_paths": [],
     "sensitive_field_patterns": [
         "password",
@@ -530,29 +528,18 @@ def _filter_sensitive_body(body: Any) -> Any:
     Returns:
         Filtered body with sensitive data masked
     """
+    if isinstance(body, list):
+        return [_filter_sensitive_body(item) for item in body]
     if not isinstance(body, dict):
         return body
 
-    filtered: dict[str, Any] = {}
+    sensitive_patterns: list[str] = _logging_config["sensitive_field_patterns"]
+    filtered: dict[Any, Any] = {}
     for key, value in body.items():
-        # Ensure key is a string before calling lower()
-        if not isinstance(key, str):
-            filtered[key] = value
-            continue
-
-        # Check if value is a dict - recursively filter it first
-        if isinstance(value, dict):
-            # Recursively filter nested objects
-            filtered[key] = _filter_sensitive_body(value)
+        if isinstance(key, str) and any(pattern in key.lower() for pattern in sensitive_patterns):
+            filtered[key] = "***REDACTED***"
         else:
-            # Check if key matches any sensitive pattern
-            sensitive_patterns: list[str] = _logging_config["sensitive_field_patterns"]
-            is_sensitive = any(pattern in key.lower() for pattern in sensitive_patterns)
-
-            if is_sensitive:
-                filtered[key] = "***REDACTED***"
-            else:
-                filtered[key] = value
+            filtered[key] = _filter_sensitive_body(value)
 
     return filtered
 
@@ -602,16 +589,6 @@ def _should_log_endpoint(path: str) -> bool:
     """
     exclude_paths: list[str] = _logging_config.get("exclude_paths", [])
     return path not in exclude_paths
-
-
-def _should_sample_request() -> bool:
-    """Determine if request should be sampled based on sampling rate.
-
-    Returns:
-        True if request should be logged, False otherwise
-    """
-    sampling_rate: float = _logging_config.get("sampling_rate", 1.0)
-    return secrets.randbelow(1_000_000) / 1_000_000 <= sampling_rate
 
 
 _LOG_LEVEL_DISPATCH: dict[str, Callable[..., None]] = {
@@ -681,10 +658,6 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         """
         # Check if endpoint should be excluded
         if not _should_log_endpoint(request.url.path):
-            return await call_next(request)
-
-        # Check sampling rate
-        if not _should_sample_request():
             return await call_next(request)
 
         # One id per request (the error handler's when it ran first), also set for service logs.
@@ -857,7 +830,6 @@ def add_request_response_logging_middleware(
     log_request_headers: bool = True,
     log_response_headers: bool = True,
     max_body_size: int = 10000,
-    sampling_rate: float = 1.0,
     exclude_paths: list[str] | None = None,
     sensitive_field_patterns: list[str] | None = None,
 ) -> None:
@@ -870,7 +842,6 @@ def add_request_response_logging_middleware(
         log_request_headers: Whether to log request headers
         log_response_headers: Whether to log response headers
         max_body_size: Maximum body size to log (bytes)
-        sampling_rate: Sampling rate (0.0 to 1.0) for high-volume endpoints
         exclude_paths: List of paths to exclude from logging
         sensitive_field_patterns: List of field name patterns to mask
     """
@@ -882,7 +853,6 @@ def add_request_response_logging_middleware(
             "log_request_headers": log_request_headers,
             "log_response_headers": log_response_headers,
             "max_body_size": max_body_size,
-            "sampling_rate": sampling_rate,
             "exclude_paths": exclude_paths or [],
             "sensitive_field_patterns": sensitive_field_patterns
             or [

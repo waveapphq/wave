@@ -26,7 +26,7 @@ from wavecore.plugins._k8s_common import (
     validate_enums,
 )
 from wavecore.plugins._k8s_common import output_format_parameter as k8s_output_format_parameter
-from wavecore.plugins._shared_params import require_positive
+from wavecore.plugins._shared_params import require_positive, toggle_parameter
 
 _ENUM_PARAMS = ("output_format", "on_error")
 
@@ -60,17 +60,6 @@ _REPO_DESCRIPTION = (
 _SET_DESCRIPTION = (
     "Individual values to override, one --set key=value per entry; a null value passes key=null"
 )
-
-
-def _toggle(name: str, description: str) -> dict[str, Any]:
-    """An optional tick that starts off."""
-    return {
-        "name": name,
-        "type": "boolean",
-        "required": False,
-        "default": False,
-        "description": description,
-    }
 
 
 def _helm_path_parameter(description: str) -> dict[str, Any]:
@@ -226,13 +215,13 @@ def tail_parameters(
     """The Advanced and Failure Handling tail every Helm block closes its rows with."""
     parameters = namespace_parameters(all_namespaces=False, description=namespace)
     if create_namespace is not None:
-        parameters.append(_toggle("create_namespace", create_namespace))
+        parameters.append(toggle_parameter("create_namespace", create_namespace))
     parameters.append(_helm_path_parameter(_HELM_PATH_DESCRIPTION))
     parameters.extend(impersonation_parameters())
     if atomic is not None:
-        parameters.append(_toggle("atomic", atomic))
+        parameters.append(toggle_parameter("atomic", atomic))
     if cleanup_on_fail is not None:
-        parameters.append(_toggle("cleanup_on_fail", cleanup_on_fail))
+        parameters.append(toggle_parameter("cleanup_on_fail", cleanup_on_fail))
     if atomic is not None or cleanup_on_fail is not None:
         parameters.append(cleanup_timeout_parameter())
     parameters.append(on_error_parameter())

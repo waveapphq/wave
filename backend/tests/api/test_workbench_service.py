@@ -531,14 +531,14 @@ class TestStartWorkbenchRun:
             assert variables["base_url"] == "https://api.example.com"
             assert variables["timeout"] == 30
 
-    def test_start_workbench_run_handles_legacy_raw_variables(
+    def test_start_workbench_run_passes_bare_value_variables_through(
         self,
         valid_test_id: str,
         valid_environment_id: str,
         mock_test_with_blocks: dict[str, Any],
         mock_environment: dict[str, Any],
     ) -> None:
-        """Test that legacy raw-value format variables are preserved as-is."""
+        """Variables stored as bare values reach the run as-is."""
         from wavecore.api.services.workbench import service as workbench_service
 
         mock_test_with_blocks["variables"] = {
@@ -600,7 +600,7 @@ class TestStartWorkbenchRun:
             assert variables["expected_status"] == 599
             assert variables["untouched"] == "keep"
 
-    def test_run_overrides_apply_to_a_legacy_raw_value_variable(
+    def test_run_overrides_apply_to_a_bare_value_variable(
         self,
         valid_test_id: str,
         valid_environment_id: str,
@@ -2545,7 +2545,7 @@ class TestAsyncWorkflowExecution:
         assert session["block_states"]["Z"] == "passed"
 
     @pytest.mark.asyncio
-    async def test_execute_workflow_start_from_node_id_removed(self) -> None:
+    async def test_execute_workflow_takes_no_start_from_node_id(self) -> None:
         """Test that _execute_workflow does not accept start_from_node_id param."""
         from wavecore.api.services.workbench import service as workbench_service
 

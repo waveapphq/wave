@@ -13,7 +13,7 @@ import asyncio
 import uuid
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -170,6 +170,207 @@ def test_stop_active_child_ignores_missing_sessions(tmp_storage: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
+# A stopped child's unwind notice
+# ---------------------------------------------------------------------------
+
+
+def _held_stopped_child(exec_id: str) -> str:
+    """A stopped child whose first snapshot is stored and whose run still unwinds."""
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    child_id = str(uuid.uuid4())
+    _exec_storage._record_run_transition(exec_id, "r1", status="stopped")
+    _exec_storage._save_snapshot(
+        exec_id,
+        "r1",
+        {"run_id": "r1", "test_id": None, "status": "stopped", "variables": {"x": 1}},
+    )
+    _sequential._unwinding_children[child_id] = (exec_id, "r1")
+    _wb_common._workbench_sessions[child_id] = {
+        "session_id": child_id,
+        "test_id": None,
+        "block_states": {"b1": "stopped"},
+        "variables": {"x": 1, "out": "tail"},
+    }
+    return child_id
+
+
+def test_a_stopped_child_unwind_notice_stores_what_it_bound_since(tmp_storage: Any) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = _held_stopped_child(exec_id)
+    try:
+        dispatched = _sequential.dispatch_child_terminal(child_id, "stopped", None)
+    finally:
+        _wb_common._workbench_sessions.pop(child_id, None)
+
+    assert dispatched is True
+    assert child_id not in _sequential._unwinding_children
+    assert _exec_storage._load_snapshot(exec_id, "r1") == {
+        "run_id": "r1",
+        "test_id": None,
+        "status": "stopped",
+        "block_states": {"b1": "stopped"},
+        "variables": {"x": 1, "out": "tail"},
+    }
+
+
+def test_an_unwind_notice_of_another_status_leaves_the_stored_snapshot(
+    tmp_storage: Any,
+) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = _held_stopped_child(exec_id)
+    try:
+        dispatched = _sequential.dispatch_child_terminal(child_id, "failed", None)
+    finally:
+        _wb_common._workbench_sessions.pop(child_id, None)
+
+    assert dispatched is True
+    assert child_id not in _sequential._unwinding_children
+    snapshot = _exec_storage._load_snapshot(exec_id, "r1") or {}
+    assert (snapshot["status"], snapshot["variables"]) == ("stopped", {"x": 1})
+
+
+def test_an_unwind_notice_after_the_session_closed_leaves_the_stored_snapshot(
+    tmp_storage: Any,
+) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = _held_stopped_child(exec_id)
+    _wb_common._workbench_sessions.pop(child_id, None)
+
+    dispatched = _sequential.dispatch_child_terminal(child_id, "stopped", None)
+
+    assert dispatched is True
+    assert child_id not in _sequential._unwinding_children
+    snapshot = _exec_storage._load_snapshot(exec_id, "r1") or {}
+    assert (snapshot["status"], snapshot["variables"]) == ("stopped", {"x": 1})
+
+
+def test_an_unwind_notice_after_the_execution_was_deleted_writes_no_snapshot(
+    tmp_storage: Any,
+) -> None:
+    from wavecore.api.services.executions import service as execution_service
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = _held_stopped_child(exec_id)
+    _sequential._finalize_execution(exec_id, "stopped")
+    assert execution_service.delete_execution(exec_id) is True
+    try:
+        dispatched = _sequential.dispatch_child_terminal(child_id, "stopped", None)
+    finally:
+        _wb_common._workbench_sessions.pop(child_id, None)
+
+    assert dispatched is True
+    assert child_id not in _sequential._unwinding_children
+    assert _exec_storage._snapshot_file(exec_id, "r1").exists() is False
+
+
+def test_an_unwind_notice_of_a_run_not_held_as_stopped_leaves_the_stored_snapshot(
+    tmp_storage: Any,
+) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = _held_stopped_child(exec_id)
+    _exec_storage._record_run_transition(exec_id, "r1", status="failed")
+    try:
+        dispatched = _sequential.dispatch_child_terminal(child_id, "stopped", None)
+    finally:
+        _wb_common._workbench_sessions.pop(child_id, None)
+
+    assert dispatched is True
+    assert child_id not in _sequential._unwinding_children
+    snapshot = _exec_storage._load_snapshot(exec_id, "r1") or {}
+    assert (snapshot["status"], snapshot["variables"]) == ("stopped", {"x": 1})
+
+
+@pytest.mark.asyncio
+async def test_a_stopped_child_is_held_until_its_task_ends(tmp_storage: Any) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = str(uuid.uuid4())
+    release = asyncio.Event()
+
+    async def _unwind() -> None:
+        await release.wait()
+
+    task = asyncio.create_task(_unwind())
+    _wb_common._active_tasks[child_id] = task
+    try:
+        _sequential._hold_until_unwound(child_id, exec_id, "r1")
+        held = _sequential._unwinding_children.get(child_id)
+        release.set()
+        await task
+        await asyncio.sleep(0)
+    finally:
+        _wb_common._active_tasks.pop(child_id, None)
+
+    assert held == (exec_id, "r1")
+    assert child_id not in _sequential._unwinding_children
+
+
+@pytest.mark.asyncio
+async def test_a_stopped_child_whose_task_ended_is_not_held(tmp_storage: Any) -> None:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    child_id = str(uuid.uuid4())
+    task = asyncio.create_task(asyncio.sleep(0))
+    await task
+    _wb_common._active_tasks[child_id] = task
+    try:
+        _sequential._hold_until_unwound(child_id, exec_id, "r1")
+    finally:
+        _wb_common._active_tasks.pop(child_id, None)
+
+    assert child_id not in _sequential._unwinding_children
+
+
+@pytest.mark.asyncio
+async def test_a_stopped_child_without_a_task_is_not_held(tmp_storage: Any) -> None:
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    from wavecore.api.services.workbench import service as workbench_service
+
+    started: list[str] = []
+
+    def _fake_start(**kwargs: Any) -> dict[str, Any]:
+        sid = kwargs["session_id"]
+        started.append(sid)
+        _sequential.dispatch_child_terminal(sid, "stopped", None)
+        return {"session_id": sid, "status": "running"}
+
+    with (
+        patch.object(workbench_service, "start_workbench_run", side_effect=_fake_start),
+        patch(
+            "wavecore.api.services.workbench._common.get_session_snapshot",
+            return_value={"test_id": "t-r1", "block_states": {}, "variables": {}},
+        ),
+        patch(
+            "wavecore.api.services.tests.service.get_test_workflow",
+            return_value=None,
+        ),
+    ):
+        run_test = _sequential._build_run_test(
+            exec_id,
+            "env",
+            parent_entity_type="suite",
+            parent_entity_id="sA",
+            default_suite_id="sA",
+        )
+        result = await run_test({"run_id": "r1", "test_id": "t-r1", "suite_id": "sA"})
+
+    assert result["status"] == "stopped"
+    assert started[0] not in _sequential._unwinding_children
+
+
+# ---------------------------------------------------------------------------
 # _mark_skipped closure
 # ---------------------------------------------------------------------------
 
@@ -248,6 +449,98 @@ async def test_build_run_test_handles_workbench_start_failure(
     assert result == {"status": "failed", "duration": 0.0, "halt_scope": None}
     # The child session bookkeeping is cleaned up on failure.
     assert not _sequential._child_sessions
+
+
+@pytest.mark.asyncio
+async def test_build_run_test_registers_and_drops_child_log_sink(tmp_storage: Any) -> None:
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    from wavecore.api.services.workbench import service as workbench_service
+
+    started: list[str] = []
+
+    def _fake_start(**kwargs: Any) -> dict[str, Any]:
+        sid = kwargs["session_id"]
+        started.append(sid)
+        _sequential.dispatch_child_terminal(sid, "passed", None)
+        return {"session_id": sid, "status": "running"}
+
+    with (
+        patch.object(workbench_service, "start_workbench_run", side_effect=_fake_start),
+        patch(
+            "wavecore.api.services.workbench._common.get_session_snapshot",
+            return_value={"test_id": "t-r1", "block_states": {}, "variables": {}},
+        ),
+        patch(
+            "wavecore.api.services.tests.service.get_test_workflow",
+            return_value=None,
+        ),
+        patch.object(
+            log_streaming_service,
+            "register_log_sink",
+            wraps=log_streaming_service.register_log_sink,
+        ) as register_mock,
+        patch.object(
+            log_streaming_service,
+            "unregister_log_sink",
+            wraps=log_streaming_service.unregister_log_sink,
+        ) as unregister_mock,
+    ):
+        run_test = _sequential._build_run_test(
+            exec_id,
+            "env",
+            parent_entity_type="suite",
+            parent_entity_id="sA",
+            default_suite_id="sA",
+        )
+        result = await run_test({"run_id": "r1", "test_id": "t-r1", "suite_id": "sA"})
+
+    assert result["status"] == "passed"
+    assert len(started) == 1
+    child_id = started[0]
+    assert register_mock.call_args_list == [call(child_id, exec_id, run_id="r1", test_id="t-r1")]
+    assert unregister_mock.call_args_list == [call(child_id)]
+
+
+@pytest.mark.asyncio
+async def test_build_run_test_drops_child_log_sink_when_start_fails(
+    tmp_storage: Any,
+) -> None:
+    exec_id, _ = _seed_suite_execution(tmp_storage)
+    from wavecore.api.services.workbench import service as workbench_service
+
+    started: list[str] = []
+
+    def _fail(**kwargs: Any) -> None:
+        started.append(kwargs["session_id"])
+        raise RuntimeError("cannot start")
+
+    with (
+        patch.object(workbench_service, "start_workbench_run", side_effect=_fail),
+        patch.object(
+            log_streaming_service,
+            "register_log_sink",
+            wraps=log_streaming_service.register_log_sink,
+        ) as register_mock,
+        patch.object(
+            log_streaming_service,
+            "unregister_log_sink",
+            wraps=log_streaming_service.unregister_log_sink,
+        ) as unregister_mock,
+    ):
+        run_test = _sequential._build_run_test(
+            exec_id,
+            "env",
+            parent_entity_type="suite",
+            parent_entity_id="sA",
+            default_suite_id="sA",
+        )
+        result = await run_test({"run_id": "r1", "test_id": "t-r1", "suite_id": "sA"})
+
+    assert result == {"status": "failed", "duration": 0.0, "halt_scope": None}
+    assert len(started) == 1
+    child_id = started[0]
+    assert register_mock.call_args_list == [call(child_id, exec_id, run_id="r1", test_id="t-r1")]
+    assert unregister_mock.call_args_list == [call(child_id)]
 
 
 # ---------------------------------------------------------------------------

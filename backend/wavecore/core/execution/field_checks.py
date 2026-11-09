@@ -5,6 +5,7 @@ REQ-3.1.1.5, REQ-3.1.2.4, REQ-3.1.2.11, REQ-3.4.2.2, REQ-3.5.0.3.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -305,6 +306,9 @@ def _required_finding(
     unset = value is None or (is_expression and is_blank_expression(value))
     if unset and get_param_attr(field, "default") is not None:
         return None
+    if value is None and name in values and get_param_attr(field, "secret"):
+        # An owed secret: the Block names the null when it runs (REQ-3.1.3.21, REQ-4.5.19).
+        return None
     if value is None:
         return FieldFinding(
             "REQUIRED_PARAM_MISSING", f"Required parameter '{name}' is missing", None, name
@@ -379,6 +383,44 @@ def _is_literal(
     return name in values and name not in expression_fields and name not in template_fields
 
 
+def name_rule_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
+    """The rule's message for a name, or None: the pattern in full as ASCII, the prefixes, then
+    the reserved names."""
+    if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
+        message = rule["message"]
+    else:
+        blocked = rule.get("blocked_prefixes", ())
+        message = next((b["message"] for b in blocked if item.startswith(b["prefix"])), None)
+        if message is None and item in rule.get("reserved_names", ()):
+            message = rule["reserved_message"]
+    return None if message is None else message.replace("{name}", str(item))
+
+
+def name_rule_refusals(rule: Mapping[str, Any], items: Iterable[Any]) -> Iterator[str]:
+    """Each refusal of the rule over the names in order, once each; a rule with a repeated
+    message also refuses a name listed again."""
+    seen: set[str] = set()
+    reported: set[str] = set()
+    for item in items:
+        message = name_rule_refusal(rule, item)
+        if message is None:
+            if item in seen and "repeated_message" in rule:
+                message = rule["repeated_message"].replace("{name}", item)
+            seen.add(item)
+        if message is not None and message not in reported:
+            reported.add(message)
+            yield message
+
+
+def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
+    """Each map key or list item the field's name rule refuses."""
+    rule = get_param_attr(field, "name_rule")
+    if rule is None or not isinstance(value, dict | list):
+        return
+    for message in name_rule_refusals(rule, value):
+        yield FieldFinding("INVALID_NAME", message, None, name)
+
+
 def check_block_fields(
     fields: Sequence[Any],
     values: Mapping[str, Any],
@@ -416,6 +458,7 @@ def check_block_fields(
                     entry_sources=sources,
                 )
             )
+            findings.extend(_name_findings(field, name, values[name]))
     findings.extend(unknown_field_findings(fields, values, block_id=block_id))
     for name in declared_names:
         findings.extend(_blank_entry_findings(name, values.get(name), expression_fields))

@@ -218,8 +218,15 @@ _FILE_IO_MODULE = "wavecore.plugins._file_ops"
 _LAUNCHER_MODULE = "wavecore.plugins._process_group"
 _NETCAT_CORE = "wavecore.plugins._netcat_core"
 _PORTS = "wavecore.plugins._ports"
+_PLURAL = "wavecore.plugins._plural"
+_BLOCK_OUTPUTS = "wavecore.connectivity.block_outputs"
 _NETCAT_MODULES = [_NETCAT_CORE, _PORTS]
-_NETCAT_WAVECORE_IMPORTS = {_PORTS, "wavecore.connectivity.k8s.verbs._outputs"}
+_NETCAT_WAVECORE_IMPORTS = {
+    _PORTS,
+    _PLURAL,
+    _BLOCK_OUTPUTS,
+    "wavecore.plugins._tls_material",
+}
 _NETCAT_IMPORT_LINE = "from wavecore.plugins import _netcat_core as netcat_core"
 _NETCAT_ENTRY = (
     '"netcat": lambda params, variables, logs: '
@@ -764,7 +771,7 @@ class TestBundleNetcatRegistration:
 class TestTheNetcatCoreStaysVendorable:
     """Both modules are copied verbatim onto a host whose floor is Python 3.10."""
 
-    def test_the_core_imports_only_the_stdlib_the_port_check_and_the_output_core(self) -> None:
+    def test_the_core_imports_only_the_stdlib_and_the_carried_cores(self) -> None:
         source = _module_source(_NETCAT_CORE)
 
         assert _unvendorable_imports(source, _NETCAT_WAVECORE_IMPORTS) == set()
@@ -796,6 +803,33 @@ class TestTheNetcatCoreStaysVendorable:
             if isinstance(node, ast.Name) and node.id == "TimeoutError"
         ]
         assert builtin == []
+
+
+class TestBundleCountWordingVendoring:
+    """The count wording the carried cores share rides the payload as its source on disk."""
+
+    def test_the_module_rides_under_its_dotted_name_as_its_source_on_disk(self) -> None:
+        assert _vendored_sources().get(_PLURAL) == _module_source(_PLURAL)
+
+
+class TestBundleBlockOutputsVendoring:
+    """The output core and table envelopes the carried cores share ride the payload."""
+
+    def test_the_module_rides_under_its_dotted_name_as_its_source_on_disk(self) -> None:
+        assert _vendored_sources().get(_BLOCK_OUTPUTS) == _module_source(_BLOCK_OUTPUTS)
+
+    def test_the_module_imports_only_the_stdlib(self) -> None:
+        assert _unvendorable_imports(_module_source(_BLOCK_OUTPUTS), set()) == set()
+
+    def test_the_module_imports_without_host_site_packages(self) -> None:
+        responses = _run_bundle_lines(
+            [{"plugin_id": "import-probe", "params": {"modules": [_BLOCK_OUTPUTS]}}],
+            isolated=True,
+            source_patch=_IMPORT_PROBE,
+        )
+
+        assert responses[0]["status"] == "passed", responses[0]["error"]
+        assert responses[0]["return_value"] == [_BLOCK_OUTPUTS]
 
 
 def _carried_unit_root(unit: str) -> Path | None:

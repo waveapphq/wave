@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 import pytest
+import yaml
 
 from tests.mcp.conftest import CONTROL_IDS, REAL_PLUGIN_IDS
 from tests.plugins._stub_plugin import register_stub_plugin
@@ -49,7 +50,8 @@ def _registries(seed_registries: None) -> None:
 def _blocks() -> list[dict[str, Any]]:
     from wavecore.mcp.tools import discover
 
-    return discover.list_blocks()["blocks"]
+    blocks: list[dict[str, Any]] = discover.list_blocks()["blocks"]
+    return blocks
 
 
 def _by_id(blocks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -153,6 +155,131 @@ class TestListBlocks:
 
         plugin_entries = [block for block in blocks if block["kind"] == "plugin"]
         assert [entry["id"] for entry in plugin_entries] == ["log"]
+
+
+SESSION_ID_DESCRIPTION = (
+    "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+    "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
+)
+REMOTE_SESSION_ID_OUTPUT = {
+    "name": "remote_session_id",
+    "type": "string",
+    "description": (
+        "Handle to the persistent remote worker opened on the SSH session host for this container"
+    ),
+}
+
+
+class TestRemoteExecutionEntry:
+    """The container's setting and output are the ones a recipe compiles and the engine reads."""
+
+    def test_the_entry_lists_the_session_id_setting(self) -> None:
+        entry = _by_id(_blocks())["remote-execution"]
+
+        assert entry["parameter_schema"] == [
+            {
+                "name": "session_id",
+                "type": "string",
+                "required": True,
+                "default": None,
+                "description": SESSION_ID_DESCRIPTION,
+            }
+        ]
+
+    def test_the_entry_lists_the_remote_session_id_output(self) -> None:
+        entry = _by_id(_blocks())["remote-execution"]
+
+        assert entry["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
+
+    def test_get_block_lists_the_same_setting_and_output(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        entry = discover.get_block("remote-execution")
+
+        assert [param["name"] for param in entry["parameter_schema"]] == ["session_id"]
+        assert [out["name"] for out in entry["output_schema"]] == ["remote_session_id"]
+
+    def test_a_recipe_written_from_the_entry_compiles_without_findings(self) -> None:
+        from wavecore.core.recipes.compiler import compile_recipe
+        from wavecore.mcp.tools import discover
+
+        entry = discover.get_block("remote-execution")
+        settings = {param["name"]: {"expr": "ssh_session"} for param in entry["parameter_schema"]}
+        capture = {out["name"]: f"captured_{out['name']}" for out in entry["output_schema"]}
+        recipe = {
+            "test": {"name": "Remote From The Catalog"},
+            "variables": {"ssh_session": {"type": "string", "value": "main"}},
+            "flow": [
+                {
+                    "remote": {
+                        "settings": settings,
+                        "body": [{"block": "log", "settings": {"message": "hello"}}],
+                        "capture": capture,
+                    }
+                }
+            ],
+        }
+
+        result = compile_recipe(yaml.safe_dump(recipe, sort_keys=False))
+
+        assert result["findings"] == []
+        nodes = result["test_data"]["workflow"]["nodes"]
+        node = next(n for n in nodes if n["id"] == "node-1")
+        assert node["data"]["config"]["values"] == {"session_id": "ssh_session"}
+        assert node["data"]["config"]["outputBindings"] == {
+            "remote_session_id": "captured_remote_session_id"
+        }
+
+    def test_a_returned_entry_is_a_fresh_copy(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        first = discover.get_block("remote-execution")
+        first["parameter_schema"][0]["name"] = "changed"
+        first["output_schema"].clear()
+
+        again = discover.get_block("remote-execution")
+
+        assert again["parameter_schema"][0]["name"] == "session_id"
+        assert again["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
+
+    def test_a_returned_output_is_a_fresh_copy(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        first = discover.get_block("remote-execution")
+        first["output_schema"][0]["description"] = "changed"
+
+        again = discover.get_block("remote-execution")
+
+        assert again["output_schema"] == [REMOTE_SESSION_ID_OUTPUT]
+
+
+class TestSshSessionIdInTheCatalog:
+    """Every SSH block describes session_id and the parent session as the editor does."""
+
+    @pytest.mark.parametrize(
+        "block_id",
+        ["ssh-session-exec", "ssh-session-script", "ssh-session-close", "ssh-tunnel-open", "sftp"],
+    )
+    def test_the_session_id_setting_uses_the_editor_text(self, block_id: str) -> None:
+        entry = _by_id(_blocks())[block_id]
+
+        session_id = next(p for p in entry["parameters"] if p["name"] == "session_id")
+        assert session_id["description"] == SESSION_ID_DESCRIPTION
+
+    def test_the_open_block_session_id_output_uses_the_editor_text(self) -> None:
+        entry = _by_id(_blocks())["ssh-session-open"]
+
+        session_id = next(o for o in entry["output_schema"] if o["name"] == "session_id")
+        assert session_id["description"] == SESSION_ID_DESCRIPTION
+
+    def test_the_open_block_parent_session_setting_uses_the_editor_text(self) -> None:
+        entry = _by_id(_blocks())["ssh-session-open"]
+
+        parent = next(p for p in entry["parameters"] if p["name"] == "parent_session_id")
+        assert parent["description"] == (
+            "Session ID of the open parent SSH session to tunnel over. "
+            "The connection fails if the parent is not open"
+        )
 
 
 class TestProxySupportInTheCatalog:

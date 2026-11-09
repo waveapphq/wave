@@ -20,10 +20,20 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 
 
 class TestListRegressionsEndpoint:
@@ -2213,3 +2223,119 @@ class TestARegressionBodyThatIsNotAJsonObject:
         assert response.status_code == 400, response.json()
         assert response.json()["error"]["message"] == message
         update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/regressions/{id}/clone", id="clone"),
+            pytest.param("POST", "/regressions/export", id="export"),
+            pytest.param("POST", "/regressions/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/regressions/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestARegressionBatchBodyThatIsNotAJsonArray:
+    """A Regression batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("DELETE", "/regressions/batch", id="delete"),
+            pytest.param("POST", "/regressions/batch/clone", id="clone"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)
+
+
+class TestARegressionBatchItemThatIsNotAnId:
+    """A Regression batch item that is not an ID string fails; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/regressions", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_fails(self, client: TestClient, item: Any) -> None:
+        regression_id = self._create(client)
+
+        response = client.request("DELETE", "/regressions/batch", json=[item, regression_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [regression_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_clone_item_fails(self, client: TestClient, item: Any) -> None:
+        regression_id = self._create(client)
+
+        response = client.post("/regressions/batch/clone", json=[item, regression_id])
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
+        assert [entry["original_id"] for entry in body["cloned"]] == [regression_id]
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A regression whose stored version is not MAJOR.MINOR.PATCH refuses a change with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create FastAPI test client."""
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions")],
+        ids=["update", "add-version"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.regression_test_helpers import (
+            load_regression_file,
+            save_regression_file,
+        )
+
+        created = client.post("/regressions", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        regression_id = created.json()["data"]["id"]
+        stored = load_regression_file(regression_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_regression_file(stored)
+
+        response = client.request(
+            method, f"/regressions/{regression_id}{suffix}", json={"description": "x"}
+        )
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression_id) == stored

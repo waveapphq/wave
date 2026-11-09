@@ -68,7 +68,9 @@ def run_hook(
     )
 
 
-def terminate_hook(shell: str, script: str, names: Sequence[str], tmp_path: Path) -> Run:
+def terminate_hook(
+    shell: str, script: str, names: Sequence[str], tmp_path: Path, bound: float = 30.0
+) -> Run:
     """Run a script under the hook in its own group, TERM the group once it is ready."""
     work = Path(tempfile.mkdtemp(dir=tmp_path))
     script_path = work / "script.sh"
@@ -83,8 +85,10 @@ def terminate_hook(shell: str, script: str, names: Sequence[str], tmp_path: Path
         start_new_session=True,
     )
     try:
-        deadline = time.monotonic() + 2.0
-        while not ready.exists() and time.monotonic() < deadline:
+        deadline = time.monotonic() + bound
+        while not ready.exists():
+            if time.monotonic() >= deadline:
+                raise AssertionError(f"the script did not write its ready file within {bound} s")
             time.sleep(0.002)
         os.killpg(child.pid, signal.SIGTERM)
         exit_code = child.wait(timeout=5)
@@ -372,6 +376,16 @@ wait
 
         assert run.exit_code == 143
         assert run.exports["COUNT"].scalar == "2"
+
+
+class TestTermHelperWaitsForReady:
+    """The TERM helper signals only a script that is ready for it."""
+
+    def test_a_script_that_never_gets_ready_fails_plainly(self, tmp_path: Path) -> None:
+        with pytest.raises(AssertionError) as raised:
+            terminate_hook(SH, "sleep 30\n", ["COUNT"], tmp_path, bound=0.2)
+
+        assert str(raised.value) == "the script did not write its ready file within 0.2 s"
 
 
 @pytest.mark.parametrize("shell", SHELLS)

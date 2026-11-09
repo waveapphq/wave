@@ -13,7 +13,6 @@ Test Coverage:
 - Validation: Workflow graph validation, block reference validation
 - Clone operations: Test derivation through cloning
 - Dependency analysis: Block references and version constraints
-- Execution history: Links to past runs for trend analysis
 - Error handling: Validation errors, conflicts, not found, internal errors
 - Caching and performance: Multi-layer caching with TTL policies
 - Concurrency control: Optimistic concurrency via ETag/If-Match headers
@@ -36,6 +35,18 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_AN_OBJECT_ITEM,
+    NOT_AN_UPDATE_OBJECT,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    NOT_OBJECT_ITEMS,
+    assert_refused,
+    send_text,
+)
 
 
 class TestListTestsEndpoint:
@@ -367,8 +378,7 @@ class TestCreateTestEndpoint:
     def test_create_test_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that POST /tests allows special characters in test name.
 
-        Naming restrictions removed - all characters are valid.
-        Future: REQ-6.4.1 will add proper sanitization for security.
+        All characters are valid.
         """
         with patch("wavecore.api.routes.tests.routes.test_service.create_test") as mock_create:
             mock_create.return_value = {
@@ -631,6 +641,30 @@ class TestBatchCreateTestsEndpoint:
             assert len(data["failed"]) == 1
             assert data["failed"][0]["index"] == 1
 
+    def test_a_refused_save_is_reported_in_failed(self, client: TestClient) -> None:
+        changing = {
+            "rows": {"type": "array", "value": [1]},
+            "sneaky": {"type": "string", "value": "rows.append(9)", "isExpression": True},
+        }
+
+        response = client.post(
+            "/tests/batch",
+            json=[{"name": "Changing Test", "variables": changing}],
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {
+            "created": [],
+            "failed": [
+                {
+                    "index": 0,
+                    "error": "The append method changes data. An expression can only read "
+                    "data, not change it. To change a variable, add a Variable Setter Block. "
+                    "Variable: sneaky.",
+                }
+            ],
+        }
+
 
 class TestBatchUpdateTestsEndpoint:
     """Test suite for PATCH /tests/batch endpoint (batch update tests)."""
@@ -757,6 +791,27 @@ class TestBatchDeleteTestsEndpoint:
             data = response.json()
             assert len(data["deleted"]) == 1
             assert len(data["failed"]) == 1
+
+    def test_batch_delete_an_id_walking_back_into_the_folder_is_not_found(
+        self, client: TestClient
+    ) -> None:
+        """Test an ID that reaches a stored test through its folder deletes nothing."""
+        from wavecore.api.services.tests import service as test_service
+        from wavecore.api.services.tests import testdata_service
+
+        kept = test_service.create_test({"name": "Kept Test"})
+        testdata_service.write_files(kept["id"], [("kept.csv", b"1")])
+        crafted = f"../api_tests/{kept['id']}"
+
+        response = client.request("DELETE", "/tests/batch", json=[crafted])
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "deleted": [],
+            "failed": [{"index": 0, "error": f"Test with ID '{crafted}' not found"}],
+        }
+        assert test_service.get_test(kept["id"]) is not None
+        assert [rel for rel, _path in testdata_service.iter_files(kept["id"])] == ["kept.csv"]
 
 
 class TestGetTestEndpoint:
@@ -922,8 +977,7 @@ class TestUpdateTestEndpoint:
     def test_update_test_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that PUT /tests/{test_id} allows special characters in name.
 
-        Naming restrictions removed - all characters are valid.
-        Future: REQ-6.4.1 will add proper sanitization for security.
+        All characters are valid.
         """
         test_id = str(uuid.uuid4())
 
@@ -965,6 +1019,22 @@ class TestUpdateTestEndpoint:
             assert data["error"]["code"] == "VALIDATION_ERROR"
             assert len(data["error"]["details"]) == 1
             assert data["error"]["details"][0]["code"] == "UNDECLARED_VARIABLE"
+
+    def test_update_test_returns_409_for_a_name_another_test_holds(
+        self, client: TestClient
+    ) -> None:
+        """PUT /tests/{test_id} refuses a rename onto another Test's name."""
+        client.post("/tests", json={"name": "Taken Name"})
+        own_id = client.post("/tests", json={"name": "Own Name"}).json()["data"]["id"]
+
+        response = client.put(f"/tests/{own_id}", json={"name": "Taken Name"})
+
+        assert response.status_code == 409
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Test with name 'Taken Name' already exists", "code": "CONFLICT"},
+        }
+        assert client.get(f"/tests/{own_id}").json()["data"]["name"] == "Own Name"
 
 
 class TestUpdateTestMetadataEndpoint:
@@ -1046,8 +1116,7 @@ class TestUpdateTestMetadataEndpoint:
     def test_update_metadata_allows_special_characters_in_name(self, client: TestClient) -> None:
         """Test that PATCH /tests/{test_id}/metadata allows special characters.
 
-        Naming restrictions removed - all characters are valid.
-        Future: REQ-6.4.1 will add proper sanitization for security.
+        All characters are valid.
         """
         test_id = str(uuid.uuid4())
 
@@ -1114,17 +1183,19 @@ class TestUpdateTestMetadataEndpoint:
 
             assert response.status_code == 412
 
-    def test_update_metadata_returns_412_on_legacy_value_error_precondition(
-        self, client: TestClient
-    ) -> None:
-        """Legacy `ValueError('Precondition failed ...')` defensive path."""
+    def test_update_metadata_value_error_is_400_whatever_its_text(self, client: TestClient) -> None:
+        """Only the typed conflict answers 412; a plain ValueError stays a 400."""
         test_id = str(uuid.uuid4())
         with patch(
             "wavecore.api.routes.tests.routes.test_service.update_test_metadata"
         ) as mock_update:
             mock_update.side_effect = ValueError("Precondition failed: stale etag")
             response = client.patch(f"/tests/{test_id}/metadata", json={"name": "X"})
-            assert response.status_code == 412
+        assert response.status_code == 400
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Precondition failed: stale etag", "code": "VALIDATION_ERROR"},
+        }
 
 
 class TestDeleteTestEndpoint:
@@ -2172,8 +2243,8 @@ class TestGetTestDependencyGraphEndpoint:
         )
 
 
-class TestGetTestExecutionsEndpoint:
-    """Test suite for GET /tests/{test_id}/executions endpoint."""
+class TestPerTestExecutionsRouteAbsent:
+    """A Test's runs are listed by GET /executions; no per-Test executions route exists."""
 
     @pytest.fixture
     def client(self) -> TestClient:
@@ -2182,84 +2253,12 @@ class TestGetTestExecutionsEndpoint:
 
         return TestClient(app)
 
-    def test_get_test_executions_returns_200_with_history(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns 200."""
-        test_id = str(uuid.uuid4())
-        exec1_id = str(uuid.uuid4())
-        exec2_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
+    def test_get_test_executions_returns_fastapi_not_found(self, client: TestClient) -> None:
+        """GET /tests/{test_id}/executions gets FastAPI's default 404, not a WAVE envelope."""
+        response = client.get(f"/tests/{uuid.uuid4()}/executions")
 
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [
-                    {
-                        "id": exec1_id,
-                        "status": "passed",
-                        "started_at": now,
-                        "duration_ms": 1234,
-                    },
-                    {
-                        "id": exec2_id,
-                        "status": "failed",
-                        "started_at": now,
-                        "duration_ms": 5678,
-                    },
-                ],
-                "total": 2,
-                "page": 1,
-                "per_page": 20,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data["data"]) == 2
-            assert data["data"][0]["status"] == "passed"
-            assert data["data"][1]["status"] == "failed"
-
-    def test_get_test_executions_supports_pagination(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions supports pagination."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [],
-                "total": 50,
-                "page": 2,
-                "per_page": 10,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions?page=2&per_page=10")
-
-            assert response.status_code == 200
-            mock_get.assert_called_once_with(test_id, page=2, per_page=10)
-
-    def test_get_test_executions_returns_404_when_not_found(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions returns 404."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = None
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(rf"^Test with ID '{test_id}' not found$", data["error"]["message"])
-
-    def test_get_test_executions_validates_uuid_format(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions validates UUID format."""
-        response = client.get("/tests/invalid-uuid/executions")
-
-        assert response.status_code == 400
-        data = response.json()
-        assert data["success"] is False
-        assert re.match(
-            r"^Invalid UUID format for test_id: 'invalid-uuid'$",
-            data["error"]["message"],
-        )
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Not Found"}
 
 
 class TestGetTestHistoryEndpoint:
@@ -2559,15 +2558,49 @@ class TestTestEndpointConcurrencyControl:
             assert response.status_code == 409
             assert "already exists" in response.json()["error"]["message"]
 
-    def test_update_returns_412_on_legacy_value_error_precondition(
-        self, client: TestClient
-    ) -> None:
-        """Legacy `ValueError('Precondition failed ...')` path on PUT /tests/{id}."""
+    def test_update_value_error_is_400_whatever_its_text(self, client: TestClient) -> None:
+        """Only the typed conflict answers 412; a plain ValueError stays a 400."""
         test_id = str(uuid.uuid4())
         with patch("wavecore.api.routes.tests.routes.test_service.update_test") as mock_update:
             mock_update.side_effect = ValueError("Precondition failed: stale etag")
             response = client.put(f"/tests/{test_id}", json={"name": "X"})
-            assert response.status_code == 412
+        assert response.status_code == 400
+        assert response.json() == {
+            "success": False,
+            "error": {"message": "Precondition failed: stale etag", "code": "VALIDATION_ERROR"},
+        }
+
+    @pytest.mark.parametrize(
+        ("method", "path_suffix"),
+        [("put", ""), ("patch", "/metadata")],
+    )
+    def test_stale_if_match_on_stored_test_returns_412(
+        self, client: TestClient, method: str, path_suffix: str
+    ) -> None:
+        """A stale If-Match against a stored Test answers 412 and leaves the Test as it was."""
+        from wavecore.api.services.tests import service as test_service
+
+        created = test_service.create_test({"name": "Stale ETag Test"})
+
+        response = client.request(
+            method,
+            f"/tests/{created['id']}{path_suffix}",
+            json={"name": "Renamed"},
+            headers={"If-Match": '"stale-etag"'},
+        )
+
+        assert response.status_code == 412
+        assert response.json() == {
+            "success": False,
+            "error": {
+                "message": "Precondition failed: resource has been modified",
+                "code": "CONFLICT",
+            },
+        }
+        stored = test_service.get_test(created["id"])
+        assert stored is not None
+        assert stored["name"] == "Stale ETag Test"
+        assert stored["version"] == created["version"]
 
     def test_delete_with_if_match_succeeds_when_matching(self, client: TestClient) -> None:
         """Test that delete with matching If-Match succeeds."""
@@ -3269,56 +3302,6 @@ class TestResponseEnvelopeConsistency:
             assert "data" in data
             assert "versions" in data["data"]
 
-    def test_get_test_executions_uses_standard_envelope(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions uses standard response envelope."""
-        test_id = str(uuid.uuid4())
-        exec_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [
-                    {"id": exec_id, "status": "passed", "started_at": now},
-                ],
-                "total": 1,
-                "page": 1,
-                "per_page": 20,
-                "total_pages": 1,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert "success" in data
-            assert data["success"] is True
-            assert "data" in data
-            assert "pagination" in data
-            assert data["pagination"]["total_pages"] == 1
-
-    def test_get_test_executions_includes_total_pages(self, client: TestClient) -> None:
-        """Test that GET /tests/{test_id}/executions includes total_pages in pagination."""
-        test_id = str(uuid.uuid4())
-
-        with patch("wavecore.api.routes.tests.routes.test_service.get_test_executions") as mock_get:
-            mock_get.return_value = {
-                "executions": [],
-                "total": 100,
-                "page": 1,
-                "per_page": 20,
-                "total_pages": 5,
-            }
-
-            response = client.get(f"/tests/{test_id}/executions")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert "pagination" in data
-            assert data["pagination"]["total"] == 100
-            assert data["pagination"]["total_pages"] == 5
-            assert data["pagination"]["page"] == 1
-            assert data["pagination"]["per_page"] == 20
-
 
 class TestListTestTagsEndpoint:
     """Test suite for GET /tests/tags endpoint (REQ-9.5.3.1)."""
@@ -3736,3 +3719,162 @@ class TestABodyThatIsNotAJsonObject:
 
         assert response.status_code == 201, response.json()
         assert response.json()["data"]["name"].endswith("(Copy)")
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/tests/export", id="export"),
+            pytest.param("POST", "/tests/{id}/versions", id="add-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestATestBatchBodyThatIsNotAJsonArray:
+    """A Test batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(self, client: TestClient, method: str, text: str, message: str) -> None:
+        assert_refused(send_text(client, method, "/tests/batch", text), message)
+
+    def test_a_delete_takes_the_ids_of_an_object(self, client: TestClient) -> None:
+        test_id = str(uuid.uuid4())
+
+        with patch(
+            "wavecore.api.routes.tests.batch_routes.test_service.batch_delete_tests"
+        ) as batch_delete:
+            batch_delete.return_value = {"deleted": [test_id], "failed": []}
+            response = client.request("DELETE", "/tests/batch", json={"ids": [test_id]})
+
+        assert response.status_code == 200, response.json()
+        batch_delete.assert_called_once_with([test_id])
+
+    def test_a_delete_whose_ids_are_not_an_array_is_refused(self, client: TestClient) -> None:
+        response = send_text(client, "DELETE", "/tests/batch", '{"ids": "x"}')
+
+        assert_refused(response, "The request body must be a JSON array")
+
+
+class TestATestBatchItemOfTheWrongShape:
+    """A Test batch item of the wrong shape fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/tests", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_a_create_item_that_is_not_an_object_fails(self, client: TestClient, item: Any) -> None:
+        response = client.post("/tests/batch", json=[item, {"name": "Batch Created"}])
+
+        assert response.status_code == 201, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_OBJECT_ITEM}]
+        assert len(body["created"]) == 1
+
+    @pytest.mark.parametrize("item", NOT_OBJECT_ITEMS)
+    def test_an_update_item_that_is_not_an_object_fails(
+        self, client: TestClient, item: Any
+    ) -> None:
+        test_id = self._create(client)
+
+        response = client.patch(
+            "/tests/batch", json=[item, {"id": test_id, "update": {"description": "Updated"}}]
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_OBJECT_ITEM}],
+        }
+        assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("update", NOT_OBJECT_ITEMS)
+    def test_an_update_item_whose_update_is_not_an_object_fails(
+        self, client: TestClient, update: Any
+    ) -> None:
+        kept_id = self._create(client)
+        test_id = self._create(client)
+        before = client.get(f"/tests/{kept_id}").json()["data"]
+
+        response = client.patch(
+            "/tests/batch",
+            json=[
+                {"id": kept_id, "update": update},
+                {"id": test_id, "update": {"description": "Updated"}},
+            ],
+        )
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "updated": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_UPDATE_OBJECT}],
+        }
+        assert client.get(f"/tests/{kept_id}").json()["data"] == before
+        assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_that_is_not_an_id_fails(self, client: TestClient, item: Any) -> None:
+        test_id = self._create(client)
+
+        response = client.request("DELETE", "/tests/batch", json=[item, test_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [test_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A test whose stored version is not MAJOR.MINOR.PATCH refuses a new version with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions"), ("POST", "/restore/1.0.0")],
+        ids=["update", "add-version", "restore"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.test_helpers import load_test_file, save_test_file
+        from wavecore.api.services.tests import service as test_service
+
+        created = client.post("/tests", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        test_id = created.json()["data"]["id"]
+        stored = load_test_file(test_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_test_file(stored)
+        history = test_service._load_versions(test_id)
+
+        response = client.request(method, f"/tests/{test_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_test_file(test_id) == stored
+        assert test_service._load_versions(test_id) == history

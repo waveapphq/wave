@@ -31,6 +31,7 @@ from wavecore.core.expressions.security import (
     is_blocked,
     mutating_method_message,
 )
+from wavecore.core.expressions.template import _TEMPLATE_PATTERN
 from wavecore.core.expressions.template_escape import render_escaped
 from wavecore.core.number_rule import (
     NumberType,
@@ -233,10 +234,6 @@ def evaluate_expression(expression: str, variables: MutableMapping[str, Any]) ->
     """
     enforce_read_only(expression)
     return _evaluate_expression(expression, variables)
-
-
-# Matches {{...}} template markers but NOT single braces {}
-_TEMPLATE_PATTERN = re.compile(r"\{\{(.+?)\}\}")
 
 
 def _evaluate_template(
@@ -609,24 +606,25 @@ def _escaped_renderer(
 
     def escaped(template: str) -> str:
         rule = spec["rules"][resolved.get(spec["by"]) or spec["default"]]
+        secrets = registry.scan_values() if registry is not None else ()
         filled, pairs = render_escaped(
             template,
             rule,
             lambda expression: evaluate_expression(expression, variables),
             _TEMPLATE_PATTERN,
             setting=setting,
+            parts=secrets,
         )
-        _register_escaped_secrets(pairs, registry)
+        _register_escaped_secrets(pairs, secrets, registry)
         return filled
 
     return escaped
 
 
-def _register_escaped_secrets(pairs: list[tuple[str, str]], registry: Any) -> None:
-    """A secret filled in escaped form is scrubbed in that form too."""
-    if registry is None:
-        return
-    secrets = set(registry.scan_values())
+def _register_escaped_secrets(
+    pairs: list[tuple[str, str]], secrets: Collection[str], registry: Any
+) -> None:
+    """A secret filled escaped, whole or inside a larger value, is scrubbed in that form too."""
     for raw, escaped in pairs:
         if raw in secrets:
             registry.register_value(escaped, source="template escape")

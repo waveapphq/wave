@@ -22,6 +22,7 @@ import asyncssh
 from wavecore.core.ssh import trusted_hosts
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._file_paths import plain_path
+from wavecore.plugins._plural import plural
 from wavecore.plugins._shared_params import number_setting
 from wavecore.plugins._tls_material import is_pem
 
@@ -52,12 +53,17 @@ _REFUSAL_DETAIL = {
     ),
 }
 
+SESSION_ID_DESCRIPTION = (
+    "Handle identifying an open SSH session: Open produces it; Execute, Script, Close, "
+    "Tunnel Open, SFTP, Remote Execution, and a chained Open's Parent Session reference it"
+)
+
 SESSION_ID_PARAM: dict[str, Any] = {
     "name": "session_id",
     "type": "string",
     "trim": True,
     "required": True,
-    "description": "Session ID of the target SSH session, as returned by SSH Session Open",
+    "description": SESSION_ID_DESCRIPTION,
 }
 
 
@@ -281,7 +287,7 @@ def host_key_identity(route: TunnelRoute) -> tuple[str, int]:
     """The far host and port whose host key a session on the tunnel's Local Port meets (SSH-8)."""
     if route.far_host in _LOOPBACK_FAR_HOSTS:
         # A loopback far end is the tunnel session's own server.
-        return route.record["host"], route.far_port
+        return route.record["host_identity"], route.far_port
     return route.far_host, route.far_port
 
 
@@ -301,7 +307,8 @@ def host_key_target(params: dict[str, Any], identity: tuple[str, int] | None) ->
 
 def command_timed_out(timeout: float) -> TimeoutError:
     """The wording both SSH session plugins report when a remote command outlives its bound."""
-    return TimeoutError(f"Command execution timed out after {timeout} seconds")
+    within = plural(timeout, "second", "seconds")
+    return TimeoutError(f"Command execution timed out after {within}")
 
 
 def _trusted_keys(host: str, addr: str, port: int) -> list[asyncssh.SSHKey]:

@@ -223,7 +223,8 @@ test.describe('V-NUMBER-RECIPES-MCP-FUNCTIONAL: recipes and readbacks follow the
       ]) {
         expect(text, `the readback holds "${line.trim()}"`).toContain(line)
       }
-      expect(text, 'no number is written with an exponent').not.toMatch(EXPONENT)
+      // The random name can hold a digit, an "e" and a digit.
+      expect(text.replaceAll(name, ''), 'no number is written with an exponent').not.toMatch(EXPONENT)
 
       const amended = callTool(NUMBER_MCP_PORT, 'amend_test_from_recipe', { test_ref: testId, recipe: text })
       expect(amended.payload.amended, JSON.stringify(amended.payload)).toBe(true)

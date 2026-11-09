@@ -715,7 +715,7 @@ class TestPackagedSwitchExample:
             assert "when" in case, f"case is not condition-guarded: {case!r}"
             assert isinstance(case["steps"], list) and case["steps"]
 
-    def test_the_removed_keys_are_gone(self) -> None:
+    def test_the_switch_has_no_on_capture_or_equals_key(self) -> None:
         # YAML 1.1 reads a bare 'on:' as boolean True, so both forms are checked.
         switch = _branching_example_switch()
         assert "on" not in switch
@@ -754,7 +754,7 @@ class TestPackagedWaitUntilExample:
         wait = _wait_until_example()
         assert isinstance(wait["retry"], list) and wait["retry"]
 
-    def test_the_removed_leaf_keys_are_gone(self) -> None:
+    def test_the_wait_has_no_condition_or_poll_interval_key(self) -> None:
         wait = _wait_until_example()
         assert "condition" not in wait
         assert "poll_interval" not in wait
@@ -851,7 +851,7 @@ class TestWaitUntilAuthoring:
         }
         assert handles == {"retry", "then"}
 
-    def test_the_removed_leaf_form_is_refused(self) -> None:
+    def test_the_condition_leaf_form_is_refused(self) -> None:
         result = author().validate_recipe(
             make_recipe(
                 [{"wait_until": {"condition": "pod_phase == 'Running'", "timeout": 30000}}],
@@ -1317,6 +1317,36 @@ class TestGetTestRecipe:
         assert errors == []
         assert recompiled["test_data"] is not None
 
+    def test_a_stored_secret_setting_reads_back_only_when_written_as_an_expression(self) -> None:
+        k8s_step = {
+            "block": "k8s-get",
+            "settings": {"session": {"expr": "kube"}, "kind": "Pod", "name": "web-0"},
+        }
+        sql_step = {
+            "block": "sql-client",
+            "settings": {
+                "host": "db",
+                "database": "wave",
+                "username": "wave",
+                "password": "pw-classified",
+                "sql": "SELECT 1",
+            },
+        }
+        recipe = make_recipe(
+            [k8s_step, sql_step],
+            name="Secret Expression Readback",
+            variables={"kube": {"type": "string", "secret": True}},
+        )
+        created = author().create_test_from_recipe(recipe)
+        assert created["created"] is True, created["findings"]
+
+        readback = author().get_test_recipe(created["test_id"])["recipe"]
+
+        k8s, sql = yaml.safe_load(readback)["flow"]
+        assert k8s["settings"]["session"] == {"expr": "kube"}
+        assert "password" not in sql["settings"]
+        assert "pw-classified" not in readback
+
     def test_resolves_the_target_by_id(self) -> None:
         created = author().create_test_from_recipe(simple_recipe("Readback By Id"))
         result = author().get_test_recipe(created["test_id"])
@@ -1379,8 +1409,8 @@ class TestFunctionInputDeclarations:
         (function,) = readback["functions"]
         assert function["inputs"] == DECLARED_INPUTS
 
-    def test_the_old_array_enum_form_is_refused(self) -> None:
-        old = {
+    def test_an_array_enum_with_an_enum_value_type_is_refused(self) -> None:
+        array_enum = {
             "name": "level",
             "type": "array",
             "required": True,
@@ -1388,7 +1418,7 @@ class TestFunctionInputDeclarations:
             "enumValues": ["low", "high"],
         }
 
-        result = author().validate_recipe(declared_inputs_recipe("Old Enum Form", [old]))
+        result = author().validate_recipe(declared_inputs_recipe("Array Enum Form", [array_enum]))
 
         assert result["valid"] is False
         assert find_finding(result["findings"], "UNKNOWN_KEY") == {

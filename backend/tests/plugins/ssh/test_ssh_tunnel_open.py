@@ -231,13 +231,13 @@ class TestMetadata:
             ("local_port", "integer"),
         ]
 
-    def test_obsolete_outputs_are_gone(self) -> None:
+    def test_there_is_no_remote_destination_or_tunnel_status_output(self) -> None:
         names = [o["name"] for o in SSHTunnelOpenPlugin().metadata["output_schema"]]
 
         assert "remote_destination" not in names
         assert "tunnel_status" not in names
 
-    def test_obsolete_profile_scope_params_are_gone(self) -> None:
+    def test_there_is_no_profile_or_scope_parameter(self) -> None:
         names = [p["name"] for p in SSHTunnelOpenPlugin().metadata["parameters"]]
 
         assert "profile" not in names
@@ -470,6 +470,66 @@ class TestMissingSession:
             match=r"^SSH session 'ssh_session_abc123' not found or already closed$",
         ):
             await _open(None, log, local_port=19446)
+
+
+class TestSessionClosedMidOpen:
+    """A session another branch closes while the tunnel opens leaves no Local Port bound."""
+
+    async def test_a_session_closed_during_the_bind_fails_the_block_and_frees_the_port(
+        self, log: RunLog, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        connection = channel_connection()
+        registry = tunnel_session(connection)
+        local_port = free_port()
+        bind = tunnel_open_module.start_forwarder
+
+        async def closed_while_binding(*args: Any) -> Any:
+            listener = await bind(*args)
+            registry.close(_SESSION_ID)
+            return listener
+
+        monkeypatch.setattr(tunnel_open_module, "start_forwarder", closed_while_binding)
+        message = _failed("the SSH connection to bastion is closed")
+        try:
+            with pytest.raises(ConnectionError, match=exact(message)):
+                await _open(registry, log, local_port=local_port)
+
+            assert registry.get(_SESSION_ID) is None
+            assert connection.open_connection.call_count == 0
+            with socket.socket() as again:
+                again.bind(("127.0.0.1", local_port))
+        finally:
+            registry.close_all()
+
+    async def test_a_session_closed_during_the_check_also_closes_the_held_channel(
+        self, log: RunLog, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async with far_end() as far:
+            connection = channel_connection(far.port)
+            registry = tunnel_session(connection)
+            local_port = free_port()
+            check = tunnel_open_module.validate_target
+
+            async def closed_while_checking(*args: Any) -> Any:
+                held = await check(*args)
+                registry.close(_SESSION_ID)
+                return held
+
+            monkeypatch.setattr(tunnel_open_module, "validate_target", closed_while_checking)
+            message = _failed("the SSH connection to bastion is closed")
+            try:
+                with pytest.raises(ConnectionError, match=exact(message)):
+                    await _open(registry, log, local_port=local_port, validate_target=True)
+
+                assert connection.channels.closed() == [True]
+                # The destination sees the held channel hang up.
+                async with asyncio.timeout(1):
+                    while not far.writers[0].is_closing():
+                        await asyncio.sleep(0.001)
+                with socket.socket() as again:
+                    again.bind(("127.0.0.1", local_port))
+            finally:
+                registry.close_all()
 
 
 class TestValidateTargetHolds:

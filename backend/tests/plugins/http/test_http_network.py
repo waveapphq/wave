@@ -20,6 +20,10 @@ read, the run log names a used proxy once per block run, a proxy failure
 fails the block with its own text, an address list pattern that takes too
 long fails only its own block run, and an https target behind the proxy is
 still handshaken and verified by the bundled engine.
+
+A connection to 127.0.0.1 or localhost at the Local Port of one of the run's open
+SSH tunnels sends the tunnel's far host as the TLS server name and checks the
+server's certificate under it, one connection at a time.
 """
 
 import asyncio
@@ -38,7 +42,9 @@ import httpx
 import pytest
 
 from tests.connectivity._proxy_servers import Proxy, closed_port
+from tests.connectivity.opensearch.fakes import record_sni
 from tests.plugins.http.httpx_fakes import make_mock_client, patch_async_client
+from tests.plugins.netcat.conftest import tunnel_registry
 
 Decision = Callable[[str, str, int], bool]
 
@@ -1572,7 +1578,7 @@ class TestTLSConfigParameterMetadata:
             )
 
     @pytest.mark.asyncio
-    async def test_auto_is_no_longer_a_tls_version(self):
+    async def test_auto_is_not_a_tls_version(self):
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
@@ -2064,6 +2070,89 @@ class TestServerVerification:
 
         assert result["status_code"] == 200
         assert result["trace"]["tls"]["protocol"].startswith("TLSv")
+
+
+async def _run_with_tunnels(registry: Any, parameters: dict[str, Any]) -> dict[str, Any]:
+    """One block run on the real client, in a run whose SSH tunnels `registry` holds."""
+    from wavecore.plugins.http_client import HTTPClientPlugin
+
+    return await HTTPClientPlugin().execute(_context(parameters, ssh_session_registry=registry))
+
+
+def _far_host_mismatch(far_host: str) -> str:
+    return _exact(
+        f'Certificate verification failed: hostname "{far_host}" does not match '
+        "the server certificate"
+    )
+
+
+class TestAnSshTunnel:
+    """A connection to an open tunnel's Local Port names and checks the tunnel's far host."""
+
+    async def test_the_far_host_is_the_server_name_and_the_checked_name(self, tls_target):
+        names = record_sni(tls_target.server)
+        registry = tunnel_registry({tls_target.port: "localhost:443"}, Mock())
+
+        result = await _run_with_tunnels(registry, tls_target.parameters("/secure"))
+
+        assert result["status_code"] == 200
+        assert names == ["localhost"]
+
+    @pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+    async def test_a_far_host_the_certificate_does_not_name_fails_verification(
+        self, tls_target, host
+    ):
+        registry = tunnel_registry({tls_target.port: "api.internal:443"}, Mock())
+
+        with pytest.raises(httpx.HTTPError, match=_far_host_mismatch("api.internal")):
+            await _run_with_tunnels(registry, tls_target.parameters("/secure", host))
+
+        assert tls_target.server.requests == []
+
+    async def test_verify_off_still_sends_the_far_host_name(self, tls_target):
+        names = record_sni(tls_target.server)
+        registry = tunnel_registry({tls_target.port: "api.internal:443"}, Mock())
+
+        result = await _run_with_tunnels(
+            registry, tls_target.parameters("/secure", verify_ssl=False)
+        )
+
+        assert result["status_code"] == 200
+        assert names == ["api.internal"]
+
+    async def test_a_port_with_no_open_tunnel_checks_the_url_host(self, tls_target):
+        names = record_sni(tls_target.server)
+        registry = tunnel_registry({tls_target.port + 1: "api.internal:443"}, Mock())
+
+        result = await _run_with_tunnels(registry, tls_target.parameters("/secure"))
+
+        assert result["status_code"] == 200
+        assert names == [None]
+
+    async def test_a_redirect_off_the_tunnel_checks_the_new_host(
+        self, tls_target, legacy_tls_server
+    ):
+        tunneled, elsewhere = record_sni(tls_target.server), record_sni(legacy_tls_server)
+        tls_target.server.enqueue(302, [("Location", f"{legacy_tls_server.base_url}/next")])
+        registry = tunnel_registry({tls_target.port: "localhost:443"}, Mock())
+
+        result = await _run_with_tunnels(registry, tls_target.parameters("/secure"))
+
+        assert result["status_code"] == 200
+        assert (tunneled, elsewhere) == (["localhost"], [None])
+
+    async def test_a_tunnel_the_proxy_setting_sends_direct_names_the_far_host(
+        self, tls_target, forward_proxy
+    ):
+        _put_in_force(forward_proxy, _never)
+        names = record_sni(tls_target.server)
+        registry = tunnel_registry({tls_target.port: "api.internal:443"}, Mock())
+
+        with pytest.raises(httpx.HTTPError, match=_far_host_mismatch("api.internal")):
+            await _run_with_tunnels(registry, tls_target.parameters("/secure", **_WAVE_SETTING))
+
+        assert names == ["api.internal"]
+        assert forward_proxy.untouched
 
 
 class TestNetworkFailurePaths:

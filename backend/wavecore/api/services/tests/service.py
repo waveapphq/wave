@@ -43,7 +43,7 @@ from wavecore.api.services.block_node_checks import (
 )
 from wavecore.api.services.block_schema import BlockSchema, block_schema
 from wavecore.api.services.entity_cache import DirectoryCache
-from wavecore.api.services.storage_paths import get_tests_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_tests_storage_path, is_entity_id
 from wavecore.api.services.tests import testdata_service
 from wavecore.api.services.typed_numbers import store_workflow_numbers
 from wavecore.api.services.variable_service import refuse_value_problems
@@ -387,16 +387,6 @@ def _set_version_attribute(test_id: str, version: str, attr: str, value: Any) ->
     _save_versions(test_id, versions)
 
 
-def _save_executions(test_id: str, executions: list[dict[str, Any]]) -> None:
-    """Save execution history to storage."""
-    _ensure_storage_dir()
-    test_dir = _get_test_dir(test_id)
-    test_dir.mkdir(parents=True, exist_ok=True)
-    executions_file = test_dir / "executions.yaml"
-    with open(executions_file, "w", encoding="utf-8") as f:
-        yaml.dump(executions, f, default_flow_style=False, sort_keys=False)
-
-
 def _ensure_storage_dir() -> None:
     """Ensure storage directory exists."""
     get_tests_storage_path().mkdir(parents=True, exist_ok=True)
@@ -404,11 +394,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_test_dir(test_id: str) -> Path:
     """Get directory path for a test."""
-    return get_tests_storage_path() / test_id
+    return entity_dir(get_tests_storage_path(), test_id)
 
 
 def _load_test(test_id: str) -> dict[str, Any] | None:
     """Load test from file storage, forgetting the cached entry when the file is gone."""
+    if not is_entity_id(test_id):
+        return None
     test_file = _get_test_dir(test_id) / _TEST_FILENAME
     if not test_file.exists():
         _test_directory.forget(test_id)
@@ -476,15 +468,6 @@ def _save_versions(test_id: str, versions: list[dict[str, Any]]) -> None:
     versions_file = test_dir / "versions.yaml"
     with open(versions_file, "w", encoding="utf-8") as f:
         yaml.dump(versions, f, default_flow_style=False, sort_keys=False)
-
-
-def _load_executions(test_id: str) -> list[dict[str, Any]]:
-    """Load execution history from file storage."""
-    executions_file = _get_test_dir(test_id) / "executions.yaml"
-    if not executions_file.exists():
-        return []
-    with open(executions_file, encoding="utf-8") as f:
-        return yaml.safe_load(f) or []
 
 
 def _list_all_tests() -> list[dict[str, Any]]:
@@ -977,6 +960,17 @@ def get_test(test_id: str) -> dict[str, Any] | None:
     return result
 
 
+def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> None:
+    """Raise when the update renames the test onto a name another test holds."""
+    if "name" not in data or data["name"] == test.get("name"):
+        return
+    if any(
+        existing.get("name") == data["name"] and existing.get("id") != test.get("id")
+        for existing in _list_all_tests()
+    ):
+        raise ConflictException(f"Test with name '{data['name']}' already exists")
+
+
 def update_test(
     test_id: str, data: dict[str, Any], etag: str | None = None
 ) -> dict[str, Any] | None:
@@ -991,7 +985,9 @@ def update_test(
         Updated test or None if not found
 
     Raises:
-        ValueError: If ETag mismatch
+        ConflictException: If ETag mismatch or the new name is taken
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH
+        SaveValidationError: If validation errors remain after autofix
     """
     test = _load_test(test_id)
     if test is None:
@@ -1003,16 +999,9 @@ def update_test(
         if etag != current_etag:
             raise ConflictException("Precondition failed: resource has been modified")
 
-    # Increment version (minor bump)
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    _refuse_taken_rename(test, data)
+
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
 
@@ -1099,11 +1088,7 @@ def update_test_metadata(
         if etag != current_etag:
             raise ConflictException("Precondition failed: resource has been modified")
 
-    # Check for name uniqueness if updating name
-    if "name" in data and data["name"] != test.get("name"):
-        for existing in _list_all_tests():
-            if existing.get("name") == data["name"] and existing.get("id") != test_id:
-                raise ConflictException(f"Test with name '{data['name']}' already exists")
+    _refuse_taken_rename(test, data)
 
     now = datetime.now(UTC).isoformat()
 
@@ -1132,9 +1117,10 @@ def update_test_metadata(
 def delete_test(test_id: str) -> bool:
     """Delete test.
 
-    Rejects with ``ConflictException`` when a tracked test execution is still
-    in ``running`` or ``paused`` state. The exception carries the blocking
-    execution IDs so the route layer can surface them in the 409 response.
+    Rejects with ``ConflictException`` while a tracked execution of the test,
+    a Suite or Regression execution running it, or a workbench session on it
+    is ``running`` or ``paused``. The exception carries the blocking IDs so
+    the route layer can surface them in the 409 response.
 
     Args:
         test_id: Test UUID
@@ -1143,7 +1129,6 @@ def delete_test(test_id: str) -> bool:
         True if deleted, False if not found
     """
     from wavecore.api.exceptions import ConflictException
-    from wavecore.api.services.executions import _storage as _exec_storage
     from wavecore.api.services.relations import service as relation_service
     from wavecore.api.services.suites import version_service as suite_version_service
 
@@ -1151,7 +1136,7 @@ def delete_test(test_id: str) -> bool:
     if test is None:
         return False
 
-    blocking = _exec_storage.get_active_tracked_executions("test", test_id)
+    blocking = testdata_service.running_holders(test_id)
     if blocking:
         raise ConflictException(
             f"Cannot delete test '{test_id}': execution is running or paused",
@@ -1172,7 +1157,7 @@ def delete_test(test_id: str) -> bool:
     return True
 
 
-def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
     """Create multiple tests in a batch.
 
     Args:
@@ -1186,15 +1171,17 @@ def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
 
     for idx, test_data in enumerate(tests):
         try:
-            test = create_test(test_data)
+            test = create_test(shared.batch_object(test_data))
             created.append(test["id"])
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
         except (WaveException, ValueError) as e:
             failed.append({"index": idx, "error": str(e)})
 
     return {"created": created, "failed": failed}
 
 
-def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
     """Update multiple tests in a batch.
 
     Args:
@@ -1207,27 +1194,29 @@ def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
 
-    for idx, update in enumerate(updates):
-        test_id = str(update.get("id", ""))
-        # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
-        update_data = update.get("update", {})
-        if not update_data:
-            # If no "update" key, use remaining fields as update data
-            update_data = {k: v for k, v in update.items() if k != "id"}
-
+    for idx, item in enumerate(updates):
         try:
+            update = shared.batch_object(item)
+            test_id = str(update.get("id", ""))
+            # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
+            update_data = shared.batch_update_fields(update)
+            if not update_data:
+                # If no "update" key, use remaining fields as update data
+                update_data = {k: v for k, v in update.items() if k != "id"}
             result = update_test(test_id, update_data)
             if result is None:
                 failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
             else:
                 updated.append(test_id)
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
         except Exception as e:
             failed.append({"index": idx, "error": str(e)})
 
     return {"updated": updated, "failed": failed}
 
 
-def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
+def batch_delete_tests(test_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple tests in a batch.
 
     Args:
@@ -1236,19 +1225,7 @@ def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-
-    for idx, test_id in enumerate(test_ids):
-        try:
-            if delete_test(test_id):
-                deleted.append(test_id)
-            else:
-                failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
-        except (WaveException, ValueError) as e:
-            failed.append({"index": idx, "error": str(e)})
-
-    return {"deleted": deleted, "failed": failed}
+    return shared.batch_delete(test_ids, delete_test, "Test")
 
 
 def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
@@ -1269,21 +1246,7 @@ def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | Non
 
     # Determine version bump
     version_bump = data.get("version_bump", "minor")
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-    except (ValueError, AttributeError):
-        parts = [1, 0, 0]  # Default fallback
-
-    if version_bump == "major":
-        new_version = f"{parts[0] + 1}.0.0"
-    elif version_bump == "minor":
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    else:
-        new_version = f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), version_bump)
 
     # Update test
     now = datetime.now(UTC).isoformat()
@@ -4620,34 +4583,6 @@ def get_test_dependency_graph(test_id: str) -> dict[str, Any] | None:
     return {"nodes": dep_nodes, "edges": dep_edges}
 
 
-def get_test_executions(test_id: str, page: int = 1, per_page: int = 20) -> dict[str, Any] | None:
-    """Get test execution history.
-
-    Args:
-        test_id: Test UUID
-        page: Page number
-        per_page: Results per page
-
-    Returns:
-        Paginated execution history or None if test not found
-    """
-    test = _load_test(test_id)
-    if test is None:
-        return None
-
-    executions = _load_executions(test_id)
-    total = len(executions)
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-
-    return {
-        "executions": executions[start_idx:end_idx],
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-    }
-
-
 def get_test_history(test_id: str) -> dict[str, Any] | None:
     """Get complete version history for a test.
 
@@ -4695,16 +4630,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
 
     now = datetime.now(UTC).isoformat()
 
-    # Create new version from restore
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     # Update test
     test["version"] = new_version

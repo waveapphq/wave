@@ -14,6 +14,7 @@ from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse
 
+from wavecore.core.variables.decimal_value import WaveDecimal
 from wavecore.plugins._parser_base import (
     OUTPUT_MODE_PARAM,
     PARSER_OUTPUT_SCHEMA,
@@ -136,7 +137,7 @@ class JSONParserPlugin(QueryParserBase):
         if logger:
             logger.debug(f"Parsing JSON document ({len(json_content)} bytes)")
         try:
-            return json.loads(json_content)
+            return json.loads(json_content, parse_float=WaveDecimal)
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse JSON: {e}") from e
 

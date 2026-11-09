@@ -740,6 +740,12 @@ class TestAlwaysHardFail:
         with pytest.raises(ValueError, match=exact("Script execution timed out after 45 seconds")):
             _run(channel, _valid_params(timeout=45))
 
+    def test_a_one_second_timeout_is_named_in_the_singular(self) -> None:
+        channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 1 second"))
+
+        with pytest.raises(ValueError, match=exact("Script execution timed out after 1 second")):
+            _run(channel, _valid_params(timeout=1))
+
     def test_the_timeout_row_falls_back_to_sixty_when_no_timeout_is_set(self) -> None:
         channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 9 seconds"))
         params = _valid_params()
