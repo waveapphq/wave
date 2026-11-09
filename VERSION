@@ -1,2 +1,2 @@
 # After changing the version, run: ./scripts/update-version.sh
-ver=1.0.0-alpha60
+ver=1.0.0-alpha61

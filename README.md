@@ -12,7 +12,7 @@ Build a test by dragging Blocks onto a canvas. Run it and debug it with breakpoi
 
 [![CI](https://github.com/waveapphq/wave/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/waveapphq/wave/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.0.0--alpha60-blue)
+![Version](https://img.shields.io/badge/version-1.0.0--alpha61-blue)
 ![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wavecore"
-version = "1.0.0-alpha60"
+version = "1.0.0-alpha61"
 description = "Workflow Automation and Validation Engine - Backend"
 readme = "README.md"
 license = "MIT"
