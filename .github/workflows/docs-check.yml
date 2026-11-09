@@ -1,51 +1,82 @@
 name: Docs check
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, synchronize, reopened]
 
 permissions: {}
 
+# The last status written wins, so runs of one pull request go in order.
+concurrency:
+  group: docs-check-${{ github.event.pull_request.number }}
+
 jobs:
   docs-check:
-    name: Docs check
-    # A release branch of this repo goes into master with no docs branch of its own.
-    if: >-
-      github.repository == 'waveapphq/wave' &&
-      !(startsWith(github.event.pull_request.head.ref, 'release/') &&
-      github.event.pull_request.head.repo.full_name == github.repository)
+    # The required check "Docs check" is the commit status this job sets.
+    name: Docs link
+    if: github.repository == 'waveapphq/wave'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+      statuses: write
     steps:
       - uses: actions/github-script@v8
         with:
           script: |
             const pr = context.payload.pull_request
-            const body = (pr.body ?? '').replace(/<!--[\s\S]*?-->/g, '')
-            if (/^\s*[-*]\s*\[x\]\s*No docs change needed/im.test(body)) return
-            let reason = 'Its description ticks no box and links no docs pull request.'
-            const links = body.matchAll(/https:\/\/github\.com\/waveapphq\/wave-docs\/pull\/(\d+)\b/gi)
-            const numbers = [...new Set([...links].map((m) => Number(m[1])))].slice(0, 20)
-            for (const pull_number of numbers) {
-              try {
-                const { data } = await github.rest.pulls.get({ owner: 'waveapphq', repo: 'wave-docs', pull_number })
-                if (data.head.ref !== pr.head.ref) {
-                  reason = `Docs pull request ${pull_number} is on the branch ${data.head.ref}, not ${pr.head.ref}.`
-                } else if (data.state === 'open') {
-                  reason = `Docs pull request ${pull_number} is not merged yet. Merge it, then re-run this check.`
-                } else if (!data.merged_at) {
-                  reason = `Docs pull request ${pull_number} was closed without a merge.`
-                } else {
-                  return
-                }
-              } catch (error) {
-                if (error.status !== 404) throw error
-                reason = `Docs pull request ${pull_number} was not found.`
+            const setStatus = (state, text) =>
+              github.rest.repos.createCommitStatus({
+                ...context.repo,
+                sha: pr.head.sha,
+                state,
+                context: 'Docs check',
+                description: text.length > 140 ? `${text.slice(0, 137)}...` : text,
+                target_url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+              })
+            const check = async () => {
+              // A release branch of this repo goes into master with no docs branch of its own.
+              if (pr.head.ref.startsWith('release/') && pr.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`) {
+                return { state: 'success', text: 'A release branch needs no docs pull request.' }
               }
+              const body = (pr.body ?? '').replace(/<!--[\s\S]*?-->/g, '')
+              if (/^\s*[-*]\s*\[x\]\s*No docs change needed/im.test(body)) {
+                return { state: 'success', text: 'No docs change needed.' }
+              }
+              let reason = 'Its description ticks no box and links no docs pull request.'
+              let open
+              const links = body.matchAll(/https:\/\/github\.com\/waveapphq\/wave-docs\/pull\/(\d+)\b/gi)
+              const numbers = [...new Set([...links].map((m) => Number(m[1])))].slice(0, 20)
+              for (const pull_number of numbers) {
+                try {
+                  const { data } = await github.rest.pulls.get({ owner: 'waveapphq', repo: 'wave-docs', pull_number })
+                  if (data.head.ref !== pr.head.ref) {
+                    reason = `Docs pull request ${pull_number} is on the branch ${data.head.ref}, not ${pr.head.ref}.`
+                  } else if (data.merged_at) {
+                    return { state: 'success', text: `waveapphq/wave-docs#${pull_number} is merged.` }
+                  } else if (data.state === 'open') {
+                    open ??= pull_number
+                  } else {
+                    reason = `Docs pull request ${pull_number} was closed without a merge.`
+                  }
+                } catch (error) {
+                  if (error.status !== 404) throw error
+                  reason = `Docs pull request ${pull_number} was not found.`
+                }
+              }
+              if (open) return { state: 'pending', text: `Waiting for waveapphq/wave-docs#${open} to merge. Re-run this check after the merge.` }
+              return { state: 'failure', text: reason }
             }
+            let result
+            try {
+              result = await check()
+            } catch (error) {
+              await setStatus('error', 'The check could not read the docs pull request. See the run log.')
+              throw error
+            }
+            await setStatus(result.state, result.text)
+            if (result.state !== 'failure') return
             const rule =
-              'Each pull request must tick "No docs change needed", or link a merged pull request in waveapphq/wave-docs on a branch with the same name, as "Send a change" in CONTRIBUTING.md says.'
+              'Each pull request must tick "No docs change needed", or link a pull request in waveapphq/wave-docs on a branch with the same name, as "Send a change" in CONTRIBUTING.md says. The check waits while that pull request is open. Re-run it after the merge.'
             const marker = '<!-- docs-check -->'
             const comments = await github.paginate(github.rest.issues.listComments, {
               ...context.repo,
@@ -56,7 +87,7 @@ jobs:
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number: pr.number,
-                body: `${marker}\n${rule}\n\n${reason}`,
+                body: `${marker}\n${rule}\n\n${result.text}`,
               })
             }
-            core.setFailed(`${rule} ${reason}`)
+            core.setFailed(`${rule} ${result.text}`)
