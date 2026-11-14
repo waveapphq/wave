@@ -8,10 +8,12 @@ from typing import Any
 import pytest
 
 from wavecore.core.expressions.errors import InvalidExpressionError
+from wavecore.core.expressions.template import _TEMPLATE_PATTERN as MARKER
 from wavecore.core.expressions.template_escape import mask_markers, render_escaped
 from wavecore.core.table import Table
 
-MARKER = re.compile(r"\{\{(.+?)\}\}")
+# Another marker shape, to show the pattern passed in is the one used.
+ANGLE_MARKER = re.compile(r"<<([^<>]+)>>")
 
 
 def _evaluator(values: dict[str, Any]) -> Callable[[str], Any]:
@@ -262,13 +264,11 @@ class TestLandingScanner:
         assert filled == r"a: p b: ann \or bob"
 
     def test_the_marker_pattern_is_the_one_passed_in(self) -> None:
-        pattern = re.compile(r"<<(.+?)>>")
-
         filled, pairs = render_escaped(
             "user.name: << user >> and {{ user }}",
             "dql",
             _evaluator({"user": "ann or bob"}),
-            pattern,
+            ANGLE_MARKER,
             setting="query",
         )
 
@@ -644,6 +644,6 @@ class TestMaskMarkers:
         assert mask_markers('user.name: "ann"', "dql", MARKER) == 'user.name: "ann"'
 
     def test_the_marker_pattern_is_the_one_passed_in(self) -> None:
-        masked = mask_markers('{"a": << v >>, "b": {{ v }}}', "json", re.compile(r"<<(.+?)>>"))
+        masked = mask_markers('{"a": << v >>, "b": {{ v }}}', "json", ANGLE_MARKER)
 
         assert masked == '{"a": 0' + " " * 6 + ', "b": {{ v }}}'

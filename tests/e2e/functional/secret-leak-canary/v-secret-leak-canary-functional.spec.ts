@@ -52,6 +52,7 @@ import {
   expectNoSecret as sweepForSecret,
   sweepStore,
   dirBytes,
+  storedYamlValues,
   SECRET_MASK,
   SECRET_ENVELOPE,
 } from '../../helpers/secret-canary'
@@ -181,9 +182,9 @@ test.describe('V-SECRET-LEAK-CANARY-FUNCTIONAL', () => {
       expect(profileBytes.includes(ENVELOPE), 'profile credential must carry an envelope').toBeTruthy()
       expect(profileBytes.includes(CANARY_CRED), 'canary cred must not sit in the profile').toBeFalsy()
       expect(
-        profileBytes.includes(PROFILE_BASE_URL),
+        [...new Set(storedYamlValues(profileBytes.toString('utf-8'), 'base_url'))],
         'non-secret profile field must stay cleartext',
-      ).toBeTruthy()
+      ).toEqual([PROFILE_BASE_URL])
 
       for (const needle of RUN_SECRETS) {
         expect(sweepStore(needle), `canary ${needle} found in the store`).toEqual([])

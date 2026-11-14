@@ -2,8 +2,7 @@
 # Wraps the existing HTTPS simulator (tests/e2e/simulators/https/server.ts)
 # UNMODIFIED and runs it as an internal-only compose service: the tunnel-only
 # destination, the real target Remote-Exec bundles reach from the sshd host, and
-# the cookie/secret canary source. Do NOT edit server.ts here - a parallel HTTP
-# rework worktree owns that file.
+# the cookie/secret canary source.
 #
 # Build: scripts/e2e-stack.sh build  (context = tests/e2e)
 FROM node:22-slim

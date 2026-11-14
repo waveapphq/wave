@@ -27,12 +27,12 @@ import {
   DEFAULT_RECONNECT_CONFIG,
   DEFAULT_HEARTBEAT_CONFIG,
   WS_OPEN,
-  generateUUID,
   createWebSocketError,
   isValidTopic,
 } from './utils'
 import { createClientContext, setState, sendMessage, clearTimers } from './client-context'
 import { performConnect } from './connection'
+import { randomUUID } from '@/lib/uuid'
 
 // Re-export everything for barrel consumers
 export * from './types'
@@ -239,7 +239,7 @@ export function createWebSocketClient(config: WebSocketClientConfig): WebSocketC
       }
 
       if (options?.requireAck) {
-        const ackId = generateUUID()
+        const ackId = randomUUID()
         message.ackId = ackId
 
         sendMessage(ctx, message)

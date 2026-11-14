@@ -26,6 +26,7 @@
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
+import { escapeRegExp } from '../../helpers/log-reader'
 import { configSheet } from '../../helpers/workbench'
 import { dismissLoadDialogIfPresent } from '../../helpers/fn-seed'
 import { randomUUID } from 'node:crypto'
@@ -149,7 +150,7 @@ test.describe('V-FN-VER-AVAIL-01: missing-version visuals', () => {
     // Tooltip names the missing version + recovery path.
     await alert.hover()
     const tooltip = page.locator('[role="tooltip"]', {
-      hasText: new RegExp(MISSING_VERSION.replace(/\./g, '\\.')),
+      hasText: new RegExp(escapeRegExp(MISSING_VERSION)),
     })
     await expect(tooltip.first()).toBeVisible({ timeout: 5_000 })
   })

@@ -194,9 +194,9 @@ function handleSubscribedMessage(ctx: ClientContext, envelope: MessageEnvelope):
   const topic = (envelope as unknown as Record<string, unknown>).topic as string | undefined
   if (!topic) return
 
-  // Resolve pending confirmation if any
+  // The topic comes from the server, so only a stored function is ever called.
   const resolve = ctx.pendingSubscriptionConfirmations.get(topic)
-  if (resolve) {
+  if (typeof resolve === 'function') {
     ctx.pendingSubscriptionConfirmations.delete(topic)
     resolve()
   }

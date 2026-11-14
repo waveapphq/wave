@@ -2,7 +2,7 @@
  * WebSocket Client Utilities - REQ-5.2.1.4
  *
  * Stateless utility functions for error classification, topic parsing,
- * UUID generation, and error construction.
+ * reconnect timing, and error construction.
  */
 
 import type { WebSocketErrorType, WebSocketError, TopicCategory, ReconnectConfig, HeartbeatConfig } from './types'
@@ -85,17 +85,6 @@ export function matchesTopic(pattern: string, topic: string): boolean {
 // ============================================================================
 // Internal Helper Functions
 // ============================================================================
-
-/**
- * Generates a UUID v4 for session identification
- */
-export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replaceAll(/[xy]/g, (c) => {
-    const r = Math.trunc(secureRandom() * 16)
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 /**
  * Creates a WebSocket error with proper typing

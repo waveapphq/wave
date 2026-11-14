@@ -17,18 +17,30 @@ export function cn(...inputs: ClassValue[]): string {
 // Cryptographically Secure Random Utilities
 // ===========================================================================
 
+const UINT32_RANGE = 0x100000000
+
 /** Return a random float in [0, 1) using crypto.getRandomValues */
 export function secureRandom(): number {
-  return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 0x100000000
+  return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / UINT32_RANGE
 }
+
+/** Return an unbiased random integer in [0, bound) for a whole bound from 1 to 2^32 */
+export function secureRandomInt(bound: number): number {
+  // A draw at or past the last full multiple of bound is redrawn, so no result is favored.
+  const limit = UINT32_RANGE - (UINT32_RANGE % bound)
+  for (;;) {
+    const [value] = globalThis.crypto.getRandomValues(new Uint32Array(1))
+    if (value < limit) return value % bound
+  }
+}
+
+const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
 /** Return a random alphanumeric string of the given length */
 export function secureRandomId(length: number = 7): string {
-  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(length))
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let result = ''
   for (let i = 0; i < length; i++) {
-    result += chars[bytes[i] % chars.length]
+    result += ID_CHARS[secureRandomInt(ID_CHARS.length)]
   }
   return result
 }

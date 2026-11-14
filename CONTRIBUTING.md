@@ -14,6 +14,7 @@ The test suites are tuned for Ubuntu 22.04 on an x86_64 machine with 16 cores, 2
 | Podman 3.4, the version that Ubuntu 22.04 ships | The three test suites, which run in containers. |
 | The `docker-compose` v2 binary, on your `PATH` | `scripts/e2e-stack.sh`, which starts the services that the E2E specs run against. |
 | `sonar-scanner`, on your `PATH`, and a SonarQube Cloud token in `SONAR_TOKEN` | The SonarQube step of the backend and frontend suites, as [The SonarQube step](#the-sonarqube-step) says. |
+| The CodeQL CLI, `codeql`, on your `PATH` | The optional CodeQL check before a push, as [The CodeQL check](#the-codeql-check) says. |
 | `jq` | The test count at the end of `./scripts/ci-playwright-local.sh`. Without it, the count says 0. The result of the suite does not change. |
 
 Run these commands to clone WAVE and install its packages:
@@ -103,6 +104,16 @@ The backend and frontend scripts each scan their code with SonarQube, on the hos
 A script stops before its tests when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
 
 The scan waits for the quality gate of its project. A failed gate fails the suite, and so does a scan that does not run.
+
+### The CodeQL check
+
+GitHub runs CodeQL code scanning on each pull request. To see its findings before you push, run `./scripts/codeql-scan.sh` on the host; it runs the same checks and is not part of the CI scripts. It scans the files your push would carry and the branch your pull request goes into, and fails on every alert that branch does not have. It lists each such alert with its file and line; `--flows` also shows the path from the input to the problem. It needs these on the host:
+
+- The CodeQL CLI bundle from the `github/codeql-action` releases, with `codeql` on your `PATH`, or `CODEQL` set to its path.
+- Room for its work files while a scan runs, several GB, by default in `~/.cache/wave-codeql`. Set `CODEQL_WORK_DIR` to put them on another disk.
+- A checked-out branch. A `fix/<version>-<name>` or `feature/<version>-<name>` branch is compared with `release/<version>`, any other branch with `master`. Set `CODEQL_BASE` to compare with another branch.
+
+A maintainer dismisses a false alarm on GitHub. With `CODEQL_GITHUB_TOKEN` set to a token that can read code scanning alerts, the scan leaves out the alerts dismissed for your branch or its pull request; without it, the scan lists them too.
 
 ### Run a part of the tests
 
@@ -265,7 +276,7 @@ A check blocks the merge of each pull request until it ticks "No docs change nee
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 
-GitHub runs the backend and frontend checks and the SonarQube analysis on each pull request. It never runs the Playwright suite.
+GitHub runs the backend and frontend checks, the SonarQube analysis and CodeQL code scanning on each pull request. It never runs the Playwright suite.
 
 Only a maintainer merges, even when every check on a pull request is green. The maintainer reviews the pull request, then merges it into its release branch and deletes the branch.
 

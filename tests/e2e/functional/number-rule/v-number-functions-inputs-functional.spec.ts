@@ -39,6 +39,7 @@ import {
   storedLocalDefinition,
 } from '../../helpers/fn-seed'
 import { finishRun, startRun } from '../../helpers/k8s-run'
+import { escapeRegExp } from '../../helpers/log-reader'
 import {
   deleteFunctionQuietly,
   deleteTestQuietly,
@@ -110,7 +111,7 @@ async function switchVersion(page: Page, sheet: Locator, version: string): Promi
   await trigger.click()
   const menu = page.locator('[data-testid="version-dropdown-menu"]')
   await expect(menu).toBeVisible()
-  await menu.getByRole('menuitemradio', { name: new RegExp(version.replace(/\./g, '\\.')) }).click()
+  await menu.getByRole('menuitemradio', { name: new RegExp(escapeRegExp(version)) }).click()
   await expect(trigger).toContainText(`v${version}`)
 }
 

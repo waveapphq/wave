@@ -41,7 +41,7 @@ import {
 import { runToken } from '../../helpers/element-types'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
 import { finishRun, resolveEnvironmentId, startRun } from '../../helpers/k8s-run'
-import { setConsoleMinimumLevel } from '../../helpers/log-reader'
+import { escapeRegExp, setConsoleMinimumLevel } from '../../helpers/log-reader'
 import { expectBlocked, expectTypedAs, importDryRun, refusalOf, typeAtEnd, typeKeys } from '../../helpers/number-entry'
 import {
   openDatabaseProfileForm,
@@ -260,7 +260,7 @@ test.describe('V-NUMBER-PROFILES: profile numbers and the one number rule', () =
         const logs = await finishRun(page, status, 'profiles-done')
         expect(logs).toContain('profiles-done one=1')
         const connected = new RegExp(
-          `^Connected to PostgreSQL \\S+.* at ${SQL_TARGET_HOST.replace(/\./g, '\\.')}:${POSTGRES_PORT}$`,
+          `^Connected to PostgreSQL \\S+.* at ${escapeRegExp(SQL_TARGET_HOST)}:${POSTGRES_PORT}$`,
         )
         expect(logs.some((line) => connected.test(line)), logs.join('\n')).toBeTruthy()
       })

@@ -11,6 +11,9 @@
 #   CODEQL_WORK_DIR  scratch space for sources, databases and cached results
 #                    (default ~/.cache/wave-codeql; several GB while a scan runs)
 #   CODEQL_RAM       MB of memory CodeQL may use (default 6000)
+#   CODEQL_GITHUB_TOKEN  a GitHub token that can read code scanning alerts; with it, an
+#                    alert dismissed on GitHub for this branch or its pull request is
+#                    left out, matched by rule, file and the text of its line
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -70,6 +73,63 @@ scan() { # scan <source dir> <language> <sarif out>; CodeQL's own output goes to
   rm -rf "$db"
 }
 
+# Alerts dismissed on GitHub, as rule, file and line text, so a moved line still matches.
+dismissed="$WORK/dismissed.json"
+python3 -I - "$dismissed" "$branch" "$(git remote get-url origin)" <<'PY'
+import json, os, re, subprocess, sys, urllib.parse, urllib.request
+
+out, branch, remote = sys.argv[1], sys.argv[2], sys.argv[3]
+token = os.environ.get("CODEQL_GITHUB_TOKEN", "")
+found = []
+if not token:
+    print("CODEQL_GITHUB_TOKEN not set: alerts dismissed on GitHub are not left out")
+else:
+    repo = re.search(r"github\.com[:/](.+?)(\.git)?$", remote).group(1)
+
+    def api(path):
+        req = urllib.request.Request(f"https://api.github.com/repos/{repo}/{path}")
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Accept", "application/vnd.github+json")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.load(resp)
+
+    shown_files = {}
+
+    def line_text(sha, path, line):
+        if (sha, path) not in shown_files:
+            show = ["git", "show", f"{sha}:{path}"]
+            shown = subprocess.run(show, capture_output=True, text=True)
+            if shown.returncode != 0:  # a commit only GitHub has, such as a pull request merge
+                subprocess.run(["git", "fetch", "--quiet", "origin", sha], capture_output=True)
+                shown = subprocess.run(show, capture_output=True, text=True)
+            shown_files[sha, path] = shown.stdout.splitlines() if shown.returncode == 0 else []
+        lines = shown_files[sha, path]
+        return lines[line - 1].strip() if 0 < line <= len(lines) else None
+
+    try:
+        owner = repo.split("/")[0]
+        pulls = api(f"pulls?state=open&head={urllib.parse.quote(owner + ':' + branch)}")
+        refs = [f"refs/heads/{branch}"] + [f"refs/pull/{p['number']}/head" for p in pulls]
+        for ref in refs:
+            page = 1
+            while True:
+                alerts = api(f"code-scanning/alerts?state=dismissed&per_page=100&page={page}&ref={urllib.parse.quote(ref)}")
+                for alert in alerts:
+                    inst = alert["most_recent_instance"]
+                    loc = inst["location"]
+                    text = line_text(inst["commit_sha"], loc["path"], loc["start_line"])
+                    if text is not None:
+                        found.append([alert["rule"]["id"], loc["path"], text])
+                if len(alerts) < 100:
+                    break
+                page += 1
+        print(f"{len(found)} alerts dismissed on GitHub are left out")
+    except Exception as error:  # a failed read leaves nothing out; the scan still reports
+        print(f"Could not read the alerts dismissed on GitHub ({error}); none are left out")
+        found = []
+json.dump(found, open(out, "w"))
+PY
+
 status=0
 for lang in "${LANGS[@]}"; do
   base_sarif="$WORK/base-$base_sha-$lang-$version.sarif"
@@ -84,10 +144,12 @@ for lang in "${LANGS[@]}"; do
   echo "Scanning the working tree for $lang..."
   head_sarif="$WORK/head-$lang.sarif"
   scan "$head_src" "$lang" "$head_sarif"
-  python3 -I - "$base_sarif" "$head_sarif" "$lang" "$FLOWS" <<'PY' || status=1
+  python3 -I - "$base_sarif" "$head_sarif" "$lang" "$FLOWS" "$dismissed" "$head_src" <<'PY' || status=1
 import json, sys
 
 base_path, head_path, lang, flows = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "true"
+dismissed = {tuple(d) for d in json.load(open(sys.argv[5]))}
+head_src = sys.argv[6]
 
 def results(path):
     run = json.load(open(path))["runs"][0]
@@ -102,11 +164,24 @@ def where(location):
     phys = location["physicalLocation"]
     return f'{phys["artifactLocation"]["uri"]}:{phys.get("region", {}).get("startLine", "?")}'
 
+def is_dismissed(result):
+    phys = result["locations"][0]["physicalLocation"]
+    path, line = phys["artifactLocation"]["uri"], phys.get("region", {}).get("startLine", 0)
+    try:
+        lines = open(f"{head_src}/{path}", encoding="utf-8", errors="replace").read().splitlines()
+    except OSError:
+        return False
+    text = lines[line - 1].strip() if 0 < line <= len(lines) else None
+    return (result["ruleId"], path, text) in dismissed
+
 _, base = results(base_path)
 run, head = results(head_path)
 known = {key(r) for r in base}
-new = [r for r in head if key(r) not in known]
-print(f"{lang}: {len(head)} alerts, {len(new)} new against the target branch")
+unknown = [r for r in head if key(r) not in known]
+new = [r for r in unknown if not is_dismissed(r)]
+skipped = len(unknown) - len(new)
+print(f"{lang}: {len(head)} alerts, {len(new)} new against the target branch"
+      + (f" ({skipped} more dismissed on GitHub)" if skipped else ""))
 for r in sorted(new, key=lambda r: (r["ruleId"], where(r["locations"][0]))):
     print(f'  {r.get("level", "warning"):8} {r["ruleId"]}  {where(r["locations"][0])}')
     print(f'           {r["message"]["text"].splitlines()[0]}')
