@@ -141,6 +141,22 @@ class TestContainedPath:
         with pytest.raises(ValidationException, match=_OUTSIDE):
             file_tree.contained_path(root, "escape.txt", "Outside the folder")
 
+    def test_a_link_into_a_sibling_whose_name_extends_the_roots_is_refused(
+        self, tmp_path: Path
+    ) -> None:
+        """Containment compares whole folder names: root2 is not inside root."""
+        root = tmp_path / "root"
+        root.mkdir()
+        sibling = tmp_path / "root2"
+        sibling.mkdir()
+        (sibling / "a.csv").write_bytes(b"x")
+        (root / "escape.csv").symlink_to(sibling / "a.csv")
+        (root / "linked").symlink_to(sibling, target_is_directory=True)
+
+        for rel in ("escape.csv", "linked/a.csv"):
+            with pytest.raises(ValidationException, match=_OUTSIDE):
+                file_tree.contained_path(root, rel, "Outside the folder")
+
     def test_a_path_through_a_folder_link_that_leaves_is_refused(self, tmp_path: Path) -> None:
         """A folder link that leaves the root cannot be walked through."""
         root = tmp_path / "root"

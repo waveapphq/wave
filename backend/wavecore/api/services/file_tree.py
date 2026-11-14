@@ -5,6 +5,7 @@ one content type lookup, one set of download headers and one download response
 builder; every file surface answers with the same shapes and headers.
 """
 
+import errno
 import os
 import re
 from datetime import UTC, datetime
@@ -77,16 +78,18 @@ def contained_path(root: Path, rel: str, message: str) -> Path:
 
 
 def _canonical_within(base: Path, path: Path, message: str) -> Path:
+    # The closing separator lets base itself pass and keeps a sibling such as base2 out.
+    canonical = os.path.join(os.path.realpath(path), "")
+    if not canonical.startswith(os.path.join(base, "")):
+        raise ValidationException(message)
+    real = Path(canonical)
     try:
-        canonical = path.resolve()
-    except RuntimeError:
-        # A link loop has no real location.
-        raise ValidationException(message) from None
-    try:
-        canonical.relative_to(base)
-    except ValueError:
-        raise ValidationException(message) from None
-    return canonical
+        real.stat()
+    except OSError as error:
+        # A link loop has no real location; a missing entry still has its place.
+        if error.errno == errno.ELOOP:
+            raise ValidationException(message) from None
+    return real
 
 
 def walk_entries(root: Path) -> list[Entry]:
