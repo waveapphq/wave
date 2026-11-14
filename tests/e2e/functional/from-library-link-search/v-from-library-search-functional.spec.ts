@@ -70,7 +70,6 @@ async function seedTest(
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
             },
           },

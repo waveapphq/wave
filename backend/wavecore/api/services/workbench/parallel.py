@@ -17,7 +17,7 @@ from wavecore.api.services.workbench._common import (
     _add_execution_log,
     _broadcast_event,
 )
-from wavecore.api.services.workbench.block_status import leave_by_then, skip_rest
+from wavecore.api.services.workbench.block_status import leave_by_then, skip_rest, take_lane
 from wavecore.api.services.workbench.try_catch import (
     _execute_path_nodes,
     _map_handle_targets,
@@ -98,6 +98,8 @@ async def _run_branch(scope: _ParallelScope, branch: _Branch) -> str:
         "SYSTEM",
         block_id=scope.node_id,
     )
+    if branch.chain:
+        await take_lane(scope.session, scope.session_id, scope.node_id, branch.handle)
     walk = _execute_path_nodes(
         branch.chain,
         scope.node_map,

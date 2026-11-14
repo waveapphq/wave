@@ -3086,8 +3086,7 @@ describe('useVariableManagement - every reference counts toward Unused (VMGR-105
     const node = savedBlock({
       nodeType: 'control',
       elementType: 'variable-setter',
-      variableExpressionKeys: ['next_try'],
-      variableTypes: { next_try: 'integer' },
+      expressionFields: ['variables.next_try'],
       config: { values: { variables: { next_try: 'attempt_var + 1' } } },
     })
 
@@ -3098,8 +3097,7 @@ describe('useVariableManagement - every reference counts toward Unused (VMGR-105
     const node = savedBlock({
       nodeType: 'control',
       elementType: 'variable-setter',
-      variableTemplateKeys: ['welcome'],
-      variableTypes: { welcome: 'string' },
+      templateFields: ['variables.welcome'],
       config: { values: { variables: { welcome: 'Hi {{ guest_var }}' } } },
     })
 
@@ -3110,7 +3108,6 @@ describe('useVariableManagement - every reference counts toward Unused (VMGR-105
     const node = savedBlock({
       nodeType: 'control',
       elementType: 'variable-setter',
-      variableTypes: { status_var: 'string' },
       config: { values: { variables: { status_var: 'done' } } },
     })
 

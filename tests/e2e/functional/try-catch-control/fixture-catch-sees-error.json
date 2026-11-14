@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'tce-before'",
@@ -55,7 +54,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -92,7 +90,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "1/0",
@@ -122,12 +119,11 @@
           "version": "1.0.0",
           "description": "Catch Snapshots Error",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "catch_saw_error",
-            "catch_saw_caught"
+          "expressionFields": [
+            "variables.catch_saw_error",
+            "variables.catch_saw_caught"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -163,7 +159,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'tce-catch caught=' + str(tce_caught) + ' error=' + str(tce_error)",
@@ -197,7 +192,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'tce-then'",

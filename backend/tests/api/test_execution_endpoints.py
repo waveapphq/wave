@@ -1993,6 +1993,7 @@ class TestHistoricalTestCanvasEndpoint:
         self,
         test_id: str,
         status: str = "passed",
+        registry: Any = None,
     ) -> str:
         from wavecore.api.services.executions import _storage as store
 
@@ -2044,6 +2045,7 @@ class TestHistoricalTestCanvasEndpoint:
                     "edges": [{"id": "e1", "source": "node-start", "target": "node-log"}],
                 },
             },
+            registry=registry,
         )
         store._append_log(
             execution_id,
@@ -2134,6 +2136,21 @@ class TestHistoricalTestCanvasEndpoint:
         # FE has nothing to render in the eye-OFF view (it then collapses
         # to the runtime snapshot, see HistoryVariableManager).
         assert data["variable_definitions"] == {}
+        assert data["lanes_taken"] == {}
+
+    def test_returns_the_lanes_each_block_took(self, client: TestClient) -> None:
+        """The history canvas paints the lane wires from the lanes the run stored."""
+        from wavecore.api.services.executions import _storage as store
+
+        store._clear_storage()
+        execution_id = self._seed_test_execution(str(uuid.uuid4()))
+        snapshot = store._load_snapshot(execution_id, execution_id) or {}
+        snapshot["lanes_taken"] = {"node-route": ["branch_1"]}
+        store._save_snapshot(execution_id, execution_id, snapshot)
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["lanes_taken"] == {"node-route": ["branch_1"]}
 
     def test_returns_variable_definitions_when_source_test_exists(self, client: TestClient) -> None:
         """The source test's declarations come back under ``variable_definitions``."""
@@ -2181,6 +2198,32 @@ class TestHistoricalTestCanvasEndpoint:
         # The runtime snapshot remains the eye-ON view.
         assert data["variables"]["x"] == 42
         assert data["variables"]["password"] == "hunter2"
+
+    def test_names_the_variables_the_run_held_secret(self, client: TestClient) -> None:
+        """A deleted test leaves no declarations, so the run itself says which names were secret."""
+        from wavecore.api.services.executions import _storage as store
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        store._clear_storage()
+        registry = SecretRegistry()
+        registry.register("password", "hunter2", "declared")
+        execution_id = self._seed_test_execution(str(uuid.uuid4()), registry=registry)
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["variable_definitions"] == {}
+        assert data["secret_variables"] == ["password"]
+        assert data["variables"] == {"x": 42, "password": "********"}
+
+    def test_a_run_stored_without_a_registry_names_no_secret(self, client: TestClient) -> None:
+        from wavecore.api.services.executions import _storage as store
+
+        store._clear_storage()
+        execution_id = self._seed_test_execution(str(uuid.uuid4()))
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["secret_variables"] == []
 
     def test_returns_per_run_payload_for_suite_child(self, client: TestClient) -> None:
         from wavecore.api.services.executions import _storage as store

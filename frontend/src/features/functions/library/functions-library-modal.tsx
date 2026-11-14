@@ -28,7 +28,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
 import { cn } from '@/lib/utils'
 
 import { listFunctions } from '@/features/functions/api/functions-api'
@@ -36,7 +37,7 @@ import type { FunctionSummary } from '@/features/functions/api/types'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 
 import { LibraryCard } from './library-card'
-import { useLibraryFilters } from './use-library-filters'
+import { LIBRARY_SEARCH_FIELDS, useLibraryFilters } from './use-library-filters'
 
 interface FunctionsLibraryModalProps {
   isOpen: boolean
@@ -53,15 +54,31 @@ const EMPTY_COPY =
 
 const FILTERED_EMPTY_COPY = 'No Functions match these filters.'
 
+const LIBRARY_PAGE = { page: 1, per_page: 100 } as const
+
+// The shared server-search wait: one search once typing stops.
+const SEARCH_WAIT_MS = 300
+
 export function FunctionsLibraryModal({
   isOpen,
   onClose,
   initialSearch = '',
 }: Readonly<FunctionsLibraryModalProps>) {
   const [allFunctions, setAllFunctions] = useState<FunctionSummary[]>([])
-  const [loadFailed, setLoadFailed] = useState(false)
+  const [searchMatches, setSearchMatches] = useState<FunctionSummary[] | null>(null)
+  const [catalogFailed, setCatalogFailed] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
   const [tagsOpen, setTagsOpen] = useState(false)
-  const filters = useLibraryFilters(allFunctions, initialSearch)
+  const filters = useLibraryFilters(allFunctions, searchMatches, initialSearch)
+  const appliedSearch = filters.search.trim()
+  const loadFailed = catalogFailed || (appliedSearch !== '' && searchFailed)
+  // The text the server searches: the seed at once, typed text once typing stops.
+  const [searchQuery, setSearchQuery] = useState(() => initialSearch.trim())
+  const queueSearch = useDebouncedCallback(setSearchQuery, SEARCH_WAIT_MS)
+  const typeSearch = (value: string) => {
+    filters.setSearch(value)
+    queueSearch(value.trim())
+  }
 
   // Revision counter bumped externally on publish (and by the in-modal
   // Refresh button) so we re-fetch the catalog without the user having
@@ -86,6 +103,7 @@ export function FunctionsLibraryModal({
   useEffect(() => {
     if (!isOpen) return
     filters.setSearch(initialSearch)
+    setSearchQuery(initialSearch.trim())
     // filters.setSearch is stable across renders (from useState); listing
     // the whole `filters` object would re-fire the effect on every keystroke.
   }, [isOpen, initialSearch])
@@ -94,16 +112,16 @@ export function FunctionsLibraryModal({
     if (!isOpen) return
     let canceled = false
     const fetchStart = Date.now()
-    listFunctions({ page: 1, per_page: 100 })
+    listFunctions(LIBRARY_PAGE)
       .then((result) => {
         if (canceled) return
         setAllFunctions(result.functions)
-        setLoadFailed(false)
+        setCatalogFailed(false)
       })
       .catch(() => {
         if (canceled) return
         // A failed read is a failure, never an empty library.
-        setLoadFailed(true)
+        setCatalogFailed(true)
       })
       .finally(() => {
         if (canceled) return
@@ -122,6 +140,25 @@ export function FunctionsLibraryModal({
     // occurred (publish, publish-edit-mode draft, refresh button click).
   }, [isOpen, libraryRevision])
 
+  // The server searches name, description and tags (CANVAS-205); a newer search cancels an older one.
+  useEffect(() => {
+    if (!isOpen || searchQuery === '') return
+    let canceled = false
+    listFunctions({ ...LIBRARY_PAGE, search: searchQuery, search_in: LIBRARY_SEARCH_FIELDS })
+      .then((result) => {
+        if (canceled) return
+        setSearchMatches(result.functions)
+        setSearchFailed(false)
+      })
+      .catch(() => {
+        if (!canceled) setSearchFailed(true)
+      })
+    return () => {
+      canceled = true
+    }
+  }, [isOpen, searchQuery, libraryRevision])
+
+  const filteredEmpty = filters.filtered.length === 0
   let body: ReactNode
   if (loadFailed) {
     body = (
@@ -142,7 +179,7 @@ export function FunctionsLibraryModal({
           <div className="flex-1 min-w-0">
             <TextField
               value={filters.search}
-              onChange={filters.setSearch}
+              onChange={typeSearch}
               placeholder="Search Functions…"
               aria-label="Search Functions"
             />
@@ -196,18 +233,24 @@ export function FunctionsLibraryModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={filters.clearFilters}
+              onClick={() => {
+                filters.clearFilters()
+                queueSearch('')
+              }}
               className="text-warning border-warning hover:bg-warning/10"
             >
               Clear Filters
             </Button>
           )}
         </div>
-        {filters.filtered.length === 0 ? (
-          <div className="flex-1 px-4 py-10 text-center text-sm text-muted-foreground">
-            {FILTERED_EMPTY_COPY}
-          </div>
-        ) : (
+        {/* Present before a search or a tag empties the list, so a screen reader reads the empty line. */}
+        <div
+          aria-live="polite"
+          className={filteredEmpty ? 'flex-1 px-4 py-10 text-center text-sm text-muted-foreground' : 'sr-only'}
+        >
+          {filteredEmpty ? FILTERED_EMPTY_COPY : null}
+        </div>
+        {filteredEmpty ? null : (
           <div
             data-testid="functions-library-grid"
             style={{
@@ -232,7 +275,6 @@ export function FunctionsLibraryModal({
       open={isOpen}
       onClose={onClose}
       sheetId="functions-library"
-      ariaLabel="Functions Library"
       data-testid="functions-library"
       initialWidth={640}
       minWidth={520}
@@ -240,7 +282,7 @@ export function FunctionsLibraryModal({
       className="max-w-[90vw] max-h-[80vh]"
       header={
         <>
-          <h2 className="text-base font-semibold">Functions Library</h2>
+          <SheetTitle className="text-base font-semibold">Functions Library</SheetTitle>
           <div className="flex items-center gap-1">
             <Button
               type="button"

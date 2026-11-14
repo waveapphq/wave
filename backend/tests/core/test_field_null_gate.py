@@ -926,7 +926,7 @@ class TestTheRunPathsGate:
             "1.0.0",
             {"variables": {"target": "None"}},
             {},
-            setter_rows=workbench_plugins.SetterRows(expression_keys={"target"}),
+            expression_fields={"variables.target"},
         )
 
         validate.assert_awaited_once_with({"variables": {"target": None}})

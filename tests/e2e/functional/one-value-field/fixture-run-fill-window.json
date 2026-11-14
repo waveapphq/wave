@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["token", "ca_cert"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "https://127.0.0.1:9460",

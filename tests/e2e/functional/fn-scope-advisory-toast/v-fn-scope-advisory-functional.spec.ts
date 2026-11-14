@@ -1,17 +1,16 @@
 /**
- * V-FN-SCOPE-ADVISORY (functional): the SCOPED_RUN_ADVISORY warning has
- * its own toast title routing - "Scope Initialized" - distinct from the
- * generic "Missing Profile Value" used for other warning types.
+ * V-FN-SCOPE-ADVISORY (functional): a Run Scope of a Function with no
+ * prior Test run to inherit from returns the SCOPED_RUN_ADVISORY warning
+ * from the workbench run API.
  *
  * Guards:
- *   - BE: _run_scoped_function + _ADVISORY_NO_PRIOR_STATE message.
- *   - FE: use-workbench-run/hook.ts per-`warning.type` title routing.
+ *   - BE: the workbench run response carries the clean-scope advisory.
  *
  * Pass Criteria:
  *   1. After clearing the workbench session and triggering a scoped Run
- *      with no prior cached state, the BE response carries
- *      `warnings[0].type === "SCOPED_RUN_ADVISORY"`.
- *   2. The advisory message mentions "Clean scope state" + "declared
+ *      with no prior cached state, the BE response carries a warning of
+ *      type "SCOPED_RUN_ADVISORY".
+ *   2. The advisory message mentions "Clean scope state" or "declared
  *      default values".
  */
 
@@ -42,7 +41,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -64,7 +62,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'advisory-body'", level: 'INFO' },
                         outputBindings: {},

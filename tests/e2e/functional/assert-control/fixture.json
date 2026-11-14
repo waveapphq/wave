@@ -19,12 +19,11 @@
           "version": "1.0.0",
           "description": "Set Test Variables",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "arr_var",
-            "map_var"
+          "expressionFields": [
+            "variables.arr_var",
+            "variables.map_var"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {

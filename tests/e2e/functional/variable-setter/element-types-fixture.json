@@ -21,11 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTypes": {
-            "m": "map",
-            "a": "array"
-          },
           "config": {
             "values": {
               "variables": {
@@ -61,7 +56,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "__MAP_PROBE__",
@@ -95,7 +89,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "__LIST_PROBE__",

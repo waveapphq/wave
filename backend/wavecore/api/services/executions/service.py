@@ -920,6 +920,7 @@ def _persist_terminal_snapshot(session_id: str, execution: dict[str, Any], statu
         "test_id": execution.get("entity_id"),
         "status": status,
         "block_states": dict(snapshot_source.get("block_states") or {}),
+        "lanes_taken": snapshot_source.get("lanes_taken") or {},
         "variables": variables,
     }
     workflow = execution.get("workflow_snapshot")
@@ -1043,6 +1044,8 @@ def get_historical_test_run(run_id: str) -> dict[str, Any] | None:
     - ``variables`` is the end-of-run runtime snapshot (secrets masked).
       The eye-ON ("runtime") view renders these so a reviewer sees the
       actual evaluated outcome.
+    - ``secret_variables`` names the variables the run held secret, so a
+      masked copy of one is not marked secret.
     """
     from wavecore.api.services.tests import service as test_service
 
@@ -1077,8 +1080,10 @@ def get_historical_test_run(run_id: str) -> dict[str, Any] | None:
         "ended_at": run_state.get("ended_at") or execution.get("ended_at"),
         "workflow": workflow,
         "block_states": snapshot.get("block_states") or {},
+        "lanes_taken": snapshot.get("lanes_taken") or {},
         "variables": variables,
         "variable_definitions": variable_definitions,
+        "secret_variables": snapshot.get("secret_variables") or [],
         "logs": logs,
         "environment_id": execution.get("environment_id"),
         "environment_name": env_record["name"] if env_record else None,

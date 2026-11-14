@@ -18,6 +18,7 @@ from tests.api.services.workbench.parallel_harness import (  # noqa: F401
     edge,
     engine_registries,
     function_node,
+    lifecycle_lines,
     local_definition,
     log_messages,
     log_node,
@@ -330,6 +331,18 @@ class TestRunCurrentInsideAFunctionBody:
 
         assert run.session["status"] == "passed", log_messages(run.session_id)
         assert run.markers == ["outer-log:outer-run"]
+
+    async def test_the_block_run_logs_its_start_and_completion(self) -> None:
+        """REQ-3.7.2.5: the completion line is the outcome line of the block run."""
+        with _stored(_nested_graph()):
+            await _full_run()
+            run = await _run_current("inner-log", ("outer", "inner"))
+
+        assert run.session["status"] == "passed", log_messages(run.session_id)
+        assert lifecycle_lines(run.session_id) == [
+            "Executing 'inner-log' (plugin/log)",
+            "Completed 'inner-log' (<n> ms)",
+        ]
 
     async def test_an_unknown_block_in_the_body_is_refused(self) -> None:
         with _stored(_nested_graph()), pytest.raises(LookupError) as refused:

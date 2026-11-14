@@ -57,7 +57,6 @@ function switchNode(id: string, x: number, y: number, branches: Array<Record<str
       description: id,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { branches }, outputBindings: {}, profileBindings: [] },
     },
   }

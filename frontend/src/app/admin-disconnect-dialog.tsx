@@ -24,7 +24,7 @@ export function AdminDisconnectDialog(): React.JSX.Element | null {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (terminated) navigate(DISCONNECT_REDIRECT)
+    if (terminated) void navigate(DISCONNECT_REDIRECT)
   }, [terminated, navigate])
 
   if (!terminated) return null

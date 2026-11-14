@@ -13,7 +13,7 @@
           "category": "system", "version": "1.0.0",
           "description": "Log Before",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'before-continue-tests'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -31,7 +31,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S1 For count=3",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i1" }, "profileBindings": []
@@ -48,7 +48,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s1-{i1}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -65,7 +65,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S1",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s1" },
             "outputBindings": {}, "profileBindings": []
@@ -82,7 +82,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 After Continue NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s1-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -99,7 +99,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s1-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -117,7 +117,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S2 ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s2" },
             "outputBindings": { "item": "item_s2", "index": "idx_s2" }, "profileBindings": []
@@ -134,7 +134,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S2 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s2-{idx_s2}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -151,7 +151,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S2",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "fe-s2" },
             "outputBindings": {}, "profileBindings": []
@@ -168,7 +168,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S2 After Continue NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s2-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -185,7 +185,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S2 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s2-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -203,7 +203,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S3 While c_s3<3",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "c_s3 < 3", "id": "cond-s3" }], "max_iterations": 10 },
             "outputBindings": { "index": "w3" }, "profileBindings": []
@@ -220,9 +220,7 @@
           "category": "flow", "version": "1.0.0",
           "description": "S3 Increment Counter",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [],
-          "variableExpressionKeys": ["c_s3"],
-          "variableTypes": { "c_s3": "integer" },
+          "expressionFields": ["variables.c_s3"], "templateFields": [],
           "config": {
             "values": { "variables": { "c_s3": "c_s3 + 1" } },
             "outputBindings": {}, "profileBindings": []
@@ -239,7 +237,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S3 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s3-{c_s3}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -256,7 +254,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S3",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "while-s3" },
             "outputBindings": {}, "profileBindings": []
@@ -273,7 +271,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S3 After Continue NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s3-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -290,7 +288,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S3 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s3-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -308,7 +306,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S4 For continue-first",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i4" }, "profileBindings": []
@@ -325,7 +323,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S4 First",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s4" },
             "outputBindings": {}, "profileBindings": []
@@ -342,7 +340,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S4 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s4-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -359,7 +357,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S4 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s4-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -377,7 +375,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S5 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
             "outputBindings": { "index": "i5" }, "profileBindings": []
@@ -394,7 +392,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S5 Inner ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s5" },
             "outputBindings": { "item": "item_s5", "index": "idx_s5" }, "profileBindings": []
@@ -411,7 +409,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Inner Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s5-inner-{idx_s5}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -428,7 +426,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S5 Inner",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "fe-s5" },
             "outputBindings": {}, "profileBindings": []
@@ -445,7 +443,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Inner After NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s5-inner-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -462,7 +460,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Inner Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s5-inner-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -479,7 +477,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s5-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -497,7 +495,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S6 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i6" }, "profileBindings": []
@@ -514,7 +512,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S6 Inner ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s6" },
             "outputBindings": { "item": "item_s6", "index": "idx_s6" }, "profileBindings": []
@@ -531,7 +529,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Inner Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s6-inner-{idx_s6}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -548,7 +546,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S6 Outer",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s6" },
             "outputBindings": {}, "profileBindings": []
@@ -565,7 +563,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Inner After NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s6-inner-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -582,7 +580,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Inner Then NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s6-inner-then-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -599,7 +597,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s6-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -617,7 +615,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S7 For TryCatch",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i7" }, "profileBindings": []
@@ -634,7 +632,7 @@
           "category": "flow", "version": "1.0.0",
           "description": "S7 TryCatch",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": {}, "profileBindings": []
@@ -651,7 +649,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 Try Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s7-try-{i7}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -668,7 +666,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S7",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s7" },
             "outputBindings": {}, "profileBindings": []
@@ -685,7 +683,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 Catch NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s7-catch-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -702,7 +700,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 For Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s7-for-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -720,7 +718,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S8 For IfTrue",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i8" }, "profileBindings": []
@@ -737,7 +735,7 @@
           "category": "conditional", "version": "1.0.0",
           "description": "S8 IfElse True",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": {
               "branches": [
@@ -764,7 +762,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 True Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'cont-s8-true-{i8}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -781,7 +779,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S8",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s8" },
             "outputBindings": {}, "profileBindings": []
@@ -798,7 +796,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 Else NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s8-else-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -815,7 +813,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 For Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'cont-s8-for-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -833,7 +831,7 @@
           "category": "system", "version": "1.0.0",
           "description": "Log After",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'after-all-continue-tests'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []

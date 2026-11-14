@@ -55,7 +55,6 @@ function httpNode(): Record<string, unknown> {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { method: 'GET', url: 'https://example.com/binding-gate', response_mode: 'body' },
         outputBindings: {},

@@ -9,6 +9,7 @@ import {
   rowPath,
   setReference,
   setRootJoiner,
+  sheetLiteralRow,
 } from '../../helpers/condition-builder'
 import { getNode } from '../../helpers/element-types'
 import {
@@ -31,7 +32,6 @@ import {
   type WorkflowNode,
 } from '../../helpers/k8s-nodes'
 import { formatEntries, type LogEntry } from '../../helpers/log-reader'
-import { literalCondition } from '../../helpers/nesting-graph'
 import { runToEnd, selectEnvironment } from '../../helpers/workbench'
 import { openLaneCanvas, setLogText } from '../canvas-lanes/lanes-helpers'
 import { dropUnder } from './check-chain'
@@ -128,7 +128,7 @@ export function checkedVariable(c: RoutingCell): string {
 
 /** One condition row in the stored shape the condition builder writes. */
 export function conditionRow(id: string, variable: string, type: CheckType, check: Check): Record<string, unknown> {
-  return literalCondition(id, variable, type, check.operator, check.reference)
+  return sheetLiteralRow(id, variable, type, check.operator, check.reference)
 }
 
 /** A Variable Setter writing a literal string, the way a lane records that it ran. */
@@ -154,7 +154,7 @@ export function heldSetter(id: string, c: RoutingCell, position: NodePosition): 
     category: 'flow',
     description: id,
     values: { variables: { [variable]: HELD_VALUE[c.type] } },
-    variableExpressionKeys: [variable],
+    expressionFields: [`variables.${variable}`],
     position,
   })
 }

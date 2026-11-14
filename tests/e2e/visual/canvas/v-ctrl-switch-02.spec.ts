@@ -13,16 +13,21 @@
  *    above falls through (SWITCH-4)
  * 4. A collapsed case still shows its Break switch and grows no annotation line
  * 5. A blocked Save says why, collapsed or not
- * 6. Half-built conditions must not save: an unpicked variable and an
- *    empty expression both outline red and refuse Save; completing them unlocks
- *    Save and the completed condition is what reaches storage
+ * 6. Half-built conditions must not save: an unpicked variable, an empty
+ *    compare value and an empty expression each outline red and refuse Save;
+ *    completing them unlocks Save and the completed condition is what reaches storage
  */
 
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
 import { configSheet, openSelectedBlockSheet } from '../../helpers/workbench'
-import { addExpressionRow, addLiteralRow, pickConditionVariable } from '../../helpers/condition-builder'
+import {
+  addExpressionRow,
+  addLiteralRow,
+  pickConditionVariable,
+  setReference,
+} from '../../helpers/condition-builder'
 
 const BASE = `http://localhost:${BACKEND_PORT}`
 
@@ -49,7 +54,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Switch under test',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -244,7 +248,7 @@ test.describe('V-CTRL-SWITCH-02: Switch/Case configuration sheet', () => {
     })
   })
 
-  test('S4: a blocked Save says why, collapsed or not (5.1 fix)', async ({ page }) => {
+  test('S4: a blocked Save says why, collapsed or not', async ({ page }) => {
     await seedAndOpen(page)
     const sheet = await openConfig(page)
 
@@ -288,13 +292,17 @@ test.describe('V-CTRL-SWITCH-02: Switch/Case configuration sheet', () => {
       await expect(body).toBeVisible()
       await addLiteralRow(body)
       await pickConditionVariable(page, body, '0', 'mode')
+      // A picked variable still needs its compare value, so the marker stays.
+      await expect(body.locator('[data-testid="param-error-assert-value-0"]')).toHaveText('Value is required')
+      await expect(marker).toBeVisible()
+      await setReference(body, '0', 'go')
       await expect(marker).toHaveCount(0)
       await expect(body.locator('[data-testid="assertion-builder-empty"]')).toHaveCount(0)
       await expect(saveButton(sheet)).toBeEnabled()
     })
   })
 
-  test('S5: half-built conditions must not save (5.1 fix)', async ({ page }) => {
+  test('S5: half-built conditions must not save', async ({ page }) => {
     const testId = await seedAndOpen(page)
     const sheet = await openConfig(page)
 
@@ -308,24 +316,32 @@ test.describe('V-CTRL-SWITCH-02: Switch/Case configuration sheet', () => {
       await expect(saveButton(sheet)).toBeDisabled()
     })
 
-    await test.step('Picking the variable clears the outline and unlocks Save', async () => {
+    await test.step('Picking the variable clears its outline; the empty compare value refuses Save', async () => {
       await pickConditionVariable(page, body, '2', 'mode')
       await expect(body.locator('[data-testid="assert-variable-2"]')).not.toHaveAttribute(
         'aria-invalid',
         'true',
       )
+      await expect(body.locator('[data-testid="param-error-assert-value-2"]')).toHaveText('Value is required')
+      await expect(saveButton(sheet)).toBeDisabled()
+    })
+
+    await test.step('Typing the compare value unlocks Save', async () => {
+      await setReference(body, '2', 'go')
+      await expect(body.locator('[data-testid="param-error-assert-value-2"]')).toHaveCount(0)
       await expect(saveButton(sheet)).toBeEnabled()
     })
 
     await test.step('An empty expression row outlines red and refuses Save', async () => {
       await addExpressionRow(body)
-      const exprRow = body.locator('[data-testid="assert-expression-input-4"]')
-      await expect(exprRow.locator('[class*="border-destructive"]').first()).toBeVisible()
+      const exprRow = body.locator('[data-testid="param-input-assert-expr-4"]')
+      await expect(exprRow).toHaveClass(/border-destructive/)
+      await expect(body.locator('[data-testid="param-error-assert-expr-4"]')).toHaveText('Condition is required')
       await expect(saveButton(sheet)).toBeDisabled()
     })
 
     await test.step('Typing the expression unlocks Save, and only complete rows persist', async () => {
-      const exprRow = body.locator('[data-testid="assert-expression-input-4"]')
+      const exprRow = body.locator('[data-testid="param-input-assert-expr-4"]')
       await exprRow.locator('.cm-content').first().click()
       await page.keyboard.type('mode == "go"')
       await expect(saveButton(sheet)).toBeEnabled()
@@ -347,6 +363,10 @@ test.describe('V-CTRL-SWITCH-02: Switch/Case configuration sheet', () => {
           expect(
             String(row.variable ?? '').trim().length,
             `a saved literal condition must name a variable: ${JSON.stringify(row)}`,
+          ).toBeGreaterThan(0)
+          expect(
+            String(row.reference_value ?? '').trim().length,
+            `a saved literal condition must carry its compare value: ${JSON.stringify(row)}`,
           ).toBeGreaterThan(0)
         } else {
           expect(

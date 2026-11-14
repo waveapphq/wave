@@ -58,7 +58,6 @@ function controlNode(
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 160, height: 62 },

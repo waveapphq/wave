@@ -305,6 +305,26 @@ describe('formatCompareMetric - type mismatch', () => {
   })
 })
 
+describe('formatCompareMetric - a value masked whole (REQ-3.1.3.5)', () => {
+  it.each([
+    ['array', []],
+    ['map', {}],
+    ['table', []],
+    ['integer', 0],
+    ['float', 0.5],
+  ] as const)('a %s masked whole has no metric, neither a count nor a type mismatch', (type, initial) => {
+    expect(formatCompareMetric(initial, '********', type, false)).toBeNull()
+  })
+
+  it('an expression masked whole has no metric either', () => {
+    expect(formatCompareMetric('vault_rows', '********', 'table', true)).toBeNull()
+  })
+
+  it('a string that reads as the mask is text, so it keeps its char count', () => {
+    expect(formatCompareMetric('ab', '********', 'string', false)).toBe('2 -> 8 chars')
+  })
+})
+
 // ===========================================================================
 // inferRenderType
 // ===========================================================================

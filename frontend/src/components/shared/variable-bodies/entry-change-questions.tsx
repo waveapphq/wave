@@ -1,7 +1,7 @@
 /**
- * The questions a list item or map entry asks before a type change, or a switch into or
- * out of {x}, clears what it holds: the shared type change warning and the Block field's
- * switch warning (FIELD-7). An entry that holds nothing changes at once.
+ * The questions a list item, map entry, Setter row or condition row asks before a type change,
+ * an operator change, or a switch into or out of {x}, clears what it holds: the shared type change
+ * warning and the Block field's switch warning (FIELD-7). A value that holds nothing changes at once.
  *
  * REQ-3.1.1.5: Block parameter configuration forms
  * REQ-3.1.3.19: Declared element types
@@ -21,11 +21,13 @@ import {
   hasEmptyValue,
   plainValueIsHeld,
 } from '@/lib/value-loss'
-import type { ValueType } from '@/lib/variable-validation'
+import type { VariableType } from '@/lib/variable-types'
 
 interface TypeAsk {
-  prev: ValueType
-  next: ValueType
+  prev: VariableType
+  next: VariableType
+  /** An operator change: the new operator as its list shows it. */
+  operator?: string
   count: number
   apply: () => void
 }
@@ -41,9 +43,13 @@ interface SwitchAsk {
 
 export interface EntryChange {
   /** Changes an entry's type, asking first when its value would be lost. */
-  requestType: (prev: ValueType, next: ValueType, value: unknown, apply: () => void) => void
+  requestType: (prev: VariableType, next: VariableType, value: unknown, apply: () => void) => void
+  /** Asks before a type change the host knows clears `count` values of type `prev` (one or more). */
+  askType: (prev: VariableType, next: VariableType, count: number, apply: () => void) => void
+  /** Asks before an operator change the host knows clears `count` values of `type` (one or more). */
+  askOperator: (type: VariableType, operator: string, count: number, apply: () => void) => void
   /** Switches an entry into or out of {x}, asking first when its value would be lost. */
-  requestSwitch: (pressed: boolean, type: ValueType, value: unknown, apply: (clear: SwitchClear) => void) => void
+  requestSwitch: (pressed: boolean, type: VariableType, value: unknown, apply: (clear: SwitchClear) => void) => void
   typeAsk: TypeAsk | null
   switchAsk: SwitchAsk | null
   closeType: () => void
@@ -51,7 +57,7 @@ export interface EntryChange {
 }
 
 /** What an entry holds as it goes into {x}: nothing, or on Clear & Empty its type's empty value. */
-export function expressionStart(type: ValueType, clear: SwitchClear): string {
+export function expressionStart(type: VariableType, clear: SwitchClear): string {
   return clear === 'clear-empty' ? emptyExpressionText(type) : ''
 }
 
@@ -77,6 +83,8 @@ export function useEntryChange(emptyEntry?: () => unknown): EntryChange {
 
   return {
     requestType,
+    askType: (prev, next, count, apply) => setTypeAsk({ prev, next, count, apply }),
+    askOperator: (type, operator, count, apply) => setTypeAsk({ prev: type, next: type, operator, count, apply }),
     requestSwitch,
     typeAsk,
     switchAsk,
@@ -97,6 +105,7 @@ export function EntryChangeQuestions({ change, subject }: Readonly<{ change: Ent
           prevType={typeAsk.prev}
           nextType={typeAsk.next}
           currentLength={typeAsk.count}
+          operator={typeAsk.operator}
           onConfirm={() => {
             change.closeType()
             typeAsk.apply()

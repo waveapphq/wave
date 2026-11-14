@@ -91,7 +91,7 @@ export function useTestDialogs({
       setTestSelectedEnvironmentId(null)
       // Test runs stream live on the Workbench canvas. On terminal the
       // workbench redirects to the Historical Test Canvas.
-      navigate('/workbench')
+      void navigate('/workbench')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start execution')
     }
@@ -196,9 +196,9 @@ export function useTestDialogs({
     // (the read-only guards depend on it); a Test returns to /workbench.
     const fvm = useWorkflowStore.getState().functionViewMode
     if (fvm) {
-      navigate(`/workbench?viewFunction=${fvm.functionId}&version=${fvm.version}`)
+      void navigate(`/workbench?viewFunction=${fvm.functionId}&version=${fvm.version}`)
     } else {
-      navigate('/workbench')
+      void navigate('/workbench')
     }
   }, [navigate, setSwitchTestDialogOpen, setPendingOpenTestId])
   /* v8 ignore stop */
@@ -227,7 +227,7 @@ export function useTestDialogs({
       setSwitchTestDialogOpen(false)
 
       if (targetTestId) {
-        navigate(`/workbench?editTest=${targetTestId}`)
+        void navigate(`/workbench?editTest=${targetTestId}`)
       } else {
         setNewTestDialogOpen(true)
       }
@@ -254,7 +254,7 @@ export function useTestDialogs({
 
     /* v8 ignore next 5 - COV-BRANCH-154: V8 tracks if/else navigate branches */
     if (targetTestId) {
-      navigate(`/workbench?editTest=${targetTestId}`)
+      void navigate(`/workbench?editTest=${targetTestId}`)
     } else {
       setNewTestDialogOpen(true)
     }
@@ -269,7 +269,7 @@ export function useTestDialogs({
         workflow: { nodes: [], edges: [] },
       })
       setNewTestDialogOpen(false)
-      navigate(`/workbench?editTest=${created.id}`)
+      void navigate(`/workbench?editTest=${created.id}`)
     },
     [navigate, setNewTestDialogOpen]
   )

@@ -127,7 +127,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": false,
@@ -224,7 +223,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -363,7 +361,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -477,7 +474,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "count",

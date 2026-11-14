@@ -41,12 +41,7 @@ async def _execute_node(
                 block_label=_stored_name(node_fields),
                 expression_fields=node_fields["expression_fields"],
                 template_fields=node_fields["template_fields"],
-                setter_rows=_plugins.SetterRows(
-                    expression_keys=node_fields["variable_expression_keys"],
-                    template_keys=node_fields["variable_template_keys"],
-                    types=node_fields["variable_types"],
-                    element_types=node_fields["variable_element_types"],
-                ),
+                element_types=node_fields["node_data"].get("elementTypes"),
                 reveal_secrets=reveal_secrets,
             )
         if node_fields["node_type"] == "plugin":
@@ -151,10 +146,6 @@ def _extract_node_fields(node: dict[str, Any]) -> dict[str, Any]:
         ),
         "expression_fields": expression_fields,
         "template_fields": set(node_data.get("templateFields", [])),
-        "variable_expression_keys": set(node_data.get("variableExpressionKeys", [])),
-        "variable_template_keys": set(node_data.get("variableTemplateKeys", [])),
-        "variable_types": node_data.get("variableTypes", {}),
-        "variable_element_types": node_data.get("variableElementTypes", {}),
         "output_bindings": node_data.get("config", {}).get("outputBindings", {}),
         "secret_masking": node_data.get("config", {}).get("secret_masking", "system"),
         "unmasked_secret_fields": list(

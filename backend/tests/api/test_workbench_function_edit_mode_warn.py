@@ -89,7 +89,6 @@ def _draft_def(name: str = "edit_draft_fn", message: str = "'editing'") -> dict[
                         "displayName": "inner",
                         "expressionFields": ["message"],
                         "templateFields": [],
-                        "variableExpressionKeys": [],
                     },
                 }
             ],

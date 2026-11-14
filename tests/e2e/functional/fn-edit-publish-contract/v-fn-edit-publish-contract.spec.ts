@@ -53,7 +53,6 @@ function editModeSharedNode(functionId: string, name: string): Record<string, un
       draft,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: {}, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },

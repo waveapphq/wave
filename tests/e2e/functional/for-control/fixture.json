@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'before-loop'", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i" },
@@ -64,7 +62,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'count-iter-{i}'", "level": "INFO" },
             "outputBindings": {},
@@ -87,7 +84,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 0, "start": 0, "end": 0 },
             "outputBindings": { "index": "j" },
@@ -110,7 +106,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "scope": "test", "status": "failed", "message": "count=0 body executed - BUG" },
             "outputBindings": {},
@@ -133,7 +128,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "range", "count": 0, "start": 0, "end": 10, "step": 2 },
             "outputBindings": { "index": "k" },
@@ -156,7 +150,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'range-iter-{k}'", "level": "INFO" },
             "outputBindings": {},
@@ -179,7 +172,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["count"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": "loop_count", "start": 0, "end": 0 },
             "outputBindings": { "index": "m" },
@@ -202,7 +194,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'expr-count-iter-{m}'", "level": "INFO" },
             "outputBindings": {},
@@ -225,7 +216,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["start", "end", "step"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "range", "count": 0, "start": "range_start", "end": "range_end", "step": "range_step" },
             "outputBindings": { "index": "n" },
@@ -248,7 +238,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'expr-range-iter-{n}'", "level": "INFO" },
             "outputBindings": {},
@@ -271,7 +260,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'after-all-loops'", "level": "INFO" },
             "outputBindings": {},
@@ -294,7 +282,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
@@ -317,7 +304,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'timeout-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -340,7 +326,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 100, "start": 0, "end": 0, "timeout": 1.0 },
             "outputBindings": { "index": "t_idx" },
@@ -363,7 +348,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "duration": 200 },
             "outputBindings": {},
@@ -386,7 +370,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'timeout-iter-{t_idx}'", "level": "INFO" },
             "outputBindings": {},

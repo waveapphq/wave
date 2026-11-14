@@ -41,10 +41,8 @@
           "version": "1.0.0",
           "description": "Store Orders",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.stored_orders", "variables.big_orders"],
           "templateFields": [],
-          "variableExpressionKeys": ["stored_orders", "big_orders"],
-          "variableTypes": { "stored_orders": "table", "big_orders": "table" },
           "config": {
             "values": {
               "variables": {

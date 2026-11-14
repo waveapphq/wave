@@ -5,6 +5,11 @@ export const inputs: InputParam[] = [
     variableRef: { types: ['array', 'map', 'table'] },
     selectableType: { options: ['array', 'map', 'table'] },
   }),
+  // Drawn by the collection row's Type picker; left out, the picker shows the bound variable's type.
+  param('collection_type', 'Collection Type', 'string', false, "The collection's type as picked in the window: array, map or table", {
+    enumValues: ['array', 'map', 'table'],
+    noExpression: true,
+  }),
   param('timeout', 'Timeout', 'float', false, 'Max execution time in seconds', {
     group: 'Advanced',
   }),

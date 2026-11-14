@@ -33,6 +33,9 @@ HTTP_OUTPUTS_SORTED = (
     "body, content_type, final_url, headers, response_time, sha256, size, status_code, trace"
 )
 
+CONDITION_PROBLEM = "Condition must be an expression string, a comparison mapping or a group"
+CONDITION_FIX = 'Use "expr string", {variable, operator, value} or {group: [...]}'
+
 COMPARISON: dict[str, Any] = {
     "variable": "transport",
     "operator": "equals",
@@ -207,6 +210,44 @@ class TestSettingsCatalog:
             "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS"
         )
         assert finding["fix"] == "Use one of the listed values"
+
+    def test_an_unknown_note_setting_is_gated(self) -> None:
+        findings = validate(make_recipe([LOG_STEP, {"note": {"text": "hi", "size": 3}}]))
+        assert findings == [
+            error_at(
+                "flow[1].settings.size",
+                "UNKNOWN_SETTING",
+                "Block 'note' has no setting 'size'",
+                "Valid settings: color, text",
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        ("note", "field", "code", "problem", "fix"),
+        [
+            pytest.param(
+                {"text": "hi", "color": "purple"},
+                "color",
+                "INVALID_ENUM_VALUE",
+                "Setting 'color' of block 'note' must be one of: blue, green, pink, slate, yellow",
+                "Use one of the listed values",
+                id="color-off-the-list",
+            ),
+            pytest.param(
+                {"text": 5},
+                "text",
+                "INVALID_SETTING_TYPE",
+                "Setting 'text' of block 'note' expects string, got integer",
+                "Provide a string value",
+                id="text-not-a-string",
+            ),
+        ],
+    )
+    def test_a_note_setting_takes_the_shared_field_check(
+        self, note: dict[str, Any], field: str, code: str, problem: str, fix: str
+    ) -> None:
+        findings = validate(make_recipe([LOG_STEP, {"note": note}]))
+        assert findings == [error_at(f"flow[1].settings.{field}", code, problem, fix)]
 
 
 class TestHttpProxyChoice:
@@ -429,20 +470,16 @@ class TestConstructShape:
         finding = find_finding(findings, "INVALID_CONDITION")
         assert finding["severity"] == "error"
         assert finding["step"] == "flow[0]"
-        assert finding["problem"] == (
-            "Condition must be an expression string or a comparison mapping"
-        )
-        assert finding["fix"] == 'Use "expr string" or {variable, operator, value}'
+        assert finding["problem"] == CONDITION_PROBLEM
+        assert finding["fix"] == CONDITION_FIX
 
     def test_switch_case_condition_must_be_string_or_comparison_mapping(self) -> None:
         flow = [{"switch": {"cases": [{"when": 42, "steps": [LOG_STEP]}]}}]
         finding = find_finding(compile_findings(make_recipe(flow)), "INVALID_CONDITION")
         assert finding["severity"] == "error"
         assert finding["step"] == "flow[0]"
-        assert finding["problem"] == (
-            "Condition must be an expression string or a comparison mapping"
-        )
-        assert finding["fix"] == 'Use "expr string" or {variable, operator, value}'
+        assert finding["problem"] == CONDITION_PROBLEM
+        assert finding["fix"] == CONDITION_FIX
 
     def test_switch_with_cases_only_is_clean(self) -> None:
         flow = [
@@ -606,8 +643,8 @@ class TestWaitUntilConstruct:
         findings = self._findings({"that": ["1 == 1"], "timeout": 1, "nope": 1})
         finding = find_finding(findings, "UNKNOWN_STEP_KEY")
         assert finding["fix"] == (
-            "Valid keys: capture, fail_current_scope, interval, label, message, retry, "
-            "that, timeout"
+            "Valid keys: capture, description, disabled, fail_current_scope, interval, label, "
+            "message, retry, that, timeout"
         )
 
 
@@ -887,10 +924,22 @@ class TestTypeHelpers:
         assert _type_accepts("map", []) is False
         assert _type_accepts("mystery-type", object()) is True
 
-    def test_null_setting_value_is_skipped(self) -> None:
+    def test_a_null_on_a_setting_with_a_default_is_refused_naming_it(self) -> None:
+        """A setting given null fails and names it (REQ-3.1.3.21)."""
         findings = validate(
             make_recipe([{"block": "log", "settings": {"message": "hi", "level": None}}])
         )
+        assert findings == [
+            error_at(
+                "flow[0].settings.level",
+                "INVALID_SETTING_VALUE",
+                "Setting 'level' of block 'log' cannot be null",
+                "Leave the setting out to use its default",
+            )
+        ]
+
+    def test_a_null_on_a_data_setting_is_taken(self) -> None:
+        findings = validate(make_recipe([{"block": "log", "settings": {"message": None}}]))
         assert codes(findings) == []
 
 
@@ -1701,10 +1750,19 @@ class TestDeclaredElementTypes:
         ]
 
     def test_element_types_belong_only_on_block_and_set_steps(self) -> None:
+        from wavecore.core.recipes.parser import parse_recipe
+
         step = {"delay": 5, "element_types": {"duration": "integer"}}
-        finding = find_finding(validate(make_recipe([step])), "INVALID_ELEMENT_TYPES")
-        assert finding["step"] == "flow[0].element_types"
-        assert finding["problem"] == "'element_types' belongs only on a block step or a set step"
+        doc, findings = parse_recipe(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            error_at(
+                "flow[0]",
+                "UNKNOWN_STEP_KEY",
+                "Unknown key 'element_types' on a 'delay' step",
+                "Valid keys: description, disabled, key, label",
+            )
+        ]
 
 
 SECRET_INPUT_DEFAULT_FIX = "Remove the default; the Function Block gives the value"
@@ -2867,5 +2925,1066 @@ class TestBlockSecretOutputs:
         assert finding["step"] == "flow[0]"
         assert finding["problem"] == "Unknown key 'secret_outputs' on a 'set' step"
         assert finding["fix"] == (
-            "Valid keys: capture, element_types, key, label, profiles, settings"
+            "Valid keys: description, disabled, element_types, key, label, secret_rows"
+        )
+
+
+def construct_error_at(step: str, problem: str) -> dict[str, Any]:
+    return {
+        "step": step,
+        "code": "INVALID_CONSTRUCT",
+        "severity": "error",
+        "problem": problem,
+        "fix": None,
+    }
+
+
+def finding_texts(findings: list[dict[str, Any]], code: str) -> set[tuple[str, str, Any]]:
+    return {(f["severity"], f["problem"], f["fix"]) for f in findings if f["code"] == code}
+
+
+CONDITION_VARIABLES: dict[str, Any] = {
+    "x": {"type": "integer", "value": 1},
+    "y": {"type": "integer", "value": 2},
+    "name": {"type": "string", "value": "web"},
+    "items": {"type": "array", "value": [1, 2]},
+}
+
+NAME_EQUALS_WEB: dict[str, Any] = {"variable": "name", "operator": "equals", "value": "web"}
+
+
+def _in_assert(conditions: Any) -> dict[str, Any]:
+    return {"assert": {"that": conditions}}
+
+
+def _in_if(conditions: Any) -> dict[str, Any]:
+    return {"if": {"when": conditions, "then": [LOG_STEP]}}
+
+
+def _in_elif(conditions: Any) -> dict[str, Any]:
+    return {
+        "if": {
+            "when": "x == 1",
+            "then": [LOG_STEP],
+            "elif": [{"when": conditions, "then": [LOG_STEP]}],
+        }
+    }
+
+
+def _in_case(conditions: Any) -> dict[str, Any]:
+    return {"switch": {"cases": [{"when": conditions, "steps": [LOG_STEP]}]}}
+
+
+def _in_while(conditions: Any) -> dict[str, Any]:
+    return {"while": {"conditions": conditions, "body": [LOG_STEP]}}
+
+
+def _in_wait_until(conditions: Any) -> dict[str, Any]:
+    return {"wait_until": {"that": conditions, "timeout": 1000}}
+
+
+CONDITION_PLACES = [
+    pytest.param(_in_assert, id="assert-that"),
+    pytest.param(_in_if, id="if-when"),
+    pytest.param(_in_elif, id="elif-when"),
+    pytest.param(_in_case, id="case-when"),
+    pytest.param(_in_while, id="while-conditions"),
+    pytest.param(_in_wait_until, id="wait-until-that"),
+]
+
+
+def condition_findings(step: dict[str, Any]) -> list[dict[str, Any]]:
+    return validate(make_recipe([step], variables=CONDITION_VARIABLES))
+
+
+MARKER_PROBLEM = "'and' and 'or' go between two conditions"
+MARKER_FIX = "Remove it, or add the condition it joins"
+
+
+class TestConditionLists:
+    """A condition list holds conditions, `and` / `or` between them and groups; a compare-to
+    value takes the value forms (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    @pytest.mark.parametrize("place", CONDITION_PLACES)
+    def test_or_between_two_conditions_is_clean(self, place: Any) -> None:
+        assert condition_findings(place(["x == 1", "or", NAME_EQUALS_WEB])) == []
+
+    @pytest.mark.parametrize(
+        "conditions",
+        [
+            ["or", "x == 1"],
+            ["x == 1", "and"],
+            ["x == 1", "or", "and", "y == 2"],
+            ["or"],
+            ["x == 1", {"group": ["and", "y == 2"]}],
+        ],
+        ids=["leading", "trailing", "doubled", "alone", "inside-a-group"],
+    )
+    def test_a_marker_that_is_not_between_two_conditions_is_refused(
+        self, conditions: list[Any]
+    ) -> None:
+        findings = condition_findings(_in_assert(conditions))
+        assert finding_texts(findings, "INVALID_CONDITION") == {
+            ("error", MARKER_PROBLEM, MARKER_FIX)
+        }
+        assert "INVALID_EXPRESSION" not in codes(findings)
+        for item in findings:
+            if item["code"] == "INVALID_CONDITION":
+                assert item["step"] == "flow[0]"
+
+    @pytest.mark.parametrize(
+        "group", ["x == 1", NAME_EQUALS_WEB, 5], ids=["text", "mapping", "number"]
+    )
+    def test_a_group_that_is_not_a_list_is_refused(self, group: Any) -> None:
+        finding = find_finding(
+            condition_findings(_in_assert(["x == 1", {"group": group}])), "INVALID_CONDITION"
+        )
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == "A group holds a list of conditions"
+        assert finding["fix"] == "Write {group: [ ... ]}"
+
+    @pytest.mark.parametrize("place", CONDITION_PLACES)
+    def test_nested_groups_are_clean(self, place: Any) -> None:
+        inner = {"group": ["x == 3", "or", NAME_EQUALS_WEB]}
+        conditions = ["x == 1", "or", {"group": ["y == 2", "and", inner]}]
+        assert condition_findings(place(conditions)) == []
+
+    def test_an_empty_group_is_left_to_the_save(self) -> None:
+        assert condition_findings(_in_assert(["x == 1", "or", {"group": []}])) == []
+
+    @pytest.mark.parametrize(
+        ("step", "problem"),
+        [
+            (_in_if([]), "'if' construct is malformed: 'when' needs at least one condition"),
+            (
+                _in_elif([]),
+                "'if' construct is malformed: each elif 'when' needs at least one condition",
+            ),
+            (
+                _in_case([]),
+                "'switch' construct is malformed: each case 'when' needs at least one condition",
+            ),
+            (
+                _in_while([]),
+                "'while' construct is malformed: 'conditions' needs at least one condition",
+            ),
+        ],
+        ids=["if-when", "elif-when", "case-when", "while-conditions"],
+    )
+    def test_an_empty_condition_list_is_refused(self, step: dict[str, Any], problem: str) -> None:
+        finding = find_finding(condition_findings(step), "INVALID_CONSTRUCT")
+        assert finding == construct_error_at("flow[0]", problem)
+
+    def test_a_compare_to_expression_with_a_syntax_error_is_refused(self) -> None:
+        condition = {"variable": "x", "operator": "equals", "value": {"expr": "y +"}}
+        finding = find_finding(condition_findings(_in_assert([condition])), "INVALID_EXPRESSION")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert_message(r"^Expression is not valid: .+$", finding["problem"])
+
+    @pytest.mark.parametrize(
+        "value", ["id-{{ y + }}", {"template": "id-{{ y + }}"}], ids=["markers", "template-form"]
+    )
+    def test_a_compare_to_template_with_a_broken_piece_is_refused(self, value: Any) -> None:
+        condition = {"variable": "name", "operator": "equals", "value": value}
+        finding = find_finding(condition_findings(_in_assert([condition])), "INVALID_EXPRESSION")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert_message(r"^Expression is not valid: .+$", finding["problem"])
+
+    @pytest.mark.parametrize(
+        ("condition", "subject"),
+        [
+            (
+                {
+                    "variable": "x",
+                    "operator": "equals",
+                    "value": "{{ y }}",
+                    "value_type": "integer",
+                },
+                "x",
+            ),
+            (
+                {
+                    "variable": "x",
+                    "operator": "greater_than",
+                    "value": {"template": "{{ y }}"},
+                    "value_type": "integer",
+                },
+                "x",
+            ),
+            (
+                {
+                    "variable": "items",
+                    "operator": "length_equals",
+                    "value": "{{ y }}",
+                    "value_type": "array",
+                },
+                "items",
+            ),
+        ],
+        ids=["integer", "integer-template-form", "length-equals"],
+    )
+    def test_a_template_on_a_number_compare_to_is_refused(
+        self, condition: dict[str, Any], subject: str
+    ) -> None:
+        finding = find_finding(condition_findings(_in_assert([condition])), "TEMPLATE_NOT_STRING")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == (
+            f"The value compared with '{subject}' is integer; "
+            "a template builds text, so it needs type string"
+        )
+        assert finding["fix"] == "Use {expr: ...} for a computed integer value"
+
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            {"variable": "x", "operator": "is_null", "value": "{{ y }}", "value_type": "integer"},
+            {
+                "variable": "x",
+                "operator": "is_not_null",
+                "value": {"template": "{{ y }}"},
+                "value_type": "integer",
+            },
+        ],
+        ids=["markers", "template-form"],
+    )
+    def test_a_template_under_an_operator_that_takes_no_value_is_never_checked(
+        self, condition: dict[str, Any]
+    ) -> None:
+        """Such a value is dropped at compile, and the save never checks it either."""
+        assert condition_findings(_in_assert([condition])) == []
+
+    def test_a_literal_compare_to_holding_braces_is_clean(self) -> None:
+        condition = {"variable": "name", "operator": "equals", "value": {"literal": "{{ y + }}"}}
+        assert condition_findings(_in_assert([condition])) == []
+
+    @pytest.mark.parametrize(
+        "when",
+        [42, ["x == 1", 42], [{"group": ["x == 1", 42]}], [{"variable": "x"}]],
+        ids=["single", "in-a-list", "in-a-group", "comparison-without-operator"],
+    )
+    def test_a_condition_of_no_known_form_is_refused(self, when: Any) -> None:
+        finding = find_finding(condition_findings(_in_if(when)), "INVALID_CONDITION")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == CONDITION_PROBLEM
+        assert finding["fix"] == CONDITION_FIX
+
+
+def _labeled_if(elif_label: Any = None, **labels: Any) -> dict[str, Any]:
+    elif_entry: dict[str, Any] = {"when": "y == 2", "then": [LOG_STEP]}
+    if elif_label is not None:
+        elif_entry["label"] = elif_label
+    return {"if": {"when": "x == 1", "then": [LOG_STEP], "elif": [elif_entry], **labels}}
+
+
+def _labeled_switch(case_label: Any = None, **labels: Any) -> dict[str, Any]:
+    case: dict[str, Any] = {"when": "x == 1", "steps": [LOG_STEP]}
+    if case_label is not None:
+        case["label"] = case_label
+    return {"switch": {"cases": [case], **labels}}
+
+
+class TestBranchLabels:
+    """A branch label is plain text, and an else or default label needs its branch
+    (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    @pytest.mark.parametrize(
+        ("step", "problem"),
+        [
+            (_labeled_if(if_label=5), "'if' construct is malformed: 'if_label' must be a string"),
+            (
+                _labeled_if(if_label={"expr": "name"}),
+                "'if' construct is malformed: 'if_label' must be a string",
+            ),
+            (
+                _labeled_if(**{"else": [LOG_STEP], "else_label": 5}),
+                "'if' construct is malformed: 'else_label' must be a string",
+            ),
+            (
+                _labeled_if(elif_label=5),
+                "'if' construct is malformed: each elif 'label' must be a string",
+            ),
+            (
+                _labeled_switch(case_label=5),
+                "'switch' construct is malformed: each case 'label' must be a string",
+            ),
+            (
+                _labeled_switch(default=[LOG_STEP], default_label=5),
+                "'switch' construct is malformed: 'default_label' must be a string",
+            ),
+        ],
+        ids=[
+            "if-label",
+            "if-label-expr",
+            "else-label",
+            "elif-label",
+            "case-label",
+            "default-label",
+        ],
+    )
+    def test_a_label_that_is_not_text_is_refused(self, step: dict[str, Any], problem: str) -> None:
+        finding = find_finding(condition_findings(step), "INVALID_CONSTRUCT")
+        assert finding == construct_error_at("flow[0]", problem)
+
+    @pytest.mark.parametrize(
+        ("step", "problem"),
+        [
+            (
+                _labeled_if(else_label="Other"),
+                "'if' construct is malformed: 'else_label' needs an 'else' list of steps",
+            ),
+            (
+                _labeled_switch(default_label="Other"),
+                "'switch' construct is malformed: 'default_label' needs a 'default' list of steps",
+            ),
+        ],
+        ids=["else-label", "default-label"],
+    )
+    def test_an_orphan_branch_label_is_refused(self, step: dict[str, Any], problem: str) -> None:
+        finding = find_finding(condition_findings(step), "INVALID_CONSTRUCT")
+        assert finding == construct_error_at("flow[0]", problem)
+
+    def test_text_labels_are_clean(self) -> None:
+        flow = [
+            _labeled_if(
+                if_label="One",
+                elif_label="Two",
+                **{"else": [LOG_STEP], "else_label": "Run {{ y + }} never read"},
+            ),
+            _labeled_switch(case_label="One", default=[LOG_STEP], default_label="Other"),
+        ]
+        assert validate(make_recipe(flow, variables=CONDITION_VARIABLES)) == []
+
+
+SECRET_TOKEN: dict[str, Any] = {"token": {"type": "string", "secret": True, "value": "hunter2"}}
+
+
+class TestConstructFieldsUseTheSharedCheck:
+    """A construct's settings get the one shared field check, named by their recipe key and
+    reported at the construct key (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    def test_a_for_count_that_is_not_a_number_is_refused(self) -> None:
+        flow = [{"for": {"count": "abc", "body": [LOG_STEP]}}]
+        finding = find_finding(validate(make_recipe(flow)), "INVALID_SETTING_TYPE")
+        assert finding == error_at(
+            "flow[0].for.count",
+            "INVALID_SETTING_TYPE",
+            "Setting 'count' of block 'for' expects integer, got string",
+            "Provide an integer value",
+        )
+
+    def test_a_wait_until_interval_below_its_minimum_names_interval(self) -> None:
+        flow = [{"wait_until": {"that": ["1 == 1"], "timeout": 1000, "interval": 0}}]
+        finding = find_finding(validate(make_recipe(flow)), "SETTING_BELOW_MINIMUM")
+        assert finding == error_at(
+            "flow[0].wait_until.interval",
+            "SETTING_BELOW_MINIMUM",
+            "Setting 'interval' of block 'wait-until' must be at least 1, got 0",
+            "Provide a value of at least 1",
+        )
+
+    @pytest.mark.parametrize(
+        ("step", "path", "problem"),
+        [
+            (
+                {"while": {"conditions": "1 == 1", "mode": "sideways", "body": [LOG_STEP]}},
+                "flow[0].while.mode",
+                "Setting 'mode' of block 'while' must be one of: while-do, do-while",
+            ),
+            (
+                {
+                    "for_each": {
+                        "collection": {"expr": "items"},
+                        "collection_type": "list",
+                        "body": [LOG_STEP],
+                    }
+                },
+                "flow[0].for_each.collection_type",
+                "Setting 'collection_type' of block 'for-each' must be one of: array, map, table",
+            ),
+            (
+                {
+                    "parallel": {
+                        "branches": [{"steps": [LOG_STEP]}, {"steps": [LOG_STEP]}],
+                        "join": "race",
+                    }
+                },
+                "flow[0].parallel.join",
+                "Setting 'join' of block 'parallel' must be one of: all, first",
+            ),
+        ],
+        ids=["while-mode", "for-each-collection-type", "parallel-join"],
+    )
+    def test_a_choice_outside_its_list_is_refused(
+        self, step: dict[str, Any], path: str, problem: str
+    ) -> None:
+        findings = validate(make_recipe([step], variables=CONDITION_VARIABLES))
+        assert find_finding(findings, "INVALID_ENUM_VALUE") == error_at(
+            path, "INVALID_ENUM_VALUE", problem, "Use one of the listed values"
+        )
+
+    def test_a_section_time_limit_below_its_minimum_is_refused(self) -> None:
+        step = {
+            "parallel": {
+                "branches": [{"steps": [LOG_STEP]}, {"steps": [LOG_STEP]}],
+                "time_limit": 0,
+            }
+        }
+        finding = find_finding(validate(make_recipe([step])), "SETTING_BELOW_MINIMUM")
+        assert finding == error_at(
+            "flow[0].parallel.time_limit",
+            "SETTING_BELOW_MINIMUM",
+            "Setting 'time_limit' of block 'parallel' must be at least 1, got 0",
+            "Provide a value of at least 1",
+        )
+
+    @pytest.mark.parametrize(
+        ("keyword", "construct"),
+        [
+            ("for", {"count": 2, "body": [LOG_STEP]}),
+            ("for_each", {"collection": {"expr": "items"}, "body": [LOG_STEP]}),
+            ("while", {"conditions": "x == 1", "body": [LOG_STEP]}),
+            ("wait_until", {"that": ["x == 1"]}),
+        ],
+        ids=["for", "for-each", "while", "wait-until"],
+    )
+    def test_an_expression_setting_with_a_syntax_error_is_refused(
+        self, keyword: str, construct: dict[str, Any]
+    ) -> None:
+        step = {keyword: {**construct, "timeout": {"expr": "y +"}}}
+        findings = validate(make_recipe([step], variables=CONDITION_VARIABLES))
+        finding = find_finding(findings, "INVALID_EXPRESSION")
+        assert finding["severity"] == "error"
+        assert finding["step"] == f"flow[0].{keyword}.timeout"
+        assert_message(r"^Expression is not valid: .+$", finding["problem"])
+
+    def test_a_broken_collection_expression_is_reported_once_at_its_setting(self) -> None:
+        step = {"for_each": {"collection": {"expr": "items +"}, "body": [LOG_STEP]}}
+        findings = validate(make_recipe([step], variables=CONDITION_VARIABLES))
+        broken = [item for item in findings if item["code"] == "INVALID_EXPRESSION"]
+        assert [item["step"] for item in broken] == ["flow[0].for_each.collection"]
+
+    def test_an_expression_setting_reading_a_secret_warns(self) -> None:
+        step = {
+            "wait_until": {
+                "that": ["1 == 1"],
+                "timeout": 1000,
+                "message": {"expr": "'gave up on ' + token"},
+            }
+        }
+        findings = validate(make_recipe([step], variables=SECRET_TOKEN))
+        assert find_finding(findings, "SECRET_DERIVED_VALUE") == {
+            "step": "flow[0].wait_until.message",
+            "code": "SECRET_DERIVED_VALUE",
+            "severity": "warning",
+            "problem": (
+                "Expression in this setting reads secret 'token'; a derived value is not masked"
+            ),
+            "fix": "Avoid emitting a value built from a secret",
+        }
+
+    @pytest.mark.parametrize(
+        ("keyword", "construct", "block_id", "outputs"),
+        [
+            ("for", {"count": 2, "body": [LOG_STEP]}, "for", "index"),
+            (
+                "for_each",
+                {"collection": {"expr": "items"}, "body": [LOG_STEP]},
+                "for-each",
+                "index, item",
+            ),
+            ("while", {"conditions": "x == 1", "body": [LOG_STEP]}, "while", "index"),
+            ("try", {"steps": [LOG_STEP]}, "try-catch-finally", "caught, error"),
+            ("assert", {"that": ["x == 1"]}, "assert", "passed"),
+        ],
+        ids=["for", "for-each", "while", "try", "assert"],
+    )
+    def test_capturing_an_output_the_construct_does_not_have_is_refused(
+        self, keyword: str, construct: dict[str, Any], block_id: str, outputs: str
+    ) -> None:
+        step = {keyword: {**construct, "capture": {"nope": "target"}}}
+        findings = validate(make_recipe([step], variables=CONDITION_VARIABLES))
+        assert find_finding(findings, "UNKNOWN_CAPTURE_OUTPUT") == error_at(
+            "flow[0].capture.nope",
+            "UNKNOWN_CAPTURE_OUTPUT",
+            f"Block '{block_id}' has no output 'nope' to capture",
+            f"Valid outputs: {outputs}",
+        )
+
+    @pytest.mark.parametrize(
+        ("construct", "problem"),
+        [
+            (
+                {"count": 3, "range": {"start": 0, "end": 3}, "body": [LOG_STEP]},
+                "'for' construct is malformed: 'count' and 'range' cannot be used together",
+            ),
+            (
+                {"range": {"start": 0, "end": 6}, "step": 2, "body": [LOG_STEP]},
+                "'for' construct is malformed: 'step' goes inside 'range' in range mode",
+            ),
+        ],
+        ids=["count-and-range", "step-beside-range"],
+    )
+    def test_a_for_mixing_count_and_range_forms_is_refused(
+        self, construct: dict[str, Any], problem: str
+    ) -> None:
+        finding = find_finding(validate(make_recipe([{"for": construct}])), "INVALID_CONSTRUCT")
+        assert finding == construct_error_at("flow[0]", problem)
+
+    @pytest.mark.parametrize("section", ["on_pass", "on_fail"])
+    def test_a_section_on_a_single_mode_assert_is_refused(self, section: str) -> None:
+        step = {"assert": {"that": ["x == 1"], "mode": "single", section: [LOG_STEP]}}
+        finding = find_finding(condition_findings(step), "INVALID_CONSTRUCT")
+        assert finding == construct_error_at(
+            "flow[0]", "'assert' construct is malformed: 'on_pass' and 'on_fail' need mode 'split'"
+        )
+
+    def test_an_expression_time_limit_on_a_lane_and_the_section_is_clean(self) -> None:
+        step = {
+            "parallel": {
+                "branches": [
+                    {"name": "probe", "steps": [LOG_STEP], "time_limit": {"expr": "probe_ms"}},
+                    {"steps": [LOG_STEP]},
+                ],
+                "time_limit": {"expr": "probe_ms * 2"},
+            }
+        }
+        variables = {"probe_ms": {"type": "integer", "value": 500}}
+        assert validate(make_recipe([step], variables=variables)) == []
+
+    def test_a_lane_time_limit_of_zero_keeps_its_text(self) -> None:
+        step = {
+            "parallel": {
+                "branches": [{"steps": [LOG_STEP]}, {"steps": [LOG_STEP], "time_limit": 0}]
+            }
+        }
+        finding = find_finding(validate(make_recipe([step])), "INVALID_SETTING_VALUE")
+        assert finding == {
+            "step": "flow[0].parallel.branches[1].time_limit",
+            "code": "INVALID_SETTING_VALUE",
+            "severity": "error",
+            "problem": "Parallel branch time limit must be a positive integer",
+            "fix": None,
+        }
+
+
+# Each control with its own step keyword, by catalog id.
+STEP_KEYWORD_CONTROLS: dict[str, str] = {
+    "if-else": "if",
+    "switch-case": "switch",
+    "for": "for",
+    "for-each": "for_each",
+    "while": "while",
+    "try-catch-finally": "try",
+    "parallel": "parallel",
+    "assert": "assert",
+    "wait-until": "wait_until",
+    "variable-setter": "set",
+    "break": "break",
+    "continue": "continue",
+    "note": "note",
+}
+
+
+class TestUseStepKeyword:
+    """`- block:` takes plugins plus Delay and Halt; every other control is written with
+    its own step keyword (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    def test_every_control_but_delay_and_halt_has_its_own_keyword(self) -> None:
+        from wavecore.core.recipes.validator import load_block_catalog
+
+        controls = {
+            block_id for block_id, entry in load_block_catalog().items() if entry.kind == "control"
+        }
+        assert controls - {"delay", "halt"} == set(STEP_KEYWORD_CONTROLS)
+
+    @pytest.mark.parametrize(
+        ("block_id", "keyword"),
+        sorted(STEP_KEYWORD_CONTROLS.items()),
+        ids=sorted(STEP_KEYWORD_CONTROLS),
+    )
+    def test_a_control_written_as_a_block_step_is_refused(
+        self, block_id: str, keyword: str
+    ) -> None:
+        findings = validate(make_recipe([{"block": block_id, "settings": {}}]))
+        assert find_finding(findings, "USE_STEP_KEYWORD") == error_at(
+            "flow[0]",
+            "USE_STEP_KEYWORD",
+            f"Block '{block_id}' is written with its own '{keyword}' step, not '- block:'",
+            f"Write it as '- {keyword}: ...'",
+        )
+
+    def test_remote_execution_written_as_a_block_step_names_the_remote_step(self) -> None:
+        """Remote Execution is listed by list_blocks, so it is no unknown block (REQ-5.2.7.3)."""
+        findings = validate(make_recipe([{"block": "remote-execution", "settings": {}}]))
+
+        assert findings == [
+            error_at(
+                "flow[0]",
+                "USE_STEP_KEYWORD",
+                "Block 'remote-execution' is written with its own 'remote' step, not '- block:'",
+                "Write it as '- remote: ...'",
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        "step",
+        [
+            {"block": "delay", "settings": {"duration": 500}},
+            {"block": "halt", "settings": {"scope": "test", "status": "passed"}},
+        ],
+        ids=["delay", "halt"],
+    )
+    def test_delay_and_halt_as_block_steps_are_clean(self, step: dict[str, Any]) -> None:
+        assert validate(make_recipe([step])) == []
+
+
+SET_VARIABLES: dict[str, Any] = {
+    "greeting": {"type": "string", "value": ""},
+    "name": {"type": "string", "value": "web"},
+    "attempts": {"type": "integer", "value": 0},
+    "ready": {"type": "boolean", "value": False},
+    "n": {"type": "integer", "value": 1},
+    "limits": {"type": "map", "value": {"max": 1}},
+    "hosts": {"type": "array", "value": ["web-1"]},
+    "config": {"type": "map", "value": {"db": {"port": 1}}},
+    "api_token": {"type": "string", "value": ""},
+    "creds": {"type": "map", "value": {"user": "u"}},
+    "plain_copy": {"type": "string", "value": ""},
+    "vault_copy": {"type": "string", "secret": True},
+    **SECRET_TOKEN,
+}
+
+
+def set_findings(rows: dict[str, Any], **extra: Any) -> list[dict[str, Any]]:
+    return validate(make_recipe([{"set": rows, **extra}], variables=SET_VARIABLES))
+
+
+DEEP_FIX = "Make the entry or the whole value {expr: ...}, or wrap plain data in {literal: ...}"
+
+
+def deep_problem(place: str) -> str:
+    """The too-deep text; the place is the setting or row's recipe key and the keys under it."""
+    return (
+        f"'{place}' is too deep for {{expr: ...}} or a template; "
+        "value modes stop at the entries of a setting or a Setter row"
+    )
+
+
+def template_row_problem(row: str, declared: str) -> str:
+    """The shared texts write 'an' before a type name that starts with a vowel."""
+    article = "an" if declared[0] in "aeiou" else "a"
+    return (
+        f"Row '{row}' sets {article} {declared} variable; "
+        "a template builds text, so it needs a string variable"
+    )
+
+
+class TestSetRows:
+    """Variable Setter rows take the value forms per row and per first-level entry, and
+    `secret_rows` marks rows Secret (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    @pytest.mark.parametrize(
+        "value", ["Hello {{ name }}", {"template": "Hello"}], ids=["markers", "template-form"]
+    )
+    def test_a_template_row_is_clean(self, value: Any) -> None:
+        assert set_findings({"greeting": value}) == []
+
+    def test_a_template_row_with_a_broken_piece_is_refused(self) -> None:
+        finding = find_finding(
+            set_findings({"greeting": "Hello {{ name + }}"}), "INVALID_EXPRESSION"
+        )
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].set.greeting"
+        assert_message(r"^Expression is not valid: .+$", finding["problem"])
+
+    @pytest.mark.parametrize(
+        ("row", "declared", "value"),
+        [
+            ("attempts", "integer", "{{ n }}"),
+            ("attempts", "integer", {"template": "{{ n }}"}),
+            ("ready", "boolean", "{{ n }}"),
+        ],
+        ids=["integer", "integer-template-form", "boolean"],
+    )
+    def test_a_template_row_on_a_non_string_variable_is_refused(
+        self, row: str, declared: str, value: Any
+    ) -> None:
+        finding = find_finding(set_findings({row: value}), "TEMPLATE_NOT_STRING")
+        assert finding["severity"] == "error"
+        assert finding["step"] == f"flow[0].set.{row}"
+        assert finding["problem"] == template_row_problem(row, declared)
+        assert finding["fix"] == f"Use {{expr: ...}} for a computed {declared} value"
+
+    def test_entry_expressions_and_templates_are_clean(self) -> None:
+        rows = {
+            "limits": {"max": {"expr": "n + 1"}, "label": "id-{{ n }}"},
+            "hosts": ["web-1", {"expr": "name"}, "{{ name }}-3", {"template": "web-4"}],
+        }
+        assert set_findings(rows) == []
+
+    def test_an_entry_expression_with_a_syntax_error_is_refused(self) -> None:
+        finding = find_finding(
+            set_findings({"limits": {"max": {"expr": "n +"}}}), "INVALID_EXPRESSION"
+        )
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].set.limits.max"
+        assert_message(r"^Expression is not valid: .+$", finding["problem"])
+
+    def test_an_entry_template_on_a_non_string_element_type_is_refused(self) -> None:
+        findings = set_findings(
+            {"limits": {"max": "{{ n }}"}}, element_types={"limits": {"max": "integer"}}
+        )
+        finding = find_finding(findings, "TEMPLATE_NOT_STRING")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].set.limits.max"
+        assert finding["problem"] == (
+            "Entry 'max' of row 'limits' is integer; "
+            "a template builds text, so it needs element type string"
+        )
+        assert finding["fix"] == "Use {expr: ...} for a computed integer value"
+
+    def test_a_list_entry_template_on_a_non_string_element_type_names_its_index(self) -> None:
+        """A list entry's key is its 0-based index, the place its flag is stored under."""
+        findings = set_findings(
+            {"hosts": ["web-1", "{{ n }}"]}, element_types={"hosts": ["string", "integer"]}
+        )
+        finding = find_finding(findings, "TEMPLATE_NOT_STRING")
+        assert finding == error_at(
+            "flow[0].set.hosts[1]",
+            "TEMPLATE_NOT_STRING",
+            "Entry '1' of row 'hosts' is integer; "
+            "a template builds text, so it needs element type string",
+            "Use {expr: ...} for a computed integer value",
+        )
+
+    @pytest.mark.parametrize(
+        ("value", "place"),
+        [
+            ({"db": {"port": {"expr": "n"}}}, "config.db.port"),
+            ({"db": {"host": {"template": "db-{{ n }}"}}}, "config.db.host"),
+        ],
+        ids=["expression", "template-form"],
+    )
+    def test_a_value_mode_three_levels_deep_is_refused(self, value: Any, place: str) -> None:
+        finding = find_finding(set_findings({"config": value}), "VALUE_FORM_TOO_DEEP")
+        assert finding == error_at(
+            f"flow[0].set.{place}", "VALUE_FORM_TOO_DEEP", deep_problem(place), DEEP_FIX
+        )
+
+    @pytest.mark.parametrize(
+        "marked", ["api_token", [1], {"api_token": True}], ids=["text", "number-item", "mapping"]
+    )
+    def test_secret_rows_that_is_not_a_list_of_names_is_refused(self, marked: Any) -> None:
+        findings = set_findings({"api_token": "hunter2"}, secret_rows=marked)
+        finding = find_finding(findings, "INVALID_CONSTRUCT")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].secret_rows"
+        assert finding["problem"] == (
+            "'set' step is malformed: 'secret_rows' must be a list of variable names"
+        )
+        assert finding["fix"] is None
+
+    def test_a_secret_row_the_step_does_not_set_is_refused(self) -> None:
+        findings = set_findings(
+            {"api_token": "hunter2", "greeting": "hi"}, secret_rows=["apitoken"]
+        )
+        finding = find_finding(findings, "UNKNOWN_SECRET_ROW")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].secret_rows"
+        assert finding["problem"] == "Variable Setter has no row 'apitoken' to mark secret"
+        assert finding["fix"] == "Valid rows: api_token, greeting"
+
+    @pytest.mark.parametrize(
+        "value", ["hunter2", {"expr": "name + '-key'"}], ids=["plain", "expression"]
+    )
+    def test_a_secret_row_holding_a_plain_value_or_an_expression_is_clean(self, value: Any) -> None:
+        assert set_findings({"api_token": value}, secret_rows=["api_token"]) == []
+
+    @pytest.mark.parametrize(
+        "value", ["Bearer {{ name }}", {"template": "Bearer"}], ids=["markers", "template-form"]
+    )
+    def test_a_template_secret_row_is_clean(self, value: Any) -> None:
+        """A readback holds a secret Template row as written, so its amend takes it."""
+        assert set_findings({"api_token": value}, secret_rows=["api_token"]) == []
+
+    def test_a_secret_read_into_a_secret_template_row_gives_no_warning(self) -> None:
+        rows = {"api_token": "Bearer {{ token }}"}
+        assert set_findings(rows, secret_rows=["api_token"]) == []
+
+    def test_a_secret_template_row_is_checked_as_any_template_row(self) -> None:
+        findings = set_findings({"n": "{{ name }}-1"}, secret_rows=["n"])
+
+        assert findings == [
+            error_at(
+                "flow[0].set.n",
+                "TEMPLATE_NOT_STRING",
+                "Row 'n' sets an integer variable; a template builds text, so it needs a string "
+                "variable",
+                "Use {expr: ...} for a computed integer value",
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        "value",
+        [{"user": "u", "pass": {"expr": "name"}}, {"user": "u", "pass": "{{ name }}"}],
+        ids=["entry-expression", "entry-template"],
+    )
+    def test_a_secret_row_with_entry_forms_is_refused(self, value: Any) -> None:
+        finding = find_finding(
+            set_findings({"creds": value}, secret_rows=["creds"]), "INVALID_SECRET_ROW"
+        )
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0].set.creds"
+        assert finding["problem"] == (
+            "Secret row 'creds' is sealed whole; its entries cannot be {expr: ...} or templates"
+        )
+        assert finding["fix"] == (
+            "Make the whole row {expr: ...}, or write its entries as plain values"
+        )
+
+    def test_a_secret_read_into_a_secret_row_gives_no_warning(self) -> None:
+        rows = {"plain_copy": {"expr": "token + '-x'"}}
+        assert set_findings(rows, secret_rows=["plain_copy"]) == []
+
+    def test_a_secret_read_into_a_declared_secret_variable_gives_no_warning(self) -> None:
+        assert set_findings({"vault_copy": {"expr": "token + '-x'"}}) == []
+
+    def test_a_secret_read_into_a_plain_row_warns(self) -> None:
+        finding = find_finding(
+            set_findings({"plain_copy": {"expr": "token + '-x'"}}), "SECRET_DERIVED_VALUE"
+        )
+        assert finding["severity"] == "warning"
+        assert finding["step"] == "flow[0].set.plain_copy"
+        assert finding["problem"] == (
+            "Expression for 'plain_copy' reads secret 'token'; a derived value is not masked"
+        )
+        assert finding["fix"] == "Mark 'plain_copy' secret: true, or avoid logging it"
+
+    @pytest.mark.parametrize(
+        ("declarations", "row"),
+        [
+            ({"variables": {"total": {"type": "integer"}}}, "total"),
+            ({"outputs": [{"name": "summary", "type": "integer"}]}, "summary"),
+        ],
+        ids=["local-variable", "output"],
+    )
+    def test_a_row_inside_a_local_function_checks_the_functions_types(
+        self, declarations: dict[str, Any], row: str
+    ) -> None:
+        function = {
+            "name": "tally",
+            "inputs": [],
+            "outputs": [],
+            **declarations,
+            "flow": [{"set": {row: "{{ 2 }}"}}],
+        }
+        variables = {row: {"type": "string", "value": ""}}
+        findings = validate(make_recipe([LOG_STEP], variables=variables, functions=[function]))
+        finding = find_finding(findings, "TEMPLATE_NOT_STRING")
+        assert finding["severity"] == "error"
+        assert finding["step"] == f"functions[tally].flow[0].set.{row}"
+        assert finding["problem"] == template_row_problem(row, "integer")
+
+
+def python_step(**settings: Any) -> dict[str, Any]:
+    return {"block": "python", "settings": {"script": "print(1)", **settings}}
+
+
+class TestValueForms:
+    """`{template: ...}` and `{literal: ...}` are value forms; modes stop at the first level
+    inside a setting (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    def test_a_literal_setting_holding_braces_skips_the_template_check(self) -> None:
+        step = http_step(url={"literal": "http://shop.local/{{ not + }}"})
+        assert validate(make_recipe([step])) == []
+
+    def test_a_template_setting_with_no_markers_is_clean(self) -> None:
+        step = http_step(url={"template": "http://shop.local/health"})
+        assert validate(make_recipe([step])) == []
+
+    @pytest.mark.parametrize(
+        ("value", "written"), [(5, "integer"), (True, "boolean")], ids=["integer", "boolean"]
+    )
+    def test_a_template_form_that_is_not_text_is_refused(self, value: Any, written: str) -> None:
+        step = http_step(url={"template": value})
+        finding = find_finding(validate(make_recipe([step])), "INVALID_TEMPLATE_FORM")
+        assert finding == error_at(
+            "flow[0].settings.url",
+            "INVALID_TEMPLATE_FORM",
+            f"A {{template: ...}} value holds text, got {written}",
+            "Write the template as text, or use {expr: ...}",
+        )
+
+    def test_a_template_form_in_a_plugin_map_entry_is_refused(self) -> None:
+        step = shell_script_step(input_vars={"X": {"template": "a {{ b }}"}})
+        finding = find_finding(validate(make_recipe([step])), "TEMPLATE_NOT_ALLOWED")
+        assert finding == error_at(
+            "flow[0].settings.input_vars.X",
+            "TEMPLATE_NOT_ALLOWED",
+            "'input_vars.X' takes no template; templates apply to a whole text setting, "
+            "a Variable Setter row or entry, and a text compare-to value",
+            "Use {expr: ...} for a computed value",
+        )
+
+    def test_a_deep_expression_in_a_map_entry_value_is_refused(self) -> None:
+        variables = {"n": {"type": "integer", "value": 1}}
+        step = python_step(input_vars={"cfg": {"port": {"expr": "n"}}})
+        findings = validate(make_recipe([step], variables=variables))
+        finding = find_finding(findings, "VALUE_FORM_TOO_DEEP")
+        assert finding == error_at(
+            "flow[0].settings.input_vars.cfg.port",
+            "VALUE_FORM_TOO_DEEP",
+            deep_problem("input_vars.cfg.port"),
+            DEEP_FIX,
+        )
+
+    @pytest.mark.parametrize(
+        "note",
+        ["{{ fix this }}", {"text": "{{ fix this }}", "color": "yellow"}],
+        ids=["text-form", "mapping-form"],
+    )
+    def test_note_text_holding_braces_is_clean(self, note: Any) -> None:
+        assert validate(make_recipe([LOG_STEP, {"note": note}])) == []
+
+    @pytest.mark.parametrize(
+        "note",
+        [{"text": {"expr": "'hi'"}}, {"text": "hi", "color": {"expr": "'blue'"}}],
+        ids=["text", "color"],
+    )
+    def test_a_note_expression_is_refused(self, note: dict[str, Any]) -> None:
+        finding = find_finding(
+            validate(make_recipe([LOG_STEP, {"note": note}])), "INVALID_CONSTRUCT"
+        )
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[1]"
+        assert finding["problem"] == (
+            "'note' step is malformed: a note holds plain text and takes no expression"
+        )
+        assert finding["fix"] is None
+
+
+IDENTITY_STEPS = [
+    pytest.param("block", lambda **extra: {**LOG_STEP, **extra}, id="block"),
+    pytest.param("set", lambda **extra: {"set": {"greeting": "hi"}, **extra}, id="set"),
+    pytest.param(
+        "for",
+        lambda **extra: {"for": {"count": 1, "body": [LOG_STEP], **extra}},
+        id="for-construct",
+    ),
+]
+
+
+class TestStepIdentity:
+    """`description` (at most 64 characters) and `disabled` (true or false) on every step
+    (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    @pytest.mark.parametrize(("keyword", "build"), IDENTITY_STEPS)
+    def test_a_description_over_64_characters_is_refused(self, keyword: str, build: Any) -> None:
+        findings = validate(make_recipe([build(description="d" * 65)], variables=SET_VARIABLES))
+        finding = find_finding(findings, "DESCRIPTION_TOO_LONG")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == "Block description must be at most 64 characters"
+        assert finding["fix"] == "Trim description to 64 characters"
+
+    @pytest.mark.parametrize(("keyword", "build"), IDENTITY_STEPS)
+    def test_a_description_of_64_characters_is_clean(self, keyword: str, build: Any) -> None:
+        step = build(description="d" * 64)
+        assert validate(make_recipe([step], variables=SET_VARIABLES)) == []
+
+    @pytest.mark.parametrize(("keyword", "build"), IDENTITY_STEPS)
+    def test_a_description_that_is_not_text_is_refused(self, keyword: str, build: Any) -> None:
+        findings = validate(make_recipe([build(description=5)], variables=SET_VARIABLES))
+        finding = find_finding(findings, "INVALID_DESCRIPTION")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == "Description must be text"
+        assert finding["fix"] == "Write the description as text"
+
+    @pytest.mark.parametrize(
+        ("keyword", "build", "problem"),
+        [
+            (
+                "block",
+                lambda **extra: {**LOG_STEP, **extra},
+                "'block' step is malformed: 'disabled' must be true or false",
+            ),
+            (
+                "set",
+                lambda **extra: {"set": {"greeting": "hi"}, **extra},
+                "'set' step is malformed: 'disabled' must be true or false",
+            ),
+            (
+                "for",
+                lambda **extra: {"for": {"count": 1, "body": [LOG_STEP], **extra}},
+                "'for' construct is malformed: 'disabled' must be true or false",
+            ),
+        ],
+        ids=["block", "set", "for-construct"],
+    )
+    def test_disabled_that_is_not_true_or_false_is_refused(
+        self, keyword: str, build: Any, problem: str
+    ) -> None:
+        findings = validate(make_recipe([build(disabled="yes")], variables=SET_VARIABLES))
+        finding = find_finding(findings, "INVALID_CONSTRUCT")
+        assert finding["severity"] == "error"
+        assert finding["step"] == "flow[0]"
+        assert finding["problem"] == problem
+        assert finding["fix"] is None
+
+    @pytest.mark.parametrize("disabled", [True, False])
+    @pytest.mark.parametrize(("keyword", "build"), IDENTITY_STEPS)
+    def test_disabled_true_or_false_is_clean(
+        self, keyword: str, build: Any, disabled: bool
+    ) -> None:
+        step = build(disabled=disabled)
+        assert validate(make_recipe([step], variables=SET_VARIABLES)) == []
+
+
+class TestLoopTargetsByName:
+    """A break or continue names its loop by label, else by the loop's block name
+    (REQ-5.2.7.3, REQ-5.2.7.5)."""
+
+    @pytest.mark.parametrize(
+        "step",
+        [
+            {"for": {"count": 2, "body": [{"break": {"loop": "For Loop"}}]}},
+            {
+                "for_each": {
+                    "collection": {"expr": "items"},
+                    "body": [{"continue": {"loop": "For Each"}}],
+                }
+            },
+            {"while": {"conditions": "x == 1", "body": [{"break": {"loop": "While Loop"}}]}},
+            {
+                "for": {
+                    "count": 2,
+                    "body": [
+                        {
+                            "while": {
+                                "conditions": "x == 1",
+                                "body": [{"break": {"loop": "For Loop"}}],
+                            }
+                        }
+                    ],
+                }
+            },
+        ],
+        ids=["for", "for-each", "while", "outer-for"],
+    )
+    def test_a_block_name_reaches_an_unlabeled_loop(self, step: dict[str, Any]) -> None:
+        assert condition_findings(step) == []
+
+    def test_a_block_name_with_no_such_loop_around_is_refused(self) -> None:
+        step = {"for": {"count": 2, "body": [{"break": {"loop": "While Loop"}}]}}
+        assert find_finding(condition_findings(step), "UNKNOWN_LOOP_LABEL") == error_at(
+            "flow[0].for.body[0]",
+            "UNKNOWN_LOOP_LABEL",
+            "No enclosing loop is labeled 'While Loop'",
+            "Label the target loop and reference that label",
         )

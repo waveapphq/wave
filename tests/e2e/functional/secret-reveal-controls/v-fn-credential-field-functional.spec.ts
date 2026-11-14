@@ -51,7 +51,6 @@ function sshOpenNode(id: string, label: string, password: string, y: number): Re
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: {
           host: 'example.host',
@@ -112,7 +111,8 @@ async function storedPasswords(request: APIRequestContext, testId: string): Prom
 }
 
 const passwordRow = (page: Page): Locator => configSheet(page).locator('[data-testid="param-row-password"]')
-const maskedControl = (row: Locator): Locator => row.locator('button[aria-label$="Edit protected value"]')
+const maskedControl = (row: Locator): Locator =>
+  row.getByRole('button', { name: 'Password: Edit protected value', exact: true })
 /** The row's one value field text box; a masked secret has none. */
 const passwordBox = (row: Locator): Locator => row.locator('[data-slot="input-group"] input')
 
@@ -120,7 +120,7 @@ const passwordBox = (row: Locator): Locator => row.locator('[data-slot="input-gr
 async function retypePassword(page: Page, blockId: string, typed: string): Promise<void> {
   await openBlockSheet(page, blockId)
   await maskedControl(passwordRow(page)).click()
-  const confirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  const confirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
   await expect(confirm).toBeVisible()
   await confirm.getByRole('button', { name: 'Delete & Edit', exact: true }).click()
   // Delete & Edit leaves the row an empty text box with the keyboard in it.

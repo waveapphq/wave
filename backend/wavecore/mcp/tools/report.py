@@ -15,7 +15,11 @@ def get_failure_report(execution_id: str) -> dict[str, Any]:
 
 
 async def get_run_report(execution_id: str, format: str = "json") -> dict[str, Any] | str:
-    """Ensure the generated report exists via the reports job flow, then return it."""
+    """Full report of a finished execution: per-Block timeline, errors, variables and logs.
+
+    A Test execution's timeline holds each Block's path, status and timing; a Suite or
+    Regression execution's holds one row per Test run. `format` is `json` (the default) or `html`.
+    """
     view = reports_service.start_execution_report(execution_id, format)
     if view["status"] in ("pending", "running"):
         task = jobs.get_task(execution_id, format)

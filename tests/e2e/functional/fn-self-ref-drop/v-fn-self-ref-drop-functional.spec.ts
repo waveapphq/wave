@@ -50,7 +50,6 @@ async function seedLibrary(request: APIRequestContext): Promise<SeededFn> {
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: { message: "'inner'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
             },
           },
@@ -91,7 +90,6 @@ async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<s
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
             },
             measured: { width: 120, height: 62 },
@@ -139,7 +137,7 @@ test.describe('V-FN-SELF-REF-DROP (functional): drop guard rejects self-nesting'
     // Open the Functions Library and isolate THIS Function's card.
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
-    const modal = page.locator('[aria-label="Functions Library"]')
+    const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
     await expect(modal).toBeVisible()
     await modal.getByPlaceholder('Search Functions…').fill(shared.name)
     const card = modal

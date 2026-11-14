@@ -17,7 +17,7 @@ No backend data required - control metadata is hardcoded in frontend.
 
 - **Custom inline editor:** VariableSetterEditor renders instead of generic ParameterTable
 - **Empty state:** One empty row with name input, type defaults to "String" (VARSET-10)
-- **Row structure:** Name input, type dropdown, value input, expression toggle, delete button (VARSET-1)
+- **Row structure:** Name input, type dropdown, inline value input with its expand button, expression toggle, delete button (VARSET-1, VARSET-7)
 - **Add button:** "+ Add" button visible and inserts new empty rows (VARSET-2)
 - **No scope:** Scope parameter/dropdown not present
 - **No outputs:** Outputs section not visible

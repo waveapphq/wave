@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'before-tc'", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
@@ -64,7 +62,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["url"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "f'https://127.0.0.1:9449/timeout?key={timeout_key}&delay=10'",
@@ -98,7 +95,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -121,7 +117,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-passed'", "level": "INFO" },
             "outputBindings": {},

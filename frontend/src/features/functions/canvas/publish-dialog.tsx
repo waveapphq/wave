@@ -202,7 +202,6 @@ export function PublishDialog({
                 onChange={setName}
                 maxLength={NAME_MAX}
                 placeholder="Function name"
-                autoFocus
               />
             </div>
             <div className="space-y-2">

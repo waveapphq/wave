@@ -146,8 +146,13 @@ function HistoryCanvasContent({
   )
 
   const variables = useMemo(
-    () => buildVariablesFromDefinitions(data.variable_definitions ?? {}, data.variables ?? {}),
-    [data.variable_definitions, data.variables],
+    () =>
+      buildVariablesFromDefinitions(
+        data.variable_definitions ?? {},
+        data.variables ?? {},
+        data.secret_variables ?? [],
+      ),
+    [data.variable_definitions, data.variables, data.secret_variables],
   )
 
   const runtimeValues = useMemo(
@@ -162,7 +167,7 @@ function HistoryCanvasContent({
 
   return (
     <WorkflowStoreProvider store={store}>
-      <HistoricalBlockStatesProvider blockStates={blockStates}>
+      <HistoricalBlockStatesProvider blockStates={blockStates} lanes={data.lanes_taken}>
         <HistoricalBreadcrumbProvider
           /* v8 ignore next 2 - COV-V8-003: nullish fallbacks on backend response shape; integration tests cover both populated and missing-id cases */
           executionId={data.execution_id ?? null}
@@ -175,7 +180,7 @@ function HistoryCanvasContent({
             actionBar={
               <HistoryActionBar
                 environmentName={data.environment_name}
-                onOpenReport={() => { navigate(`/reports/${data.execution_id}`) }}
+                onOpenReport={() => { void navigate(`/reports/${data.execution_id}`) }}
               />
             }
             breadcrumbBar={<HistoryBreadcrumbBar status={status} />}

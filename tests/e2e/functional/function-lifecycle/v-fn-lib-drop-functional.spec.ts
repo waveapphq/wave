@@ -123,7 +123,7 @@ test.describe('V-FN-LIB-DROP-FUNCTIONAL: drag library card onto canvas', () => {
     // Open the Library modal from the palette.
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
-    const modal = page.locator('[aria-label="Functions Library"]')
+    const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
     await expect(modal).toBeVisible({ timeout: 10_000 })
 
     // The card for our seeded library entry must be present.

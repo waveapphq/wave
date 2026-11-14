@@ -90,7 +90,6 @@ function buildDelayWorkflowFixture(name: string): Record<string, unknown> {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { duration }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },

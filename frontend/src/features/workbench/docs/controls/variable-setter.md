@@ -5,10 +5,10 @@ versions:
   - version: "1.0.0"
     releaseDate: "2026-02-27"
     changelog:
-      - "Set variables in the execution context with a key-value map"
+      - "Set variables in the flow the setter runs in, one row per variable name and its value"
       - "Supports all variable types: string, integer, float, boolean, array, map, table"
       - "Existing variables are updated while preserving their original scope"
-      - "New variables are created at test scope"
+      - "New variables are created in the scope of the flow the setter runs in"
       - "Expression evaluation support for dynamic values"
 ---
 
@@ -22,10 +22,12 @@ The Var Setter control provides declarative variable management within workflows
 - Set baseline values for conditional logic
 
 **Behavior:**
-- Accepts a map of variable names to values
-- New variables are created at test scope automatically
-- Existing variables are updated in place, preserving their original scope
-- Variable types are inferred from values (string, integer, float, boolean, array, map, table)
+- Each row sets one variable: its name, its type, whether it is secret, and its value
+- New variables are created automatically in the scope the setter runs in (the test, or the Function that holds it), with the type the row picks (String by default)
+- Existing variables are updated in place, preserving their original scope and their declared type
+- A value is typed as is, written as an expression, or, for text, written as a template whose `{{ }}` parts are filled in when the setter runs; inside a list or map each entry can be an expression
+- The null button writes null into the variable
+- A secret row's value is stored protected and is never shown again
 - All assignments are logged at DEBUG level for audit trails
 
 **Parameters:**

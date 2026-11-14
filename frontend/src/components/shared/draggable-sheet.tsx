@@ -8,17 +8,22 @@
  * sheet or markup that opened it.
  * Sheets share a module z-order: pointer-down brings a sheet to front and
  * ESC closes only the front-most open sheet. Width resize reuses the shared
- * dialog-resize affordance (520-1200px).
+ * dialog-resize affordance (520-1200px). To assistive technology a sheet is
+ * a non-modal dialog named by its SheetTitle (CANVAS-227).
  */
 
 import {
+  createContext,
   use,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type PointerEvent,
   type ReactNode,
   type Ref,
@@ -298,6 +303,19 @@ function hasOpenPopupLayer(): boolean {
   )
 }
 
+// The id of the title that names the sheet it sits in.
+const SheetTitleIdContext = createContext<string | undefined>(undefined)
+
+/** The sheet's visible title in its header; the sheet is named by it. */
+export function SheetTitle({ children, ...props }: Readonly<Omit<ComponentProps<'h2'>, 'id'>>) {
+  const id = use(SheetTitleIdContext)
+  return (
+    <h2 {...props} id={id}>
+      {children}
+    </h2>
+  )
+}
+
 export interface DraggableSheetProps {
   /** Lets the sheet's opener raise it again (see useSheetOpener). */
   ref?: Ref<SheetHandle>
@@ -313,9 +331,10 @@ export interface DraggableSheetProps {
   captureEsc?: boolean
   /** Also persist the adjusted geometry to localStorage (survives reloads). */
   persistGeometry?: boolean
-  ariaLabel: string
-  /** Header content (icon + title + actions). The header bar is the drag handle. */
+  /** Header content (icon + SheetTitle + actions). The header bar is the drag handle. */
   header: ReactNode
+  /** The field that takes the cursor when the sheet opens. */
+  initialFocus?: RefObject<HTMLElement | null>
   /** Extra classes for the header bar (e.g. compact padding). */
   headerClassName?: string
   /** Pixel offset added to the centered position (cascade support). */
@@ -353,8 +372,8 @@ export function DraggableSheet({
   sheetId,
   captureEsc = false,
   persistGeometry = false,
-  ariaLabel,
   header,
+  initialFocus,
   headerClassName,
   initialOffset,
   initialWidth,
@@ -382,7 +401,8 @@ export function DraggableSheet({
   const [active, setActive] = useState(false)
   const [pulsing, setPulsing] = useState(false)
   const dragRef = useRef<DragState>(INITIAL_DRAG_STATE)
-  const sheetRef = useRef<HTMLElement>(null)
+  const sheetRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
   const entryRef = useRef<SheetRegistryEntry | null>(null)
   entryRef.current ??= {
     z: Z_BASE,
@@ -405,6 +425,8 @@ export function DraggableSheet({
   const openerRef = useRef<Element | null>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  const initialFocusRef = useRef(initialFocus)
+  initialFocusRef.current = initialFocus
   // Only user-adjusted geometry is remembered; untouched sheets keep the
   // default centered + cascade placement on every open.
   const userAdjustedRef = useRef(false)
@@ -459,10 +481,10 @@ export function DraggableSheet({
 
   // Open sheets join the shared z-order on top; any pointer-down inside the
   // sheet brings it to front. The listener is attached natively because the
-  // section is non-interactive markup (mirrors the canvas keydown pattern).
+  // dialog is non-interactive markup (mirrors the canvas keydown pattern).
   useEffect(() => {
     if (!open) return
-    // The section is always mounted when open (the ref is assigned before
+    // The dialog is always mounted when open (the ref is assigned before
     // effects run), so the cast is safe.
     const el = sheetRef.current as HTMLElement
     bringSheetToFront(entry)
@@ -486,6 +508,11 @@ export function DraggableSheet({
   // left with the sheet leaves the canvas deaf.
   if (open && openerRef.current === null) openerRef.current = document.activeElement
   if (!open && openerRef.current !== null) openerRef.current = null
+  // The sheet places the cursor as it opens, so its field is announced with the dialog.
+  useLayoutEffect(() => {
+    if (open) initialFocusRef.current?.current?.focus()
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const opener = openerRef.current
@@ -575,7 +602,7 @@ export function DraggableSheet({
     (event: PointerEvent<HTMLDivElement>) => {
       const state = dragRef.current
       if (!state.active || state.pointerId !== event.pointerId) return
-      // The drag handle lives inside the sheet section, so the ref is set
+      // The drag handle lives inside the sheet, so the ref is set
       // whenever the pointermove handler fires.
       const el = sheetRef.current as HTMLElement
       const dx = event.clientX - state.startX
@@ -645,10 +672,12 @@ export function DraggableSheet({
 
   if (!open) return null
 
-  const section = (
-    <section
+  const sheet = (
+    <dialog
       ref={sheetRef}
-      aria-label={ariaLabel}
+      open
+      aria-modal="false"
+      aria-labelledby={titleId}
       {...dataAttributes}
       data-testid={testId}
       data-draggable-sheet=""
@@ -658,6 +687,8 @@ export function DraggableSheet({
       }}
       className={cn(
         'fixed left-1/2 top-1/2',
+        // The dialog element's own fit-content height and system text color give way to the page's.
+        'h-auto text-inherit',
         'flex flex-col',
         // A clearer border than the default so the floating sheet never blends
         // into the canvas; the front-most (active) sheet gains the indigo focus
@@ -695,7 +726,7 @@ export function DraggableSheet({
           headerClassName,
         )}
       >
-        {header}
+        <SheetTitleIdContext value={titleId}>{header}</SheetTitleIdContext>
         {onMaximize && (
           <Button
             type="button"
@@ -731,8 +762,8 @@ export function DraggableSheet({
           {children}
         </fieldset>
       )}
-    </section>
+    </dialog>
   )
 
-  return createPortal(section, layer ?? document.body)
+  return createPortal(sheet, layer ?? document.body)
 }

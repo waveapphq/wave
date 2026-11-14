@@ -278,6 +278,23 @@ export async function dragFromLane(page: Page, source: string, handle: string | 
   await dragLink(page, laneDot(page, source, handle), inputDot(page, target), edgeOnCanvas(page, source, target))
 }
 
+/** Screen point where a drawn link's line starts. */
+export async function lineStart(drawn: Locator): Promise<{ x: number; y: number }> {
+  return drawn.locator('path.react-flow__edge-path').evaluate((path) => {
+    const svgPath = path as SVGPathElement
+    const point = svgPath.getPointAtLength(0)
+    const matrix = svgPath.getScreenCTM()
+    const screen = matrix ? new DOMPoint(point.x, point.y).matrixTransform(matrix) : point
+    return { x: screen.x, y: screen.y }
+  })
+}
+
+/** Screen point a link leaves a lane dot from: the dot's bottom middle. */
+export async function laneExit(page: Page, source: string, handle: string | null): Promise<{ x: number; y: number }> {
+  const dot = await boxOf(laneDot(page, source, handle), `lane ${handle ?? 'exit'} of ${source}`)
+  return { x: dot.x + dot.width / 2, y: dot.y + dot.height }
+}
+
 /** The link is on the canvas and its line leaves from the lane's own dot. */
 export async function expectDrawnFromLane(
   page: Page,
@@ -289,15 +306,8 @@ export async function expectDrawnFromLane(
   const drawn = edgeOnCanvas(page, source, target)
   await expect.soft(drawn, `a link ${source} -> ${target} is drawn (lane ${lane})`).toHaveCount(1)
   if ((await drawn.count()) !== 1) return
-  const start = await drawn.locator('path.react-flow__edge-path').evaluate((path) => {
-    const svgPath = path as SVGPathElement
-    const point = svgPath.getPointAtLength(0)
-    const matrix = svgPath.getScreenCTM()
-    const screen = matrix ? new DOMPoint(point.x, point.y).matrixTransform(matrix) : point
-    return { x: screen.x, y: screen.y }
-  })
-  const dot = await boxOf(laneDot(page, source, handle), `lane ${lane} of ${source}`)
-  const expected = { x: dot.x + dot.width / 2, y: dot.y + dot.height }
+  const start = await lineStart(drawn)
+  const expected = await laneExit(page, source, handle)
   expect
     .soft(
       Math.hypot(start.x - expected.x, start.y - expected.y),
@@ -404,7 +414,7 @@ export function counterBlock(id: string, counter: string, position: NodePosition
     category: 'flow',
     description: id,
     values: { variables: { [counter]: `${counter} + 1` } },
-    variableExpressionKeys: [counter],
+    expressionFields: [`variables.${counter}`],
     position,
   })
 }

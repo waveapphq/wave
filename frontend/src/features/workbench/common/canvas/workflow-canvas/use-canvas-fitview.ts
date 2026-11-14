@@ -37,7 +37,7 @@ export function useCanvasFitView() {
 
   const executeFitView = useCallback(() => {
     /* v8 ignore start - COV-REACT-008 */
-    reactFlowFitView({
+    void reactFlowFitView({
       padding: fitViewOptions?.padding ?? 0.2,
       duration: fitViewOptions?.duration ?? 200,
     })

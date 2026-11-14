@@ -28,7 +28,7 @@ there or carries on to the next case.
 
 ### Conditions
 Each case uses the full assertion builder:
-- Literal comparisons with typed operators
+- Literal comparisons with typed operators; the value to compare with is typed as is, written as an expression, or, for text, written as a template
 - Python boolean expressions
 - AND/OR combinators with group support
 

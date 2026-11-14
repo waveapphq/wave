@@ -144,8 +144,8 @@ function functionBlock(id: string, label: string, body: LocalFunctionBody, value
   return block as unknown as Record<string, unknown>
 }
 
-/** A Variable Setter writing each entry as an expression of the given type. */
-function setterNode(id: string, writes: Record<string, string>, types: Record<string, string>): Record<string, unknown> {
+/** A Variable Setter writing each entry as an expression. */
+function setterNode(id: string, writes: Record<string, string>): Record<string, unknown> {
   return {
     id,
     type: 'workflowNode',
@@ -156,10 +156,8 @@ function setterNode(id: string, writes: Record<string, string>, types: Record<st
       nodeType: 'control',
       category: 'flow',
       version: '1.0.0',
-      expressionFields: [],
+      expressionFields: Object.keys(writes).map((name) => `variables.${name}`),
       templateFields: [],
-      variableExpressionKeys: Object.keys(writes),
-      variableTypes: types,
       config: { values: { variables: writes }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },
@@ -370,7 +368,7 @@ test.describe('V-FN-PARAM-WINDOW: Function inputs and outputs in the one window'
           fnId,
           'Rename_Fn',
           {
-            nodes: [setterNode(setterId, { res_out: "'R-' + who_in", tok_out: "'T-' + who_in" }, { res_out: 'string', tok_out: 'string' })],
+            nodes: [setterNode(setterId, { res_out: "'R-' + who_in", tok_out: "'T-' + who_in" })],
             edges: [startEdge(setterId)],
             inputs: [{ name: 'who_in', type: 'string', required: true, description: '' }],
             outputs: [

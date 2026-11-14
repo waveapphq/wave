@@ -468,8 +468,8 @@ async def get_historical_test_run(run_id: str) -> Response:
 
     Returns:
         ``{ run_id, execution_id, test_id, suite_id, status, started_at,
-        ended_at, workflow, block_states, variables, logs,
-        environment_id, environment_name }`` - the payload the
+        ended_at, workflow, block_states, variables, variable_definitions,
+        secret_variables, logs, environment_id, environment_name }`` - the payload the
         Historical Test Canvas needs to paint the snapshot and wire
         the Back link back to the parent execution page.
     """

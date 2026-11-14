@@ -488,6 +488,20 @@ describe('VariableCreateModal - the window chrome per kind and mode (VMGR-106, V
     expect(screen.getByRole('heading', { level: 2, name: editTitle })).toBeInTheDocument()
   })
 
+  it.each(CHROME)('$kind Add: the window is a non-modal dialog named $addTitle', ({ mode, addTitle }) => {
+    renderModal({ mode })
+    const sheet = screen.getByTestId('variable-create-modal')
+    expect(screen.getByRole('dialog', { name: addTitle })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
+  })
+
+  it.each(CHROME)('$kind Edit: the window is a non-modal dialog named $editTitle', ({ mode, editTitle }) => {
+    renderEditWindow({ mode })
+    const sheet = screen.getByTestId('variable-create-modal')
+    expect(screen.getByRole('dialog', { name: editTitle })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
+  })
+
   it.each(CHROME)('$kind Add: the empty Name field shows the placeholder variable_name', ({ mode }) => {
     renderModal({ mode })
     expect(nameField()).toHaveAttribute('placeholder', 'variable_name')

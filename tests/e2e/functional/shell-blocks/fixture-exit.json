@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "f_error" },

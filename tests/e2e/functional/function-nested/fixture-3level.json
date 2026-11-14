@@ -22,7 +22,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -53,7 +52,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn3-lvl1'",
@@ -85,7 +83,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {},
                       "outputBindings": {},
@@ -116,7 +113,6 @@
                                 "message"
                               ],
                               "templateFields": [],
-                              "variableExpressionKeys": [],
                               "config": {
                                 "values": {
                                   "message": "'fn3-lvl2'",
@@ -148,7 +144,6 @@
                               "hasNewerVersion": false,
                               "expressionFields": [],
                               "templateFields": [],
-                              "variableExpressionKeys": [],
                               "config": {
                                 "values": {},
                                 "outputBindings": {},
@@ -179,7 +174,6 @@
                                           "message"
                                         ],
                                         "templateFields": [],
-                                        "variableExpressionKeys": [],
                                         "config": {
                                           "values": {
                                             "message": "'fn3-lvl3-deepest'",

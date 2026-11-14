@@ -236,7 +236,7 @@ def _setter_node(node_id: str, variables: dict[str, Any], secret_keys: list[str]
             "version": "1.0.0",
             "config": {
                 "values": {"variables": variables},
-                "variableSecretKeys": secret_keys,
+                "secretFields": [f"variables.{key}" for key in secret_keys],
             },
         },
     }

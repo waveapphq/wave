@@ -68,7 +68,6 @@ function readerTest(name: string): Record<string, unknown> {
       hasNewerVersion: false,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { message, level: 'INFO' }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 140, height: 62 },

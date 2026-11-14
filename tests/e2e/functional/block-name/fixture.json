@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "duration": 3000
@@ -54,7 +53,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'bn-hello'",
@@ -89,7 +87,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'bn-muted-never'",
@@ -123,7 +120,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'bn-skipped-never'",
@@ -155,7 +151,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -192,7 +187,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "1/0",
@@ -226,7 +220,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'bn-catch node=' + str(charge_error['node'])",
@@ -260,7 +253,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'bn-then'",

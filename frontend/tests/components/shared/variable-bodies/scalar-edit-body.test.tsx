@@ -23,15 +23,18 @@ vi.mock('@/components/shared/variable-bodies/string-edit-body', () => ({
     value,
     format,
     extraExtensions,
+    autoFocus,
   }: {
     value: unknown
     format?: string
     extraExtensions?: unknown[]
+    autoFocus?: boolean
   }) => (
     <div
       data-testid="string-edit-stub"
       data-format={format ?? ''}
       data-extra={JSON.stringify(extraExtensions ?? [])}
+      data-autofocus={String(autoFocus === true)}
     >
       {String(value)}
     </div>
@@ -83,6 +86,16 @@ describe('ScalarEditBody - field shape by type', () => {
     renderBody({ value: 'hello', type: 'string' })
     expect(screen.getByTestId('string-edit-stub')).toHaveTextContent('hello')
     expect(screen.queryByTestId('scalar-edit-input')).not.toBeInTheDocument()
+  })
+
+  it('hands the text editor the request to take the cursor once built', () => {
+    render(<ScalarEditBody value="hello" type="string" onChange={vi.fn()} onValidChange={vi.fn()} autoFocus />)
+    expect(screen.getByTestId('string-edit-stub')).toHaveAttribute('data-autofocus', 'true')
+  })
+
+  it('asks the text editor for no cursor by default', () => {
+    renderBody({ value: 'hello', type: 'string' })
+    expect(screen.getByTestId('string-edit-stub')).toHaveAttribute('data-autofocus', 'false')
   })
 
   it('renders a numeric input for integer values seeded from the draft', () => {

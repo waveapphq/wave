@@ -106,7 +106,7 @@ const expandButtonFor = (page: Page, name: string): Locator =>
     .locator('[data-testid^="expand-button-"]')
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 async function openInspector(page: Page, name: string): Promise<Locator> {
   await expandButtonFor(page, name).click()

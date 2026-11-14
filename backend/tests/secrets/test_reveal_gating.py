@@ -394,7 +394,7 @@ def _cred_workflow() -> dict[str, Any]:
                         "version": "1.0.0",
                         "config": {
                             "values": {"variables": {"api_key": _SECRET}},
-                            "variableSecretKeys": ["api_key"],
+                            "secretFields": ["variables.api_key"],
                         },
                     },
                 },

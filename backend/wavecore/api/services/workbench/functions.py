@@ -499,10 +499,12 @@ def _build_library_payload(
     }
 
 
-def _create_library_entry(library_payload: dict[str, Any]) -> dict[str, Any]:
+def _create_library_entry(
+    library_payload: dict[str, Any], repairs: list[dict[str, Any]] | None
+) -> dict[str, Any]:
     """Wrap `create_function` with the publish-specific exception remapping."""
     try:
-        definition, _etag = _functions_service.create_function(library_payload)
+        definition, _etag = _functions_service.create_function(library_payload, repairs=repairs)
         return definition
     except ValidationException as exc:
         if "is already in use" in (exc.message or ""):
@@ -517,6 +519,8 @@ def publish_local_function(
     test_id: str,
     node_id: str,
     payload: dict[str, Any],
+    *,
+    repairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Promote a local Function node to a published library entry.
 
@@ -527,7 +531,8 @@ def publish_local_function(
     the Test node and are preserved across the transition.
 
     Rolls the library entry back if the Test save fails so the system can
-    never persist a half-published state.
+    never persist a half-published state. The wires the library save removed
+    go into ``repairs`` when given.
     """
     test, node = _load_test_and_node(test_id, node_id)
     data = node.get("data") or {}
@@ -546,7 +551,7 @@ def publish_local_function(
     version_str = _resolve_publish_version(payload)
 
     library_payload = _build_library_payload(name, payload, local_def, version_str)
-    definition = _create_library_entry(library_payload)
+    definition = _create_library_entry(library_payload, repairs)
     function_id = definition["id"]
 
     new_data = {k: v for k, v in data.items() if k != "localDefinition"}

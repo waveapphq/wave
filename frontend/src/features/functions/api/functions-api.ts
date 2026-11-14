@@ -91,6 +91,7 @@ function buildListQuery(params?: ListFunctionsParams): string {
   if (params.page !== undefined) usp.set('page', String(params.page))
   if (params.per_page !== undefined) usp.set('per_page', String(params.per_page))
   if (params.search) usp.set('search', params.search)
+  if (params.search_in?.length) usp.set('search_in', params.search_in.join(','))
   if (params.tags?.length) usp.set('tags', params.tags.join(','))
   if (params.sort_by) usp.set('sort_by', params.sort_by)
   if (params.sort_order) usp.set('sort_order', params.sort_order)

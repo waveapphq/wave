@@ -1,0 +1,895 @@
+{
+  "name": "zz-ctrl-fields-modes-1",
+  "version": "1.0.0",
+  "description": "Every mode section and lane rule on one chain; no choice is stored, so the window writes the defaults",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "5d2501d2-c0f2-43e7-b229-97b473933a25",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "data": {
+          "label": "Count loop",
+          "elementType": "for",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Count loop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "mode": "count",
+              "count": 2
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8b565212-24d5-4596-b355-65fa3bf0bc0e",
+        "type": "workflowNode",
+        "position": {
+          "x": -240,
+          "y": 130
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "For body",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'for=body'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "be23bae7-cc60-4b28-9994-f5bd88d68ea8",
+        "type": "workflowNode",
+        "position": {
+          "x": -240,
+          "y": 260
+        },
+        "data": {
+          "label": "Continue",
+          "elementType": "continue",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Continue the loop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "target_loop": "5d2501d2-c0f2-43e7-b229-97b473933a25"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "55a4cc1e-7412-46c8-84a3-382682cc47c2",
+        "type": "workflowNode",
+        "position": {
+          "x": -240,
+          "y": 390
+        },
+        "data": {
+          "label": "Break",
+          "elementType": "break",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Break the loop",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "target_loop": "5d2501d2-c0f2-43e7-b229-97b473933a25"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "89ac798b-3532-4c5f-b30f-664ad6066433",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 520
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Guard",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {},
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "b7c21b0f-412f-4ec1-805c-b0c9e2b206c0",
+        "type": "workflowNode",
+        "position": {
+          "x": -240,
+          "y": 650
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Try path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'try=ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fe71e8d7-e161-4b1a-a237-3e5559dd08f4",
+        "type": "workflowNode",
+        "position": {
+          "x": -60,
+          "y": 650
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Catch path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'catch=ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ba98f041-43a9-4f03-838f-f1a19273a315",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 780
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Fan out",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "one"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "two"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "205e0ac1-13ff-43c1-9a52-7792120616d3",
+        "type": "workflowNode",
+        "position": {
+          "x": -60,
+          "y": 910
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Lane one",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'lane=one'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "7a36706e-f185-4023-bb68-1dc1c2f9ed2a",
+        "type": "workflowNode",
+        "position": {
+          "x": 120,
+          "y": 910
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Lane two",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'lane=two'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5dc04e27-d0c6-4d88-a38e-f9561fc455a5",
+        "type": "workflowNode",
+        "position": {
+          "x": 360,
+          "y": 1040
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "id": "cond-modes-wait",
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes"
+                }
+              ],
+              "timeout": 3000,
+              "check_interval": 200
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8d83f9e4-ce2f-45e8-8437-b2a88b027ca9",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 1170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Retry lane",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'wait=retry'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "b38ef4c1-f06f-4b7c-af59-3f1158cbd20c",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 1170
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the wait",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'wait=then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "aed80ae3-654d-4ce8-bedc-6cda17facbf6",
+        "type": "noteNode",
+        "position": {
+          "x": 420,
+          "y": 1290
+        },
+        "data": {
+          "label": "Note",
+          "elementType": "note",
+          "nodeType": "control",
+          "category": "misc",
+          "version": "1.0.0",
+          "description": "Modes note",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "text": "Modes note",
+              "color": "slate"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 80
+        }
+      },
+      {
+        "id": "79ce438f-ba88-4763-8374-c486ca5e3bbf",
+        "type": "workflowNode",
+        "position": {
+          "x": 420,
+          "y": 1420
+        },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Route on ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_if",
+                  "type": "if",
+                  "label": "ready",
+                  "conditions": [
+                    {
+                      "id": "cond-modes-if",
+                      "type": "literal",
+                      "variable": "ready",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "yes"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_elif",
+                  "type": "else_if",
+                  "label": "not ready",
+                  "conditions": [
+                    {
+                      "id": "cond-modes-elif",
+                      "type": "literal",
+                      "variable": "ready",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "no"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_else",
+                  "type": "else",
+                  "label": "otherwise"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "1293e85d-06cc-4d27-a90f-8fcdb244ce99",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 1550
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "If path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'if=if'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f2b4ce6d-ba05-429d-9712-2a7c1dfd2f3f",
+        "type": "workflowNode",
+        "position": {
+          "x": 440,
+          "y": 1550
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Else if path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'if=elif'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d00867ec-e533-44d3-9d50-c22a706ecb11",
+        "type": "workflowNode",
+        "position": {
+          "x": 620,
+          "y": 1550
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Else path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'if=else'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "2c32a607-213e-48c0-9a88-dea402f9ff64",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 1680
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Check ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "id": "cond-modes-assert",
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "c8c63cae-fbf3-45e2-a6e8-b7b8c390306d",
+        "type": "workflowNode",
+        "position": {
+          "x": 140,
+          "y": 1810
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Pass path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'assert=pass'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e1fc2ab9-d817-49ca-b5d7-1d5a9e87fbf3",
+        "type": "workflowNode",
+        "position": {
+          "x": 340,
+          "y": 1810
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Fail path",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'assert=fail'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-modes-start",
+        "source": "start-node",
+        "target": "5d2501d2-c0f2-43e7-b229-97b473933a25",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-for-body",
+        "source": "5d2501d2-c0f2-43e7-b229-97b473933a25",
+        "target": "8b565212-24d5-4596-b355-65fa3bf0bc0e",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-modes-for-cont",
+        "source": "8b565212-24d5-4596-b355-65fa3bf0bc0e",
+        "target": "be23bae7-cc60-4b28-9994-f5bd88d68ea8",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-cont-brk",
+        "source": "be23bae7-cc60-4b28-9994-f5bd88d68ea8",
+        "target": "55a4cc1e-7412-46c8-84a3-382682cc47c2",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-for-then",
+        "source": "5d2501d2-c0f2-43e7-b229-97b473933a25",
+        "target": "89ac798b-3532-4c5f-b30f-664ad6066433",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-modes-tc-try",
+        "source": "89ac798b-3532-4c5f-b30f-664ad6066433",
+        "target": "b7c21b0f-412f-4ec1-805c-b0c9e2b206c0",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "e-modes-tc-catch",
+        "source": "89ac798b-3532-4c5f-b30f-664ad6066433",
+        "target": "fe71e8d7-e161-4b1a-a237-3e5559dd08f4",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "e-modes-tc-then",
+        "source": "89ac798b-3532-4c5f-b30f-664ad6066433",
+        "target": "ba98f041-43a9-4f03-838f-f1a19273a315",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-modes-par-one",
+        "source": "ba98f041-43a9-4f03-838f-f1a19273a315",
+        "target": "205e0ac1-13ff-43c1-9a52-7792120616d3",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-modes-par-two",
+        "source": "ba98f041-43a9-4f03-838f-f1a19273a315",
+        "target": "7a36706e-f185-4023-bb68-1dc1c2f9ed2a",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-modes-par-then",
+        "source": "ba98f041-43a9-4f03-838f-f1a19273a315",
+        "target": "5dc04e27-d0c6-4d88-a38e-f9561fc455a5",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-modes-wait-retry",
+        "source": "5dc04e27-d0c6-4d88-a38e-f9561fc455a5",
+        "target": "8d83f9e4-ce2f-45e8-8437-b2a88b027ca9",
+        "type": "default",
+        "sourceHandle": "retry"
+      },
+      {
+        "id": "e-modes-wait-then",
+        "source": "5dc04e27-d0c6-4d88-a38e-f9561fc455a5",
+        "target": "b38ef4c1-f06f-4b7c-af59-3f1158cbd20c",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-modes-wait-note",
+        "source": "b38ef4c1-f06f-4b7c-af59-3f1158cbd20c",
+        "target": "aed80ae3-654d-4ce8-bedc-6cda17facbf6",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-note-if",
+        "source": "aed80ae3-654d-4ce8-bedc-6cda17facbf6",
+        "target": "79ce438f-ba88-4763-8374-c486ca5e3bbf",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-if",
+        "source": "79ce438f-ba88-4763-8374-c486ca5e3bbf",
+        "target": "1293e85d-06cc-4d27-a90f-8fcdb244ce99",
+        "type": "default",
+        "sourceHandle": "branch_if"
+      },
+      {
+        "id": "e-modes-elif",
+        "source": "79ce438f-ba88-4763-8374-c486ca5e3bbf",
+        "target": "f2b4ce6d-ba05-429d-9712-2a7c1dfd2f3f",
+        "type": "default",
+        "sourceHandle": "branch_elif"
+      },
+      {
+        "id": "e-modes-else",
+        "source": "79ce438f-ba88-4763-8374-c486ca5e3bbf",
+        "target": "d00867ec-e533-44d3-9d50-c22a706ecb11",
+        "type": "default",
+        "sourceHandle": "branch_else"
+      },
+      {
+        "id": "e-modes-if-assert",
+        "source": "1293e85d-06cc-4d27-a90f-8fcdb244ce99",
+        "target": "2c32a607-213e-48c0-9a88-dea402f9ff64",
+        "type": "default"
+      },
+      {
+        "id": "e-modes-pass",
+        "source": "2c32a607-213e-48c0-9a88-dea402f9ff64",
+        "target": "c8c63cae-fbf3-45e2-a6e8-b7b8c390306d",
+        "type": "default",
+        "sourceHandle": "pass"
+      },
+      {
+        "id": "e-modes-fail",
+        "source": "2c32a607-213e-48c0-9a88-dea402f9ff64",
+        "target": "e1fc2ab9-d817-49ca-b5d7-1d5a9e87fbf3",
+        "type": "default",
+        "sourceHandle": "fail"
+      }
+    ]
+  },
+  "variables": {
+    "ready": {
+      "value": "yes",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

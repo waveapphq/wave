@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { AssertionBuilder, type AssertionItem } from './assertion-builder'
-import { areAssertionsComplete } from './assertion-builder/tree-helpers'
+import { AssertionBuilder } from './assertion-builder/builder'
+import type { AssertionItem } from './assertion-builder/types'
 import { BranchCard, incompleteBranchReason } from './branch-card'
 import { nextBranchId, withBranchMoved, withoutBranch } from './branch-list-ops'
 
@@ -30,7 +30,6 @@ export interface CaseBranchEditorProps {
   branches: CaseBranch[]
   availableVariables: Array<{ name: string; type: string }>
   onBranchesChange: (branches: CaseBranch[]) => void
-  onValidChange: (valid: boolean) => void
 }
 
 function newCase(id: string): CaseBranch {
@@ -41,7 +40,6 @@ export function CaseBranchEditor({
   branches: externalBranches,
   availableVariables,
   onBranchesChange,
-  onValidChange,
 }: Readonly<CaseBranchEditorProps>) {
   const branches = externalBranches.length > 0 ? externalBranches : [newCase('branch_0')]
 
@@ -49,15 +47,6 @@ export function CaseBranchEditor({
   useEffect(() => {
     if (externalBranches.length === 0) onBranchesChange([newCase('branch_0')])
   }, []) // Only run on mount
-
-  useEffect(() => {
-    onValidChange(
-      branches.every(
-        (branch) =>
-          branch.type === 'default' || areAssertionsComplete(branch.conditions ?? []),
-      ),
-    )
-  }, [branches, onValidChange])
 
   const updateBranch = useCallback(
     (id: string, update: Partial<CaseBranch>) => {

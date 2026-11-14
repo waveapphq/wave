@@ -5,7 +5,7 @@ value and on typed values (REQ-3.1.3.25, REQ-3.3.1.4). Each spec builds its chec
 config sheet on a blank `zz-` Test it creates, runs it, reads each block's status and the
 console, and deletes the Test. Where a matrix is too large to build by hand
 (`v-null-check-assert-functional.spec.ts`), the spec first proves that the sheet stores the same
-row shape as `literalCondition` (`helpers/nesting-graph.ts`), then imports a generated `zz-` Test
+row shape as `sheetLiteralRow` (`helpers/condition-builder.ts`), then imports a generated `zz-` Test
 with one Single Assert per cell. `check-chain.ts` holds the shared chain builder and the
 generator.
 
@@ -17,7 +17,7 @@ generator.
 | Spec | What it builds | Services |
 |------|----------------|----------|
 | `v-check-length-contains-functional.spec.ts` | `nums` = `[1, 2, 3]` (integer items) from the Variable Manager; Single-mode Asserts `nums` length equals `3` and `nums` contains `2` typed into the value box; then length equals 3 / 0, contains 2 and does not contain 2 on `nums` and on a null `nums_null` (seeded) | none |
-| `v-null-check-operators-functional.spec.ts` | One test per check block (Assert, If/Else, Switch, While, Wait Until) on a Test seeded with one variable per type: seven rows built in the sheet, the operator list of each type read in order, is null / not null picked (value box and `{}` toggle gone), saved, and the stored rows read back; an Assert whose rows the variable pick lands on is true / is null, copied and pasted; a CSV filter row switched from String to Boolean | none |
+| `v-null-check-operators-functional.spec.ts` | One test per check block (Assert, If/Else, Switch, While, Wait Until) on a Test seeded with one variable per type: seven rows built in the sheet, the operator list of each type read in order, is null / not null picked (value box and `{}` toggle gone), saved, and the stored rows read back; an Assert whose rows the variable pick lands on is true / is null, copied and pasted; a row switched from is null back to not equals; a CSV filter row switched from String to Boolean through the `Change entry type?` question | none |
 | `v-null-check-assert-functional.spec.ts` | Test 1 builds five Single Asserts in the sheet on a null `status` (not equals, equals, is null, not null with its `actual: null` lines) and a null compare-to expression; tests 2-8 import one generated Assert per operator of each type on a null and on a held value; test 9 is null / not null on `'abc'` checked as integer; test 10 a null compare-to value in Assert, If/Else, Switch, While and Wait Until, each on its own Try path | none |
 | `v-null-check-table-functional.spec.ts` | Four Single Asserts built in the sheet on the table `hosts` (is null, not null, is empty, is not empty), seeded null, empty and filled, one test each; the row offers only the four table operators | none |
 | `v-null-check-ifelse-functional.spec.ts` | Test 1: an If/Else from the palette, If `i_null not null`, an added Else If `s_null not equals x`, a Log on each lane. Tests 2-3: a generated Test with one If/Else per cell (7 types x is null / not null / one holds-nothing check), a Variable Setter on each lane writing `route_<cell>` | none |

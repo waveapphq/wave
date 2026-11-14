@@ -4,7 +4,9 @@ Verify an assistant can manage a test's own data files through the MCP tools and
 that what it writes is the same folder the person sees: the five tools round
 trip, a refusal stays a finding while a raise stays a raise, a run in progress
 locks the folder, and a recipe whose `testdata://` reference is missing warns
-without blocking - then runs green once the file is supplied.
+without blocking - then runs green once the file is supplied. A second spec,
+described in its own section below, proves that nothing outside a test's own
+folder is ever one of its data entries, whatever links the folder holds.
 
 ## Prerequisites
 
@@ -82,3 +84,78 @@ reset and no other shard is affected.
   file is missing, stops warning once `write_testdata` supplies it, and the
   packaged example then runs `passed` and logs the row count it parsed out of
   the file the tool wrote
+
+## V-MCP-TESTDATA-CONTAINMENT: nothing outside a test's folder is test data
+
+`v-mcp-testdata-containment-functional.spec.ts` proves that a test's data is
+only what lies in its own folder: a path whose real location, or the real
+folder its last entry sits in, is outside that folder is refused as an invalid
+path by the MCP tools and the HTTP routes alike, and a clone copies nothing
+from outside (TDATA-1, TDATA-12, REQ-5.2.7.9).
+
+### Prerequisites
+
+- The same stack, environment and `fixture.json` as the spec above; no
+  external service
+- The spec reaches the stack's own data folder on the file system: it plants
+  links in a test's folder (`<data>/testdata/<test id>/`), giving the folder
+  its write bit back only while it plants them, and makes folders outside the
+  data folder under the OS temp folder, each holding `secret.txt` and
+  `sub/key`
+
+### Isolation on the shared stack
+
+Each case imports its own Test from `fixture.json`; every case but the one
+whose test folder is a link uploads `kept.csv` into it through
+`POST /tests/{id}/testdata/upload`. Teardown deletes every Test the case made,
+its clones included, gives the outside folders their write bits back and
+removes them, frees the workbench slot and resets the MCP settings. The two
+`.` cases run last: if `.` were ever accepted, the relock that follows would
+leave the whole Test Data zone read-only, and every later case would fail for
+that reason instead of its own.
+
+### Steps
+
+1. Import the Test, upload `kept.csv` where the case needs it, and enable the
+   MCP listener until-restart for the cases that call a tool
+2. Plant the case's links: a folder link to an outside folder whose `back.csv`
+   links back to `kept.csv`, a folder link to a folder inside, two links that
+   point at each other, links inside, out, up to `..`, between two folders and
+   to nothing, or the test's whole folder as a link to an outside folder
+3. Call `delete_testdata`, `write_testdata` or `rename_testdata`, read
+   `GET /tests/{id}/testdata/content/{rel}`, upload into a folder, or clone the
+   Test with `POST /tests/{id}/clone`
+4. Read the result back through the test data listing and content routes and
+   on the file system
+
+### Validation
+
+- **A refusal is a finding:** every refused tool call answers its boolean
+  false, never a raised error, with exactly one `VALIDATION` finding at step
+  `input` whose problem is `Invalid test data path: ` followed by the path, or
+  the part of it, that is refused
+- **NUL byte:** `delete_testdata` of a path holding a NUL byte is refused, and
+  `kept.csv` keeps its bytes
+- **Through a folder link out:** `delete_testdata` and `rename_testdata` of
+  `linked/back.csv` are refused with that path, and `write_testdata` with
+  `linked`; the link outside stays a link, no mode under the outside folder
+  changes, `kept.csv` keeps its bytes, and after the rename the listing still
+  holds `kept.csv` alone
+- **Upload through a folder link inside:** the upload answers `alias/a.csv`,
+  the file lands in the real folder, and that folder is read-only again (0500,
+  the file 0400)
+- **Link loop:** content of `ping` and `ping/x` answers 400 with
+  `Invalid test data path: <path>` and `delete_testdata` of `ping` is refused;
+  the listing still answers and holds `kept.csv` alone
+- **Clone:** a link that stays inside is copied as its content; links to an
+  outside file or folder, a link up to `..`, a dangling link and a loop are
+  left out; two folders that link to each other are copied once each; the
+  clone is locked like any test folder
+- **A test folder that is a link:** the listing is empty, content of every
+  file it points at answers 400, a write is refused with a finding that names
+  the empty path (the test's folder itself) and lands nowhere, and deleting
+  the Test removes the link and leaves the folder it points at with the same
+  files and modes
+- **`.`:** `rename_testdata` and `delete_testdata` of `.` are refused with
+  `Invalid test data path: .` and every file stays, because the empty path
+  alone names the folder itself

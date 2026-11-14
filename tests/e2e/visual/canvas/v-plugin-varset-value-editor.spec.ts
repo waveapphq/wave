@@ -1,6 +1,6 @@
 /**
- * V-PLUGIN-VARSET-VALUE-EDITOR: the shared "Edit value" sheet the Variable
- * Setter opens for a string or complex row value.
+ * V-PLUGIN-VARSET-VALUE-EDITOR: the "Edit value" sheet a Variable Setter row's
+ * expand button opens for a string or complex row value.
  *
  * Phase: no-data (parallel) - drops a Var Setter; no backend data needed.
  * Design Decisions: VMGR-84, VMGR-85 (Kind dropdown; static header, no Mode
@@ -36,7 +36,8 @@ async function dropVarSetterAndOpenConfig(page: Page): Promise<Locator> {
 }
 
 async function openValueSheet(page: Page, modal: Locator): Promise<Locator> {
-  await modal.locator('[data-testid="varset-edit-value-0"]').click()
+  // The row's expand button opens its Edit value sheet.
+  await modal.locator('[data-testid="param-expand-varset-value-0"]').click()
   const sheet = page.locator('[data-testid="value-editor-sheet"]')
   await expect(sheet).toBeVisible()
   return sheet

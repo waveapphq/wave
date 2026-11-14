@@ -74,7 +74,6 @@ def _make_node(node_id: str, output_bindings: dict[str, str]) -> dict[str, Any]:
             "description": "Netcat",
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -312,7 +311,6 @@ def _make_setter(node_id: str, rows: Any) -> dict[str, Any]:
             "description": "Set Variables",
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

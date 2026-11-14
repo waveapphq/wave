@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'as-start'",
@@ -55,7 +54,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -96,7 +94,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "assertions": [
@@ -137,7 +134,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'as-tail'",
@@ -171,7 +167,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'as-sibling'",
@@ -205,7 +200,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'as-then'",
@@ -239,7 +233,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'as-after'",

@@ -108,7 +108,6 @@ def make_log_node(
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

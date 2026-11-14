@@ -194,7 +194,6 @@ test.describe('V-EXPORT-01: Export Dialog Single Test', () => {
                 hasNewerVersion: false,
                 expressionFields: [],
                 templateFields: [],
-                variableExpressionKeys: [],
                 config: {
                   values: { message: 'masked export guard', level: 'INFO' },
                   outputBindings: {},

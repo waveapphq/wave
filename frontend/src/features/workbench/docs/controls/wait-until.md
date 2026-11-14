@@ -36,7 +36,8 @@ still running when it expires are marked stopped.
   something else in the run has to satisfy the condition.
 
 ### Conditions
-The full assertion builder: literal comparisons with typed operators, Python
+The full assertion builder: literal comparisons with typed operators (the value typed as is,
+written as an expression, or, for text, written as a template), Python
 boolean expressions, and AND/OR combinators with group support. Conditions are
 re-evaluated every round, so a retry lane that changes a variable changes the answer.
 

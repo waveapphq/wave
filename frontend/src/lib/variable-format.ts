@@ -208,10 +208,16 @@ export function sameStoredValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
+/** A value the server masked whole, such as a copy of a secret table: the bare mask where no text fits (REQ-3.1.3.5). */
+export function isMaskedWhole(value: unknown, type: VariableType): boolean {
+  return value === MASK_PLACEHOLDER && type !== 'string'
+}
+
 export function formatValue(value: unknown, type: VariableType, isSecret?: boolean): string {
   // Null wins over the secret mask: there is no hidden value to claim.
   if (isNullValue(value)) return NULL_TEXT
   if (isSecret) return holdsSecretValue(value) ? MASK_PLACEHOLDER : ''
+  if (isMaskedWhole(value, type)) return MASK_PLACEHOLDER
 
   switch (type) {
     case 'string':
@@ -333,7 +339,7 @@ function compareUnit(type: CompareCountableType, count: number): string {
  * watchers label the left side "expression"; an unevaluated one yields
  * "expression -> no value yet". A type-incompatible current value collapses to
  * the bare "type mismatch" (no arrow); summary envelopes are valid current
- * values. Numeric / boolean types carry no center metric (null).
+ * values. Numeric / boolean types and a value masked whole carry no center metric (null).
  */
 export function formatCompareMetric(
   initialValue: unknown,
@@ -344,6 +350,8 @@ export function formatCompareMetric(
   if (showingSourceLeft && currentValue === undefined) {
     return `expression -> ${METRIC_NO_VALUE_YET}`
   }
+  // A value masked whole has no count to show and is no type mismatch.
+  if (isMaskedWhole(currentValue, type)) return null
   if (type === 'integer' || type === 'float' || type === 'boolean') {
     return typeof currentValue === 'object' && currentValue !== null
       ? METRIC_TYPE_MISMATCH

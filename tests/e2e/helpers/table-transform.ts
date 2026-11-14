@@ -96,7 +96,7 @@ export async function addFilterLiteral(
   await pickOption(page, operator, operatorLabel)
   if (value !== undefined) {
     const id = ((await operator.getAttribute('data-testid')) ?? '').replace('filter-condition-operator-', '')
-    const input = block.locator(`[data-testid="filter-condition-value-${id}"]`)
+    const input = block.locator(`[data-testid="param-input-filter-condition-value-${id}"]`)
     await input.fill(value)
     await expect(input).toHaveValue(value)
   }
@@ -170,6 +170,24 @@ export async function setFilterAsType(page: Page, block: Locator, asType: Filter
   await pickOption(page, block.locator('[data-testid^="filter-astype-"]'), AS_TYPE_LABELS[asType])
 }
 
+/** Switch a filter's "as" type that a compare value would not fit: answer the question it asks first (FIELD-13). */
+export async function setFilterAsTypeAsked(
+  page: Page,
+  block: Locator,
+  asType: FilterColumnType,
+  answer: 'Cancel' | 'Change type',
+): Promise<void> {
+  const trigger = block.locator('[data-testid^="filter-astype-"]')
+  const before = ((await trigger.textContent()) ?? '').trim()
+  await trigger.click()
+  await page.getByRole('option', { name: AS_TYPE_LABELS[asType], exact: true }).click()
+  const question = page.getByRole('alertdialog').filter({ hasText: 'Change entry type?' })
+  await expect(question).toBeVisible()
+  await question.getByRole('button', { name: answer, exact: true }).click()
+  await expect(question).toBeHidden()
+  await expect(trigger).toHaveText(answer === 'Change type' ? AS_TYPE_LABELS[asType] : before)
+}
+
 /** Pick the operator of a filter block's nth literal condition and, when given, fill its value. */
 export async function setFilterCondition(
   page: Page,
@@ -182,7 +200,7 @@ export async function setFilterCondition(
   await pickOption(page, operator, operatorLabel)
   if (value === undefined) return
   const id = ((await operator.getAttribute('data-testid')) ?? '').replace('filter-condition-operator-', '')
-  const input = block.locator(`[data-testid="filter-condition-value-${id}"]`)
+  const input = block.locator(`[data-testid="param-input-filter-condition-value-${id}"]`)
   await input.fill(value)
   await expect(input).toHaveValue(value)
 }
@@ -191,15 +209,15 @@ export async function setFilterCondition(
 // The one stored shape (CSV-12) and generators that write it
 // ---------------------------------------------------------------------------
 
-/** A literal condition row as the sheet stores it. */
+/** A literal condition row as the sheet stores it: the compare value and its {x} flag only when set (CSV-12). */
 export interface StoredCondition {
   id: string
   type: 'literal'
   variable: '_cell'
   value_type: FilterColumnType
   operator: string
-  reference_value: string | null
-  reference_is_expression: false
+  reference_value?: string
+  reference_is_expression?: boolean
 }
 
 /** The operators that take no compare-to value; a row on one stores none (REQ-3.1.3.25). */
@@ -235,21 +253,12 @@ export function storedFilter(
   operator: string,
   value = '',
 ): StoredFilter {
+  const row: StoredCondition = { id: `${id}-row`, type: 'literal', variable: '_cell', value_type: asType, operator }
   return {
     id,
     column,
     asType,
-    conditions: [
-      {
-        id: `${id}-row`,
-        type: 'literal',
-        variable: '_cell',
-        value_type: asType,
-        operator,
-        reference_value: NO_COMPARE_TO_OPERATORS.has(operator) ? null : value,
-        reference_is_expression: false,
-      },
-    ],
+    conditions: [NO_COMPARE_TO_OPERATORS.has(operator) ? row : { ...row, reference_value: value }],
   }
 }
 

@@ -18,16 +18,21 @@ vi.mock('@/features/workbench/common/element-config/expressions/expression-field
     value,
     onChange,
     placeholder,
+    template,
+    editorOpen,
   }: {
     value: string
     onChange: (value: string) => void
     placeholder?: string
+    template?: boolean
+    editorOpen?: boolean
   }) {
-    expression.props.push({ value, placeholder })
+    expression.props.push({ value, placeholder, template, editorOpen })
     return (
       <textarea
         data-testid="expression-field"
         aria-label="Expression"
+        data-template={template === true ? 'true' : 'false'}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
@@ -768,7 +773,7 @@ describe('BlockValueField - masked secret (REQ-3.1.3.18)', () => {
     ['the mask', MASK_PLACEHOLDER],
   ])('masks %s behind the pencil control with the lock icon and no expand', (_label, stored) => {
     renderField({ testId: 'token', label: 'Token', leftIcon: 'lock', value: stored, isSet: true })
-    expect(screen.getByRole('button', { name: /Edit protected value$/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Token: Edit protected value' })).toBeInTheDocument()
     expect(host().querySelector('svg.lucide-lock')).not.toBeNull()
     expect(within(host()).queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByDisplayValue(stored)).not.toBeInTheDocument()
@@ -782,6 +787,24 @@ describe('BlockValueField - masked secret (REQ-3.1.3.18)', () => {
     expect(textbox()).toHaveValue('typed-now')
     expect(host().querySelector('svg.lucide-lock')).not.toBeNull()
     expect(expandButton('token')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['a stored text', 'string', MASK_PLACEHOLDER],
+    ['a stored map', 'map', { 'tls.crt': `${SECRET_ENVELOPE_PREFIX}Y3J0`, 'tls.key': `${SECRET_ENVELOPE_PREFIX}a2V5` }],
+  ] as const)('names the pencil of %s after the field it sits in', (_label, type, stored) => {
+    renderField({ testId: 'api_key', label: 'API Key', type, leftIcon: 'lock', value: stored, isSet: true })
+    expect(within(host()).getByRole('button', { name: 'API Key: Edit protected value' })).toBeEnabled()
+  })
+
+  it('names the pencil after the field name when the field has no label', () => {
+    renderField({ testId: 'api_key', label: undefined, leftIcon: 'lock', value: MASK_PLACEHOLDER, isSet: true })
+    expect(within(host()).getByRole('button', { name: 'api_key: Edit protected value' })).toBeEnabled()
+  })
+
+  it('names the text box after the field name when the field has no label', () => {
+    renderField({ testId: 'api_key', label: undefined, leftIcon: 'lock', value: 'typed-now', isSet: true })
+    expect(within(host()).getByRole('textbox', { name: 'api_key' })).toHaveValue('typed-now')
   })
 })
 
@@ -1081,10 +1104,10 @@ describe('BlockValueField - a suggestion list under the text box', () => {
     expect(within(host()).queryByRole('combobox')).not.toBeInTheDocument()
   })
 
-  it('a field without suggestions is a plain text box with no row test id', () => {
+  it('a field without suggestions is a plain text box', () => {
     renderField({ defaultValue: '@timestamp' })
     expect(within(host()).queryByRole('combobox')).not.toBeInTheDocument()
-    expect(textbox()).not.toHaveAttribute('data-testid')
+    expect(textbox()).toBeInTheDocument()
   })
 })
 
@@ -2013,5 +2036,122 @@ describe('BlockValueField - form names', () => {
   it('names the number box after the field', () => {
     renderField({ testId: 'timeout', label: 'Timeout', type: 'integer', defaultValue: 30 })
     expect(numberBox()).toHaveAttribute('name', 'timeout')
+  })
+
+  it('marks the text box itself with the cell id, as the number box', () => {
+    renderField({ value: 'qa-team', isSet: true })
+    expect(textbox()).toHaveAttribute('data-testid', `param-input-${NAME}`)
+    expect(numberBox(NAME)).toBe(textbox())
+  })
+})
+
+// A Block string field held as Template draws the Template face of the one field (REQ-3.1.1.5, REQ-3.1.3.15).
+describe('BlockValueField - a Template', () => {
+  const TEMPLATE = 'Run {{ run_id }} done'
+  const TEMPLATE_MODE = 'template' as FieldProps['mode']
+  const renderTemplate = (props: Partial<FieldProps> = {}) =>
+    renderField({ mode: TEMPLATE_MODE, value: TEMPLATE, isSet: true, ...props })
+
+  it('draws the source box in template mode holding the text, and no plain text box', () => {
+    renderTemplate()
+    expect(expressionBox()).toHaveValue(TEMPLATE)
+    expect(expressionBox()).toHaveAttribute('data-template', 'true')
+    expect(within(host()).queryByRole('textbox', { name: LABEL })).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue(TEMPLATE)).toBe(expressionBox())
+  })
+
+  it('shows no null button, even on a field that takes null', () => {
+    renderTemplate({ nullable: true })
+    expect(expressionBox()).toBeInTheDocument()
+    expect(nullButton()).not.toBeInTheDocument()
+  })
+
+  it('is edited inline', () => {
+    const { onChange } = renderTemplate()
+    fireEvent.change(expressionBox(), { target: { value: 'Run {{ run_id }} failed' } })
+    expect(onChange.mock.lastCall?.[0]).toBe('Run {{ run_id }} failed')
+  })
+
+  it('expand asks the host for its Edit value sheet and opens no expression editor', async () => {
+    const user = userEvent.setup()
+    const { onExpand } = renderTemplate()
+    expect(expressionBox()).toBeInTheDocument()
+    await user.click(expandButton() as HTMLElement)
+    expect(onExpand).toHaveBeenCalledTimes(1)
+    expect(expression.props.at(-1)).toMatchObject({ template: true })
+    expect(expression.props.some((props) => props.editorOpen === true)).toBe(false)
+  })
+})
+
+// A required field that takes null starts empty; null shows once chosen or stored (REQ-3.1.3.21, REQ-3.1.1.5).
+describe('BlockValueField - a required field that takes null', () => {
+  const required = { nullable: true, required: true } as Partial<FieldProps>
+
+  it('shows an empty number box while not set: no null, the null button not pressed', () => {
+    renderField({ type: 'integer', testId: 'count', label: 'Count', ...required })
+    expect(numberBox('count')).toHaveValue('')
+    expect(shownElement('null')).toBeNull()
+    expect(nullButton('count')).toHaveAttribute('aria-pressed', 'false')
+    expect(numberBox('count')).not.toHaveAccessibleDescription('null')
+  })
+
+  it('shows an empty text box while not set: no null, the null button not pressed', () => {
+    renderField({ testId: 'note', label: 'Note', ...required })
+    expect(textbox()).toHaveValue('')
+    expect(shownElement('null')).toBeNull()
+    expect(nullButton('note')).toHaveAttribute('aria-pressed', 'false')
+    expect(textbox()).not.toHaveAccessibleDescription('null')
+  })
+
+  it('fills the field with null on a press of the null button', async () => {
+    const user = userEvent.setup()
+    const { onNull } = renderField({ type: 'integer', testId: 'count', label: 'Count', ...required })
+    expect(shownElement('null')).toBeNull()
+    await user.click(nullButton('count') as HTMLElement)
+    expect(onNull).toHaveBeenCalledTimes(1)
+    expect(shown('null')).toHaveClass(TEXT_MUTED, 'italic')
+    expect(nullButton('count')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('shows a stored null as null with the null button pressed', () => {
+    renderField({ type: 'integer', testId: 'count', label: 'Count', value: null, isSet: true, ...required })
+    expect(shown('null')).toHaveClass(TEXT_MUTED, 'italic')
+    expect(nullButton('count')).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+// The 32 px expand column keeps the {x} column in line: empty beside a number, the expand in {x} mode (FIELD-1).
+describe('BlockValueField - the expand column', () => {
+  const fieldColumns = () => Array.from((host().firstElementChild as HTMLElement).children)
+  const limit = { type: 'integer', testId: 'limit', label: 'Time Limit', value: '500', isSet: true } as Partial<FieldProps>
+
+  it('keeps an empty expand column beside a number box', () => {
+    renderField(limit)
+    expect(numberBox('limit')).toHaveValue('500')
+    expect(expandButton('limit')).not.toBeInTheDocument()
+    expect(fieldColumns()).toHaveLength(2)
+    expect(fieldColumns()[1]).toHaveAttribute('aria-hidden', 'true')
+    expect(fieldColumns()[1]).toBeEmptyDOMElement()
+  })
+
+  it('draws the expand in that column in {x} mode', () => {
+    renderField({ ...limit, mode: 'expression', value: 'limit_ms' })
+    expect(fieldColumns()).toHaveLength(2)
+    expect(fieldColumns()[1]).toContainElement(expandButton('limit'))
+    expect(expandButton('limit')).toHaveAccessibleName('Open editor for Time Limit')
+  })
+})
+
+// The outline button look sits after the utilities in the same layer, so only the important form clears it (SECFLD-1).
+describe('BlockValueField - the masked face draws on the box fill', () => {
+  it('gives the pencil button no fill and no border of its own and keeps its name and focus ring', () => {
+    renderField({ testId: 'token', label: 'Token', leftIcon: 'lock', value: MASK_PLACEHOLDER, isSet: true })
+    const pencil = within(host()).getByRole('button', { name: 'Token: Edit protected value' })
+    expect(pencil).toHaveClass('!bg-transparent', '!border-0', 'shadow-none')
+    expect(pencil).not.toHaveClass('bg-transparent', 'border-0')
+    expect(pencil).toHaveClass('focus-visible:ring-2')
+    expect(host().querySelector('svg.lucide-lock')).not.toBeNull()
+    expect(pencil.querySelector('svg.lucide-pencil')).not.toBeNull()
+    expect(pencil).toHaveTextContent(/^•{8}$/)
   })
 })

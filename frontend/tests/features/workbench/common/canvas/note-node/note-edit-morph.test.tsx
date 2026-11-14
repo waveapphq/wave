@@ -37,7 +37,10 @@ const mockStore = {
   copy: vi.fn(),
   cut: vi.fn(),
   unlinkNode: vi.fn(),
-  edges: [] as Array<{ id: string; source: string; target: string }>,
+  edges: [] as Array<{ id: string; source: string; target: string; targetHandle?: string }>,
+  nodes: [] as unknown[],
+  variables: [] as unknown[],
+  drillPath: [] as unknown[],
 }
 
 vi.mock('@/features/workbench/stores/workflow-store', () => ({
@@ -66,7 +69,7 @@ async function mountNote(text = 'My note') {
     <NoteNode
       id="note-1"
       type="noteNode"
-      data={{ label: 'Note', config: { text, color: 'amber' } }}
+      data={{ label: 'Note', config: { values: { text, color: 'yellow' } } }}
       selected={true}
       positionAbsoluteX={0}
       positionAbsoluteY={0}
@@ -141,6 +144,25 @@ describe('NoteNode - edit-mode chrome morph', () => {
     })
     expect(screen.getByTestId('node-kebab')).toBeInTheDocument()
     expect(mockStore.updateNode).toHaveBeenCalled()
+  })
+
+  // REQ-3.5.0.3: the text is a declared field under config.values; the color stays beside it.
+  it('opens the editor on the stored text and writes the edit to config.values.text', async () => {
+    const user = userEvent.setup()
+    await mountNote('Probe gateway')
+    fireEvent.doubleClick(screen.getByTestId('note-node-note-1'))
+    const textarea = (await screen.findByTestId('note-text-editor')) as HTMLTextAreaElement
+    expect(textarea.value).toBe('Probe gateway')
+
+    await user.clear(textarea)
+    await user.type(textarea, 'Updated text')
+    await user.click(screen.getByTestId('note-edit-accept'))
+
+    expect(mockStore.updateNode).toHaveBeenCalledTimes(1)
+    const [updatedId, payload] = mockStore.updateNode.mock.calls[0]
+    expect(updatedId).toBe('note-1')
+    expect(payload.data.config).toEqual({ values: { text: 'Updated text', color: 'yellow' } })
+    expect(mockStore.commitHistory).toHaveBeenCalledWith('Edit note text')
   })
 
   it('Cancel returns to idle without committing the edit', async () => {

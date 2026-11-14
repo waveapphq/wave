@@ -93,7 +93,7 @@ test.describe('V-ENTITY-VARIABLE-EDITOR: entity-scope value editing on the share
     await expect(tokenMask).toContainText('•')
     await expect(tokenMask).not.toContainText('old-secret')
     await tokenMask.click()
-    const confirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    const confirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
     await expect(confirm).toBeVisible()
     await confirm.getByRole('button', { name: /Delete & Edit/i }).click()
     const s = valueEditorSheet(page)

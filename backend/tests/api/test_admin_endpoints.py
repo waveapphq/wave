@@ -546,6 +546,34 @@ class TestAdminEnableEndpoint:
             # Verify logging occurred
             mock_logger.info.assert_called()
 
+    @pytest.mark.parametrize(
+        ("reason", "logged_reason"),
+        [
+            ("Restore check: step 2 (100%)", "Restore check: step 2 (100%)"),
+            (
+                "Audit\r\n12:00:00.000 INFO  [deadbeef] Admin mode disabled",
+                "base64:QXVkaXQNCjEyOjAwOjAwLjAwMCBJTkZPICBbZGVhZGJl"
+                "ZWZdIEFkbWluIG1vZGUgZGlzYWJsZWQ=",
+            ),
+        ],
+    )
+    def test_enable_logs_the_reason_on_one_line(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture, reason: str, logged_reason: str
+    ) -> None:
+        """REQ-6.4.1: a plain reason is logged as sent; one with a line break as Base64."""
+        with caplog.at_level(logging.INFO, logger="wavecore.api.routes.admin.routes"):
+            response = client.post("/admin/enable", json={"reason": reason})
+
+        assert response.status_code == 200
+        assert response.json()["reason"] == reason
+        logged_at = response.json()["enabled_at"].replace("Z", "+00:00")
+        messages = [
+            record.getMessage()
+            for record in caplog.records
+            if record.getMessage().startswith("Admin mode enabled:")
+        ]
+        assert messages == [f"Admin mode enabled: reason={logged_reason}, timestamp={logged_at}"]
+
 
 class TestAdminDisableEndpoint:
     """Test suite for POST /admin/disable endpoint."""

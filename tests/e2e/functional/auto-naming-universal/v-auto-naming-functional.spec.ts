@@ -123,7 +123,6 @@ test.describe('V-AUTO-NAMING (functional): universal bare-first then _N labeling
                 version: '1.0.0',
                 expressionFields: ['message'],
                 templateFields: [],
-                variableExpressionKeys: [],
                 config: { values: { message: "'preseed'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
               },
             },

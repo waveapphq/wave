@@ -62,7 +62,6 @@ function buildFixture(): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: "'IF-FIRED'", level: 'INFO' },
               profileBindings: [],
@@ -81,7 +80,6 @@ function buildFixture(): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: "'ELSE-FIRED'", level: 'INFO' },
               profileBindings: [],

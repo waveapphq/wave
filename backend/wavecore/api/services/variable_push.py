@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from wavecore.api.websocket.manager import WebSocketManager
+from wavecore.core.secrets.masking import MASK_PLACEHOLDER
 from wavecore.core.table import Table
 from wavecore.core.variables.wire_form import wire_scalar
 
@@ -100,7 +101,8 @@ class VariablePushService:
         Returns:
             The transformed value to push to clients
         """
-        if var_type in _COMPLEX_VAR_TYPES:
+        # A list, map or table masked whole pushes the bare placeholder, never a measurement.
+        if var_type in _COMPLEX_VAR_TYPES and value != MASK_PLACEHOLDER:
             return self._summarize_complex_value(value)
         # A scalar pushes whole, a number in its wire form (REQ-3.1.3.14).
         return wire_scalar(value)

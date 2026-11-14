@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["collection"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "collection": "10 + 5" },
             "outputBindings": { "item": "bad_item", "index": "bad_idx" },

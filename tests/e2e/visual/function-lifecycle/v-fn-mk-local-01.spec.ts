@@ -75,7 +75,6 @@ async function seedTest(page: Page, functionId: string): Promise<string> {
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
             },
             measured: { width: 120, height: 62 },
           },

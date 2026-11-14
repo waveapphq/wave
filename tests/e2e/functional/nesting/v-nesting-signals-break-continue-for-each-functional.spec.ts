@@ -20,7 +20,11 @@
  *    the try path for a signal in finally, runs once each time the signal leaves the Try/Catch, before the target
  *    loop's then successor
  *
- * Other slots (Switch/Case case, Wait Until retry body, Remote Execution body, Function body):
+ * Function body: a Function is its own flow, so its body holds no loop of the Test that calls it. Publishing the
+ * Function is refused with 422 `Function has 1 validation error(s)` and the one finding `BREAK_OUTSIDE_LOOP`
+ * `break/continue is only valid inside a loop body`; nothing is stored or run.
+ *
+ * Other slots (Switch/Case case, Wait Until retry body, Remote Execution body):
  * the design does not settle the outcome, so the cell records a refusal or the run and asserts only that a run it
  * starts ends with no node left running.
  */

@@ -23,7 +23,6 @@
             "password"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "host": "127.0.0.1",
@@ -62,7 +61,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid"
@@ -95,7 +93,6 @@
             "token"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "http://k8s-gateway:8080/k8s/clusters/wave",
@@ -134,7 +131,6 @@
             "namespace"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "gw_session",
@@ -175,7 +171,6 @@
             "session"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "gw_session",
@@ -216,7 +211,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'null-gateway-done'",

@@ -39,7 +39,7 @@ test.describe('V-FN-FROMLIB-01: dropped-from-library source link', () => {
     // Open the Functions Library modal from the palette.
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
-    const modal = page.locator('[aria-label="Functions Library"]')
+    const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
     await expect(modal).toBeVisible({ timeout: 10_000 })
 
     const card = modal.locator('[data-testid="library-card"]').filter({ hasText: fn.name }).first()

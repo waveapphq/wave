@@ -663,6 +663,7 @@ class TestBatchCreateTestsEndpoint:
                     "Variable: sneaky.",
                 }
             ],
+            "repairs": {},
         }
 
 
@@ -3511,22 +3512,24 @@ class TestNumbersAreStoredInWireForm:
                 "nodeType": "control",
                 "version": "1.0.0",
                 "label": "Set",
-                "variableTypes": {name: SENT_VARIABLES[name]["type"] for name in rows},
                 "config": {"values": {"variables": rows}},
             },
         }
-        checks = [
-            {
-                "id": f"a{index}",
-                "type": "literal",
-                "variable": name,
-                "value_type": SENT_VARIABLES[name]["type"],
-                "operator": "equals",
-                "reference_value": value,
-                "reference_is_expression": False,
-            }
-            for index, (name, value) in enumerate(rows.items())
-        ]
+        checks: list[dict[str, Any]] = []
+        for index, (name, value) in enumerate(rows.items()):
+            if checks:
+                checks.append({"type": "operator", "value": "and"})
+            checks.append(
+                {
+                    "id": f"a{index}",
+                    "type": "literal",
+                    "variable": name,
+                    "value_type": SENT_VARIABLES[name]["type"],
+                    "operator": "equals",
+                    "reference_value": value,
+                    "reference_is_expression": False,
+                }
+            )
         check = {
             "id": "check",
             "type": "workflowNode",
@@ -3553,7 +3556,9 @@ class TestNumbersAreStoredInWireForm:
 
         assert list(nodes[0]["data"]["config"]["values"]["variables"].values()) == stored
         assert [
-            row["reference_value"] for row in nodes[1]["data"]["config"]["values"]["assertions"]
+            row["reference_value"]
+            for row in nodes[1]["data"]["config"]["values"]["assertions"]
+            if row["type"] == "literal"
         ] == stored
 
     def test_a_variables_patch_stores_its_numbers_in_wire_form(self, client: TestClient) -> None:
@@ -3582,6 +3587,126 @@ class TestNumbersAreStoredInWireForm:
             r"^Value for variable 'n' is not a valid integer$", response.json()["error"]["message"]
         )
         assert self._read(client, created["id"])["variables"] == {}
+
+
+def _no_value_row(row_id: str, variable: str, operator: str, **compare_to: Any) -> dict[str, Any]:
+    row = {"id": row_id, "type": "literal", "variable": variable, "value_type": "string"}
+    return {**row, "operator": operator, **compare_to}
+
+
+class TestNoValueRowsStoreNoCompareTo:
+    """REQ-3.5.1.5: a check row or filter row whose operator takes no value is stored with no
+    compare-to value and no mode, whatever a REST client sends."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture(autouse=True)
+    def _registered_blocks(self) -> Any:
+        from wavecore.controls.registry import _registry, register_all_core_controls
+        from wavecore.core.plugin_registry import clear_registry, register_plugin
+        from wavecore.plugins.csv_parser import CSVParserPlugin
+
+        register_all_core_controls(_registry)
+        clear_registry()
+        register_plugin(CSVParserPlugin())
+        yield
+        clear_registry()
+
+    def _workflow(self, **compare_to: Any) -> dict[str, Any]:
+        check = {
+            "id": "check",
+            "type": "workflowNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "elementType": "assert",
+                "nodeType": "control",
+                "version": "1.0.0",
+                "label": "Check",
+                "config": {
+                    "values": {
+                        "assertions": [_no_value_row("a1", "host", "is_not_null", **compare_to)]
+                    }
+                },
+            },
+        }
+        filters = [
+            {
+                "id": "flt-1",
+                "column": {"mode": "name", "value": "name"},
+                "asType": "string",
+                "conditions": [_no_value_row("f1", "_cell", "is_null", **compare_to)],
+            }
+        ]
+        parse = {
+            "id": "parse",
+            "type": "workflowNode",
+            "position": {"x": 0, "y": 100},
+            "data": {
+                "elementType": "csv-parser",
+                "nodeType": "plugin",
+                "version": "1.0.0",
+                "label": "Parse",
+                "config": {
+                    "values": {
+                        "operation": "parse",
+                        "csv_content": "name\nann\n",
+                        "filters": filters,
+                    }
+                },
+            },
+        }
+        edges = [{"id": "e1", "source": "check", "target": "parse"}]
+        return {"nodes": [check, parse], "edges": edges}
+
+    def _stored_rows(self, test_id: str) -> list[Any]:
+        from wavecore.api.services.tests import service as test_service
+
+        stored = test_service._load_test(test_id)
+        assert stored is not None
+        check, parse = stored["workflow"]["nodes"]
+        return [
+            check["data"]["config"]["values"]["assertions"],
+            parse["data"]["config"]["values"]["filters"][0]["conditions"],
+        ]
+
+    _STORED = [
+        [_no_value_row("a1", "host", "is_not_null")],
+        [_no_value_row("f1", "_cell", "is_null")],
+    ]
+
+    def test_a_create_stores_no_compare_to_value(self, client: TestClient) -> None:
+        response = client.post(
+            "/tests",
+            json={
+                "name": "Null Checks",
+                "workflow": self._workflow(reference_value="", reference_is_expression=True),
+                "variables": {"host": {"type": "string", "value": "web-1"}},
+            },
+        )
+
+        assert response.status_code == 201, response.json()
+        assert self._stored_rows(response.json()["data"]["id"]) == self._STORED
+
+    def test_an_update_stores_no_compare_to_value(self, client: TestClient) -> None:
+        variables = {"host": {"type": "string", "value": "web-1"}}
+        created = client.post(
+            "/tests",
+            json={"name": "Null Checks", "workflow": self._workflow(), "variables": variables},
+        )
+        assert created.status_code == 201, created.json()
+        test_id = created.json()["data"]["id"]
+
+        response = client.put(
+            f"/tests/{test_id}",
+            json={"workflow": self._workflow(reference_value="web", reference_is_template=True)},
+        )
+
+        assert response.status_code == 200, response.json()
+        assert self._stored_rows(test_id) == self._STORED
 
 
 class TestTypedSettingEntriesOfAFunctionBlock:
@@ -3804,6 +3929,7 @@ class TestATestBatchItemOfTheWrongShape:
         assert response.json() == {
             "updated": [test_id],
             "failed": [{"index": 0, "error": NOT_AN_OBJECT_ITEM}],
+            "repairs": {test_id: []},
         }
         assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"
 
@@ -3827,6 +3953,7 @@ class TestATestBatchItemOfTheWrongShape:
         assert response.json() == {
             "updated": [test_id],
             "failed": [{"index": 0, "error": NOT_AN_UPDATE_OBJECT}],
+            "repairs": {test_id: []},
         }
         assert client.get(f"/tests/{kept_id}").json()["data"] == before
         assert client.get(f"/tests/{test_id}").json()["data"]["description"] == "Updated"

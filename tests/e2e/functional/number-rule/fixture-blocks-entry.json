@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "http://127.0.0.1:9450/health?who=typed-entry",
@@ -54,7 +53,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "variables": {
@@ -64,10 +62,6 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableTypes": {
-            "count": "integer",
-            "ratio": "float"
           }
         },
         "measured": {
@@ -92,7 +86,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "number-entry-done",

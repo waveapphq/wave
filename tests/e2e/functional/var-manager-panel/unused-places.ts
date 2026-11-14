@@ -151,7 +151,7 @@ async function buildCompareToExpression(page: Page, blockId: string, variable: s
   const toggle = body.locator('[data-testid="assert-expr-toggle-0"]')
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-pressed', 'true')
-  const editor = body.locator('[data-testid="assert-value-input-0"] .cm-content')
+  const editor = body.locator('[data-testid="param-input-assert-value-0"] .cm-content')
   await replaceCode(page, editor, expression)
   await leaveExpressionEditor(editor)
   await saveBlockSheet(sheet)
@@ -161,7 +161,7 @@ async function buildCompareToExpression(page: Page, blockId: string, variable: s
 async function buildExpressionRow(page: Page, blockId: string, expression: string): Promise<void> {
   const { sheet, body } = await openConditionList(page, blockId, ASSERT)
   await addExpressionRow(body)
-  const editor = body.locator('[data-testid="assert-expression-input-0"] .cm-content')
+  const editor = body.locator('[data-testid="param-input-assert-expr-0"] .cm-content')
   await replaceCode(page, editor, expression)
   await leaveExpressionEditor(editor)
   await saveBlockSheet(sheet)
@@ -190,10 +190,13 @@ async function buildSetterRows(page: Page, blockId: string, rows: ReadonlyArray<
   for (const [index, [target, expression]] of rows.entries()) {
     const nameInput = sheet.locator(`[data-testid="varset-name-input-${index}"]`)
     if ((await nameInput.count()) === 0) await add.click()
+    // {x} first, while the new row holds null: a named row starts on its type's value, which {x} would ask about.
+    const toggle = sheet.locator(`[data-testid="varset-expression-toggle-${index}"]`)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await nameInput.fill(target)
     await add.focus()
-    await sheet.locator(`[data-testid="varset-expression-toggle-${index}"]`).click()
-    const editor = sheet.locator(`[data-testid="param-input-${target}"] .cm-content`)
+    const editor = sheet.locator(`[data-testid="param-input-varset-value-${index}"] .cm-content`)
     await replaceCode(page, editor, expression)
     await leaveExpressionEditor(editor)
     await expect(sheet).toBeVisible()
@@ -432,7 +435,10 @@ const SETTER: PaletteDragSpec = { term: 'var setter', testId: 'palette-item-vari
 function setterCell(declared: Declared[], read: string[], rows: Array<[string, string]>): ScopeCell {
   return blockCell(declared, read, SETTER, (page, id) => buildSetterRows(page, id, rows), (node) => {
     const held = (values(node).variables ?? {}) as Record<string, unknown>
-    for (const [target, expression] of rows) expect(held[target], `the stored Setter row ${target}`).toBe(expression)
+    for (const [target, expression] of rows) {
+      expect(held[target], `the stored Setter row ${target}`).toBe(expression)
+      expect(node.data.expressionFields ?? [], `the Setter row ${target} is an expression`).toContain(`variables.${target}`)
+    }
   })
 }
 

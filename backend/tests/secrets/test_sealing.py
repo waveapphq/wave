@@ -437,10 +437,10 @@ class TestUnsealVariables:
 def _setter_node(
     node_id: str,
     variables: dict[str, Any],
-    secret_keys: list[str],
+    secret_rows: list[str],
 ) -> dict[str, Any]:
     """A Variable Setter workflow node carrying a flat variables map plus the
-    list of setter targets flagged secret (config.variableSecretKeys)."""
+    rows marked secret (config.secretFields, one `variables.<row>` place each)."""
     return {
         "id": node_id,
         "type": "workflowNode",
@@ -451,7 +451,7 @@ def _setter_node(
             "version": "1.0.0",
             "config": {
                 "values": {"variables": variables},
-                "variableSecretKeys": secret_keys,
+                "secretFields": [f"variables.{row}" for row in secret_rows],
             },
         },
     }
@@ -462,7 +462,7 @@ def _node_variables(node: dict[str, Any]) -> dict[str, Any]:
 
 
 class TestSealWorkflowNodeSecrets:
-    def test_seals_values_named_in_variable_secret_keys(self) -> None:
+    def test_seals_values_named_in_secret_fields(self) -> None:
         workflow = {
             "nodes": [
                 _setter_node("s1", {"api_key": "sk-live-classified", "count": "5"}, ["api_key"])
@@ -492,6 +492,7 @@ class TestSealWorkflowNodeSecrets:
         result = sealing.seal_workflow_node_secrets(workflow)
 
         sealed = _node_variables(result["nodes"][0])["api_key"]
+        assert is_secret_envelope(sealed)
         assert unseal_all(sealed) == "sk-live-classified"
 
     def test_setter_without_secret_keys_is_untouched(self) -> None:
@@ -530,6 +531,7 @@ class TestSealWorkflowNodeSecrets:
         once = sealing.seal_workflow_node_secrets(workflow)
         twice = sealing.seal_workflow_node_secrets(once)
 
+        assert is_secret_envelope(_node_variables(once["nodes"][0])["api_key"])
         assert twice == once
 
     def test_input_workflow_is_not_mutated(self) -> None:
@@ -562,6 +564,8 @@ class TestSealWorkflowNodeSecrets:
 
         result = sealing.seal_workflow_node_secrets(workflow)
 
+        assert is_secret_envelope(_node_variables(result["nodes"][0])["a"])
+        assert is_secret_envelope(_node_variables(result["nodes"][1])["b"])
         assert unseal_all(_node_variables(result["nodes"][0])["a"]) == "secret-a"
         assert unseal_all(_node_variables(result["nodes"][1])["b"]) == "secret-b"
 
@@ -596,6 +600,7 @@ class TestUnsealWorkflowNodeSecrets:
 
         result = sealing.unseal_workflow_node_secrets(sealed)
 
+        assert is_secret_envelope(_node_variables(sealed["nodes"][0])["api_key"])
         assert _node_variables(result["nodes"][0])["api_key"] == "sk-live-classified"
 
     def test_seal_then_unseal_is_identity(self) -> None:
@@ -801,6 +806,7 @@ class TestFunctionBodyNodeSecrets:
 
         inner = result["nodes"][0]["data"]["localDefinition"]["workflow"]["nodes"][0]
         sealed = _node_variables(inner["data"]["localDefinition"]["workflow"]["nodes"][0])["pw"]
+        assert is_secret_envelope(sealed)
         assert unseal_all(sealed) == "deep-secret"
 
     def test_seals_both_top_level_and_nested_setters(self) -> None:
@@ -810,6 +816,8 @@ class TestFunctionBodyNodeSecrets:
 
         result = sealing.seal_workflow_node_secrets(workflow)
 
+        assert is_secret_envelope(_node_variables(result["nodes"][0])["a"])
+        assert is_secret_envelope(_nested_variables(result["nodes"][1])["b"])
         assert unseal_all(_node_variables(result["nodes"][0])["a"]) == "top-secret"
         assert unseal_all(_nested_variables(result["nodes"][1])["b"]) == "nested-secret"
 
@@ -849,6 +857,7 @@ class TestFunctionBodyNodeSecrets:
         result = sealing.seal_workflow_node_secrets(workflow)
 
         assert result["nodes"][0] == "garbage"
+        assert is_secret_envelope(_node_variables(result["nodes"][1])["token"])
         assert unseal_all(_node_variables(result["nodes"][1])["token"]) == "sk-secret"
 
     def test_node_without_data_is_skipped(self) -> None:
@@ -1340,6 +1349,121 @@ class TestIterSetterSecretItems:
         result = sealing.transform_setter_node_secrets(workflow, lambda _v: "REPLACED")
 
         assert _node_variables(result["nodes"][0])["token"] == "REPLACED"
+
+
+class TestSetterSecretRows:
+    """A Setter row is marked secret by its place in `config.secretFields`; the entry types of
+    a secret list or map row sit at `elementTypes["variables.<row>"]` and travel with its value
+    (REQ-3.4.1.14)."""
+
+    def test_a_secret_row_is_read_from_secret_fields(self) -> None:
+        node = _setter_node("s1", {"api_token": "sk-live-classified", "count": "5"}, ["api_token"])
+        workflow = {"nodes": [node]}
+        log_node = {"id": "log-1", "data": {"elementType": "log", "config": {"values": {}}}}
+
+        assert node["data"]["config"]["secretFields"] == ["variables.api_token"]
+        assert sealing.setter_secret_target(node) == (
+            {"api_token": "sk-live-classified", "count": "5"},
+            ["api_token"],
+        )
+        assert sealing.setter_secret_target(log_node) is None
+        assert sealing.collect_setter_secret_names(workflow) == {"api_token"}
+        assert sealing.iter_secret_settings(workflow) == [
+            sealing.SecretSetting(("s1",), sealing.SETTER_ROW, "api_token", "sk-live-classified")
+        ]
+        sealed = sealing.seal_workflow_node_secrets(workflow)
+        assert is_secret_envelope(_node_variables(sealed["nodes"][0])["api_token"])
+        assert _node_variables(sealed["nodes"][0])["count"] == "5"
+
+    @pytest.mark.parametrize("flag", ["expressionFields", "templateFields"])
+    def test_an_expression_or_template_secret_row_stays_as_written(self, flag: str) -> None:
+        """A source row names variables, not a secret value; only a literal row seals."""
+        node = _setter_node(
+            "s1", {"auth": "'Bearer ' + api_token", "api_token": "sk-live"}, ["auth", "api_token"]
+        )
+        node["data"][flag] = ["variables.auth"]
+        workflow = {"nodes": [node]}
+
+        sealed = sealing.seal_workflow_node_secrets(workflow)
+        masked = sealing.mask_workflow_node_secrets(workflow)
+
+        assert _node_variables(sealed["nodes"][0])["auth"] == "'Bearer ' + api_token"
+        assert is_secret_envelope(_node_variables(sealed["nodes"][0])["api_token"])
+        assert _node_variables(masked["nodes"][0]) == {
+            "auth": "'Bearer ' + api_token",
+            "api_token": MASK_PLACEHOLDER,
+        }
+        assert sealing.iter_secret_settings(workflow) == [
+            sealing.SecretSetting(("s1",), sealing.SETTER_ROW, "api_token", "sk-live")
+        ]
+        assert sealing.collect_setter_secret_names(workflow) == {"auth", "api_token"}
+
+    def test_a_secret_row_with_an_expression_entry_seals_whole(self) -> None:
+        node = _setter_node("s1", {"hosts": ["web-1", "primary"]}, ["hosts"])
+        node["data"]["expressionFields"] = ["variables.hosts.1"]
+
+        sealed = sealing.seal_workflow_node_secrets({"nodes": [node]})
+
+        stored = _node_variables(sealed["nodes"][0])["hosts"]
+        assert is_secret_envelope(stored)
+        assert unseal_all(stored) == ["web-1", "primary"]
+
+    def test_entry_types_of_a_secret_row_seal_with_its_value(self) -> None:
+        node = _setter_node(
+            "s1", {"creds": {"user": "svc", "port": "5432"}, "hosts": ["web-1"]}, ["creds"]
+        )
+        node["data"]["elementTypes"] = {
+            "variables.creds": {"user": "string", "port": "integer"},
+            "variables.hosts": ["string"],
+        }
+        workflow = {"nodes": [node]}
+
+        sealed = sealing.seal_workflow_node_secrets(workflow)
+
+        data = sealed["nodes"][0]["data"]
+        assert is_secret_envelope(data["config"]["values"]["variables"]["creds"])
+        assert is_secret_envelope(data["elementTypes"]["variables.creds"])
+        assert data["elementTypes"]["variables.hosts"] == ["string"]
+        assert sealing.unseal_workflow_node_secrets(sealed) == workflow
+
+    def test_masking_drops_element_types_when_it_empties(self) -> None:
+        only_secret = _setter_node("s1", {"ids": ["7"]}, ["ids"])
+        only_secret["data"]["elementTypes"] = {"variables.ids": ["integer"]}
+        mixed = _setter_node("s2", {"creds": {"port": "5432"}, "plain": {"n": "16"}}, ["creds"])
+        mixed["data"]["elementTypes"] = {
+            "variables.creds": {"port": "integer"},
+            "variables.plain": {"n": "integer"},
+        }
+        workflow = {"nodes": [only_secret, mixed]}
+
+        masked = sealing.mask_workflow_node_secrets(workflow)
+
+        first, second = (node["data"] for node in masked["nodes"])
+        assert _node_variables(masked["nodes"][0])["ids"] == MASK_PLACEHOLDER
+        assert "elementTypes" not in first
+        assert _node_variables(masked["nodes"][1])["creds"] == MASK_PLACEHOLDER
+        assert second["elementTypes"] == {"variables.plain": {"n": "integer"}}
+        assert workflow["nodes"][0]["data"]["elementTypes"] == {"variables.ids": ["integer"]}
+        assert sealing.restore_masked_workflow_secrets(masked, workflow) == workflow
+
+    def test_a_renamed_target_keeps_its_secret_mark(self) -> None:
+        from wavecore.api.services.tests.service import _rename_setter_target
+
+        node = _setter_node("s1", {"creds": {"user": "svc"}, "count": "5"}, ["creds"])
+        node["data"]["elementTypes"] = {"variables.creds": {"user": "string"}}
+
+        _rename_setter_target(node["data"], "creds", "login")
+
+        assert node["data"]["config"]["secretFields"] == ["variables.login"]
+        assert sealing.setter_secret_target(node) == (
+            {"login": {"user": "svc"}, "count": "5"},
+            ["login"],
+        )
+        sealed = sealing.seal_workflow_node_secrets({"nodes": [node]})
+        data = sealed["nodes"][0]["data"]
+        assert is_secret_envelope(data["config"]["values"]["variables"]["login"])
+        assert is_secret_envelope(data["elementTypes"]["variables.login"])
+        assert data["config"]["values"]["variables"]["count"] == "5"
 
 
 # ---------------------------------------------------------------------------

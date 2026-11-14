@@ -345,6 +345,53 @@ describe('Execution Store', () => {
     })
   })
 
+  // A Block keeps the lanes of its last pass (REQ-3.2.2.15).
+  describe('lanes a block took', () => {
+    async function runWithLanes() {
+      const { useExecutionStore } = await import('../../../../src/features/workbench/stores/execution-store')
+      useExecutionStore.setState({
+        executions: {},
+        activeExecutionId: null,
+        isConnected: true,
+        lastEventTime: null,
+      })
+      const store = useExecutionStore.getState()
+      const executionId = store.startExecution('test-1')
+      store.updateBlockExecution(executionId, 'route', { status: 'running' })
+      store.updateBlockExecution(executionId, 'route', { lanes: ['branch_0'] })
+      const lanesOf = () =>
+        useExecutionStore.getState().getBlockExecution(executionId, 'route')?.lanes
+      return { store: useExecutionStore.getState(), executionId, lanesOf }
+    }
+
+    it('keeps the lanes when the block finishes', async () => {
+      const { store, executionId, lanesOf } = await runWithLanes()
+
+      store.updateBlockExecution(executionId, 'route', { status: 'success' })
+
+      expect(lanesOf()).toEqual(['branch_0'])
+    })
+
+    it.each(['running', 'skipped'] as const)(
+      'drops the lanes of the pass before when the block turns %s',
+      async (status) => {
+        const { store, executionId, lanesOf } = await runWithLanes()
+
+        store.updateBlockExecution(executionId, 'route', { status })
+
+        expect(lanesOf()).toBeUndefined()
+      },
+    )
+
+    it('keeps lanes restored together with a status', async () => {
+      const { store, executionId, lanesOf } = await runWithLanes()
+
+      store.updateBlockExecution(executionId, 'route', { status: 'skipped', lanes: ['branch_0'] })
+
+      expect(lanesOf()).toEqual(['branch_0'])
+    })
+  })
+
   // A Parallel section runs several branches at once, so more than one block
   // is `running` at the same time (REQ-3.2.3.1). Nothing may collapse the set
   // to a single current block.

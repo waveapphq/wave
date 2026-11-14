@@ -18,9 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTemplateKeys": [],
-          "variableTypes": { "spare_port": "integer" },
           "config": {
             "values": { "variables": { "spare_port": 1 } },
             "outputBindings": {},

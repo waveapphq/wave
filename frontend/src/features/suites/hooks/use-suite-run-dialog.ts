@@ -93,7 +93,7 @@ export function useSuiteRunDialog({ setError, environments }: Readonly<UseSuiteR
       setSuiteToRun(null)
       envSelect.selectEnvironment(null)
       setSuiteTests([])
-      navigate(`/executions/${execution.id}`)
+      void navigate(`/executions/${execution.id}`)
     } catch (err) {
       /* v8 ignore next - COV-BRANCH-029: defensive non-Error fallback */
       setError(err instanceof Error ? err.message : 'Failed to start execution')

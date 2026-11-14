@@ -242,9 +242,9 @@ class TestSetterRowsInAMaskedExport:
                     "id": "set-1",
                     "data": {
                         "elementType": "variable-setter",
-                        "variableElementTypes": {
-                            "secret_map": {"api_key": "string"},
-                            "plain_map": {"n": "integer"},
+                        "elementTypes": {
+                            "variables.secret_map": {"api_key": "string"},
+                            "variables.plain_map": {"n": "integer"},
                         },
                         "config": {
                             "values": {
@@ -253,7 +253,7 @@ class TestSetterRowsInAMaskedExport:
                                     "plain_map": {"n": "16"},
                                 }
                             },
-                            "variableSecretKeys": ["secret_map"],
+                            "secretFields": ["variables.secret_map"],
                         },
                     },
                 },
@@ -269,10 +269,10 @@ class TestSetterRowsInAMaskedExport:
                                         "id": "set-2",
                                         "data": {
                                             "elementType": "variable-setter",
-                                            "variableElementTypes": {"only_secret": ["integer"]},
+                                            "elementTypes": {"variables.only_secret": ["integer"]},
                                             "config": {
                                                 "values": {"variables": {"only_secret": ["7"]}},
-                                                "variableSecretKeys": ["only_secret"],
+                                                "secretFields": ["variables.only_secret"],
                                             },
                                         },
                                     }
@@ -289,11 +289,11 @@ class TestSetterRowsInAMaskedExport:
         first = masked["nodes"][0]["data"]
         nested = masked["nodes"][2]["data"]["localDefinition"]["workflow"]["nodes"][0]["data"]
         assert first["config"]["values"]["variables"]["secret_map"] == MASK_PLACEHOLDER
-        assert first["variableElementTypes"] == {"plain_map": {"n": "integer"}}
+        assert first["elementTypes"] == {"variables.plain_map": {"n": "integer"}}
         assert nested["config"]["values"]["variables"]["only_secret"] == MASK_PLACEHOLDER
-        assert "variableElementTypes" not in nested
+        assert "elementTypes" not in nested
         assert masked["nodes"][1] == workflow["nodes"][1]
-        assert workflow["nodes"][0]["data"]["variableElementTypes"]["secret_map"] == {
+        assert workflow["nodes"][0]["data"]["elementTypes"]["variables.secret_map"] == {
             "api_key": "string"
         }
 
@@ -306,7 +306,7 @@ class TestSetterRowsInAMaskedExport:
                         "elementType": "variable-setter",
                         "config": {
                             "values": {"variables": {"token": "t"}},
-                            "variableSecretKeys": ["token"],
+                            "secretFields": ["variables.token"],
                         },
                     },
                 }
@@ -315,7 +315,7 @@ class TestSetterRowsInAMaskedExport:
 
         masked = mask_workflow_node_secrets(workflow)
 
-        assert "variableElementTypes" not in masked["nodes"][0]["data"]
+        assert "elementTypes" not in masked["nodes"][0]["data"]
 
 
 def _setter_workflow() -> dict[str, Any]:
@@ -326,9 +326,9 @@ def _setter_workflow() -> dict[str, Any]:
                 "id": "set-1",
                 "data": {
                     "elementType": "variable-setter",
-                    "variableElementTypes": {
-                        "secret_map": {"api_key": "string", "port": "integer"},
-                        "plain_map": {"n": "integer"},
+                    "elementTypes": {
+                        "variables.secret_map": {"api_key": "string", "port": "integer"},
+                        "variables.plain_map": {"n": "integer"},
                     },
                     "config": {
                         "values": {
@@ -337,7 +337,7 @@ def _setter_workflow() -> dict[str, Any]:
                                 "plain_map": {"n": "16"},
                             }
                         },
-                        "variableSecretKeys": ["secret_map"],
+                        "secretFields": ["variables.secret_map"],
                     },
                 },
             },
@@ -352,10 +352,10 @@ def _setter_workflow() -> dict[str, Any]:
                                     "id": "set-2",
                                     "data": {
                                         "elementType": "variable-setter",
-                                        "variableElementTypes": {"only_secret": ["integer"]},
+                                        "elementTypes": {"variables.only_secret": ["integer"]},
                                         "config": {
                                             "values": {"variables": {"only_secret": ["7"]}},
-                                            "variableSecretKeys": ["only_secret"],
+                                            "secretFields": ["variables.only_secret"],
                                         },
                                     },
                                 }
@@ -379,16 +379,16 @@ class TestSetterRowsSealedAtRest:
         sealed = seal_workflow_node_secrets(_setter_workflow())
 
         first, nested = _setter_data(sealed)
-        assert is_secret_envelope(first["variableElementTypes"]["secret_map"])
-        assert "api_key" not in first["variableElementTypes"]["secret_map"]
-        assert first["variableElementTypes"]["plain_map"] == {"n": "integer"}
-        assert is_secret_envelope(nested["variableElementTypes"]["only_secret"])
+        assert is_secret_envelope(first["elementTypes"]["variables.secret_map"])
+        assert "api_key" not in first["elementTypes"]["variables.secret_map"]
+        assert first["elementTypes"]["variables.plain_map"] == {"n": "integer"}
+        assert is_secret_envelope(nested["elementTypes"]["variables.only_secret"])
 
     def test_unsealing_gives_the_element_types_back(self) -> None:
         unsealed = unseal_workflow_node_secrets(seal_workflow_node_secrets(_setter_workflow()))
 
         first, nested = _setter_data(unsealed)
-        assert first["variableElementTypes"]["secret_map"] == {
+        assert first["elementTypes"]["variables.secret_map"] == {
             "api_key": "string",
             "port": "integer",
         }
@@ -396,7 +396,7 @@ class TestSetterRowsSealedAtRest:
             "api_key": "k-1",
             "port": "8443",
         }
-        assert nested["variableElementTypes"]["only_secret"] == ["integer"]
+        assert nested["elementTypes"]["variables.only_secret"] == ["integer"]
 
     def test_sealing_a_sealed_workflow_changes_nothing(self) -> None:
         once = seal_workflow_node_secrets(_setter_workflow())
@@ -406,17 +406,17 @@ class TestSetterRowsSealedAtRest:
         masked = mask_workflow_node_secrets(seal_workflow_node_secrets(_setter_workflow()))
 
         first, nested = _setter_data(masked)
-        assert first["variableElementTypes"] == {"plain_map": {"n": "integer"}}
-        assert "variableElementTypes" not in nested
+        assert first["elementTypes"] == {"variables.plain_map": {"n": "integer"}}
+        assert "elementTypes" not in nested
 
     def test_a_secret_row_without_element_types_gets_none(self) -> None:
         workflow = _setter_workflow()
         first, _nested = _setter_data(workflow)
-        del first["variableElementTypes"]["secret_map"]
+        del first["elementTypes"]["variables.secret_map"]
 
         sealed_first, _ = _setter_data(seal_workflow_node_secrets(workflow))
 
-        assert sealed_first["variableElementTypes"] == {"plain_map": {"n": "integer"}}
+        assert sealed_first["elementTypes"] == {"variables.plain_map": {"n": "integer"}}
 
 
 def _function_local_workflow(local: dict[str, Any]) -> dict[str, Any]:

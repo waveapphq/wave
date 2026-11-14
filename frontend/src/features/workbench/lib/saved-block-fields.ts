@@ -4,30 +4,21 @@
 
 import type { SaveData } from '@/features/workbench/common/element-config/types'
 import { getInputParams } from '@/features/workbench/lib/node-parameters'
+import { conditionListsOf } from '@/features/workbench/lib/validation/condition-checks'
 import { PYTHON_KEYWORD_SET } from '@/features/workbench/lib/python-builtins'
 import { isSealedSecret, MASK_PLACEHOLDER } from '@/lib/secret-envelope'
 import { isTableShape } from '@/lib/variable-table-model'
 import { numberValueProblem, sameNumber } from '@/lib/number-rule'
 
 export interface SavedBlockFields {
-  data: Pick<
-    SaveData,
-    | 'description'
-    | 'version'
-    | 'expressionFields'
-    | 'templateFields'
-    | 'variableExpressionKeys'
-    | 'variableTemplateKeys'
-    | 'variableTypes'
-    | 'variableElementTypes'
-    | 'elementTypes'
-  >
-  config: Pick<SaveData, 'values' | 'outputBindings' | 'profileBindings' | 'variableSecretKeys' | 'outputSecretFields'> & {
+  data: Pick<SaveData, 'description' | 'version' | 'expressionFields' | 'templateFields' | 'elementTypes'>
+  config: Pick<SaveData, 'values' | 'outputBindings' | 'profileBindings' | 'secretFields' | 'outputSecretFields'> & {
     unmasked_secret_fields: SaveData['unmaskedSecretFields']
     secret_masking: SaveData['secretMasking']
   }
 }
 
+/** The window's picked types for new Setter targets stay off the node: the declared variable carries the type. */
 export function savedBlockFields(saveData: SaveData): SavedBlockFields {
   return {
     data: {
@@ -35,17 +26,13 @@ export function savedBlockFields(saveData: SaveData): SavedBlockFields {
       version: saveData.version,
       expressionFields: saveData.expressionFields,
       templateFields: saveData.templateFields,
-      variableExpressionKeys: saveData.variableExpressionKeys,
-      variableTemplateKeys: saveData.variableTemplateKeys,
-      variableTypes: saveData.variableTypes,
-      variableElementTypes: saveData.variableElementTypes,
       elementTypes: saveData.elementTypes,
     },
     config: {
       values: saveData.values,
       outputBindings: saveData.outputBindings,
       profileBindings: saveData.profileBindings,
-      variableSecretKeys: saveData.variableSecretKeys,
+      secretFields: saveData.secretFields,
       outputSecretFields: saveData.outputSecretFields,
       // Snake_case: the backend runtime reads these two config keys.
       unmasked_secret_fields: saveData.unmaskedSecretFields,
@@ -83,7 +70,8 @@ interface NameSpan {
 }
 
 const SETTER_ELEMENT = 'variable-setter'
-const CONDITION_LIST_KEYS = ['assertions', 'conditions'] as const
+const SETTER_FIELD = 'variables'
+const SETTER_SLOT_ROW = new RegExp(String.raw`^${SETTER_FIELD}\.([^.]+)`)
 const FILTER_CELL = '_cell'
 const STRING_PREFIXES = new Set(['r', 'u', 'b', 'f', 'br', 'rb', 'fr', 'rf'])
 const IDENT_START = /[A-Za-z_]/
@@ -313,28 +301,26 @@ function referenceFields(elementType: unknown): string[] {
   return (getInputParams(elementType) ?? []).filter((p) => p.variableRef).map((p) => p.name)
 }
 
+/** The compare value of a literal row reads names only in {x} or Template mode. */
+function compareToKind(item: Rec): SiteKind | null {
+  if (item.reference_is_expression) return 'expression'
+  return item.reference_is_template ? 'template' : null
+}
+
 function conditionSites(items: unknown, path: string[], sites: TextSite[], local?: string): void {
   if (!Array.isArray(items)) return
-  const site = (at: string[]): TextSite => ({ path: at, kind: 'expression', local })
   items.forEach((item, index) => {
     if (!isRec(item)) return
     const at = [...path, String(index)]
     if (item.type === 'literal') {
-      sites.push(site([...at, 'variable']))
-      if (item.reference_is_expression) sites.push(site([...at, 'reference_value']))
+      sites.push({ path: [...at, 'variable'], kind: 'expression', local })
+      const kind = compareToKind(item)
+      if (kind) sites.push({ path: [...at, 'reference_value'], kind, local })
     } else if (item.type === 'expression') {
-      sites.push(site([...at, 'expression']))
+      sites.push({ path: [...at, 'expression'], kind: 'expression', local })
     } else if (item.type === 'group') {
       conditionSites(item.items, [...at, 'items'], sites, local)
     }
-  })
-}
-
-/** CSV / Excel filter conditions read like check rows, the cell they test bound as `_cell`. */
-function filterSites(filters: unknown, path: string[], sites: TextSite[]): void {
-  if (!Array.isArray(filters)) return
-  filters.forEach((filter, index) => {
-    conditionSites(isRec(filter) ? filter.conditions : undefined, [...path, String(index), 'conditions'], sites, FILTER_CELL)
   })
 }
 
@@ -349,17 +335,10 @@ function valueSites(data: Rec, values: Rec, sites: TextSite[]): void {
   for (const field of referenceFields(data.elementType)) {
     sites.push({ path: [...valuesPath, field], kind: 'expression' })
   }
-  for (const key of CONDITION_LIST_KEYS) conditionSites(values[key], [...valuesPath, key], sites)
-  filterSites(values.filters, [...valuesPath, 'filters'], sites)
-  if (Array.isArray(values.branches)) {
-    values.branches.forEach((branch, index) => {
-      conditionSites(isRec(branch) ? branch.conditions : undefined, [...valuesPath, 'branches', String(index), 'conditions'], sites)
-    })
-  }
-  if (data.elementType === SETTER_ELEMENT) {
-    const setterPath = [...valuesPath, 'variables']
-    for (const key of stringList(data.variableExpressionKeys)) sites.push({ path: [...setterPath, key], kind: 'expression' })
-    for (const key of stringList(data.variableTemplateKeys)) sites.push({ path: [...setterPath, key], kind: 'template' })
+  if (typeof data.elementType !== 'string') return
+  // CSV / Excel filter conditions bind the cell they test as `_cell`.
+  for (const list of conditionListsOf(data.elementType, values)) {
+    conditionSites(list.items, [...valuesPath, ...list.place.split('.')], sites, list.inFilter ? FILTER_CELL : undefined)
   }
 }
 
@@ -456,22 +435,24 @@ function rewriteOutputBindings(data: Rec, rename: NameRename): Rec {
   return { ...data, config: nextConfig }
 }
 
-/** A renamed Variable Setter target moves across its value map, kind keys, types and secret keys. */
+/** A Setter slot `variables.<row>` or `variables.<row>.<entry>` with its row renamed; any other key stays. */
+function renameSetterSlot(slot: string, rename: NameRename): string {
+  return slot.replace(SETTER_SLOT_ROW, (_slot, row: string) => `${SETTER_FIELD}.${rename(row)}`)
+}
+
+/** A renamed Variable Setter target moves across its value map and every `variables.<row>` slot it keys. */
 function rewriteSetterTargets(data: Rec, rename: NameRename): Rec {
   const variables = setterVariablesOf(data)
   if (!variables || !Object.keys(variables).some((key) => rename(key) !== key)) return data
+  const slot: NameRename = (key) => renameSetterSlot(key, rename)
   const config = data.config as Rec
   const values = config.values as Rec
   const nextConfig: Rec = { ...config, values: { ...values, variables: renameKeys(variables, rename) } }
-  if (Array.isArray(config.variableSecretKeys)) nextConfig.variableSecretKeys = renameEach(config.variableSecretKeys, rename)
-  const next: Rec = {
-    ...data,
-    config: nextConfig,
-    variableExpressionKeys: renameEach(data.variableExpressionKeys, rename),
-    variableTemplateKeys: renameEach(data.variableTemplateKeys, rename),
-    variableTypes: renameKeys(isRec(data.variableTypes) ? data.variableTypes : {}, rename),
-  }
-  if (isRec(data.variableElementTypes)) next.variableElementTypes = renameKeys(data.variableElementTypes, rename)
+  if (Array.isArray(config.secretFields)) nextConfig.secretFields = renameEach(config.secretFields, slot)
+  const next: Rec = { ...data, config: nextConfig }
+  if (Array.isArray(data.expressionFields)) next.expressionFields = renameEach(data.expressionFields, slot)
+  if (Array.isArray(data.templateFields)) next.templateFields = renameEach(data.templateFields, slot)
+  if (isRec(data.elementTypes)) next.elementTypes = renameKeys(data.elementTypes, slot)
   return next
 }
 
@@ -603,7 +584,7 @@ function sameAllowedValue(item: unknown, value: unknown, type: string | undefine
 }
 
 /** True when a stored literal still fits its input: null and an untyped input always do (FNCFG-9). */
-function literalFits(value: unknown, input: BlockFieldInput): boolean {
+export function literalFits(value: unknown, input: BlockFieldInput): boolean {
   if (value === null || value === undefined) return true
   if (typeof value === 'string' && (isSealedSecret(value) || value === MASK_PLACEHOLDER)) return true
   const fits = input.type === undefined ? undefined : FIT_CHECKS[input.type]

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from tests.core.recipes.conftest import LOG_STEP, find_finding, make_recipe
+from tests.core.recipes.conftest import LOG_STEP, create_profile, find_finding, make_recipe
 
 
 def compile_recipe(text: str) -> dict[str, Any]:
@@ -50,6 +50,12 @@ def values_of(result: dict[str, Any], node_id: str) -> dict[str, Any]:
 
 def without_id(item: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in item.items() if key != "id"}
+
+
+def variable_prefixed_keys(data: dict[str, Any]) -> list[str]:
+    """Keys of a node's data or config named 'variable...': a Setter keeps its rows only in
+    config.values and the shared flags (REQ-3.4.1.14)."""
+    return [key for key in (*data, *data.get("config", {})) if key.startswith("variable")]
 
 
 def assert_assertion_ids(items: list[dict[str, Any]]) -> None:
@@ -158,6 +164,52 @@ class TestIfElse:
         assert implicit["sourceHandle"] == "branch_1"
         assert implicit["targetHandle"] == "ingress_1"
 
+    def test_empty_branches_meeting_one_block_each_keep_their_own_wire(self) -> None:
+        flow = [
+            {
+                "if": {
+                    "when": "x == 1",
+                    "then": [],
+                    "elif": [{"when": "x == 2", "then": []}],
+                    "else": [],
+                }
+            },
+            LOG_STEP,
+        ]
+        result = compile_clean(make_recipe(flow, variables={"x": {"type": "integer", "value": 1}}))
+        assert edges_from(result, "node-1") == [
+            {
+                "id": "edge-node-1-branch_0-node-2",
+                "source": "node-1",
+                "target": "node-2",
+                "sourceHandle": "branch_0",
+            },
+            {
+                "id": "edge-node-1-branch_1-node-2-ingress_1",
+                "source": "node-1",
+                "target": "node-2",
+                "sourceHandle": "branch_1",
+                "targetHandle": "ingress_1",
+            },
+            {
+                "id": "edge-node-1-branch_2-node-2-ingress_2",
+                "source": "node-1",
+                "target": "node-2",
+                "sourceHandle": "branch_2",
+                "targetHandle": "ingress_2",
+            },
+        ]
+
+    def test_a_missing_else_falling_through_beside_an_empty_then_keeps_its_own_wire(
+        self,
+    ) -> None:
+        flow = [{"if": {"when": "x == 1", "then": []}}, LOG_STEP]
+        result = compile_clean(make_recipe(flow, variables={"x": {"type": "integer", "value": 1}}))
+        assert [edge["id"] for edge in edges_from(result, "node-1")] == [
+            "edge-node-1-branch_0-node-2",
+            "edge-node-1-branch_1-node-2-ingress_1",
+        ]
+
     def test_trailing_if_without_else_keeps_a_single_branch(self) -> None:
         flow = [{"if": {"when": "x == 1", "then": [LOG_STEP]}}]
         result = compile_clean(make_recipe(flow, variables={"x": {"type": "integer", "value": 1}}))
@@ -186,6 +238,70 @@ class TestIfElse:
         assert [(edge["source"], edge.get("sourceHandle")) for edge in delay_in] == [
             ("node-2", "branch_1")
         ]
+
+    def test_branch_labels_come_from_if_label_elif_label_and_else_label(self) -> None:
+        flow = [
+            {
+                "if": {
+                    "label": "Route",
+                    "if_label": "Is one",
+                    "when": "x == 1",
+                    "then": [LOG_STEP],
+                    "elif": [{"label": "Is two", "when": "x == 2", "then": [LOG_STEP]}],
+                    "else_label": "Other",
+                    "else": [LOG_STEP],
+                }
+            },
+            LOG_STEP,
+        ]
+        result = compile_clean(make_recipe(flow, variables={"x": {"type": "integer", "value": 1}}))
+        branches = values_of(result, "node-1")["branches"]
+        assert [branch["label"] for branch in branches] == ["Is one", "Is two", "Other"]
+        # The construct's own label stays the Block's name.
+        assert nodes_by_id(result)["node-1"]["data"]["label"] == "Route"
+
+    def test_an_implicit_else_keeps_a_blank_label(self) -> None:
+        flow = [{"if": {"if_label": "Is one", "when": "x == 1", "then": [LOG_STEP]}}, LOG_STEP]
+        result = compile_clean(make_recipe(flow, variables={"x": {"type": "integer", "value": 1}}))
+        branches = values_of(result, "node-1")["branches"]
+        assert branches[0]["label"] == "Is one"
+        assert branches[1] == {"id": "branch_1", "type": "else", "label": ""}
+
+    def test_when_lists_join_their_conditions(self) -> None:
+        flow = [
+            {
+                "if": {
+                    "when": ["x == 1", COMPARISON],
+                    "then": [LOG_STEP],
+                    "elif": [{"when": ["x == 2", "or", "x == 3"], "then": [LOG_STEP]}],
+                }
+            },
+            LOG_STEP,
+        ]
+        variables = {
+            "x": {"type": "integer", "value": 1},
+            "transport": {"type": "string", "value": "TCP"},
+        }
+        branches = values_of(compile_clean(make_recipe(flow, variables=variables)), "node-1")[
+            "branches"
+        ]
+        assert [without_id(item) for item in branches[0]["conditions"]] == [
+            {"type": "expression", "expression": "x == 1"},
+            {"type": "operator", "value": "and"},
+            {
+                "type": "literal",
+                "variable": "transport",
+                "operator": "equals",
+                "value_type": "string",
+                "reference_value": "TCP",
+            },
+        ]
+        assert [without_id(item) for item in branches[1]["conditions"]] == [
+            {"type": "expression", "expression": "x == 2"},
+            {"type": "operator", "value": "or"},
+            {"type": "expression", "expression": "x == 3"},
+        ]
+        assert_assertion_ids([*branches[0]["conditions"], *branches[1]["conditions"]])
 
 
 SWITCH_VARIABLES = {
@@ -312,6 +428,251 @@ class TestSwitch:
         assert [edge["sourceHandle"] for edge in edges_from(result, "node-1")] == ["branch_0"]
         assert edges_from(result, "node-2") == []
 
+    def test_case_and_default_labels_come_from_label_and_default_label(self) -> None:
+        flow = [
+            {
+                "switch": {
+                    "cases": [
+                        {"label": "OK", "when": "code == 200", "steps": [LOG_STEP]},
+                        {"when": "code == 404", "steps": [LOG_STEP]},
+                    ],
+                    "default_label": "Fallback",
+                    "default": [LOG_STEP],
+                }
+            },
+            LOG_STEP,
+        ]
+        result = compile_clean(make_recipe(flow, variables=SWITCH_VARIABLES))
+        branches = values_of(result, "node-1")["branches"]
+        assert [branch["label"] for branch in branches] == ["OK", "", "Fallback"]
+
+    def test_a_case_when_list_joins_its_conditions(self) -> None:
+        flow = [
+            {"switch": {"cases": [{"when": ["code == 200", COMPARISON], "steps": [LOG_STEP]}]}},
+            LOG_STEP,
+        ]
+        conditions = values_of(
+            compile_clean(make_recipe(flow, variables=SWITCH_VARIABLES)), "node-1"
+        )["branches"][0]["conditions"]
+        assert [without_id(item) for item in conditions] == [
+            {"type": "expression", "expression": "code == 200"},
+            {"type": "operator", "value": "and"},
+            {
+                "type": "literal",
+                "variable": "transport",
+                "operator": "equals",
+                "value_type": "string",
+                "reference_value": "TCP",
+            },
+        ]
+        assert_assertion_ids(conditions)
+
+
+CONDITION_VARIABLES = {
+    "x": {"type": "integer", "value": 1},
+    "count": {"type": "integer", "value": 0},
+    "limit": {"type": "integer", "value": 5},
+    "host": {"type": "string", "value": "web-1"},
+    "prefix": {"type": "string", "value": "web"},
+}
+
+
+def assertion_items(that: list[Any]) -> list[dict[str, Any]]:
+    flow = [{"assert": {"that": that}}, LOG_STEP]
+    result = compile_clean(make_recipe(flow, variables=CONDITION_VARIABLES))
+    items: list[dict[str, Any]] = values_of(result, "node-1")["assertions"]
+    return items
+
+
+def without_ids(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Condition items with every id dropped, group items included."""
+    stripped: list[dict[str, Any]] = []
+    for item in items:
+        bare = without_id(item)
+        if bare.get("type") == "group":
+            bare["items"] = without_ids(bare["items"])
+        stripped.append(bare)
+    return stripped
+
+
+def item_ids(items: list[dict[str, Any]]) -> list[Any]:
+    """The ids of every condition and group item, group items included."""
+    ids: list[Any] = []
+    for item in items:
+        if item.get("type") == "operator":
+            continue
+        ids.append(item.get("id"))
+        if item.get("type") == "group":
+            ids.extend(item_ids(item["items"]))
+    return ids
+
+
+def expression(text: str) -> dict[str, Any]:
+    return {"type": "expression", "expression": text}
+
+
+def operator(word: str) -> dict[str, Any]:
+    return {"type": "operator", "value": word}
+
+
+class TestConditionItems:
+    """Recipe condition lists compile to the stored condition items (REQ-5.2.7.3)."""
+
+    def test_an_or_marker_becomes_an_or_operator(self) -> None:
+        items = assertion_items(["x == 1", "or", "x == 2"])
+        assert without_ids(items) == [expression("x == 1"), operator("or"), expression("x == 2")]
+        assert_assertion_ids(items)
+
+    def test_neighbors_are_joined_with_and(self) -> None:
+        items = assertion_items(["x == 1", "x == 2", "or", "x == 3"])
+        assert without_ids(items) == [
+            expression("x == 1"),
+            operator("and"),
+            expression("x == 2"),
+            operator("or"),
+            expression("x == 3"),
+        ]
+
+    def test_an_explicit_and_marker_is_kept_once(self) -> None:
+        items = assertion_items(["x == 1", "and", "x == 2"])
+        assert without_ids(items) == [expression("x == 1"), operator("and"), expression("x == 2")]
+
+    def test_a_group_becomes_a_group_item_with_nested_items_and_unique_ids(self) -> None:
+        items = assertion_items([{"group": ["x == 1", "or", "x == 2"]}, "x == 3"])
+        assert without_ids(items) == [
+            {
+                "type": "group",
+                "items": [expression("x == 1"), operator("or"), expression("x == 2")],
+            },
+            operator("and"),
+            expression("x == 3"),
+        ]
+        ids = item_ids(items)
+        assert len(ids) == 4
+        assert all(isinstance(item_id, str) and item_id for item_id in ids)
+        assert len(set(ids)) == len(ids)
+
+    def test_groups_nest_inside_groups(self) -> None:
+        items = assertion_items([{"group": ["x == 1", {"group": ["x == 2", "or", "x == 3"]}]}])
+        assert without_ids(items) == [
+            {
+                "type": "group",
+                "items": [
+                    expression("x == 1"),
+                    operator("and"),
+                    {
+                        "type": "group",
+                        "items": [expression("x == 2"), operator("or"), expression("x == 3")],
+                    },
+                ],
+            }
+        ]
+        ids = item_ids(items)
+        assert len(ids) == 5
+        assert len(set(ids)) == len(ids)
+
+    def test_an_expression_compare_to_sets_the_flag_with_the_text_and_the_declared_type(
+        self,
+    ) -> None:
+        (item,) = assertion_items(
+            [{"variable": "count", "operator": "equals", "value": {"expr": "limit + 1"}}]
+        )
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "count",
+            "operator": "equals",
+            "value_type": "integer",
+            "reference_value": "limit + 1",
+            "reference_is_expression": True,
+        }
+
+    @pytest.mark.parametrize(
+        ("value", "stored"),
+        [
+            pytest.param("{{ prefix }}-1", "{{ prefix }}-1", id="template-text"),
+            pytest.param({"template": "web-1"}, "web-1", id="template-form"),
+        ],
+    )
+    def test_a_template_compare_to_sets_the_template_flag(self, value: Any, stored: str) -> None:
+        (item,) = assertion_items([{"variable": "host", "operator": "equals", "value": value}])
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "host",
+            "operator": "equals",
+            "value_type": "string",
+            "reference_value": stored,
+            "reference_is_template": True,
+        }
+
+    def test_a_literal_compare_to_sets_no_flag(self) -> None:
+        (item,) = assertion_items(
+            [{"variable": "host", "operator": "equals", "value": {"literal": "{{ prefix }}-1"}}]
+        )
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "host",
+            "operator": "equals",
+            "value_type": "string",
+            "reference_value": "{{ prefix }}-1",
+        }
+
+    def test_a_comparison_written_with_no_value_stores_no_compare_to_value(self) -> None:
+        (item,) = assertion_items([{"variable": "host", "operator": "equals"}])
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "host",
+            "operator": "equals",
+            "value_type": "string",
+        }
+
+    def test_a_null_value_is_stored_as_written(self) -> None:
+        (item,) = assertion_items([{"variable": "host", "operator": "equals", "value": None}])
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "host",
+            "operator": "equals",
+            "value_type": "string",
+            "reference_value": None,
+        }
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param({"expr": "prefix"}, id="expression"),
+            pytest.param({"literal": "web"}, id="literal-form"),
+            pytest.param("{{ prefix }}-1", id="template-text"),
+            pytest.param({"template": "web-1"}, id="template-form"),
+        ],
+    )
+    def test_a_unary_operator_with_a_value_stores_no_compare_to_value(self, value: Any) -> None:
+        (item,) = assertion_items([{"variable": "host", "operator": "is_null", "value": value}])
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "host",
+            "operator": "is_null",
+            "value_type": "string",
+        }
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("{{ limit }}", id="template-text"),
+            pytest.param({"template": "{{ limit }}"}, id="template-form"),
+        ],
+    )
+    def test_a_template_under_a_unary_operator_on_a_number_compiles_and_is_dropped(
+        self, value: Any
+    ) -> None:
+        (item,) = assertion_items(
+            [{"variable": "count", "operator": "is_not_null", "value": value}]
+        )
+        assert without_id(item) == {
+            "type": "literal",
+            "variable": "count",
+            "operator": "is_not_null",
+            "value_type": "integer",
+        }
+
 
 class TestUnreachableGuard:
     def test_a_compile_producing_an_orphan_block_is_refused(self) -> None:
@@ -329,9 +690,9 @@ class TestUnreachableGuard:
         assert finding["step"] == "flow[0]"
         assert finding["problem"] == "Compiled block is unreachable from the start of the flow"
 
-    def test_floating_notes_never_trip_the_guard(self) -> None:
-        flow = [LOG_STEP, {"note": {"text": "Reviewed", "color": "yellow"}}]
-        result = compile_clean(make_recipe(flow))
+    def test_notes_beside_the_flow_never_trip_the_guard(self) -> None:
+        notes = [{"note": {"text": "Reviewed", "color": "yellow"}}]
+        result = compile_clean(make_recipe([LOG_STEP], notes=notes))
         note = next(
             node for node in result["test_data"]["workflow"]["nodes"] if node["type"] == "noteNode"
         )
@@ -404,6 +765,44 @@ class TestLoops:
             {"type": "expression", "expression": "i < 10"}
         ]
         assert edge_between(result, "node-1", "node-2")["sourceHandle"] == "body"
+
+    def test_for_count_mode_keeps_its_step(self) -> None:
+        flow = [{"for": {"count": 6, "step": 2, "body": [LOG_STEP]}}]
+        result = compile_clean(make_recipe(flow))
+        assert values_of(result, "node-1") == {"mode": "count", "count": 6, "step": 2}
+
+    def test_for_each_writes_a_given_collection_type(self) -> None:
+        flow = [
+            {
+                "for_each": {
+                    "collection": {"expr": "bag"},
+                    "collection_type": "map",
+                    "body": [LOG_STEP],
+                }
+            }
+        ]
+        variables = {"bag": {"type": "map", "value": {}}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        assert values_of(result, "node-1") == {"collection": "bag", "collection_type": "map"}
+
+    @pytest.mark.parametrize("declared", ["array", "map", "table"])
+    def test_for_each_derives_the_collection_type_from_the_variable_it_names(
+        self, declared: str
+    ) -> None:
+        flow = [{"for_each": {"collection": "bag", "body": [LOG_STEP]}}]
+        variables = {"bag": {"type": declared}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        data = nodes_by_id(result)["node-1"]["data"]
+        assert data["config"]["values"] == {"collection": "bag", "collection_type": declared}
+        assert data["expressionFields"] == []
+
+    def test_for_each_leaves_the_collection_type_out_for_an_expression_collection(self) -> None:
+        flow = [{"for_each": {"collection": {"expr": "bag"}, "body": [LOG_STEP]}}]
+        variables = {"bag": {"type": "map", "value": {}}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        data = nodes_by_id(result)["node-1"]["data"]
+        assert data["config"]["values"] == {"collection": "bag"}
+        assert data["expressionFields"] == ["collection"]
 
 
 class TestWaitUntil:
@@ -685,6 +1084,22 @@ class TestAssert:
         ]
         assert_assertion_ids(assertions)
 
+    def test_empty_pass_and_fail_meeting_the_next_step_each_keep_their_own_wire(self) -> None:
+        flow = [{"assert": {"that": ["x == 1"], "on_pass": [], "on_fail": []}}, LOG_STEP]
+        variables = {"x": {"type": "integer", "value": 1}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        assert [edge["id"] for edge in edges_from(result, "node-1")] == [
+            "edge-node-1-pass-node-2",
+            "edge-node-1-fail-node-2-ingress_1",
+        ]
+
+    def test_split_mode_with_no_section_last_in_the_flow_stays_split_with_no_egress(self) -> None:
+        flow = [LOG_STEP, {"assert": {"that": ["x == 1"], "mode": "split"}}]
+        variables = {"x": {"type": "integer", "value": 1}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        assert values_of(result, "node-2")["mode"] == "split"
+        assert edges_from(result, "node-2") == []
+
 
 class TestRemote:
     def _compile(self) -> dict[str, Any]:
@@ -716,6 +1131,28 @@ class TestRemote:
         assert edge_between(result, "node-1", "node-2")["sourceHandle"] == "body"
         assert edge_between(result, "node-1", "node-3")["sourceHandle"] == "then"
         assert result["step_map"]["node-2"] == "flow[0].remote.body[0]"
+
+    def test_remote_binds_its_profiles(self) -> None:
+        profile = create_profile("remote-main")
+        flow = [
+            {
+                "remote": {
+                    "settings": {"session_id": {"expr": "ssh_session"}},
+                    "profiles": [{"profile": "remote-main"}],
+                    "body": [LOG_STEP],
+                }
+            }
+        ]
+        variables = {"ssh_session": {"type": "string", "value": "main"}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        bindings = nodes_by_id(result)["node-1"]["data"]["config"]["profileBindings"]
+        assert bindings == [
+            {
+                "profileId": profile["id"],
+                "profileName": "remote-main",
+                "profileType": profile["type"],
+            }
+        ]
 
 
 class TestBreakContinue:
@@ -796,9 +1233,9 @@ class TestLeafSugar:
         data = nodes_by_id(result)["node-1"]["data"]
         assert data["elementType"] == "variable-setter"
         assert data["config"]["values"] == {"variables": {"counter": 0, "greeting": "'hi ' + user"}}
-        assert data["variableExpressionKeys"] == ["greeting"]
-        # The canvas setter editor types its rows from this node-data map.
-        assert data["variableTypes"] == {"counter": "integer", "greeting": "string"}
+        assert data["expressionFields"] == ["variables.greeting"]
+        # A row's type is its declared variable's type; the Block stores none (REQ-3.4.1.14).
+        assert variable_prefixed_keys(data) == []
 
     def test_set_types_rows_from_auto_declared_capture_targets(self) -> None:
         flow = [
@@ -811,7 +1248,8 @@ class TestLeafSugar:
         ]
         result = compile_clean(make_recipe(flow))
         data = nodes_by_id(result)["node-2"]["data"]
-        assert data["variableTypes"] == {"code": "integer"}
+        assert variable_prefixed_keys(data) == []
+        assert result["test_data"]["variables"]["code"] == {"type": "integer"}
 
     def test_halt_settings_pass_through(self) -> None:
         flow = [LOG_STEP, {"halt": {"scope": "test", "status": "failed", "message": "gave up"}}]
@@ -825,19 +1263,97 @@ class TestLeafSugar:
         }
         assert edges_from(result, "node-2") == []
 
-    def test_note_emits_a_free_floating_note_node(self) -> None:
+    def test_a_note_step_stands_in_the_flow(self) -> None:
         flow = [LOG_STEP, {"note": {"text": "Reviewed by QA", "color": "yellow"}}, LOG_STEP]
         result = compile_clean(make_recipe(flow))
         note = nodes_by_id(result)["node-2"]
         assert note["type"] == "noteNode"
         assert note["data"]["elementType"] == "note"
-        # Note nodes store config flat ({text, color}), matching the canvas
-        # note-node contract - not the workflowNode config.values shape.
-        assert note["data"]["config"] == {"text": "Reviewed by QA", "color": "yellow"}
-        # The note floats free and the chain passes it by untouched.
-        assert edges_from(result, "node-2") == []
-        assert not [edge for edge in all_edges(result) if edge["target"] == "node-2"]
-        assert edge_between(result, "node-1", "node-3") is not None
+        config = note["data"]["config"]
+        assert config["values"] == {"text": "Reviewed by QA", "color": "yellow"}
+        assert "text" not in config
+        assert "color" not in config
+        assert edges_from(result, "node-1") == [
+            {"id": "edge-node-1-node-2", "source": "node-1", "target": "node-2"}
+        ]
+        assert edges_from(result, "node-2") == [
+            {"id": "edge-node-2-node-3", "source": "node-2", "target": "node-3"}
+        ]
+
+    @pytest.mark.parametrize(
+        "halt_step",
+        [
+            pytest.param({"halt": {}}, id="halt-keyword"),
+            pytest.param({"block": "halt"}, id="block-halt"),
+        ],
+    )
+    def test_a_step_after_a_halt_is_unreachable(self, halt_step: dict[str, Any]) -> None:
+        result = compile_recipe(make_recipe([halt_step, LOG_STEP]))
+        assert result["test_data"] is None
+        assert find_finding(result["findings"], "UNREACHABLE_BLOCK") == {
+            "step": "flow[1]",
+            "code": "UNREACHABLE_BLOCK",
+            "severity": "error",
+            "problem": "Compiled block is unreachable from the start of the flow",
+            "fix": None,
+        }
+
+
+class TestStepIdentity:
+    """A step's description and disabled mark are written on its Block (REQ-5.2.7.3)."""
+
+    @pytest.mark.parametrize(
+        "step",
+        [
+            pytest.param({**LOG_STEP, "description": "Says hello", "disabled": True}, id="block"),
+            pytest.param(
+                {"set": {"counter": 1}, "description": "Says hello", "disabled": True},
+                id="set",
+            ),
+            pytest.param(
+                {
+                    "for": {
+                        "count": 2,
+                        "description": "Says hello",
+                        "disabled": True,
+                        "body": [LOG_STEP],
+                    }
+                },
+                id="construct",
+            ),
+        ],
+    )
+    def test_a_step_holds_its_description_and_disabled_mark(self, step: dict[str, Any]) -> None:
+        variables = {"counter": {"type": "integer", "value": 0}}
+        result = compile_clean(make_recipe([step], variables=variables))
+        data = nodes_by_id(result)["node-1"]["data"]
+        assert data["description"] == "Says hello"
+        assert data["disabled"] is True
+
+
+class TestNodeDataShape:
+    """A compiled Block keeps its values in config.values and the shared flags only
+    (REQ-5.2.7.3)."""
+
+    def test_no_block_carries_a_variable_key(self) -> None:
+        flow = [
+            LOG_STEP,
+            {"note": "Reviewed"},
+            {"for": {"count": 2, "body": [{"set": {"counter": 1}}]}},
+        ]
+        variables = {"counter": {"type": "integer", "value": 0}}
+        nodes = compile_clean(make_recipe(flow, variables=variables))["test_data"]["workflow"][
+            "nodes"
+        ]
+        assert {node["data"]["elementType"] for node in nodes} == {
+            "log",
+            "note",
+            "for",
+            "variable-setter",
+        }
+        assert {node["id"]: variable_prefixed_keys(node["data"]) for node in nodes} == {
+            node["id"]: [] for node in nodes
+        }
 
 
 def without_key(values: dict[str, Any], key: str) -> dict[str, Any]:
@@ -867,12 +1383,21 @@ class TestConstructCreationValues:
 
         assert values_of(result, "node-1") == {"mode": "count", "count": 3}
 
-    def test_a_for_each_step_never_writes_the_collection_type(self) -> None:
-        flow = [{"for_each": {"collection": {"expr": "items"}, "body": [LOG_STEP]}}]
+    @pytest.mark.parametrize(
+        "step",
+        [
+            pytest.param({"collection": {"expr": "items"}, "collection_type": "array"}, id="given"),
+            pytest.param({"collection": "items"}, id="derived"),
+        ],
+    )
+    def test_a_for_each_step_writes_the_collection_type_when_given_or_derived(
+        self, step: dict[str, Any]
+    ) -> None:
+        flow = [{"for_each": {**step, "body": [LOG_STEP]}}]
         variables = {"items": {"type": "array", "value": []}}
         result = compile_clean(make_recipe(flow, variables=variables))
 
-        assert values_of(result, "node-1") == {"collection": "items"}
+        assert values_of(result, "node-1") == {"collection": "items", "collection_type": "array"}
 
     def test_a_wait_until_step_holds_the_declared_fail_scope_flag(self) -> None:
         flow = [{"wait_until": {"that": ["ready == True"], "timeout": 30000, "retry": [LOG_STEP]}}]
@@ -922,8 +1447,7 @@ class TestConstructCreationValues:
     def test_a_note_step_holds_the_declared_color_beside_its_text(self) -> None:
         result = compile_clean(make_recipe([LOG_STEP, {"note": "Reviewed by QA"}, LOG_STEP]))
 
-        # A note keeps its settings flat in config, where the canvas note reads them.
-        assert nodes_by_id(result)["node-2"]["data"]["config"] == {
+        assert nodes_by_id(result)["node-2"]["data"]["config"]["values"] == {
             "text": "Reviewed by QA",
             "color": "slate",
         }
@@ -951,6 +1475,20 @@ class TestNestedConstructs:
         assert edge_between(result, "node-2", "node-3")["sourceHandle"] == "branch_0"
         assert edge_between(result, "node-3", "node-5").get("targetHandle") is None
         assert edge_between(result, "node-4", "node-5")["targetHandle"] == "ingress_1"
+
+    def test_nested_empty_branches_give_every_wire_its_own_id(self) -> None:
+        inner = {"if": {"when": "x == 2", "then": [], "else": []}}
+        flow = [{"if": {"when": "x == 1", "then": [inner], "else": []}}, LOG_STEP]
+        variables = {"x": {"type": "integer", "value": 1}}
+        result = compile_clean(make_recipe(flow, variables=variables))
+        ids = [edge["id"] for edge in all_edges(result)]
+        assert len(ids) == len(set(ids)), ids
+        into_log = [edge["id"] for edge in all_edges(result) if edge["target"] == "node-3"]
+        assert into_log == [
+            "edge-node-2-branch_0-node-3",
+            "edge-node-2-branch_1-node-3-ingress_1",
+            "edge-node-1-branch_1-node-3-ingress_2",
+        ]
 
     def test_switch_inside_a_loop_body_recurses(self) -> None:
         flow = [
@@ -1067,10 +1605,11 @@ class TestCoverageClosure:
         condition = values_of(result, "node-1")["branches"][0]["conditions"][0]
         assert condition["value_type"] == "boolean"
 
-    def test_set_to_an_undeclared_name_infers_the_row_type(self) -> None:
+    def test_set_to_an_undeclared_name_stores_no_row_type(self) -> None:
         result = compile_clean(make_recipe([{"set": {"fresh_target": 42}}]))
         data = nodes_by_id(result)["node-1"]["data"]
-        assert data["variableTypes"] == {"fresh_target": "integer"}
+        assert data["config"]["values"] == {"variables": {"fresh_target": 42}}
+        assert variable_prefixed_keys(data) == []
 
 
 VARIABLE_TYPES = ("string", "integer", "float", "boolean", "array", "map", "table")
@@ -1105,7 +1644,6 @@ class TestValuelessComparisons:
             "variable": "x",
             "operator": operator,
             "value_type": declared,
-            "reference_value": None,
         }
 
     @pytest.mark.parametrize("operator", ["is_null", "is_not_null"])
@@ -1117,7 +1655,6 @@ class TestValuelessComparisons:
             "type": "literal",
             "variable": "outer_value",
             "operator": operator,
-            "reference_value": None,
         }
 
     def test_an_authored_value_type_wins_and_compiles_with_no_reference(self) -> None:
@@ -1126,7 +1663,7 @@ class TestValuelessComparisons:
             {"x": {"type": "integer", "value": 3}},
         )
         assert condition["value_type"] == "string"
-        assert condition["reference_value"] is None
+        assert "reference_value" not in condition
 
     @pytest.mark.parametrize("operator", ["is_empty", "is_not_empty"])
     def test_a_table_emptiness_check_takes_the_table_type(self, operator: str) -> None:
@@ -1134,7 +1671,7 @@ class TestValuelessComparisons:
             {"variable": "grid", "operator": operator}, {"grid": {"type": "table"}}
         )
         assert condition["value_type"] == "table"
-        assert condition["reference_value"] is None
+        assert "reference_value" not in condition
 
     @pytest.mark.parametrize(
         ("declared", "operator"),
@@ -1148,7 +1685,7 @@ class TestValuelessComparisons:
         ],
     )
     @pytest.mark.parametrize("value", ["", "abc"])
-    def test_an_operator_that_takes_no_value_stores_none_and_the_declared_type(
+    def test_an_operator_that_takes_no_value_stores_no_value_and_the_declared_type(
         self, declared: str, operator: str, value: str
     ) -> None:
         condition = if_condition(
@@ -1159,7 +1696,6 @@ class TestValuelessComparisons:
             "variable": "x",
             "operator": operator,
             "value_type": declared,
-            "reference_value": None,
         }
 
     def test_value_type_table_compiles(self) -> None:
@@ -1172,7 +1708,6 @@ class TestValuelessComparisons:
             "variable": "grid",
             "operator": "is_not_empty",
             "value_type": "table",
-            "reference_value": None,
         }
 
 
@@ -1270,11 +1805,13 @@ class TestRecipeNumbersStoredForm:
                 }
             },
         ]
-        result = compile_clean(make_recipe(flow).replace("__value__", "2.50"))
+        recipe = make_recipe(flow, variables={"ratio": {"type": "float"}})
+        result = compile_clean(recipe.replace("__value__", "2.50"))
         setter = nodes_by_id(result)["node-1"]["data"]
         condition = values_of(result, "node-2")["branches"][0]["conditions"][0]
 
-        assert setter["variableTypes"] == {"ratio": "float"}
+        assert variable_prefixed_keys(setter) == []
+        assert result["test_data"]["variables"]["ratio"] == {"type": "float"}
         assert setter["config"]["values"] == {"variables": {"ratio": 2.5}}
         assert condition["value_type"] == "float"
         assert condition["reference_value"] == "2.50"

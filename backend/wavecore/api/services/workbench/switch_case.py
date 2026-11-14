@@ -12,7 +12,11 @@ from wavecore.api.services.workbench._common import (
     _add_execution_log,
 )
 from wavecore.api.services.workbench.block_source import node_source
-from wavecore.api.services.workbench.block_status import leave_by_then, skip_lanes_not_run
+from wavecore.api.services.workbench.block_status import (
+    leave_by_then,
+    skip_lanes_not_run,
+    take_lane,
+)
 from wavecore.api.services.workbench.nested import has_session_signal
 from wavecore.api.services.workbench.try_catch import (
     _execute_path_nodes,
@@ -60,6 +64,8 @@ async def _run_branch(scope: _SwitchScope, branch: dict[str, Any], index: int) -
         scope.node_map,
         scope.executed,
     )
+    if chain:
+        await take_lane(scope.session, scope.session_id, scope.node_id, str(branch.get("id")))
     return await _execute_path_nodes(
         chain,
         scope.node_map,

@@ -38,7 +38,7 @@ run reads the new name everywhere.
 - Step 5 (persisted Test):
   - The serialized workflow and variables contain `gadget_key` and NOT `widget_id` anywhere.
   - The variable definition is renamed (`gadget_key`, not `widget_id`).
-  - Setter target key + `variableTypes` renamed to `gadget_key`.
+  - Setter target key renamed to `gadget_key`; the `gadget_key` variable keeps its integer type.
   - Setter expression value is `gadget_key * 2`; template value is `id is {{ gadget_key }}`.
   - Log template field is `Total {{ gadget_key }}`; Log expression field is `str(gadget_key)`.
 - Step 6: the run passes and the two Logs print `Total 7` and `7`.

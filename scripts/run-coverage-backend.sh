@@ -13,8 +13,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 
-# Ensure sonar-scanner is on PATH if installed locally
-export PATH="$HOME/bin:$PATH"
 COVERAGE_DIR="$BACKEND_DIR/.coverage"
 COVERAGE_DATA="$COVERAGE_DIR/.coverage"
 
@@ -569,15 +567,6 @@ if [ "$COV_MODE" = "clean" ] || [ ${#TEST_SUITES[@]} -eq ${#ALL_SUITES[@]} ]; th
     echo "  - JSON: coverage.json"
 fi
 echo ""
-
-# Run SonarQube scan if sonar-scanner is available (always, even if thresholds failed)
-if command -v sonar-scanner &> /dev/null && [ -f "sonar-project.properties" ]; then
-    echo ""
-    echo "================================"
-    echo "📡 Running SonarQube Analysis"
-    echo "================================"
-    sonar-scanner 2>&1 | tail -5
-fi
 
 # Check coverage threshold (only in clean mode or when running all tests)
 if [ "$COV_MODE" = "smart" ] && [ ${#TEST_SUITES[@]} -lt ${#ALL_SUITES[@]} ]; then

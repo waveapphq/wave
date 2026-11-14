@@ -1640,7 +1640,7 @@ class TestFlowConsistency:
                             "label": "try-1",
                             "elementType": "try_catch",
                             "nodeType": "control",
-                            "config": {"enable_catch": True, "enable_finally": False},
+                            "config": {"values": {"enable_catch": True, "enable_finally": False}},
                         },
                     },
                     _make_workflow_node(
@@ -1663,6 +1663,166 @@ class TestFlowConsistency:
             _issue_field(issues[0], "message"),
         )
         assert _issue_field(issues[0], "node_label") == "try-1"
+
+    def test_a_note_with_no_wire_is_an_annotation_and_not_unreachable(self) -> None:
+        # REQ-5.2.7.3: a Note nothing connects to sits beside the flow; the run never reaches it.
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        payload = _note_flow([_edge("start-node", "log-1")])
+
+        assert _find(_validate_flow_consistency(payload), "NODE_UNREACHABLE") == []
+
+    @pytest.mark.parametrize(
+        "wire",
+        [_edge("note-1", "orphan"), _edge("orphan", "note-1")],
+        ids=["wire-out", "wire-in"],
+    )
+    def test_a_note_with_a_wire_the_entry_does_not_reach_is_unreachable(
+        self, wire: dict[str, Any]
+    ) -> None:
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        payload = _note_flow([_edge("start-node", "log-1"), wire], orphan=True)
+
+        issues = _find(_validate_flow_consistency(payload), "NODE_UNREACHABLE")
+        assert sorted(_issue_field(i, "node_id") for i in issues) == ["note-1", "orphan"]
+
+    def test_a_note_the_flow_reaches_is_not_unreachable(self) -> None:
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        payload = _note_flow([_edge("start-node", "log-1"), _edge("log-1", "note-1")])
+
+        assert _find(_validate_flow_consistency(payload), "NODE_UNREACHABLE") == []
+
+    def test_a_library_save_accepts_a_note_with_no_wire(self) -> None:
+        from wavecore.api.services.functions._storage import validate_function_for_save
+
+        issues = validate_function_for_save(_note_flow([_edge("start-node", "log-1")]))
+
+        assert [i for i in issues if _issue_field(i, "severity") == "error"] == []
+
+    def test_a_block_only_a_removed_retry_wire_reached_names_that_wire(self) -> None:
+        # REQ-3.5.4.3: the save removed the Watch wait's retry wire, the Block's only wire in.
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        issues = _find(
+            _validate_flow_consistency(_retry_stranded_flow(), [_RETRY_WIRE]), "NODE_UNREACHABLE"
+        )
+
+        assert _unreached_rows(issues) == [("stranded", _STRANDED_MESSAGE)]
+
+    def test_the_save_check_passes_the_removed_retry_wires_to_the_flow_check(self) -> None:
+        from wavecore.api.services.functions._storage import validate_function_for_save
+
+        issues = validate_function_for_save(
+            _retry_stranded_flow(), removed_retry_wires=[_RETRY_WIRE]
+        )
+
+        assert _unreached_rows(_find(issues, "NODE_UNREACHABLE")) == [
+            ("stranded", _STRANDED_MESSAGE)
+        ]
+
+    def test_an_unreached_block_keeps_the_plain_finding_when_no_wire_was_removed(self) -> None:
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        issues = _find(_validate_flow_consistency(_retry_stranded_flow()), "NODE_UNREACHABLE")
+
+        assert _unreached_rows(issues) == [("stranded", _UNREACHED_MESSAGE)]
+
+    def test_a_block_two_removed_retry_wires_reached_keeps_the_plain_finding(self) -> None:
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        payload = _retry_stranded_flow(second_watch=True)
+        second = {**_RETRY_WIRE, "source": "watch-2"}
+
+        issues = _find(
+            _validate_flow_consistency(payload, [_RETRY_WIRE, second]), "NODE_UNREACHABLE"
+        )
+
+        assert _unreached_rows(issues) == [("stranded", _UNREACHED_MESSAGE)]
+
+    def test_a_removed_wire_from_a_block_outside_the_flow_keeps_the_plain_finding(self) -> None:
+        from wavecore.api.services.functions._storage import _validate_flow_consistency
+
+        elsewhere = {**_RETRY_WIRE, "source": "not-in-this-flow"}
+
+        issues = _find(
+            _validate_flow_consistency(_retry_stranded_flow(), [elsewhere]), "NODE_UNREACHABLE"
+        )
+
+        assert _unreached_rows(issues) == [("stranded", _UNREACHED_MESSAGE)]
+
+
+_RETRY_WIRE: dict[str, Any] = {"source": "watch", "target": "stranded", "sourceHandle": "retry"}
+_UNREACHED_MESSAGE = "Block is not reachable from the Function's entry"
+_STRANDED_MESSAGE = (
+    "Block 'stranded' is not reachable from the Function's entry: its only wire came from the "
+    "retry lane of Watch-mode Wait Until 'watch', which was removed"
+)
+
+
+def _retry_stranded_flow(*, second_watch: bool = False) -> dict[str, Any]:
+    """A Watch wait and its next Log, plus a Log no wire reaches now that its retry wire is gone."""
+    watch_values = {"mode": "watch", "timeout": 1000, "conditions": []}
+    nodes = [
+        _make_workflow_node(
+            "watch", element_type="wait-until", node_type="control", values=watch_values
+        ),
+        _make_workflow_node("next", element_type="log", values={"message": "'a'", "level": "INFO"}),
+        _make_workflow_node(
+            "stranded", element_type="log", values={"message": "'b'", "level": "INFO"}
+        ),
+    ]
+    edges = [_edge("start-node", "watch"), _edge("watch", "next")]
+    if second_watch:
+        nodes.append(
+            _make_workflow_node(
+                "watch-2", element_type="wait-until", node_type="control", values=watch_values
+            )
+        )
+        edges.append(_edge("next", "watch-2"))
+    return make_function_payload(name="stranded", workflow={"nodes": nodes, "edges": edges})
+
+
+def _unreached_rows(issues: Iterable[Any]) -> list[tuple[str, str]]:
+    return [(_issue_field(i, "node_id"), _issue_field(i, "message")) for i in issues]
+
+
+def _note(node_id: str) -> dict[str, Any]:
+    """A Note as the canvas stores it."""
+    return {
+        "id": node_id,
+        "type": "noteNode",
+        "position": {"x": 0, "y": 0},
+        "data": {
+            "label": "Note",
+            "elementType": "note",
+            "nodeType": "control",
+            "version": "1.0.0",
+            "config": {
+                "values": {"text": "Owned by payments", "color": "pink"},
+                "profileBindings": [],
+                "outputBindings": {},
+            },
+        },
+    }
+
+
+def _note_flow(edges: list[dict[str, Any]], *, orphan: bool = False) -> dict[str, Any]:
+    """A Function flow of one Log and one Note, plus an unreached Log when ``orphan``."""
+    nodes = [
+        _make_workflow_node(
+            "log-1", element_type="log", values={"message": "'a'", "level": "INFO"}
+        ),
+        _note("note-1"),
+    ]
+    if orphan:
+        nodes.append(
+            _make_workflow_node(
+                "orphan", element_type="log", values={"message": "'b'", "level": "INFO"}
+            )
+        )
+    return make_function_payload(name="annotated", workflow={"nodes": nodes, "edges": edges})
 
 
 # ---------------------------------------------------------------------------
@@ -1944,15 +2104,63 @@ class TestOutputProducerDefensiveBranches:
         assert len(producers) == 1
 
 
-class TestTryCatchEnablesCatchFallback:
-    """``_try_catch_enables_catch`` falls back to ``config.values`` when
-    ``enable_catch`` is not on the top-level config."""
+def _catch_default_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Declare ``enable_catch`` off by default on the Try / Catch / Finally control."""
+    from wavecore.controls.flow import TryCatchFinallyControl
 
-    def test_try_with_catch_disabled_via_values_skips_validation(self) -> None:
+    declared = TryCatchFinallyControl.__dict__["metadata"]
+
+    def metadata(control: Any) -> dict[str, Any]:
+        found: dict[str, Any] = declared.fget(control)
+        found["parameter_schema"] = [
+            field.model_copy(update={"default": False}) if field.name == "enable_catch" else field
+            for field in found["parameter_schema"]
+        ]
+        return found
+
+    monkeypatch.setattr(TryCatchFinallyControl, "metadata", property(metadata))
+
+
+class TestTryCatchEnablesCatchFallback:
+    """``_try_catch_enables_catch`` reads ``enable_catch`` from ``config.values``, else the
+    control's declared default; a key beside ``values`` is not read."""
+
+    @pytest.mark.parametrize(
+        ("config", "declared_off", "expected"),
+        [
+            pytest.param({"values": {"enable_catch": False}}, False, [], id="values-off"),
+            pytest.param(
+                {"values": {"enable_catch": True}},
+                False,
+                ["Try construct has no matching catch branch"],
+                id="values-on",
+            ),
+            pytest.param(
+                {"values": {}},
+                False,
+                ["Try construct has no matching catch branch"],
+                id="declared-default-on",
+            ),
+            pytest.param({"values": {}}, True, [], id="declared-default-off"),
+            pytest.param(
+                {"enable_catch": False, "values": {}},
+                False,
+                ["Try construct has no matching catch branch"],
+                id="key-beside-values-is-not-read",
+            ),
+        ],
+    )
+    def test_try_catch_reads_enable_catch_from_values_or_the_declared_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        config: dict[str, Any],
+        declared_off: bool,
+        expected: list[str],
+    ) -> None:
         from wavecore.api.services.functions._storage import validate_function_for_save
 
-        # A try-catch with catch disabled via ``values.enable_catch=False``
-        # bypasses the TRY_WITHOUT_CATCH check entirely.
+        if declared_off:
+            _catch_default_false(monkeypatch)
         payload = make_function_payload(
             workflow={
                 "nodes": [
@@ -1962,9 +2170,7 @@ class TestTryCatchEnablesCatchFallback:
                         "data": {
                             "nodeType": "control",
                             "elementType": "try-catch-finally",
-                            "config": {
-                                "values": {"enable_catch": False},
-                            },
+                            "config": config,
                         },
                     },
                     _make_workflow_node(
@@ -1979,8 +2185,10 @@ class TestTryCatchEnablesCatchFallback:
                 ],
             },
         )
-        codes = _codes(validate_function_for_save(payload))
-        assert "TRY_WITHOUT_CATCH" not in codes
+
+        issues = _find(validate_function_for_save(payload), "TRY_WITHOUT_CATCH")
+
+        assert _messages(issues) == expected
 
 
 # ---------------------------------------------------------------------------

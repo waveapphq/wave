@@ -131,7 +131,6 @@ def log_block(
             },
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     )
 
@@ -212,11 +211,10 @@ def setter_block(
                 "values": {"variables": dict(values)},
                 "outputBindings": {},
                 "profileBindings": [],
-                "variableSecretKeys": list(secret_keys),
+                "secretFields": [f"variables.{key}" for key in secret_keys],
             },
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     )
 

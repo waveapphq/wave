@@ -22,6 +22,7 @@ import { openSessionEventCollector } from '../../helpers/ws-events'
 function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
   nodes: Record<string, unknown>[]
   edges: Record<string, unknown>[]
+  variables: Record<string, unknown>[]
 } {
   const nodes: Record<string, unknown>[] = [
     {
@@ -36,7 +37,6 @@ function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
         version: '1.0.0',
         expressionFields: ['message'],
         templateFields: [],
-        variableExpressionKeys: [],
         config: {
           values: { message: "'scope-terminal-line'", level: 'INFO' },
           outputBindings: {},
@@ -48,6 +48,7 @@ function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
   const edges: Record<string, unknown>[] = [
     { id: 'e-start-inner', source: 'start-node', target: 'inner-log' },
   ]
+  const variables: Record<string, unknown>[] = []
   if (scenario === 'slow') {
     // A Delay control (duration in MILLISECONDS, category "timing") gives the
     // WS test time to subscribe after learning the session id but before the
@@ -64,15 +65,14 @@ function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
         version: '1.0.0',
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         config: { values: { duration: 2500 }, outputBindings: {}, profileBindings: [] },
       },
     })
     edges.push({ id: 'e-log-delay', source: 'inner-log', target: 'inner-delay' })
   }
   if (scenario === 'failing') {
-    // Assert control with a literal assertion that is always false:
-    // 1 equals 2 -> assertion fails -> body fails.
+    // An always-false Assert that fails its scope (the local `one`, 1, equals 2) fails the body.
+    variables.push({ name: 'one', type: 'integer', value: 1 })
     nodes.push({
       id: 'inner-assert',
       type: 'workflowNode',
@@ -85,14 +85,14 @@ function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
         version: '1.0.0',
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         config: {
           values: {
             mode: 'single',
+            fail_current_scope: true,
             assertions: [
               {
                 type: 'literal',
-                variable: '1',
+                variable: 'one',
                 value_type: 'integer',
                 operator: 'equals',
                 reference_value: 2,
@@ -108,7 +108,7 @@ function buildInnerNodes(scenario: 'passing' | 'failing' | 'slow'): {
     })
     edges.push({ id: 'e-log-assert', source: 'inner-log', target: 'inner-assert' })
   }
-  return { nodes, edges }
+  return { nodes, edges, variables }
 }
 
 async function seedTest(
@@ -137,14 +137,13 @@ async function seedTest(
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
               description: 'Scope-terminal-event body',
               inputs: [],
               outputs: [],
-              variables: [],
+              variables: body.variables,
               workflow: { nodes: body.nodes, edges: body.edges },
             },
           },

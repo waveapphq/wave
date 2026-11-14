@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'anchor'", "level": "INFO" },
             "outputBindings": {},

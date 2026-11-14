@@ -720,7 +720,7 @@ class TestPublishRouteServiceErrors:
         etag = _get_test_etag(client, test_id)
         original = wfunctions._functions_service.create_function
 
-        def _raise_other(payload):
+        def _raise_other(payload, **_kwargs):
             raise ValidationException(
                 message="Some other validation error",
                 details={"errors": [{"message": "Some other validation error"}]},
@@ -751,7 +751,7 @@ class TestPublishRouteServiceErrors:
         test_id = _seed_test_with_local_function()
         etag = _get_test_etag(client, test_id)
 
-        def _raise_save(_t, _n, _p):
+        def _raise_save(_t, _n, _p, **_kwargs):
             raise SaveValidationError(
                 [{"code": "FOO", "message": "Forced body error", "severity": "error"}]
             )
@@ -847,7 +847,7 @@ class TestPublishRouteEmptyErrorsEnvelope:
         test_id = _seed_test_with_local_function()
         etag = _get_test_etag(client, test_id)
 
-        def _raise_empty(_t, _n, _p):
+        def _raise_empty(_t, _n, _p, **_kwargs):
             err = SaveValidationError([])
             err.errors = []
             raise err

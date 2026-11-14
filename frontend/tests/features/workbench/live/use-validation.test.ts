@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useValidation } from '@/features/workbench/live/use-validation'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
+import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
 import type { ValidationError } from '@/features/workbench/common/canvas/dialogs/validation-error-dialog'
 import { createSimpleRouterWrapper } from '../../../utils/router-test-utils'
 
@@ -84,6 +85,7 @@ const storeFns = {
   setVariables: vi.fn(),
   addVariable: vi.fn(),
   editingTestId: null as string | null,
+  editingTestName: null as string | null,
 }
 
 function setupStore(overrides: Partial<typeof storeFns> = {}) {
@@ -91,7 +93,45 @@ function setupStore(overrides: Partial<typeof storeFns> = {}) {
   vi.mocked(useWorkflowStore).mockImplementation((selector: unknown) => {
     return (selector as (s: typeof state) => unknown)(state)
   })
+  // The deleted-Test check reads the open Test outside React, as the save does.
+  vi.mocked(useWorkflowStore).getState = (() => state) as unknown as typeof useWorkflowStore.getState
   return state
+}
+
+const REPEATED_WIRE_MESSAGE = "Edge ID 'e-shared' is used by more than one edge"
+const REPEATED_WIRE_ID: ValidationError = {
+  path: 'edges.1',
+  code: 'DUPLICATE_EDGE_ID',
+  message: REPEATED_WIRE_MESSAGE,
+  fix_action: null,
+}
+const CROSS_SCOPE_WIRE: ValidationError = {
+  path: 'edges.2',
+  code: 'CROSS_SCOPE_EDGE',
+  message: "Block 'Log' cannot connect to 'Log'",
+  fix_action: 'Remove the cross-scope edge',
+}
+/** The finding as the fix endpoint's 422 lists it. */
+const REPEATED_WIRE_FINDING = {
+  path: 'edges.1',
+  node_id: null,
+  node_label: null,
+  element_type: null,
+  code: 'DUPLICATE_EDGE_ID',
+  message: REPEATED_WIRE_MESSAGE,
+  severity: 'error',
+  fix_action: null,
+}
+
+/** The fix endpoint's refusal, as the API client raises it. */
+function fixRefusal(details: Array<Record<string, unknown>>): Error {
+  return Object.assign(new Error('Test has 1 validation error(s)'), {
+    type: 'validation',
+    status: 422,
+    code: 'VALIDATION_ERROR',
+    details,
+    isRetryable: false,
+  })
 }
 
 /** Each variable Fix All handed to addVariable, in call order. */
@@ -117,6 +157,7 @@ function renderValidation(clearDraft = vi.fn()) {
 describe('useValidation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useDeletedTestStore.setState({ info: null })
     // Reset store defaults
     storeFns.editingTestId = null
     storeFns.reset = vi.fn()
@@ -490,6 +531,100 @@ describe('useValidation', () => {
       consoleSpy.mockRestore()
     })
 
+    it('lists the refusal in the dialog when the fix endpoint refuses a Test that repeats a wire id', async () => {
+      const state = setupStore({ editingTestId: 'test-99' })
+      mockFixTest.mockRejectedValue(fixRefusal([REPEATED_WIRE_FINDING]))
+      const { result } = renderValidation()
+      act(() => {
+        result.current.setValidationMode('load')
+        result.current.setValidationErrors([CROSS_SCOPE_WIRE])
+        result.current.setShowValidationErrorDialog(true)
+      })
+
+      await act(async () => {
+        await result.current.handleFixAll()
+      })
+
+      expect(mockToastError).not.toHaveBeenCalled()
+      expect(result.current.showValidationErrorDialog).toBe(true)
+      expect(result.current.validationMode).toBe('load')
+      expect(result.current.validationErrors.map((e) => [e.code, e.message, e.fix_action ?? null])).toEqual([
+        ['DUPLICATE_EDGE_ID', REPEATED_WIRE_MESSAGE, null],
+      ])
+      expect(result.current.canFixAll).toBe(false)
+      expect(result.current.isFixingTest).toBe(false)
+      expect(state.reset).not.toHaveBeenCalled()
+    })
+
+    it('raises the Test not found dialog in place of the load dialog when the open Test is gone', async () => {
+      const state = setupStore({ editingTestId: 'test-99', editingTestName: 'Payment smoke' })
+      mockFixTest.mockRejectedValue(
+        Object.assign(new Error("Test with ID 'test-99' not found"), { status: 404, code: 'NOT_FOUND' }),
+      )
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { result } = renderValidation()
+      act(() => {
+        result.current.setValidationMode('load')
+        result.current.setValidationErrors([CROSS_SCOPE_WIRE])
+        result.current.setShowValidationErrorDialog(true)
+      })
+
+      await act(async () => {
+        await result.current.handleFixAll()
+      })
+
+      expect(useDeletedTestStore.getState().info).toEqual({ testId: 'test-99', testName: 'Payment smoke' })
+      expect(mockToastError).not.toHaveBeenCalled()
+      expect(consoleSpy).not.toHaveBeenCalled()
+      expect(result.current.showValidationErrorDialog).toBe(false)
+      expect(result.current.validationErrors).toEqual([])
+      expect(result.current.validationFatal).toBe(false)
+      expect(result.current.isFixingTest).toBe(false)
+      expect(state.reset).not.toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it('keeps the retry toast for a failure that is not the open Test being gone', async () => {
+      setupStore({ editingTestId: 'test-99', editingTestName: 'Payment smoke' })
+      mockFixTest.mockRejectedValue(Object.assign(new Error('Internal server error'), { status: 500 }))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { result } = renderValidation()
+      act(() => {
+        result.current.setValidationMode('load')
+        result.current.setValidationErrors([CROSS_SCOPE_WIRE])
+        result.current.setShowValidationErrorDialog(true)
+      })
+
+      await act(async () => {
+        await result.current.handleFixAll()
+      })
+
+      expect(useDeletedTestStore.getState().info).toBeNull()
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Failed to apply automatic fixes. Please try again.',
+        'Fix Failed',
+      )
+      expect(result.current.showValidationErrorDialog).toBe(true)
+      consoleSpy.mockRestore()
+    })
+
+    it('keeps the retry toast when a refusal names no finding', async () => {
+      setupStore({ editingTestId: 'test-99' })
+      mockFixTest.mockRejectedValue(fixRefusal([]))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { result } = renderValidation()
+
+      await act(async () => {
+        await result.current.handleFixAll()
+      })
+
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Failed to apply automatic fixes. Please try again.',
+        'Fix Failed',
+      )
+      consoleSpy.mockRestore()
+    })
+
     it('does nothing when editingTestId is null', async () => {
       setupStore({ editingTestId: null })
       const { result } = renderValidation()
@@ -756,6 +891,34 @@ describe('useValidation', () => {
         result.current.setValidationErrors([
           { path: 'p', code: 'MISSING_FUNCTION_VERSION', message: 'gone' },
           { path: 'r', code: 'DANGLING_EDGE', message: 'dangling', fix_action: 'Remove dangling edge' },
+        ])
+      })
+
+      expect(result.current.canFixAll).toBe(true)
+    })
+
+    it('is false in load mode while a repeated wire id is listed, even beside a fixable issue', () => {
+      // REQ-5.2.4.3: the fix endpoint refuses a Test whose wires repeat an id and repairs nothing.
+      setupStore()
+      const { result } = renderValidation()
+
+      act(() => {
+        result.current.setValidationMode('load')
+        result.current.setValidationErrors([REPEATED_WIRE_ID, CROSS_SCOPE_WIRE])
+      })
+
+      expect(result.current.canFixAll).toBe(false)
+    })
+
+    it('stays true in save mode beside a repeated wire id, since that Fix only declares variables', () => {
+      setupStore()
+      const { result } = renderValidation()
+
+      act(() => {
+        result.current.setValidationMode('save')
+        result.current.setValidationErrors([
+          REPEATED_WIRE_ID,
+          { path: 'variables.x', code: 'UNDECLARED_VARIABLE', message: 'm' },
         ])
       })
 

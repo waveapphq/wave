@@ -5,7 +5,7 @@
  * REQ: REQ-3.4.1.14, REQ-3.1.3.15
  *
  * Renames `widget_id` -> `gadget_key` and proves, anchored on the persisted Test and the run:
- *   - a Variable Setter TARGET key (+ its variableTypes)
+ *   - a Variable Setter TARGET key (its type is the renamed variable's)
  *   - a Variable Setter per-key EXPRESSION value (`widget_id * 2`)
  *   - a Variable Setter per-key TEMPLATE value (`id is {{ widget_id }}`)
  *   - a node TEMPLATE field (`Total {{ widget_id }}`)
@@ -47,7 +47,6 @@ interface FetchedNode {
   id: string
   data: {
     config?: { values?: Record<string, unknown> }
-    variableTypes?: Record<string, unknown>
   }
 }
 
@@ -107,7 +106,7 @@ test.describe('Variable rename refactors all references (V-VAR-RENAME-REFACTOR-F
 
       const target = nodeById(data, 'varset-target')
       expect(Object.keys(setterVariables(target))).toEqual(['gadget_key'])
-      expect(target.data.variableTypes).toEqual({ gadget_key: 'integer' })
+      expect(data.variables.gadget_key, 'the renamed target keeps its integer type').toMatchObject({ type: 'integer' })
 
       const refsVars = setterVariables(nodeById(data, 'varset-refs'))
       expect(refsVars.doubled).toBe('gadget_key * 2')

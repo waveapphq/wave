@@ -126,7 +126,7 @@ test.describe('V-VARPICK-SUGGEST-FOCUS: the suggestion list follows focus', () =
   test('a check row expression', async ({ page }) => {
     const sheet = await openBlockSheet(page, await dropBelowStart(page, 'assert'))
     await addExpressionRow(sheet)
-    await expectListFollowsFocus(page, sheet.locator('[data-testid="assert-expression-input-0"] .cm-content'), NAME_TYPING)
+    await expectListFollowsFocus(page, sheet.locator('[data-testid="param-input-assert-expr-0"] .cm-content'), NAME_TYPING)
   })
 
   test('a table filter expression row', async ({ page }) => {

@@ -48,7 +48,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Picker host',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [

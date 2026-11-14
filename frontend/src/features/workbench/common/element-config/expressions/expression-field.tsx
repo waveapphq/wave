@@ -83,6 +83,7 @@ export function ExpressionField({
       <div ref={inputContainerRef} className="w-full min-w-0">
         <ExpressionInput
           name={name}
+          label={displayName}
           value={value}
           onChange={onChange}
           availableVariables={availableVariables}

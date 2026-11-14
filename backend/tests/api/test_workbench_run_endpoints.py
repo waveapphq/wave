@@ -184,33 +184,28 @@ class TestWorkbenchRunEndpoint:
             )
 
     # =========================================================================
-    # Pre-flight Validation: Profile Completeness (REQ-3.2.1.1)
+    # Run Warnings
     # =========================================================================
 
-    def test_workbench_run_returns_profile_warnings_without_blocking(
+    def test_workbench_run_passes_warnings_through_without_blocking(
         self, client: TestClient, valid_test_id: str, valid_environment_id: str
     ) -> None:
-        """Test that incomplete profiles generate warnings but don't block execution.
-
-        Per REQ-3.2.1.1: Pre-flight validation warns about missing profile values
-        but allows the user to proceed ("Cancel" / "Run Anyway").
-        """
+        """A warning in the run result reaches the client and the run goes on."""
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
             mock_run.return_value = {
                 "session_id": str(uuid.uuid4()),
-                "status": "running",  # Still running despite warnings
+                "status": "running",
                 "test_id": valid_test_id,
                 "environment_id": valid_environment_id,
                 "debug_mode": False,
                 "websocket_topic": f"workbench:{str(uuid.uuid4())}",
                 "warnings": [
                     {
-                        "type": "INCOMPLETE_PROFILE",
-                        "profile_name": "Database Connection",
-                        "message": "Profile 'Database Connection' has no value for this "
-                        "environment",
+                        "type": "SCOPED_RUN_ADVISORY",
+                        "message": "Clean scope state - the Function ran with declared "
+                        "default values for its inputs (no prior Test run to inherit from).",
                     },
                 ],
             }
@@ -223,12 +218,10 @@ class TestWorkbenchRunEndpoint:
                 },
             )
 
-            # Execution proceeds (200 OK) with warnings
             assert response.status_code == 200
             data = response.json()
             assert data["data"]["status"] == "running"
-            assert len(data["data"]["warnings"]) == 1
-            assert data["data"]["warnings"][0]["type"] == "INCOMPLETE_PROFILE"
+            assert data["data"]["warnings"] == mock_run.return_value["warnings"]
 
     # =========================================================================
     # Test Validation: Workflow Must Have Blocks
@@ -628,6 +621,52 @@ class TestWorkbenchSessionEndpoint:
             assert data["data"]["test_id"] == test_id
             assert data["data"]["block_states"] == {"block-a": "passed"}
             assert "variables" not in data["data"]
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+            _wb_common._user_active_session.pop(_wb_common.DEFAULT_USER_ID, None)
+
+    def test_workbench_session_carries_the_lanes_each_block_took(self, client: TestClient) -> None:
+        """A reload paints the lane wires from the lanes the run stored (REQ-3.2.2.15)."""
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        _wb_common._workbench_sessions[session_id] = {
+            "session_id": session_id,
+            "status": "passed",
+            "test_id": str(uuid.uuid4()),
+            "block_states": {"route": "passed", "join": "passed"},
+            "lanes_taken": {"route": ["branch_0"]},
+            "user_id": _wb_common.DEFAULT_USER_ID,
+        }
+        _wb_common._user_active_session[_wb_common.DEFAULT_USER_ID] = session_id
+
+        try:
+            data = client.get("/workbench/session").json()["data"]
+
+            assert data["lanes_taken"] == {"route": ["branch_0"]}
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+            _wb_common._user_active_session.pop(_wb_common.DEFAULT_USER_ID, None)
+
+    def test_workbench_session_of_a_run_that_took_no_lane_carries_none(
+        self, client: TestClient
+    ) -> None:
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        session_id = str(uuid.uuid4())
+        _wb_common._workbench_sessions[session_id] = {
+            "session_id": session_id,
+            "status": "passed",
+            "test_id": str(uuid.uuid4()),
+            "block_states": {"log": "passed"},
+            "user_id": _wb_common.DEFAULT_USER_ID,
+        }
+        _wb_common._user_active_session[_wb_common.DEFAULT_USER_ID] = session_id
+
+        try:
+            data = client.get("/workbench/session").json()["data"]
+
+            assert data["lanes_taken"] == {}
         finally:
             _wb_common._workbench_sessions.pop(session_id, None)
             _wb_common._user_active_session.pop(_wb_common.DEFAULT_USER_ID, None)

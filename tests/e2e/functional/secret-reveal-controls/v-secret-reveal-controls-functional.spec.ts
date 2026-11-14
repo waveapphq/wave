@@ -200,7 +200,7 @@ test.describe('V-SECRET-REVEAL-CONTROLS-FUNCTIONAL', () => {
     const expandBtn = row.locator('[data-testid^="expand-button-"]')
     await expect(expandBtn, 'test_variables on must make the secret inspectable').toBeEnabled()
     await expandBtn.click()
-    const modal = page.locator('section[aria-label="Inspect variable api_token"]')
+    const modal = page.getByRole('dialog', { name: 'api_token', exact: true, includeHidden: true })
     await expect(modal).toBeVisible()
     await expect(
       modal.locator('[data-testid="inspect-secret-masked"]'),

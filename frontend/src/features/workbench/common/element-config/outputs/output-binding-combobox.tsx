@@ -21,6 +21,9 @@ import {
   isOutputBindable,
 } from '@/features/workbench/lib/validation/output-binding-rules'
 
+/** The empty box hint takes the gray of a not-set default in an input row (FIELD-2, CANVAS-131). */
+const EMPTY_HINT_CLASS = 'placeholder:text-[color:var(--color-text-muted)]'
+
 export function OutputBindingCombobox({
   value,
   onChange,
@@ -99,6 +102,7 @@ export function OutputBindingCombobox({
       invalid={nameRejected || errorId !== undefined}
       aria-describedby={errorId}
       aria-label={ariaLabel}
+      inputClassName={EMPTY_HINT_CLASS}
     />
   )
 }

@@ -43,28 +43,54 @@ vi.mock('@/features/functions/hooks/use-function-versions', () => ({
   useFunctionVersions: () => mockFunctionVersions,
 }))
 
-// Mock VariableSetterEditor to avoid importing its complex dependencies
-vi.mock('@/features/workbench/common/variables/variable-setter-editor', () => ({
-  VariableSetterEditor: (props: Record<string, unknown>) => {
-    const onVariablesChange = props.onVariablesChange as (vars: Record<string, unknown>) => void
-    const onExpressionKeysChange = props.onExpressionKeysChange as (keys: string[]) => void
-    const onTypesChange = props.onTypesChange as (types: Record<string, string>) => void
-    const onValidChange = props.onValidChange as (valid: boolean) => void
+// Mock VariableSetterEditor to avoid importing its complex dependencies; it writes the shared Setter slots.
+vi.mock('@/features/workbench/common/variables/variable-setter-editor/editor', () => ({
+  VariableSetterEditor: (props: {
+    slots?: Record<string, unknown>
+    onSlotsChange?: (next: Record<string, unknown>) => void
+    onValidChange: (valid: boolean) => void
+  }) => {
+    const change = (patch: Record<string, unknown>) => props.onSlotsChange?.({ ...props.slots, ...patch })
     return (
       <div data-testid="variable-setter-editor">
-        <button data-testid="mock-varset-change" onClick={() => onVariablesChange({ test: 'val' })}>
+        <span data-testid="mock-varset-slots">{JSON.stringify(props.slots ?? null)}</span>
+        <button data-testid="mock-varset-change" onClick={() => change({ variables: { test: 'val' } })}>
           Change
         </button>
-        <button data-testid="mock-varset-expr-keys" onClick={() => onExpressionKeysChange(['changed_key'])}>
+        <button
+          data-testid="mock-varset-expr-keys"
+          onClick={() => change({ expressionFields: ['variables.changed_key'] })}
+        >
           ExprKeys
         </button>
-        <button data-testid="mock-varset-types" onClick={() => onTypesChange({ changed: 'integer' })}>
-          Types
+        <button data-testid="mock-varset-secret" onClick={() => change({ secretFields: ['variables.token'] })}>
+          Secret
         </button>
-        <button data-testid="mock-varset-invalidate" onClick={() => onValidChange(false)}>
+        <button
+          data-testid="mock-varset-template-and-entry-types"
+          onClick={() =>
+            change({
+              variables: { greeting: 'Hi {{ name }}', hosts: ['a', 'b'] },
+              templateFields: ['variables.greeting'],
+              elementTypes: { 'variables.hosts': ['string', 'string'] },
+            })
+          }
+        >
+          TemplateAndEntryTypes
+        </button>
+        <button
+          data-testid="mock-varset-new-target"
+          onClick={() => change({ variables: { fresh: null }, rowTypes: { fresh: 'integer' } })}
+        >
+          NewTarget
+        </button>
+        <button data-testid="mock-varset-number-rows" onClick={() => change({ variables: { fresh: '42', padded: '060', retries: '30000' }, rowTypes: { fresh: 'integer', padded: 'integer' } })}>
+          NumberRows
+        </button>
+        <button data-testid="mock-varset-invalidate" onClick={() => props.onValidChange(false)}>
           Invalidate
         </button>
-        <button data-testid="mock-varset-validate" onClick={() => onValidChange(true)}>
+        <button data-testid="mock-varset-validate" onClick={() => props.onValidChange(true)}>
           Validate
         </button>
       </div>
@@ -132,68 +158,59 @@ vi.mock('@/features/workbench/common/editors/json-query-editor', () => ({
   },
 }))
 
-// Mock AssertionBuilder to avoid importing its complex dependencies (CodeMirror etc.)
-const mockOnAssertionsChange = vi.fn()
-const mockOnAssertValid = vi.fn()
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+// A complete literal row and one the shared condition check holds (no variable picked).
+const COMPLETE_ROW = { id: 'a1', type: 'literal', variable: 'x', value_type: 'integer', operator: 'equals', reference_value: '1' }
+const STORED_ROW = { id: 's1', type: 'literal', variable: 'x', value_type: 'integer', operator: 'equals', reference_value: '5' }
+const ROW_WITHOUT_VARIABLE = { id: 'a2', type: 'literal', variable: '', value_type: 'string', operator: 'equals', reference_value: 'ok' }
+
+// Mock AssertionBuilder to avoid importing its complex dependencies (CodeMirror etc.); it holds no validity of its own.
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: (props: {
-    assertions: unknown[]
+    assertions?: unknown[]
     availableVariables: unknown[]
     onAssertionsChange: (v: unknown[]) => void
-    onValidChange: (v: boolean) => void
-  }) => {
-    // Store callbacks so tests can trigger them
-    mockOnAssertionsChange.mockImplementation(props.onAssertionsChange)
-    mockOnAssertValid.mockImplementation(props.onValidChange)
-    return (
-      <div data-testid="assertion-builder-mock">
-        <span data-testid="mock-assert-count">{props.assertions.length}</span>
-        <button
-          data-testid="mock-assert-change"
-          onClick={() => props.onAssertionsChange([{ id: 'a1', type: 'literal', variable: 'x', value_type: 'integer', operator: 'equals', reference_value: 1, reference_is_expression: false }])}
-        >
-          ChangeAssertions
-        </button>
-        <button data-testid="mock-assert-invalidate" onClick={() => props.onValidChange(false)}>
-          InvalidateAssert
-        </button>
-        <button data-testid="mock-assert-validate" onClick={() => props.onValidChange(true)}>
-          ValidateAssert
-        </button>
-      </div>
-    )
-  },
+  }) => (
+    <div data-testid="assertion-builder-mock">
+      <span data-testid="mock-assert-count">{(props.assertions ?? []).length}</span>
+      <button data-testid="mock-assert-change" onClick={() => props.onAssertionsChange([COMPLETE_ROW])}>
+        ChangeAssertions
+      </button>
+      <button data-testid="mock-assert-incomplete" onClick={() => props.onAssertionsChange([ROW_WITHOUT_VARIABLE])}>
+        IncompleteAssertions
+      </button>
+    </div>
+  ),
 }))
 
-// Mock ConditionBranchEditor to avoid importing its complex dependencies
+// Mock ConditionBranchEditor to avoid importing its complex dependencies; it holds no validity of its own.
 vi.mock('@/features/workbench/common/config/condition-branch-editor', () => ({
   ConditionBranchEditor: (props: {
-    branches: Array<{ id: string; type: string; label: string; conditions?: unknown[] }>
+    branches?: Array<{ id: string; type: string; label: string; conditions?: unknown[] }>
     availableVariables: unknown[]
     onBranchesChange: (branches: unknown[]) => void
-    onValidChange: (valid: boolean) => void
-  }) => {
-    return (
-      <div data-testid="condition-branch-editor-mock">
-        <span data-testid="mock-branch-count">{props.branches.length}</span>
-        <button
-          data-testid="mock-branch-change"
-          onClick={() => props.onBranchesChange([
-            { id: 'branch_0', type: 'if', label: '', conditions: [{ id: 'a1', type: 'literal', variable: 'x', value_type: 'integer', operator: 'equals', reference_value: 1, reference_is_expression: false }] },
-            { id: 'branch_1', type: 'else', label: '' },
-          ])}
-        >
-          ChangeBranches
-        </button>
-        <button data-testid="mock-branch-invalidate" onClick={() => props.onValidChange(false)}>
-          InvalidateBranch
-        </button>
-        <button data-testid="mock-branch-validate" onClick={() => props.onValidChange(true)}>
-          ValidateBranch
-        </button>
-      </div>
-    )
-  },
+  }) => (
+    <div data-testid="condition-branch-editor-mock">
+      <span data-testid="mock-branch-count">{(props.branches ?? []).length}</span>
+      <button
+        data-testid="mock-branch-change"
+        onClick={() => props.onBranchesChange([
+          { id: 'branch_0', type: 'if', label: '', conditions: [COMPLETE_ROW] },
+          { id: 'branch_1', type: 'else', label: '' },
+        ])}
+      >
+        ChangeBranches
+      </button>
+      <button
+        data-testid="mock-branch-no-condition"
+        onClick={() => props.onBranchesChange([
+          { id: 'branch_0', type: 'if', label: '', conditions: [] },
+          { id: 'branch_1', type: 'else', label: '' },
+        ])}
+      >
+        BranchWithoutCondition
+      </button>
+    </div>
+  ),
 }))
 
 // Mock LoopTargetSelector to avoid importing workflow store and graph traversal
@@ -360,6 +377,11 @@ const originalVariables = mockWorkflowStore.variables
 /** A save test changes the config first: nothing changed anywhere keeps Save disabled. */
 function changeDescription() {
   fireEvent.change(screen.getByTestId('element-description-input'), { target: { value: 'changed' } })
+}
+
+/** Per-row Setter keys beside the shared lists (each starts with `variable` and a capital); the shared shape has none. */
+function perRowSetterKeys(record: object | null | undefined): string[] {
+  return Object.keys(record ?? {}).filter((key) => /^variable[A-Z]/.test(key))
 }
 
 /** A field holding a value asks before it switches mode (FIELD-7); take the default, leaving the box empty. */
@@ -2128,6 +2150,95 @@ describe('ElementConfigModal Component', () => {
     })
   })
 
+  describe('Window width (REQ-3.1.1.5, REQ-3.5.1.6)', () => {
+    /** A Block window with its own sheet id, so no width a resize test left behind applies. */
+    function blockOf(elementType: string, idSuffix = '') {
+      return {
+        id: `width-${elementType}${idSuffix}`,
+        name: elementType,
+        elementType,
+        version: '1.0.0',
+        availableVersions: ['1.0.0'],
+        parameters: [],
+        outputs: [],
+        currentValues: {},
+        outputBindings: {},
+      }
+    }
+
+    async function openWindow(element: Record<string, unknown>) {
+      const { ElementConfigModal } = await import(
+        '@/features/workbench/common/element-config'
+      )
+      return render(
+        <ElementConfigModal
+          isOpen={true}
+          onClose={vi.fn()}
+          element={element as never}
+          onSave={vi.fn()}
+        />
+      )
+    }
+
+    it.each([
+      'if-else',
+      'switch-case',
+      'assert',
+      'while',
+      'wait-until',
+      'variable-setter',
+      'parallel',
+    ])('opens the %s window 880 px wide, so a condition row, a Setter row or a lane row fits', async (elementType) => {
+      await openWindow(blockOf(elementType))
+
+      expect(screen.getByTestId('element-config-sheet').style.width).toBe('880px')
+    })
+
+    it.each([
+      'csv-parser',
+      'excel-parser',
+      'for',
+      'for-each',
+      'try-catch-finally',
+      'delay',
+      'halt',
+      'break',
+      'continue',
+    ])('opens the %s window at 672 px, as today', async (elementType) => {
+      await openWindow(blockOf(elementType))
+
+      expect(screen.getByTestId('element-config-sheet').style.width).toBe('672px')
+    })
+
+    it('opens a plugin Block window at 672 px, as today', async () => {
+      await openWindow({ ...mockElementData, id: 'width-http-client' })
+
+      expect(screen.getByTestId('element-config-sheet').style.width).toBe('672px')
+    })
+
+    it('keeps the width the user dragged a wide window to when it opens again in the session', async () => {
+      const { unmount } = await openWindow(blockOf('if-else', '-dragged'))
+      const sheetRoot = screen.getByTestId('element-config-sheet')
+      expect(sheetRoot.style.width).toBe('880px')
+
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByTestId('dialog-resize-handle'), { clientX: 800 })
+      })
+      await act(async () => {
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 850 }))
+      })
+      await act(async () => {
+        document.dispatchEvent(new MouseEvent('mouseup'))
+      })
+      expect(sheetRoot.style.width).toBe('980px')
+      unmount()
+
+      await openWindow(blockOf('if-else', '-dragged'))
+
+      expect(screen.getByTestId('element-config-sheet').style.width).toBe('980px')
+    })
+  })
+
   describe('Log Plugin Configuration (REQ-3.4.1.17)', () => {
     const mockLogElement = {
       id: 'node-log',
@@ -2203,7 +2314,7 @@ describe('ElementConfigModal Component', () => {
         { name: 'variables', type: 'map' as const, required: true },
       ],
       outputs: [],
-      currentValues: { variables: {} },
+      currentValues: { variables: { my_var: 'a' } },
       outputBindings: {},
     }
 
@@ -2226,16 +2337,7 @@ describe('ElementConfigModal Component', () => {
       expect(screen.queryByTestId('param-row-variables')).not.toBeInTheDocument()
     })
 
-    it('includes variableExpressionKeys and variableTypes in save data', async () => {
-      const user = userEvent.setup({ delay: null })
-      const handleSave = vi.fn()
-
-      const elementWithVarSetData = {
-        ...mockVariableSetterElement,
-        variableExpressionKeys: ['computed_val'],
-        variableTypes: { my_var: 'string', computed_val: 'integer' },
-      }
-
+    async function renderSetter(element: Record<string, unknown>, onSave = vi.fn()) {
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
       )
@@ -2243,38 +2345,43 @@ describe('ElementConfigModal Component', () => {
         <ElementConfigModal
           isOpen={true}
           onClose={vi.fn()}
-          element={elementWithVarSetData}
-          onSave={handleSave}
+          element={element as never}
+          onSave={onSave}
         />
       )
+      return onSave
+    }
 
-      // Nothing changed anywhere keeps Save disabled.
-      changeDescription()
-      await user.click(screen.getByRole('button', { name: /save/i }))
+    function shownSlots(): Record<string, unknown> | null {
+      return JSON.parse(screen.getByTestId('mock-varset-slots').textContent ?? 'null') as Record<string, unknown> | null
+    }
 
-      expect(handleSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variableExpressionKeys: ['computed_val'],
-          variableTypes: { my_var: 'string', computed_val: 'integer' },
-        })
-      )
+    it('hands the editor the Setter rows and their marks as the shared slots (REQ-3.4.1.14)', async () => {
+      await renderSetter({
+        ...mockVariableSetterElement,
+        currentValues: { variables: { token: 'abc', next_id: 'id + 1', hosts: ['a'] } },
+        expressionFields: ['variables.next_id'],
+        templateFields: [],
+        elementTypes: { 'variables.hosts': ['string'] },
+        secretFields: ['variables.token'],
+      })
+
+      expect(shownSlots()).toEqual(expect.objectContaining({
+        variables: { token: 'abc', next_id: 'id + 1', hosts: ['a'] },
+        expressionFields: ['variables.next_id'],
+        templateFields: [],
+        elementTypes: { 'variables.hosts': ['string'] },
+        secretFields: ['variables.token'],
+      }))
     })
 
-    it('does not include variableExpressionKeys or variableTypes for non-variable-setter elements', async () => {
+    it('saves the Setter row flags in the shared lists and no per-row Setter keys', async () => {
       const user = userEvent.setup({ delay: null })
-      const handleSave = vi.fn()
-
-      const { ElementConfigModal } = await import(
-        '@/features/workbench/common/element-config'
-      )
-      render(
-        <ElementConfigModal
-          isOpen={true}
-          onClose={vi.fn()}
-          element={mockElementData}
-          onSave={handleSave}
-        />
-      )
+      const handleSave = await renderSetter({
+        ...mockVariableSetterElement,
+        currentValues: { variables: { my_var: 'a', computed_val: 'x + 1' } },
+        expressionFields: ['variables.computed_val'],
+      })
 
       // Nothing changed anywhere keeps Save disabled.
       changeDescription()
@@ -2282,30 +2389,28 @@ describe('ElementConfigModal Component', () => {
 
       expect(handleSave).toHaveBeenCalledTimes(1)
       const saveData = handleSave.mock.calls[0][0]
-      expect(saveData).not.toHaveProperty('variableExpressionKeys')
-      expect(saveData).not.toHaveProperty('variableTypes')
+      expect(saveData.values.variables).toEqual({ my_var: 'a', computed_val: 'x + 1' })
+      expect(saveData.expressionFields).toEqual(['variables.computed_val'])
+      expect(perRowSetterKeys(saveData)).toEqual([])
     })
 
-    it('updates variables state when VariableSetterEditor fires onVariablesChange', async () => {
+    it('writes no per-row Setter keys for non-variable-setter elements', async () => {
       const user = userEvent.setup({ delay: null })
-      const handleSave = vi.fn()
+      const handleSave = await renderSetter(mockElementData)
 
-      const { ElementConfigModal } = await import(
-        '@/features/workbench/common/element-config'
-      )
-      render(
-        <ElementConfigModal
-          isOpen={true}
-          onClose={vi.fn()}
-          element={mockVariableSetterElement}
-          onSave={handleSave}
-        />
-      )
+      // Nothing changed anywhere keeps Save disabled.
+      changeDescription()
+      await user.click(screen.getByRole('button', { name: /save/i }))
 
-      // Click the mock change button to trigger onVariablesChange
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      expect(perRowSetterKeys(handleSave.mock.calls[0][0])).toEqual([])
+    })
+
+    it('updates variables state when VariableSetterEditor writes its rows', async () => {
+      const user = userEvent.setup({ delay: null })
+      const handleSave = await renderSetter(mockVariableSetterElement)
+
       await user.click(screen.getByTestId('mock-varset-change'))
-
-      // Save and verify the variables value was updated
       await user.click(screen.getByRole('button', { name: /save/i }))
 
       expect(handleSave).toHaveBeenCalledWith(
@@ -2317,66 +2422,87 @@ describe('ElementConfigModal Component', () => {
       )
     })
 
-    it('detects hasChanges when variableExpressionKeys differ from element state', async () => {
+    it('detects hasChanges when a row {x} flag differs from the stored one', async () => {
       const user = userEvent.setup({ delay: null })
-
-      const elementWithExprKeys = {
+      await renderSetter({
         ...mockVariableSetterElement,
-        variableExpressionKeys: [],
-        variableTypes: {},
-      }
+        currentValues: { variables: { changed_key: 'a + 1' } },
+      })
+      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
 
-      const { ElementConfigModal } = await import(
-        '@/features/workbench/common/element-config'
-      )
-      render(
-        <ElementConfigModal
-          isOpen={true}
-          onClose={vi.fn()}
-          element={elementWithExprKeys}
-          onSave={vi.fn()}
-        />
-      )
-
-      // Click the mock button to change expression keys
       await user.click(screen.getByTestId('mock-varset-expr-keys'))
 
-      // The save button should now be enabled (hasChanges = true due to line 533)
-      await waitFor(() => {
-        const saveButton = screen.getByRole('button', { name: /save/i })
-        expect(saveButton).not.toBeDisabled()
-      })
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
     })
 
-    it('detects hasChanges when variableTypes differ from element state', async () => {
+    it('detects hasChanges when a row secret mark differs from the stored one', async () => {
       const user = userEvent.setup({ delay: null })
-
-      const elementWithTypes = {
+      await renderSetter({
         ...mockVariableSetterElement,
-        variableExpressionKeys: [],
-        variableTypes: {},
-      }
-
-      const { ElementConfigModal } = await import(
-        '@/features/workbench/common/element-config'
-      )
-      render(
-        <ElementConfigModal
-          isOpen={true}
-          onClose={vi.fn()}
-          element={elementWithTypes}
-          onSave={vi.fn()}
-        />
-      )
-
-      // Click the mock button to change types
-      await user.click(screen.getByTestId('mock-varset-types'))
-
-      // The save button should now be enabled (hasChanges = true due to line 534)
-      await waitFor(() => {
-        const saveButton = screen.getByRole('button', { name: /save/i })
-        expect(saveButton).not.toBeDisabled()
+        currentValues: { variables: { token: 'abc' } },
       })
+      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
+
+      await user.click(screen.getByTestId('mock-varset-secret'))
+
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
+    })
+
+    it('saves the secret marks under secretFields', async () => {
+      const user = userEvent.setup({ delay: null })
+      const handleSave = await renderSetter({
+        ...mockVariableSetterElement,
+        currentValues: { variables: { token: 'abc' } },
+      })
+
+      await user.click(screen.getByTestId('mock-varset-secret'))
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      expect(handleSave.mock.calls[0][0].secretFields).toEqual(['variables.token'])
+    })
+
+    it('saves the row Template flags and the list entry types the editor writes in the shared lists', async () => {
+      const user = userEvent.setup({ delay: null })
+      const handleSave = await renderSetter(mockVariableSetterElement)
+
+      await user.click(screen.getByTestId('mock-varset-template-and-entry-types'))
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      const saveData = handleSave.mock.calls[0][0]
+      expect(saveData.values.variables).toEqual({ greeting: 'Hi {{ name }}', hosts: ['a', 'b'] })
+      expect(saveData.templateFields).toEqual(['variables.greeting'])
+      expect(saveData.elementTypes).toEqual(expect.objectContaining({ 'variables.hosts': ['string', 'string'] }))
+      expect(perRowSetterKeys(saveData)).toEqual([])
+    })
+
+    it('hands the type picked for a new target to the canvas at Save and stores no row type', async () => {
+      const user = userEvent.setup({ delay: null })
+      const handleSave = await renderSetter(mockVariableSetterElement)
+
+      await user.click(screen.getByTestId('mock-varset-new-target'))
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      const saveData = handleSave.mock.calls[0][0]
+      expect(saveData.values.variables).toEqual({ fresh: null })
+      expect(saveData.newTargetTypes).toEqual({ fresh: 'integer' })
+      expect(saveData.elementTypes ?? {}).not.toHaveProperty('variables')
+      expect(perRowSetterKeys(saveData)).toEqual([])
+    })
+
+    // A new target's number row takes the type picked for it; a declared target's row its variable's type (REQ-3.1.3.14).
+    it('writes literal number rows in the number wire form of the picked type of a new target and the declared type of a variable', async () => {
+      mockWorkflowStore.variables = [...originalVariables, { name: 'retries', type: 'integer' }]
+      const user = userEvent.setup({ delay: null })
+      const handleSave = await renderSetter(mockVariableSetterElement)
+
+      await user.click(screen.getByTestId('mock-varset-number-rows'))
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(handleSave).toHaveBeenCalledTimes(1)
+      expect(handleSave.mock.calls[0][0].values.variables).toEqual({ fresh: 42, padded: '060', retries: 30000 })
     })
 
     it('disables save button when variable setter has validation errors', async () => {
@@ -2445,8 +2571,9 @@ describe('ElementConfigModal Component', () => {
         />
       )
 
-      // Should still render VariableSetterEditor (the ?? {} fallback on line 682)
+      // Should still render VariableSetterEditor, its rows slot empty
       expect(screen.getByTestId('variable-setter-editor')).toBeInTheDocument()
+      expect(JSON.parse(screen.getByTestId('mock-varset-slots').textContent ?? 'null')?.variables).toEqual({})
     })
   })
 
@@ -3603,8 +3730,9 @@ describe('ElementConfigModal Component', () => {
       outputs: [
         { name: 'passed', type: 'boolean', description: 'Whether all assertions passed' },
       ],
+      // An empty required list holds Save, so the stored Assert holds one row.
       currentValues: {
-        assertions: [],
+        assertions: [STORED_ROW],
         mode: 'split',
       },
       outputBindings: {},
@@ -3670,9 +3798,9 @@ describe('ElementConfigModal Component', () => {
 
       expect(onSave).toHaveBeenCalled()
       const savedData = onSave.mock.calls[0][0]
-      // Assertions should be included in the saved values
-      expect(savedData.values.assertions).toBeDefined()
-      expect(savedData.values.mode).toBeDefined()
+      expect(savedData.values.assertions).toEqual([COMPLETE_ROW])
+      expect(savedData.values.mode).toBe('split')
+      expect(savedData.values.fail_current_scope).toBe(false)
     })
 
     it('detects unsaved changes when assertions differ from element state', async () => {
@@ -3737,7 +3865,7 @@ describe('ElementConfigModal Component', () => {
       expect(savedData.values.mode).toBe('single')
     })
 
-    it('disables save when AssertionBuilder reports invalid (line 533: isAssert && !assertValid)', async () => {
+    it('holds Save while the shared condition check finds a row with no variable', async () => {
       const user = userEvent.setup()
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
@@ -3751,18 +3879,19 @@ describe('ElementConfigModal Component', () => {
         />
       )
 
-      // First make a change so Save is enabled (assertions differ from empty state)
+      // First make a change so Save is enabled (a complete row differs from the stored one)
       await user.click(screen.getByTestId('mock-assert-change'))
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
 
-      // Now invalidate the assert builder
-      await user.click(screen.getByTestId('mock-assert-invalidate'))
+      // Now the list holds a row with no variable picked
+      await user.click(screen.getByTestId('mock-assert-incomplete'))
 
-      // Save button should be disabled because assertValid is false
+      // The Assert list is incomplete, so Save is held
       const saveBtn = screen.getByRole('button', { name: /save/i })
       expect(saveBtn).toBeDisabled()
     })
 
-    it('detects hasChanges when currentValues has no assertions field (triggers ?? [] fallback, line 589)', async () => {
+    it('detects hasChanges when the Block stores no assertions list', async () => {
       // Suppress Radix animation warnings
       vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
         const msg = typeof args[0] === 'string' ? args[0] : ''
@@ -3775,8 +3904,6 @@ describe('ElementConfigModal Component', () => {
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
       )
-      // currentValues has no assertions key - element.currentValues.assertions is undefined
-      // This triggers the `?? []` fallback on line 589
       const elementWithoutAssertions = {
         ...mockAssertElement,
         currentValues: { mode: 'split' }, // no assertions key
@@ -3798,7 +3925,7 @@ describe('ElementConfigModal Component', () => {
       expect(handleClose).not.toHaveBeenCalled()
     })
 
-    it('detects hasChanges when currentValues has no mode field (triggers ?? split fallback, line 590)', async () => {
+    it('detects hasChanges when the Block stores no mode (Split by default)', async () => {
       // Suppress Radix animation warnings
       vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
         const msg = typeof args[0] === 'string' ? args[0] : ''
@@ -3811,8 +3938,6 @@ describe('ElementConfigModal Component', () => {
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
       )
-      // currentValues has no mode key - element.currentValues.mode is undefined
-      // This triggers the `?? 'split'` fallback on line 590
       const elementWithoutMode = {
         ...mockAssertElement,
         currentValues: { assertions: [] }, // no mode key
@@ -3987,9 +4112,10 @@ describe('ElementConfigModal Component', () => {
 
       expect(onSave).toHaveBeenCalled()
       const savedData = onSave.mock.calls[0][0]
-      // Branches should be included in the saved values
-      expect(savedData.values.branches).toBeDefined()
-      expect(savedData.values.branches).toHaveLength(2)
+      expect(savedData.values.branches).toEqual([
+        { id: 'branch_0', type: 'if', label: '', conditions: [COMPLETE_ROW] },
+        { id: 'branch_1', type: 'else', label: '' },
+      ])
     })
 
     it('detects unsaved changes when branches differ from element state', async () => {
@@ -4022,7 +4148,7 @@ describe('ElementConfigModal Component', () => {
       expect(handleClose).not.toHaveBeenCalled()
     })
 
-    it('disables save when ConditionBranchEditor reports invalid', async () => {
+    it('holds Save while the shared check finds an IF branch with no condition', async () => {
       const user = userEvent.setup()
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
@@ -4038,16 +4164,17 @@ describe('ElementConfigModal Component', () => {
 
       // First make a change so save would be enabled
       await user.click(screen.getByTestId('mock-branch-change'))
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
 
-      // Now invalidate via the mock button
-      await user.click(screen.getByTestId('mock-branch-invalidate'))
+      // Now the IF branch holds no condition
+      await user.click(screen.getByTestId('mock-branch-no-condition'))
 
-      // Save button should be disabled because ifElseValid is false
+      // The If/Else structure is incomplete, so Save is held
       const saveBtn = screen.getByRole('button', { name: /save/i })
       expect(saveBtn).toBeDisabled()
     })
 
-    it('detects hasChanges when currentValues has no branches field (triggers ?? [] fallback)', async () => {
+    it('detects hasChanges when the Block stores no branches list', async () => {
       // Suppress Radix animation warnings
       vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
         const msg = typeof args[0] === 'string' ? args[0] : ''
@@ -4144,7 +4271,7 @@ describe('ElementConfigModal Component', () => {
 
       expect(onSave).toHaveBeenCalled()
       const savedData = onSave.mock.calls[0][0]
-      expect(savedData.values.conditions).toBeDefined()
+      expect(savedData.values.conditions).toEqual([COMPLETE_ROW])
     })
 
     it('detects unsaved changes when conditions differ', async () => {
@@ -4176,7 +4303,7 @@ describe('ElementConfigModal Component', () => {
       expect(handleClose).not.toHaveBeenCalled()
     })
 
-    it('detects hasChanges when currentValues has no conditions field (triggers ?? [] fallback)', async () => {
+    it('detects hasChanges when the Block stores no conditions list', async () => {
       vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
         const msg = typeof args[0] === 'string' ? args[0] : ''
         if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
@@ -4225,12 +4352,103 @@ describe('ElementConfigModal Component', () => {
 
       // Make a change so Save would be enabled
       await user.click(screen.getByTestId('mock-assert-change'))
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
 
-      // Invalidate via While conditions validation
-      await user.click(screen.getByTestId('mock-assert-invalidate'))
+      // The shared condition check finds a row with no variable
+      await user.click(screen.getByTestId('mock-assert-incomplete'))
 
       const saveBtn = screen.getByRole('button', { name: /save/i })
       expect(saveBtn).toBeDisabled()
+    })
+  })
+
+  describe('Wait Until Control', () => {
+    const mockWaitElement = {
+      id: 'node-wait-1',
+      name: 'Wait Until',
+      elementType: 'wait-until',
+      version: '1.0.0',
+      availableVersions: ['1.0.0'],
+      parameters: [],
+      outputs: [],
+      currentValues: {
+        conditions: [STORED_ROW],
+        timeout: 5000,
+      },
+      outputBindings: {},
+    }
+
+    async function renderWait(element: Record<string, unknown> = mockWaitElement, onSave = vi.fn(), onClose = vi.fn()) {
+      const { ElementConfigModal } = await import(
+        '@/features/workbench/common/element-config'
+      )
+      render(
+        <ElementConfigModal
+          isOpen={true}
+          onClose={onClose}
+          element={element as never}
+          onSave={onSave}
+        />
+      )
+      return onSave
+    }
+
+    it('hands the condition builder the stored conditions', async () => {
+      await renderWait()
+
+      expect(screen.getByTestId('assertion-builder-mock')).toBeInTheDocument()
+      expect(screen.getByTestId('mock-assert-count')).toHaveTextContent('1')
+    })
+
+    it('shows Retry for a Wait Until that stores no mode', async () => {
+      await renderWait()
+
+      expect(screen.getByRole('radio', { name: 'Retry' })).toBeChecked()
+      expect(screen.getByRole('radio', { name: 'Watch' })).not.toBeChecked()
+    })
+
+    it('saves the conditions, the picked mode and Fail Current Scope in values', async () => {
+      const user = userEvent.setup()
+      const onSave = await renderWait()
+
+      await user.click(screen.getByTestId('mock-assert-change'))
+      await user.click(screen.getByLabelText('Watch'))
+      await user.click(screen.getByRole('checkbox', { name: 'Fail Current Scope' }))
+      await user.click(screen.getByRole('button', { name: /save/i }))
+
+      expect(onSave).toHaveBeenCalledTimes(1)
+      const savedData = onSave.mock.calls[0][0]
+      expect(savedData.values.conditions).toEqual([COMPLETE_ROW])
+      expect(savedData.values.mode).toBe('watch')
+      expect(savedData.values.fail_current_scope).toBe(true)
+    })
+
+    it('detects unsaved changes when only the mode differs from the stored one', async () => {
+      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+        const msg = typeof args[0] === 'string' ? args[0] : ''
+        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
+        console.warn('[unexpected console.error]', ...args)
+      })
+      const user = userEvent.setup({ delay: null })
+      const handleClose = vi.fn()
+      await renderWait(mockWaitElement, vi.fn(), handleClose)
+
+      await user.click(screen.getByLabelText('Watch'))
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      expect(handleClose).not.toHaveBeenCalled()
+    })
+
+    it('holds Save while the shared condition check finds a row with no variable', async () => {
+      const user = userEvent.setup()
+      await renderWait()
+
+      await user.click(screen.getByTestId('mock-assert-change'))
+      expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled()
+
+      await user.click(screen.getByTestId('mock-assert-incomplete'))
+
+      expect(screen.getByRole('button', { name: /save/i })).toBeDisabled()
     })
   })
 
@@ -4512,11 +4730,29 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
       />
     )
 
-    expect(screen.getByTestId('element-config-sheet')).toBeInTheDocument()
-    // The shell itself is a DraggableSheet region; only the NESTED dialogs
-    // (Changelog, Details, Profiles, Unsaved changes) stay Radix Dialogs and
-    // none of them is open here.
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    const shell = screen.getByTestId('element-config-sheet')
+    // The shell is a non-modal sheet dialog; the NESTED dialogs (Changelog,
+    // Details, Profiles, Unsaved changes) stay Radix Dialogs and none is open here.
+    expect(shell).toHaveAttribute('aria-modal', 'false')
+    expect(screen.getAllByRole('dialog')).toEqual([shell])
+  })
+
+  it('is named by its "<Name> - Edit Config" title', async () => {
+    const { ElementConfigModal } = await import(
+      '@/features/workbench/common/element-config'
+    )
+    render(
+      <ElementConfigModal
+        isOpen={true}
+        onClose={vi.fn()}
+        element={mockElementData}
+        onSave={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('dialog', { name: 'HTTP Client - Edit Config' })).toBe(
+      screen.getByTestId('element-config-sheet'),
+    )
   })
 
   it('live-follows the Name field in the sheet title', async () => {
@@ -4778,7 +5014,7 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
     })
     expect(handleClose).not.toHaveBeenCalled()
 
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog', { name: 'Unsaved changes' })
     expect(
       within(dialog).queryByRole('button', { name: /^save$/i }),
     ).not.toBeInTheDocument()
@@ -4815,7 +5051,7 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
       expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
     })
 
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog', { name: 'Unsaved changes' })
     await user.click(within(dialog).getByRole('button', { name: /^save$/i }))
     expect(handleSave).toHaveBeenCalledTimes(1)
     expect(handleSave).toHaveBeenCalledWith(
@@ -5518,6 +5754,12 @@ describe('ElementConfigModal - a Function Block (CANVAS-207)', () => {
 
       expect(within(sheet).getByLabelText('Function name')).toHaveValue('enrich_user')
       expect(within(sheet).queryByTestId('element-name-input')).toBeNull()
+    })
+
+    it('opens the Function Block window at 672 px, as today (REQ-3.1.1.5)', async () => {
+      const sheet = await openFunctionBlock(localFunctionNode())
+
+      expect(sheet.style.width).toBe('672px')
     })
   })
 

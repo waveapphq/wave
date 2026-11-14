@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["headers.X-Trace"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/echo",
@@ -52,7 +51,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/echo",
@@ -86,7 +84,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'http-null-header-done'",

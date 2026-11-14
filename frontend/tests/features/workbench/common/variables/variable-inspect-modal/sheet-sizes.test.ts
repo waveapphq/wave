@@ -110,6 +110,29 @@ describe('getValueEditorSheetSize - Python and scaffolded-map geometry', () => {
   })
 })
 
+// A list whose items take {x} gains the 32 px {x} column and its 8 px gap; the sheet opens that much wider (FIELD-6, VMGR-85).
+describe('getValueEditorSheetSize - a list whose items take {x}', () => {
+  it('opens 40 px wider than a plain list, so its items keep their width', () => {
+    const plain = getValueEditorSheetSize('array')
+    const withExpressions = getValueEditorSheetSize('array', null, false, true)
+    expect(withExpressions.width).toBe(plain.width + 40)
+    expect(withExpressions.width).toBe(480)
+  })
+
+  it('keeps the plain list height and resize floors', () => {
+    const plain = getValueEditorSheetSize('array')
+    const withExpressions = getValueEditorSheetSize('array', null, false, true)
+    expect(withExpressions.height).toBe(plain.height)
+    expect(withExpressions.minWidth).toBe(plain.minWidth)
+    expect(withExpressions.minHeight).toBe(plain.minHeight)
+  })
+
+  it('opens a scaffolded map and a string at their own sizes', () => {
+    expect(getValueEditorSheetSize('map', null, true, true)).toEqual(getValueEditorSheetSize('map', null, true))
+    expect(getValueEditorSheetSize('string', null, false, true)).toEqual(getValueEditorSheetSize('string'))
+  })
+})
+
 // The SQL and OpenSearch footers hold Kind, Format, Help and the catalog chip, so their floor is wider (SQL-10, OS-12).
 describe('getValueEditorSheetSize - the SQL and OpenSearch editors (SQL-10, OS-12)', () => {
   it.each([['sql' as const], ['dql' as const], ['query-dsl' as const], ['aggregation-json' as const]])(

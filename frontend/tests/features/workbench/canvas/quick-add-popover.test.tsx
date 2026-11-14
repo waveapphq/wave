@@ -247,6 +247,12 @@ describe('Quick Insert - window shell', () => {
     expect(within(getWindow()).getByText('Quick Insert')).toBeInTheDocument()
   })
 
+  it('is a non-modal dialog named by its title', () => {
+    renderPopover()
+    expect(screen.getByRole('dialog', { name: 'Quick Insert' })).toBe(getWindow())
+    expect(getWindow()).toHaveAttribute('aria-modal', 'false')
+  })
+
   it('offers a close control with an accessible name', () => {
     const { onOpenChange } = renderPopover()
 

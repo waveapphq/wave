@@ -1825,7 +1825,10 @@ class TestBackupUploadRoutes:
     def test_every_upload_gets_an_id_of_its_own(self, upload_client: TestClient) -> None:
         archive = _build_backup_zip({"environments": [_make_environment("E1")]})
 
-        assert _keep(upload_client, archive) != _keep(upload_client, archive)
+        first = _keep(upload_client, archive)
+        second = _keep(upload_client, archive)
+
+        assert first != second
 
     def test_upload_does_not_check_the_content(self, upload_client: TestClient) -> None:
         """A bad archive is kept; validate reports it the way it does for the file."""

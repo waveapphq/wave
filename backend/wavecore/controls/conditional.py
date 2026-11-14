@@ -6,10 +6,16 @@ Requirements implemented:
 - REQ-3.5.0.12: Control registration at application startup
 """
 
+from collections.abc import Collection, Mapping
 from typing import Any
 
-from wavecore.controls.assertion_evaluator import UNARY_OPERATORS, evaluate_assertions
-from wavecore.controls.base import ControlBase
+from wavecore.controls.assertion_evaluator import (
+    UNARY_OPERATORS,
+    condition_join_problems,
+    evaluate_assertions,
+)
+from wavecore.controls.base import ControlBase, duplicate_branch_id, raise_first_problem
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.core.variables.print_form import value_text
 from wavecore.models.controls.parameters import ControlParameter
 from wavecore.models.enums import ControlId
@@ -18,15 +24,20 @@ _VALID_BRANCH_TYPES = {"if", "else_if", "else"}
 _VALID_SWITCH_BRANCH_TYPES = {"case", "default"}
 
 
-def _validate_branches_structure(params: dict[str, Any]) -> list[dict[str, Any]]:
-    """Validate the top-level structure of the branches parameter.
+def _structure(message: str, field: str, code: str = "INVALID_CONTROL_STRUCTURE") -> FieldFinding:
+    return FieldFinding(code, message, None, field)
 
-    Returns:
-        The validated branches list.
 
-    Raises:
-        ValueError: If branches is missing, not a list, empty, or first branch is not 'if'.
-    """
+def _branch_list(values: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The branches as records; a value that is no list is left to the shared checks."""
+    branches = values.get("branches")
+    if not isinstance(branches, list):
+        return []
+    return [branch if isinstance(branch, Mapping) else {} for branch in branches]
+
+
+def _branches_shape(params: Mapping[str, Any]) -> None:
+    """The run's own shape lines, kept before the structure rules."""
     if "branches" not in params:
         raise ValueError("branches parameter is required")
     branches = params["branches"]
@@ -34,110 +45,70 @@ def _validate_branches_structure(params: dict[str, Any]) -> list[dict[str, Any]]
         raise ValueError("branches must be a list")
     if len(branches) == 0:
         raise ValueError("branches must not be empty")
-    if branches[0].get("type") != "if":
-        raise ValueError("first branch must be type 'if'")
-    return branches
 
 
-def _validate_branch_id(branch: dict[str, Any], branch_ids: set[str]) -> None:
-    """Check branch ID uniqueness and track seen IDs."""
-    branch_id = branch.get("id")
-    if branch_id is not None:
-        if branch_id in branch_ids:
-            raise ValueError(f"duplicate branch id: {branch_id!r}")
-        branch_ids.add(branch_id)
-
-
-def _validate_single_branch(
-    branch: dict[str, Any],
-    index: int,
-    total: int,
-    branch_ids: set[str],
-) -> None:
-    """Validate a single branch entry.
-
-    Args:
-        branch: The branch dict.
-        index: Position of the branch in the list.
-        total: Total number of branches.
-        branch_ids: Mutable set for tracking seen IDs.
-
-    Raises:
-        ValueError: If the branch violates any structural rule.
-    """
+def _if_else_branch_problems(
+    branch: Mapping[str, Any], index: int, total: int, seen: set[Any]
+) -> list[FieldFinding]:
+    """One If/Else branch: type, id, else last, else conditions, if first, conditions."""
     branch_type = branch.get("type")
+    at = f"branches.{index}"
     if branch_type not in _VALID_BRANCH_TYPES:
-        raise ValueError(f"invalid branch type: {branch_type!r}")
-
-    _validate_branch_id(branch, branch_ids)
-
+        return [_structure(f"invalid branch type: {branch_type!r}", f"{at}.type")]
+    problems = duplicate_branch_id(branch, index, seen)
     if branch_type == "else":
         if index != total - 1:
-            raise ValueError("else branch must be last")
+            problems.append(_structure("else branch must be last", f"{at}.type"))
         if branch.get("conditions"):
-            raise ValueError("else branch must not have conditions")
-        return
-
+            problems.append(_structure("else branch must not have conditions", f"{at}.conditions"))
+        return problems
     if branch_type == "if" and index != 0:
-        raise ValueError("if branch must be first")
-
-    # if and else_if require conditions
+        problems.append(_structure("if branch must be first", f"{at}.type"))
     if not branch.get("conditions"):
-        raise ValueError(f"{branch_type} branch must have conditions")
+        message = f"{branch_type} branch must have conditions"
+        problems.append(_structure(message, f"{at}.conditions", "REQUIRED_PARAM_EMPTY"))
+    return problems
 
 
-def _validate_switch_branches(params: dict[str, Any]) -> list[dict[str, Any]]:
-    """Validate the top-level structure of the Switch branches parameter.
-
-    Returns:
-        The validated branches list.
-
-    Raises:
-        ValueError: If branches is missing, not a list, or empty.
-    """
-    if "branches" not in params:
-        raise ValueError("branches parameter is required")
-    branches = params["branches"]
-    if not isinstance(branches, list):
-        raise ValueError("branches must be a list")
-    if len(branches) == 0:
-        raise ValueError("branches must not be empty")
-    return branches
-
-
-def _validate_switch_identity(branches: list[dict[str, Any]]) -> None:
-    """Check every branch's type vocabulary and ID uniqueness, entry by entry."""
-    branch_ids: set[str] = set()
-    for branch in branches:
-        branch_type = branch.get("type")
-        if branch_type not in _VALID_SWITCH_BRANCH_TYPES:
-            raise ValueError(f"invalid branch type: {branch_type!r}")
-        _validate_branch_id(branch, branch_ids)
-
-
-def _validate_switch_composition(branches: list[dict[str, Any]]) -> None:
-    """Check the case/default mix and the default's trailing position."""
-    default_indexes = [i for i, branch in enumerate(branches) if branch.get("type") == "default"]
-    if len(default_indexes) > 1:
-        raise ValueError("only one default branch allowed")
+def _switch_composition_problems(branches: list[Mapping[str, Any]]) -> list[FieldFinding]:
+    """The case and default mix and the default's trailing place."""
+    problems: list[FieldFinding] = []
+    defaults = [index for index, branch in enumerate(branches) if branch.get("type") == "default"]
+    if len(defaults) > 1:
+        problems.append(_structure("only one default branch allowed", "branches"))
     if not any(branch.get("type") == "case" for branch in branches):
-        raise ValueError("at least one case branch is required")
-    if default_indexes and default_indexes[0] != len(branches) - 1:
-        raise ValueError("default branch must be last")
+        problems.append(_structure("at least one case branch is required", "branches"))
+    if defaults and defaults[0] != len(branches) - 1:
+        problems.append(_structure("default branch must be last", f"branches.{defaults[0]}.type"))
+    return problems
 
 
-def _validate_switch_branch_body(branch: dict[str, Any]) -> None:
-    """Check one branch's conditions and break against its type."""
+def _switch_body_problems(branch: Mapping[str, Any], index: int) -> list[FieldFinding]:
+    """One branch's conditions and break against its type."""
+    at = f"branches.{index}"
+    problems: list[FieldFinding] = []
     if branch.get("type") == "default":
         if branch.get("conditions"):
-            raise ValueError("default branch must not have conditions")
+            message = "default branch must not have conditions"
+            problems.append(_structure(message, f"{at}.conditions"))
         if "break" in branch:
-            raise ValueError("default branch must not have break")
-        return
+            problems.append(_structure("default branch must not have break", f"{at}.break"))
+        return problems
     if not branch.get("conditions"):
-        raise ValueError("case branch must have conditions")
+        message = "case branch must have conditions"
+        problems.append(_structure(message, f"{at}.conditions", "REQUIRED_PARAM_EMPTY"))
     if "break" in branch and not isinstance(branch["break"], bool):
-        raise ValueError("break must be a boolean")
+        problems.append(_structure("break must be a boolean", f"{at}.break"))
+    return problems
+
+
+def _branch_join_problems(params: Mapping[str, Any]) -> list[FieldFinding]:
+    """The join check of every branch's condition list."""
+    problems: list[FieldFinding] = []
+    for index, branch in enumerate(_branch_list(params)):
+        place = f"branches.{index}.conditions"
+        problems.extend(condition_join_problems(branch.get("conditions"), place))
+    return problems
 
 
 class IfElseControl(ControlBase):
@@ -223,23 +194,26 @@ class IfElseControl(ControlBase):
             logger.info("All conditions evaluated and failed, end of flow")
         return {"__branch": "__no_match__"}
 
+    def structure_problems(
+        self, values: Mapping[str, Any], sources: Collection[str] = ()
+    ) -> list[FieldFinding]:
+        """The If/Else branch rules, every problem at its place (REQ-3.5.1.1, REQ-3.5.1.6)."""
+        branches = _branch_list(values)
+        if not branches:
+            return []
+        problems: list[FieldFinding] = []
+        if branches[0].get("type") != "if":
+            problems.append(_structure("first branch must be type 'if'", "branches.0.type"))
+        seen: set[Any] = set()
+        for index, branch in enumerate(branches):
+            problems.extend(_if_else_branch_problems(branch, index, len(branches), seen))
+        return problems
+
     async def validate(self, params: dict[str, Any]) -> None:
-        """Validate If/Else parameters.
-
-        Enforces structural rules:
-        - branches must be a non-empty list
-        - First branch must be type 'if'
-        - Only one 'else' branch allowed, must be last
-        - if/else_if branches must have conditions
-        - else branch must not have conditions
-        - Branch IDs must be unique
-        """
-        branches = _validate_branches_structure(params)
-
-        # Check each branch
-        branch_ids: set[str] = set()
-        for i, branch in enumerate(branches):
-            _validate_single_branch(branch, i, len(branches), branch_ids)
+        """Validate If/Else parameters: the branch list shape, its rules, then its joins."""
+        _branches_shape(params)
+        raise_first_problem(self.structure_problems(params))
+        raise_first_problem(_branch_join_problems(params))
 
 
 class SwitchCaseControl(ControlBase):
@@ -299,21 +273,34 @@ class SwitchCaseControl(ControlBase):
             "__switch_branches": context["parameters"]["branches"],
         }
 
-    async def validate(self, params: dict[str, Any]) -> None:
-        """Validate Switch/Case parameters.
+    def structure_problems(
+        self, values: Mapping[str, Any], sources: Collection[str] = ()
+    ) -> list[FieldFinding]:
+        """Identity per branch, then the case and default mix, then each body (REQ-3.5.1.20)."""
+        branches = _branch_list(values)
+        if not branches:
+            return []
+        problems: list[FieldFinding] = []
+        seen: set[Any] = set()
+        known: list[tuple[int, Mapping[str, Any]]] = []
+        for index, branch in enumerate(branches):
+            branch_type = branch.get("type")
+            if branch_type not in _VALID_SWITCH_BRANCH_TYPES:
+                message = f"invalid branch type: {branch_type!r}"
+                problems.append(_structure(message, f"branches.{index}.type"))
+                continue
+            problems.extend(duplicate_branch_id(branch, index, seen))
+            known.append((index, branch))
+        problems.extend(_switch_composition_problems(branches))
+        for index, branch in known:
+            problems.extend(_switch_body_problems(branch, index))
+        return problems
 
-        Enforces structural rules:
-        - branches must be a non-empty list
-        - Branch types are 'case' or 'default'; branch IDs must be unique
-        - At most one default, which must be last and carries no
-          conditions and no break
-        - Every case branch must have conditions; break must be boolean
-        """
-        branches = _validate_switch_branches(params)
-        _validate_switch_identity(branches)
-        _validate_switch_composition(branches)
-        for branch in branches:
-            _validate_switch_branch_body(branch)
+    async def validate(self, params: dict[str, Any]) -> None:
+        """Validate Switch/Case parameters: the branch list shape, its rules, then its joins."""
+        _branches_shape(params)
+        raise_first_problem(self.structure_problems(params))
+        raise_first_problem(_branch_join_problems(params))
 
 
 def _actual_text(value: Any, max_len: int = 1000) -> str:
@@ -409,7 +396,7 @@ class AssertControl(ControlBase):
                 ControlParameter(
                     name="mode",
                     type="string",
-                    required=False,
+                    required=True,
                     default="split",
                     description="Output mode: 'single' (one handle) or 'split' (pass/fail handles)",
                     enum_values=["single", "split"],
@@ -447,8 +434,8 @@ class AssertControl(ControlBase):
         logger = context.get("logger")
 
         assertions = params["assertions"]
-        mode = params.get("mode", "split")
-        fail_current_scope = params.get("fail_current_scope", False)
+        mode = params["mode"]
+        fail_current_scope = params["fail_current_scope"]
 
         result = evaluate_assertions(assertions, variables)
 
@@ -481,6 +468,4 @@ class AssertControl(ControlBase):
             raise ValueError("assertions must be a list")
         if len(assertions) == 0:
             raise ValueError("assertions must not be empty")
-        mode = params.get("mode", "split")
-        if mode not in ("single", "split"):
-            raise ValueError(f"Invalid mode: {mode!r}. Must be 'single' or 'split'")
+        raise_first_problem(condition_join_problems(assertions, "assertions"))

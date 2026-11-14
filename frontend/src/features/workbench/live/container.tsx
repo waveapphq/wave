@@ -515,15 +515,15 @@ export function WorkbenchContainer(): ReactNode {
   // Rejoin from the banner: converge back on the holder's surface. A browsed
   // Library View also drops its ?viewFunction URL on the way back.
   const handleWatchSession = useCallback(() => {
-    if (functionViewMode) navigate('/workbench')
+    if (functionViewMode) void navigate('/workbench')
     rejoinMirror()
   }, [functionViewMode, navigate, rejoinMirror])
 
   const handleSeeConnection = useCallback(() => {
     if (ownership.holderKind === 'mcp') {
-      navigate(`/settings/mcp?session=${ownership.mcpSessionId ?? ''}`)
+      void navigate(`/settings/mcp?session=${ownership.mcpSessionId ?? ''}`)
     } else {
-      navigate(`/settings/server?session=${ownership.browserSessionId ?? ''}`)
+      void navigate(`/settings/server?session=${ownership.browserSessionId ?? ''}`)
     }
   }, [navigate, ownership.holderKind, ownership.mcpSessionId, ownership.browserSessionId])
 
@@ -542,7 +542,7 @@ export function WorkbenchContainer(): ReactNode {
     registerTrackedTerminalHandler((execId: string) => {
       useWorkflowStore.getState().reset()
       clearWorkbenchSession(toastError).catch(alreadyReported)
-      navigate(`/executions/${execId}`)
+      void navigate(`/executions/${execId}`)
     })
     return () => {
       registerTrackedTerminalHandler(null)

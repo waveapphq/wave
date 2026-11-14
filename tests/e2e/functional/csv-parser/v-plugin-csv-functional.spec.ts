@@ -18,8 +18,9 @@
  * Aborting permutations (run must FAIL at the node with the exact message) live
  * in their own fixtures because they terminate the run:
  *   parse-mismatch-fail  S4  on_mismatch=fail
- *   transform-unknown-op T9  unknown filter operator
  *   serialize-wrong-type Z7  serialize a non-table
+ * The save refuses an unknown filter operator with the run's own text:
+ *   transform-unknown-op T9  unknown filter operator
  *
  * The serialize/schema fixtures use the UI-faithful literal variable_ref form
  * (bare variable name, no expressionFields).
@@ -30,6 +31,7 @@
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts, getLogLines } from '../../helpers/log-reader'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
+import { expectTestRefused } from '../../helpers/number-rule'
 import { selectEnvironment } from '../../helpers/workbench'
 import fs from 'fs'
 import path from 'path'
@@ -91,11 +93,6 @@ const ABORTING: Array<{ name: string; node: string; errorText: string }> = [
     errorText: "Type mismatch in column 'age': 'abc' is not a valid integer",
   },
   {
-    name: 'transform-unknown-op',
-    node: 't9',
-    errorText: "Unknown filter operator: 'bogus'",
-  },
-  {
     // The table input is a variable_ref: a non-table variable is rejected at
     // parameter resolution (the type-check fires before execute), so the run
     // fails with the resolution-layer message rather than the plugin's own
@@ -126,3 +123,9 @@ for (const { name, node, errorText } of ABORTING) {
     ).toBeTruthy()
   })
 }
+
+test('CSV functional save refusal: transform-unknown-op', async ({ request }) => {
+  const fixture = loadFixture('transform-unknown-op')
+  const body = { ...fixture, name: `${String(fixture.name)} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  await expectTestRefused(request, body, [['INVALID_CONDITION', "Unknown filter operator: 'bogus'"]])
+})

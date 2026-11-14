@@ -6,10 +6,13 @@ Requirements implemented:
 - REQ-3.5.0.12: Control registration at application startup
 """
 
+from collections.abc import Collection, Mapping
 from typing import Any
 
-from wavecore.controls.base import ControlBase
-from wavecore.core.number_rule import is_integer_value
+from wavecore.controls.assertion_evaluator import condition_join_problems
+from wavecore.controls.base import ControlBase, raise_first_problem
+from wavecore.core.execution.field_checks import FieldFinding
+from wavecore.core.number_rule import is_integer_value, number_problem, parse_number
 from wavecore.core.table import Table
 from wavecore.models.controls.parameters import ControlParameter, RequiredWhen
 from wavecore.models.enums import ControlId
@@ -56,6 +59,7 @@ class ForControl(ControlBase):
                     type="integer",
                     required_when=RequiredWhen(field="mode", values=["count"]),
                     accepts_null=True,
+                    minimum=0,
                     description="Number of iterations",
                 ),
                 ControlParameter(
@@ -98,8 +102,8 @@ class ForControl(ControlBase):
     async def execute(self, context: dict[str, Any]) -> Any:
         """Execute For loop - return signals for engine to iterate."""
         params = context.get("parameters", {})
-        mode = params.get("mode", "count")
-        step = params.get("step", 1)
+        mode = params["mode"]
+        step = params["step"]
 
         if mode == "count":
             # A null count holds nothing, so the loop runs zero times (REQ-3.1.3.25).
@@ -127,13 +131,21 @@ class ForControl(ControlBase):
             "index": initial_index,
         }
 
-    async def validate(self, params: dict[str, Any]) -> None:
-        """Validate For loop parameters."""
-        mode = params.get("mode", "count")
-        if mode not in ("count", "range"):
-            raise ValueError("mode must be 'count' or 'range'")
+    def structure_problems(
+        self, values: Mapping[str, Any], sources: Collection[str] = ()
+    ) -> list[FieldFinding]:
+        """A literal step of zero; any other step is left to the shared type check."""
+        step = values.get("step")
+        if "step" in sources or number_problem(step, "integer") is not None:
+            return []
+        if parse_number(step, "integer") != 0:
+            return []
+        return [FieldFinding("INVALID_SETTING_VALUE", "step must not be zero", None, "step")]
 
-        if mode == "count":
+    async def validate(self, params: dict[str, Any]) -> None:
+        """Validate For loop parameters; the run fill has already written the mode."""
+        raise_first_problem(self.structure_problems(params))
+        if params["mode"] == "count":
             if "count" not in params:
                 raise ValueError("count is required when mode is 'count'")
             count = params["count"]
@@ -144,10 +156,6 @@ class ForControl(ControlBase):
                 raise ValueError("start is required when mode is 'range'")
             if "end" not in params:
                 raise ValueError("end is required when mode is 'range'")
-
-        step = params.get("step")
-        if step is not None and step == 0:
-            raise ValueError("step must not be zero")
 
 
 class ForEachControl(ControlBase):
@@ -331,6 +339,7 @@ class WhileControl(ControlBase):
                     name="max_iterations",
                     type="integer",
                     required=False,
+                    minimum=1,
                     description="Maximum iterations - session FAILS if reached",
                 ),
                 ControlParameter(
@@ -354,7 +363,7 @@ class WhileControl(ControlBase):
     async def execute(self, context: dict[str, Any]) -> Any:
         """Execute While loop - return signals for engine to iterate."""
         params = context.get("parameters", {})
-        mode = params.get("mode", "while-do")
+        mode = params["mode"]
         conditions = params.get("conditions", [])
 
         logger = context.get("logger")
@@ -372,16 +381,16 @@ class WhileControl(ControlBase):
 
     async def validate(self, params: dict[str, Any]) -> None:
         """Validate While loop parameters."""
-        mode = params.get("mode", "while-do")
-        if mode not in ("while-do", "do-while"):
-            raise ValueError("mode must be 'while-do' or 'do-while'")
-
         if "conditions" not in params:
             raise ValueError("conditions parameter is required")
 
         conditions = params["conditions"]
         if not isinstance(conditions, list):
             raise ValueError("conditions must be a list")
+        if not conditions:
+            # The save's own text: the save check refuses it before a run (REQ-3.5.1.17).
+            raise ValueError("Required parameter 'conditions' is empty")
+        raise_first_problem(condition_join_problems(conditions, "conditions"))
 
         max_iterations = params.get("max_iterations")
         if max_iterations is not None and (

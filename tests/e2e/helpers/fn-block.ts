@@ -23,7 +23,8 @@ export interface BlockFields {
   values?: Rec
   expressionFields?: string[]
   templateFields?: string[]
-  variableExpressionKeys?: string[]
+  /** The secret marks, stored under `config.secretFields`. */
+  secretFields?: string[]
   elementTypes?: Rec
   outputBindings?: Record<string, string>
   profileBindings?: Rec[]
@@ -33,15 +34,16 @@ export interface BlockFields {
 }
 
 function blockData(fields: BlockFields): Rec {
+  const config: Rec = {
+    values: fields.values ?? {},
+    outputBindings: fields.outputBindings ?? {},
+    profileBindings: fields.profileBindings ?? [],
+  }
+  if (fields.secretFields?.length) config.secretFields = fields.secretFields
   const data: Rec = {
     expressionFields: fields.expressionFields ?? [],
     templateFields: fields.templateFields ?? [],
-    variableExpressionKeys: fields.variableExpressionKeys ?? [],
-    config: {
-      values: fields.values ?? {},
-      outputBindings: fields.outputBindings ?? {},
-      profileBindings: fields.profileBindings ?? [],
-    },
+    config,
   }
   if (fields.elementTypes) data.elementTypes = fields.elementTypes
   if (fields.description !== undefined) data.description = fields.description
@@ -95,9 +97,34 @@ export function csvBlock(id: string, label: string, opts: BlockFields = {}): Rec
   })
 }
 
-/** A Variable Setter writing `rows` (name -> value). */
-export function setterBlock(id: string, label: string, rows: Rec, opts: BlockFields = {}): Rec {
-  return controlBlock(id, label, 'variable-setter', 'variables', { ...opts, values: { variables: rows } })
+/** A Setter's row flags by row name; each is stored at `variables.<row>`, an entry at `variables.<row>.<entry>`. */
+export interface SetterFlags {
+  /** Rows (`next_attempt`) or list and map entries (`host_list.2`) that hold {x}. */
+  expressionRows?: string[]
+  templateRows?: string[]
+  secretRows?: string[]
+  /** Declared entry types of a list or map row, by row name. */
+  entryTypes?: Record<string, unknown>
+}
+
+const setterPath = (row: string): string => `variables.${row}`
+
+function setterPaths(rows: readonly string[] | undefined, given: string[] | undefined): string[] {
+  return [...(given ?? []), ...(rows ?? []).map(setterPath)]
+}
+
+/** A Variable Setter writing `rows` (name -> value), its row flags in the stored dotted shape. */
+export function setterBlock(id: string, label: string, rows: Rec, opts: BlockFields & SetterFlags = {}): Rec {
+  const { expressionRows, templateRows, secretRows, entryTypes, ...fields } = opts
+  const rowTypes = entryTypes && Object.fromEntries(Object.entries(entryTypes).map(([row, types]) => [setterPath(row), types]))
+  return controlBlock(id, label, 'variable-setter', 'variables', {
+    ...fields,
+    values: { variables: rows },
+    expressionFields: setterPaths(expressionRows, fields.expressionFields),
+    templateFields: setterPaths(templateRows, fields.templateFields),
+    secretFields: setterPaths(secretRows, fields.secretFields),
+    elementTypes: rowTypes ? { ...fields.elementTypes, ...rowTypes } : fields.elementTypes,
+  })
 }
 
 /** A body of Blocks for a Local Function, a Shared draft or a library version. */

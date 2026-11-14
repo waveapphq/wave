@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -57,7 +56,6 @@
             "req_in"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "req_in": "None"
@@ -109,7 +107,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn-a-body-ran'",
@@ -160,7 +157,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'fn-a-caught'",
@@ -192,7 +188,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -229,7 +224,6 @@
             "def_in"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "req_in": "'r-b'",
@@ -282,7 +276,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn-b-body-ran'",
@@ -333,7 +326,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'fn-b-caught'",
@@ -368,7 +360,6 @@
             "opt_in"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "req_in": "'r-c'",
@@ -421,7 +412,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "opt_in",
@@ -455,7 +445,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "def_in",
@@ -510,7 +499,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -546,7 +534,6 @@
             "req_in"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "req_in": "1 / 0"
@@ -598,7 +585,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn-d-body-ran'",
@@ -649,7 +635,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'fn-d-caught'",
@@ -684,7 +669,6 @@
             "def_in"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "req_in": "'r-e'",
@@ -737,7 +721,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "def_in",
@@ -771,7 +754,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "opt_in",
@@ -828,7 +810,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'null-function-inputs-done'",

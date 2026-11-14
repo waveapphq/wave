@@ -80,7 +80,6 @@ def _log_node(node_id: str, label: str, message: str = "'ok'") -> dict[str, Any]
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

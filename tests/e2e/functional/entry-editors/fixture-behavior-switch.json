@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "elementTypes": {
             "cfg": { "txt": "string", "num": "integer", "sub": "map", "arr": "array", "empty": "string" },
             "lst": ["string", "array", "map", "string"]
@@ -56,7 +55,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "f\"SW txt=[{cfg['txt']}] num={cfg['num'] + 0} sub={len(cfg['sub'])} arr={len(cfg['arr'])} empty={cfg['empty']} l0=[{lst[0]}] l1={lst[1][0] + 0} l2={len(lst[2])} l3={lst[3]}\"",

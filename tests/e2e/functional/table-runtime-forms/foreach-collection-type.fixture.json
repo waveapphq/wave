@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "collection": "orders_table" },
             "outputBindings": { "item": "bound_item", "index": "bound_idx" },

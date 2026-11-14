@@ -13,7 +13,7 @@ The test suites are tuned for Ubuntu 22.04 on an x86_64 machine with 16 cores, 2
 | Node.js 22.13 or a later 22 release, or Node.js 24 or later | The frontend. |
 | Podman 3.4, the version that Ubuntu 22.04 ships | The three test suites, which run in containers. |
 | The `docker-compose` v2 binary, on your `PATH` | `scripts/e2e-stack.sh`, which starts the services that the E2E specs run against. |
-| `sonar-scanner`, on your `PATH` | The SonarQube step of the backend and frontend suites, as [The SonarQube step](#the-sonarqube-step) says. |
+| `sonar-scanner`, on your `PATH`, and a SonarQube Cloud token in `SONAR_TOKEN` | The SonarQube step of the backend and frontend suites, as [The SonarQube step](#the-sonarqube-step) says. |
 | `jq` | The test count at the end of `./scripts/ci-playwright-local.sh`. Without it, the count says 0. The result of the suite does not change. |
 
 Run these commands to clone WAVE and install its packages:
@@ -94,13 +94,15 @@ The text checks fail on spelling that `typos.toml` does not allow, on an em or e
 
 ### The SonarQube step
 
-The backend and frontend scripts each scan their code with SonarQube, on the host. The scan waits for the quality gate of its project, `wave-backend` or `wave-frontend`, and fails when the gate fails. The scan needs these on the host:
+The backend and frontend scripts each scan their code with SonarQube, on the host. The scan goes to SonarQube Cloud, to the project `waveapphq_wave-backend` or `waveapphq_wave-frontend` of the organization `waveapphq`. The scan needs these on the host:
 
 - `sonar-scanner`, on your `PATH`.
-- `SONAR_URL`, set to the address of a SonarQube server that you can reach.
-- `SONAR_TOKEN`, set to a token of that server.
+- `SONAR_TOKEN`, set to a token of your SonarQube Cloud account. The account needs scan rights on the two projects. A maintainer grants them together with collaborator access.
+- A checked-out branch. SonarQube Cloud analyzes a local scan as your current branch.
 
-A script stops before its tests when one of these is missing. A scan that does not run fails the suite. Both scripts refuse `--no-sonar` outside GitHub Actions.
+A script stops before its tests when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
+
+The scan waits for the quality gate of its project. A failed gate fails the suite, and so does a scan that does not run.
 
 ### Run a part of the tests
 

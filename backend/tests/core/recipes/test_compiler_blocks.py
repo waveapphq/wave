@@ -306,6 +306,24 @@ class TestNestedExpressionEmission:
         assert data["config"]["values"]["arguments"] == [{"value": "--env"}, {"value": "env_name"}]
         assert data["expressionFields"] == ["arguments.1.value"]
 
+    def test_a_list_item_expression_is_stored_and_marked_by_its_index(self) -> None:
+        step = {
+            "block": "http-client",
+            "settings": {
+                "url": "http://x",
+                "method": "GET",
+                "cipher_suites": ["TLS_AES_128_GCM_SHA256", {"expr": "extra_suite"}],
+            },
+        }
+        variables = {"extra_suite": {"type": "string", "value": "TLS_AES_256_GCM_SHA384"}}
+        result = compile_clean(make_recipe([step], variables=variables))
+        data = nodes_by_id(result)["node-1"]["data"]
+        assert data["config"]["values"]["cipher_suites"] == [
+            "TLS_AES_128_GCM_SHA256",
+            "extra_suite",
+        ]
+        assert data["expressionFields"] == ["cipher_suites.1"]
+
     def test_a_part_field_expression_is_stored_and_marked(self) -> None:
         step = {
             "block": "http-client",
@@ -380,6 +398,22 @@ class TestTypedSettingEmission:
                 "startup": "map",
             }
         }
+
+    def test_a_literal_driver_options_map_is_stored_element_typed(self) -> None:
+        step = {
+            "block": "sql-client",
+            "settings": {
+                "host": "db",
+                "database": "wave",
+                "username": "wave",
+                "sql": "SELECT 1",
+                "driver_options": {"literal": {"expr": 5}},
+            },
+        }
+        data = nodes_by_id(compile_clean(make_recipe([step])))["node-1"]["data"]
+        assert data["config"]["values"]["driver_options"] == {"expr": "5"}
+        assert data["expressionFields"] == []
+        assert data["elementTypes"] == {"driver_options": {"expr": "integer"}}
 
     def test_a_text_only_map_setting_carries_no_element_types(self) -> None:
         step = {
@@ -456,6 +490,13 @@ class TestOpensearchBlockEmission:
 
         assert data["config"]["values"]["query"] == "service: {{ service }}"
         assert data["templateFields"] == ["query"]
+
+    def test_a_literal_inside_a_query_map_is_stored_as_the_data_it_holds(self) -> None:
+        query = {"term": {"literal": {"template": "welcome-mail"}}}
+        data = self._data(opensearch_step(query=query))
+
+        assert data["config"]["values"]["query"] == {"term": {"template": "welcome-mail"}}
+        assert (data["expressionFields"], data["templateFields"]) == (["url"], [])
 
     def test_the_compile_raises_no_stub_warning(self) -> None:
         result = compile_recipe(make_recipe([opensearch_step()], variables=OPENSEARCH_VARIABLES))
@@ -1327,6 +1368,17 @@ def _filter_row(row_id: str, operator: str, reference: Any) -> dict[str, Any]:
     }
 
 
+def _no_value_row(row_id: str, operator: str) -> dict[str, Any]:
+    """A filter row whose operator takes no value: no compare-to value and no mode."""
+    return {
+        "id": row_id,
+        "type": "literal",
+        "variable": "_cell",
+        "value_type": "string",
+        "operator": operator,
+    }
+
+
 def _csv_step(filters: Any) -> dict[str, Any]:
     return {
         "block": "csv-parser",
@@ -1340,12 +1392,16 @@ def _stored_filters(filters: Any) -> Any:
     ]["values"]["filters"]
 
 
-class TestFilterRowCompareToValue:
-    """A filter row on an operator taking no compare-to value stores none (REQ-3.1.3.25)."""
+_NO_VALUE_OPERATORS = ["is_null", "is_not_null", "is_true", "is_false", "is_empty", "is_not_empty"]
 
-    @pytest.mark.parametrize("operator", ["is_null", "is_not_null", "is_true", "is_false"])
-    @pytest.mark.parametrize("reference", ["", "abc"])
-    def test_a_value_on_such_a_row_is_stored_as_none(self, operator: str, reference: str) -> None:
+
+class TestFilterRowCompareToValue:
+    """A filter row on an operator taking no compare-to value stores none and no mode
+    (REQ-3.1.3.25, REQ-3.5.1.5)."""
+
+    @pytest.mark.parametrize("operator", _NO_VALUE_OPERATORS)
+    @pytest.mark.parametrize("reference", ["", "abc", None])
+    def test_a_value_on_such_a_row_is_not_stored(self, operator: str, reference: Any) -> None:
         filters = [
             {
                 "id": "f1",
@@ -1354,7 +1410,7 @@ class TestFilterRowCompareToValue:
                 "conditions": [_filter_row("r1", operator, reference)],
             }
         ]
-        assert _stored_filters(filters)[0]["conditions"] == [_filter_row("r1", operator, None)]
+        assert _stored_filters(filters)[0]["conditions"] == [_no_value_row("r1", operator)]
 
     def test_a_grouped_row_follows_the_rule_and_the_other_items_stay_as_written(self) -> None:
         group = {
@@ -1382,7 +1438,7 @@ class TestFilterRowCompareToValue:
             *conditions[:4],
             {
                 **group,
-                "items": [_filter_row("r2", "is_null", None), {"type": "operator", "value": "or"}],
+                "items": [_no_value_row("r2", "is_null"), {"type": "operator", "value": "or"}],
             },
         ]
 
@@ -1401,3 +1457,41 @@ class TestFilterRowCompareToValue:
 
     def test_filters_given_as_an_expression_stay_an_expression(self) -> None:
         assert _stored_filters({"expr": "my_filters"}) == "my_filters"
+
+    def test_a_template_flag_on_a_filter_row_is_kept(self) -> None:
+        row = {**_filter_row("r1", "equals", "{{ prefix }}-1"), "reference_is_template": True}
+        filters = [
+            {
+                "id": "f1",
+                "column": {"mode": "name", "value": "name"},
+                "asType": "string",
+                "conditions": [row],
+            }
+        ]
+        assert _stored_filters(filters)[0]["conditions"] == [row]
+
+    def test_a_row_with_no_compare_to_value_stays_without_one(self) -> None:
+        row = _no_value_row("r1", "equals")
+        filters = [
+            {
+                "id": "f1",
+                "column": {"mode": "name", "value": "name"},
+                "asType": "string",
+                "conditions": [row],
+            }
+        ]
+        assert _stored_filters(filters)[0]["conditions"] == [row]
+
+    @pytest.mark.parametrize("operator", _NO_VALUE_OPERATORS)
+    @pytest.mark.parametrize("flag", ["reference_is_expression", "reference_is_template"])
+    def test_a_mode_on_such_a_row_is_not_stored(self, operator: str, flag: str) -> None:
+        row = {**_filter_row("r1", operator, "prefix"), flag: True}
+        filters = [
+            {
+                "id": "f1",
+                "column": {"mode": "name", "value": "name"},
+                "asType": "string",
+                "conditions": [row],
+            }
+        ]
+        assert _stored_filters(filters)[0]["conditions"] == [_no_value_row("r1", operator)]

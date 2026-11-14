@@ -53,7 +53,6 @@ function buildSeed(functionId: string, libName: string): Record<string, unknown>
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             // The Required `user_id` input holds a value so the seed saves clean.
             config: {
               values: { user_id: 'seed' },

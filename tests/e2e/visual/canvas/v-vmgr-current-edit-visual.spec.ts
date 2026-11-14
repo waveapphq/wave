@@ -55,7 +55,6 @@ function buildFixture() {
             hasNewerVersion: false,
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { message: "'anchor'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
           },
           measured: { width: 120, height: 62 },
@@ -73,7 +72,7 @@ function buildFixture() {
 }
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 async function openInspector(page: Page, name: string): Promise<Locator> {
   const row = page

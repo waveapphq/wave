@@ -11,7 +11,7 @@
  *   - Variable propagation: downstream blocks read values set by upstream setter
  *   - Type preservation: numeric types stay numeric, boolean stays boolean
  *   - Multiple variables per setter: all assignments in one control execute correctly
- *   - Per-variable expression resolution (variableExpressionKeys)
+ *   - Per-row expression resolution (expressionFields `variables.<row>`)
  *
  * Step 2 - Loop body:
  *   - For(count=5) with VarSetter(counter = counter + 1) in body

@@ -476,7 +476,7 @@ class TestVariableSetterSecretSeeding:
                 "version": "1.0.0",
                 "config": {
                     "values": {"variables": variables},
-                    "variableSecretKeys": secret_keys,
+                    "secretFields": [f"variables.{key}" for key in secret_keys],
                 },
             },
         }
@@ -825,7 +825,6 @@ class TestUnmaskSecretsNodeOption:
                 "config": config,
                 "expressionFields": ["message"],
                 "templateFields": [],
-                "variableExpressionKeys": [],
             },
         }
 
@@ -1526,7 +1525,6 @@ def _fn_log_node(node_id: str, message: str) -> dict[str, Any]:
             "config": {"values": {"message": message, "level": "INFO"}, "profileBindings": []},
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

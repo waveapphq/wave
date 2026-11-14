@@ -20,6 +20,7 @@ from wavecore.api.exceptions import (
     ValidationException,
 )
 from wavecore.api.services import config_service
+from wavecore.core.logging.log_safe import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -149,5 +150,5 @@ async def get_config_value(key: str) -> JSONResponse:
     except (ValidationException, NotFoundException):
         raise
     except RuntimeError as e:
-        logger.error(f"Internal error retrieving config value {key}: {e}")
+        logger.error(f"Internal error retrieving config value {log_safe(key)}: {e}")
         raise InternalServerException() from e

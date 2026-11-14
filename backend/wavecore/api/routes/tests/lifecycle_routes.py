@@ -184,16 +184,20 @@ async def publish_function(
     response: Response,
     if_match: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any] | JSONResponse:
-    """Publish a local Function node into the library."""
-    return await _run_body_node_op(
+    """Publish a local Function node into the library; the answer lists what the save removed."""
+    repairs: list[dict[str, Any]] = []
+    answer = await _run_body_node_op(
         test_id,
         request,
         response,
         if_match,
         lambda node_id, body: workbench_functions.publish_local_function(
-            test_id, node_id, _local_publish_payload(body)
+            test_id, node_id, _local_publish_payload(body), repairs=repairs
         ),
     )
+    if isinstance(answer, JSONResponse):
+        return answer
+    return {**answer, "repairs": repairs}
 
 
 @router.post("/tests/{test_id}/functions/detach", response_model=None)

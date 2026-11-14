@@ -193,7 +193,10 @@ def _setter_node(value: Any) -> dict[str, Any]:
             "elementType": "variable-setter",
             "nodeType": "control",
             "version": "1.0.0",
-            "config": {"values": {"variables": {"tok": value}}, "variableSecretKeys": ["tok"]},
+            "config": {
+                "values": {"variables": {"tok": value}},
+                "secretFields": ["variables.tok"],
+            },
         },
     }
 

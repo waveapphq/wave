@@ -149,7 +149,7 @@ export function FunctionDetailPage(): ReactNode {
       try {
         applyVersions(await listFunctionVersions(functionId!))
       } catch {
-        navigate('/functions')
+        void navigate('/functions')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete version')
@@ -165,7 +165,7 @@ export function FunctionDetailPage(): ReactNode {
     }
     try {
       await deleteFunction(functionId!, { cascade: true })
-      navigate('/functions')
+      void navigate('/functions')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete function')
     }
@@ -193,7 +193,7 @@ export function FunctionDetailPage(): ReactNode {
       >
         <FunctionSquare className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">{error ?? 'Function not found'}</p>
-        <Button variant="outline" size="sm" onClick={() => { navigate('/functions') }}>
+        <Button variant="outline" size="sm" onClick={() => { void navigate('/functions') }}>
           Back to Functions
         </Button>
       </div>
@@ -207,7 +207,7 @@ export function FunctionDetailPage(): ReactNode {
       <DetailHeader
         name={functionName}
         entityType="function"
-        onBack={() => { navigate('/functions') }}
+        onBack={() => { void navigate('/functions') }}
         actions={
           <>
             <ConditionalTooltip content="Open the read-only workflow view for this version" wide>
@@ -216,7 +216,7 @@ export function FunctionDetailPage(): ReactNode {
                 size="sm"
                 data-testid="view-workflow"
                 onClick={() => {
-                  navigate(`/workbench?viewFunction=${functionId!}&version=${selectedVersion}`)
+                  void navigate(`/workbench?viewFunction=${functionId!}&version=${selectedVersion}`)
                 }}
               >
                 <Eye className="mr-1.5 h-4 w-4" />

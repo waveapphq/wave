@@ -20,6 +20,7 @@ import { PARAM_TYPE_TO_VAR_TYPE } from '@/features/workbench/lib/node-parameters
 import type { SecretMaskingSetting } from '@/features/workbench/lib/node-parameters/secret-reveal'
 import { isOutputBindable } from '@/features/workbench/lib/validation/output-binding-rules'
 import { getControlMetadata, getControlVersions } from '@/features/workbench/docs/_loader'
+import { getNodeOutputHandles } from './node-builders'
 import {
   activeFunctionScopeBody,
   functionScopeNames,
@@ -32,6 +33,8 @@ import {
   findNodeDeepById,
   walkActiveSubtree,
 } from '@/features/functions/canvas/inner-workflow'
+
+type Rec = Record<string, unknown>
 
 /** Minimal edge shape matching the workflow store's EdgeType */
 interface StoreEdge {
@@ -51,51 +54,43 @@ function removeMatchingEdges<E extends StoreEdge>(storeEdges: E[], sourceId: str
   return storeEdges.filter((e) => !removeIds.has(e.id))
 }
 
-/** Clean up outgoing edges when assert mode changes (single <-> split).
- *
- * The mode value can be ``undefined`` in two places we must normalize before
- * comparing:
- *   - ``oldMode`` is ``undefined`` for a freshly-dropped Assert whose modal
- *     was never saved, because ``data.config.values.mode`` was never set on
- *     the node. The modal renders it as the default ("split"), so the
- *     effective mode the user sees is "split" - normalize undefined to that.
- *   - ``saveData.values.mode`` is set explicitly by the modal save path, but
- *     guard against undefined for the same reason.
- *
- * Without the normalization, editing a fresh Assert (no mode change, just
- * adding an expression) would wipe every wired egress edge because
- * ``undefined !== 'split'``.
- */
-function cleanupAssertModeEdges<E extends StoreEdge>(
-  storeEdges: E[],
-  saveData: SaveData,
-  oldMode: unknown,
-): E[] | null {
-  const normalizedOld = (oldMode as string | undefined) ?? 'split'
-  const normalizedNew = (saveData.values.mode as string | undefined) ?? 'split'
-  if (normalizedOld === normalizedNew) return null
-  return removeMatchingEdges(storeEdges, saveData.id, () => true)
+function sameHandles(before: string[] | null, after: string[] | null): boolean {
+  if (before === null || after === null) return before === after
+  return before.length === after.length && before.every((handle, index) => handle === after[index])
 }
 
-/** A container's egress lane is not a branch, so a branch edit never orphans it. */
-const NON_BRANCH_EGRESS_HANDLES = new Set(['then'])
+const WAIT_UNTIL_EGRESS = 'then'
 
-/** Clean up orphaned edges when if-else branches are removed */
-function cleanupOrphanedBranchEdges<E extends StoreEdge>(
+/** A Wait Until mode change moves the edge a run leaves by to the new mode's exit; another edge stays only on a lane the new mode draws (REQ-3.5.4.3). */
+function moveWaitUntilEdges<E extends StoreEdge>(storeEdges: E[], nodeId: string, after: string[] | null): E[] | null {
+  const out = storeEdges.filter((e) => e.source === nodeId)
+  if (out.length === 0) return null
+  // A run leaves by the `then` edge, else by the first unnamed one.
+  const next = out.find((e) => e.sourceHandle === WAIT_UNTIL_EGRESS) ?? out.find((e) => !e.sourceHandle)
+  const lanes = new Set(after)
+  lanes.delete(WAIT_UNTIL_EGRESS)
+  return storeEdges
+    .filter((e) => e.source !== nodeId || e === next || lanes.has(e.sourceHandle ?? ''))
+    .map((e) => (e === next ? { ...e, sourceHandle: after === null ? undefined : WAIT_UNTIL_EGRESS } : e))
+}
+
+/** The Block's edges out of a handle its saved config no longer draws go; null when nothing goes (REQ-3.5.1.11, REQ-3.5.4.3). */
+function cleanupGoneHandleEdges<E extends StoreEdge>(
   storeEdges: E[],
-  saveData: SaveData,
+  nodeId: string,
+  elementType: string,
+  oldConfig: Rec,
+  newConfig: Rec,
 ): E[] | null {
-  const branches = saveData.values.branches as Array<{id: string}> | undefined
-  if (!branches) return null
-  const branchIds = new Set(branches.map((b) => b.id))
-  return removeMatchingEdges(
-    storeEdges,
-    saveData.id,
-    (e) =>
-      !!e.sourceHandle &&
-      !branchIds.has(e.sourceHandle) &&
-      !NON_BRANCH_EGRESS_HANDLES.has(e.sourceHandle),
-  )
+  const before = getNodeOutputHandles({ id: nodeId, data: { elementType, config: oldConfig } })
+  const after = getNodeOutputHandles({ id: nodeId, data: { elementType, config: newConfig } })
+  if (sameHandles(before, after)) return null
+  // An Assert mode change drops every connection out of it.
+  if (elementType === 'assert') return removeMatchingEdges(storeEdges, nodeId, () => true)
+  if (elementType === 'wait-until') return moveWaitUntilEdges(storeEdges, nodeId, after)
+  if (after === null) return removeMatchingEdges(storeEdges, nodeId, (e) => !!e.sourceHandle)
+  const kept = new Set(after)
+  return removeMatchingEdges(storeEdges, nodeId, (e) => !e.sourceHandle || !kept.has(e.sourceHandle))
 }
 
 // ===========================================================================
@@ -140,7 +135,16 @@ const OUTPUT_ROW_PREFIX = 'param:output:'
 /** The output bindings and Variable Setter Secret rows a Save carries. */
 interface SecretCarriers {
   outputBindings: Record<string, string>
-  variableSecretKeys?: string[]
+  secretFields?: string[]
+}
+
+const SETTER_SLOT_PREFIX = 'variables.'
+
+/** The Setter rows a Save marks secret: each `variables.<row>` mark names its row's variable. */
+function setterSecretRows(secretFields: readonly string[] | undefined): string[] {
+  return (secretFields ?? [])
+    .filter((slot) => slot.startsWith(SETTER_SLOT_PREFIX))
+    .map((slot) => slot.slice(SETTER_SLOT_PREFIX.length))
 }
 
 /** The existing plain variables a Save would make secret, each once; Secret is sticky (SECUI-4, SECUI-12). */
@@ -150,7 +154,7 @@ function variablesBecomingSecret(
   variables: WorkflowVariable[],
 ): WorkflowVariable[] {
   const secretOutputs = new Set(secretOutputNames)
-  const names = new Set(carriers.variableSecretKeys ?? [])
+  const names = new Set(setterSecretRows(carriers.secretFields))
   for (const [outputName, varName] of Object.entries(carriers.outputBindings)) {
     if (varName && secretOutputs.has(outputName)) names.add(varName)
   }
@@ -188,22 +192,24 @@ function createVariableSetterVariables(
   addVariable: (v: Omit<WorkflowVariable, 'id'>) => void,
   reservedScopeNames: Set<string> = new Set(),
 ): void {
-  if (!saveData.variableTypes) return
+  // The window's type picks for new targets; the node never stores a row type.
+  const pickedTypes = saveData.newTargetTypes
+  if (!pickedTypes) return
   const varMap = saveData.values.variables as Record<string, unknown> | undefined
   if (!varMap) return
 
   const existingTestVarNames = new Set(variables.map((v) => v.name))
-  const secretKeys = new Set(saveData.variableSecretKeys ?? [])
+  const secretRows = new Set(setterSecretRows(saveData.secretFields))
   for (const varName of Object.keys(varMap)) {
     if (!varName) continue
     if (existingTestVarNames.has(varName)) continue
     if (reservedScopeNames.has(varName)) continue
-    const varType = (saveData.variableTypes[varName] ?? 'string') as WorkflowVariable['type']
+    const varType = (pickedTypes[varName] ?? 'string') as WorkflowVariable['type']
     // A Variable Setter target is written at run time: declare it holding null.
     addVariable({
       name: varName,
       type: varType,
-      isSecret: secretKeys.has(varName),
+      isSecret: secretRows.has(varName),
     })
     existingTestVarNames.add(varName)
   }
@@ -223,8 +229,6 @@ function resolveControlVersion(
     controlVersions.length > 0 ? controlVersions.map((v) => v.version) : [nodeVersion]
   return { nodeVersion, availableVersions }
 }
-
-type Rec = Record<string, unknown>
 
 /** A plugin or control Block's element: it carries none of a Function Block's chrome. */
 type BlockElement = ElementData & { kind: 'block' } & {
@@ -464,16 +468,11 @@ export function useConfigModal(nodeId: string | null) {
       profileBindings: (config.profileBindings ?? []) as ProfileBinding[],
       expressionFields: (nodeData.expressionFields as string[] | undefined) ?? [],
       templateFields: (nodeData.templateFields as string[] | undefined) ?? [],
-      variableExpressionKeys: (nodeData.variableExpressionKeys as string[] | undefined) ?? [],
-      variableTemplateKeys: (nodeData.variableTemplateKeys as string[] | undefined) ?? [],
-      variableSecretKeys: (config.variableSecretKeys as string[] | undefined) ?? [],
+      secretFields: (config.secretFields as string[] | undefined) ?? [],
       // Undefined means never saved; the sheet then seeds schema-secret outputs (K8SCON-4).
       outputSecretFields: config.outputSecretFields as string[] | undefined,
       unmaskedSecretFields: (config.unmasked_secret_fields as string[] | undefined) ?? [],
       secretMasking: (config.secret_masking as SecretMaskingSetting | undefined) ?? 'system',
-      variableTypes: (nodeData.variableTypes as Record<string, string> | undefined) ?? {},
-      variableElementTypes:
-        (nodeData.variableElementTypes as Record<string, ElementTypes> | undefined) ?? {},
       elementTypes: (nodeData.elementTypes as Record<string, ElementTypes> | undefined) ?? {},
     }
   }, [nodeId, activeNodes, storeNodes])
@@ -487,15 +486,15 @@ export function useConfigModal(nodeId: string | null) {
         transaction(() => {
           updateNode(saveData.id, { data: data as typeof activeNodes[number]['data'] })
 
-          // Clean up edges on assert mode change (scoped to active subtree)
-          if (configModalElement.elementType === 'assert') {
-            const cleaned = cleanupAssertModeEdges(activeEdges, saveData, configModalElement.currentValues.mode)
-            if (cleaned) setEdges(cleaned)
-          }
-
-          // Clean up orphaned branch edges (scoped to active subtree)
-          const orphanCleaned = cleanupOrphanedBranchEdges(activeEdges, saveData)
-          if (orphanCleaned) setEdges(orphanCleaned)
+          // The connections of a handle the Save removes go (scoped to active subtree).
+          const cleaned = cleanupGoneHandleEdges(
+            activeEdges,
+            saveData.id,
+            configModalElement.elementType,
+            { values: configModalElement.currentValues },
+            data.config as Rec,
+          )
+          if (cleaned) setEdges(cleaned)
 
           // Create variables for output bindings and variable setter entries.
           // The existing-name check reads activeVariables so inputs/outputs

@@ -42,15 +42,15 @@ describe('ForEach Loop Control Parameters', () => {
   // Input parameter count and names
   // ---------------------------------------------------------------------------
 
-  it('has exactly 2 input parameters', () => {
-    const inputs = CONTROL_INPUTS['for-each']
-    expect(inputs).toHaveLength(2)
+  it('has the collection, its collection type and the timeout as input parameters', () => {
+    const names = CONTROL_INPUTS['for-each'].map((p) => p.name)
+    expect([...names].sort()).toEqual(['collection', 'collection_type', 'timeout'])
   })
 
-  it('has input parameters in correct order (collection, timeout)', () => {
-    const inputs = CONTROL_INPUTS['for-each']
-    expect(inputs[0].name).toBe('collection')
-    expect(inputs[1].name).toBe('timeout')
+  // The collection type is drawn by the collection row's Type picker, never as a row of its own.
+  it('draws the collection row before the timeout row', () => {
+    const rows = CONTROL_INPUTS['for-each'].map((p) => p.name).filter((name) => name !== 'collection_type')
+    expect(rows).toEqual(['collection', 'timeout'])
   })
 
   // ---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ describe('ForEach Loop Control Parameters', () => {
     it('returns full parameters for production version (1.0.0)', () => {
       const inputs = getInputParams('for-each')
       expect(inputs).toBeDefined()
-      expect(inputs).toHaveLength(2)
+      expect(inputs).toHaveLength(3)
 
       const outputs = getOutputParams('for-each')
       expect(outputs).toBeDefined()

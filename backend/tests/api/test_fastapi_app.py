@@ -338,16 +338,9 @@ class TestServerIntegration:
         from wavecore.api.app import app
 
         with TestClient(app) as client:
-            # Even without routes, app should handle requests
-            # (might return 404, but shouldn't crash)
-            try:
-                response = client.get("/nonexistent")
-                assert response.status_code in [
-                    404,
-                    200,
-                ], "app must handle requests without crashing"
-            except Exception as e:
-                pytest.fail(f"app must handle HTTP requests without exceptions: {e}")
+            response = client.get("/nonexistent")
+
+        assert response.status_code == 404, "an unknown path must be answered, not crash the app"
 
     def test_app_cors_ready(self) -> None:
         """Test that app is ready for CORS middleware configuration."""

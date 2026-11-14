@@ -3,18 +3,25 @@
 Pure function of the flow's structure: the same nodes and edges always
 produce identical positions. Child flows occupy centered columns beneath
 their construct; continuation resumes on the parent centerline below the
-deepest child row.
+deepest child row. A pinned node keeps its place unless a placed or grown
+node needs the room, and then it only moves down.
 """
 
+import math
 import re
 from collections import defaultdict
+from collections.abc import Collection, Mapping
 from typing import Any
 
-from wavecore.core.layout.dimensions import estimate_node_size
+from wavecore.core.layout.dimensions import TALLEST_COLLAPSED_HEIGHT, estimate_node_size
 
 RHYTHM_Y = 140
 GUTTER_X = 80
 MIN_COLUMN_WIDTH = 240
+# Two blocks closer than these on both axes crowd each other.
+ROOM_CLEARANCE_X = GUTTER_X // 2
+# The space a row leaves under the tallest collapsed card, so fresh rows never crowd.
+ROOM_CLEARANCE_Y = RHYTHM_Y - TALLEST_COLLAPSED_HEIGHT
 
 START_NODE_ID = "start-node"
 
@@ -31,6 +38,9 @@ _SECTION_ORDER = {
 _NAMED_SECTIONS = frozenset(_SECTION_ORDER)
 
 _Chain = list[tuple[str, list["_Chain"]]]
+FlowTree = list[tuple[str, dict[str, "FlowTree"]]]
+_Positions = Mapping[str, Mapping[str, float]]
+_Box = tuple[float, float, int, float]
 
 
 def _is_section_handle(handle: str) -> bool:
@@ -46,6 +56,24 @@ def _section_sort_key(handle: str) -> int:
 
 def _num(value: float) -> float:
     return int(value) if float(value).is_integer() else float(value)
+
+
+def _gap(start_a: float, size_a: float, start_b: float, size_b: float) -> float:
+    return max(start_b - (start_a + size_a), start_a - (start_b + size_b))
+
+
+def _crowds(first: _Box, second: _Box) -> bool:
+    first_x, first_y, first_width, first_height = first
+    second_x, second_y, second_width, second_height = second
+    return (
+        _gap(first_x, first_width, second_x, second_width) < ROOM_CLEARANCE_X
+        and _gap(first_y, first_height, second_y, second_height) < ROOM_CLEARANCE_Y
+    )
+
+
+def _row_step(height: float) -> int:
+    """Top-to-top distance below a block of this height, in whole rhythm rows."""
+    return math.ceil((height + ROOM_CLEARANCE_Y) / RHYTHM_Y) * RHYTHM_Y
 
 
 def ingress_counts(edges: list[dict[str, Any]]) -> dict[str, int]:
@@ -68,12 +96,23 @@ class _Layouter:
             for edge in edges
             if str(edge.get("targetHandle") or "").startswith("ingress_")
         }
+        self.starts = [str(e["target"]) for e in edges if str(e["source"]) == START_NODE_ID]
         self.visited: set[str] = set()
         self.positions: dict[str, dict[str, float]] = {}
+        self.sections: dict[str, list[tuple[str, _Chain]]] = {}
+        # node id -> the nodes the flow puts above it (its construct, or the row before it).
+        self.follows: dict[str, set[str]] = {}
+        self.sizes: dict[str, tuple[int, float]] = {}
+
+    def _size(self, node_id: str) -> tuple[int, float]:
+        if node_id not in self.sizes:
+            self.sizes[node_id] = estimate_node_size(
+                self.by_id[node_id], self.ingress.get(node_id, 0)
+            )
+        return self.sizes[node_id]
 
     def _width(self, node_id: str) -> int:
-        width, _height = estimate_node_size(self.by_id[node_id], self.ingress.get(node_id, 0))
-        return width
+        return self._size(node_id)[0]
 
     def _classify_outgoing(
         self, node_id: str
@@ -88,16 +127,18 @@ class _Layouter:
         return section_edges, then_edge, plain_edge
 
     def _build_children(
-        self, section_edges: list[dict[str, Any]]
+        self, node_id: str, section_edges: list[dict[str, Any]]
     ) -> tuple[list[_Chain], list[str]]:
         child_chains: list[_Chain] = []
         child_exits: list[str] = []
+        sections = self.sections.setdefault(node_id, [])
         for edge in section_edges:
             target = str(edge["target"])
             if target in self.rejoins:
                 child_exits.append(target)
                 continue
             sub_chain, sub_exit = self.build_chain(target)
+            sections.append((str(edge["sourceHandle"]), sub_chain))
             if sub_chain:
                 child_chains.append(sub_chain)
             if sub_exit is not None:
@@ -131,7 +172,7 @@ class _Layouter:
         while current is not None and current in self.by_id and current not in self.visited:
             self.visited.add(current)
             section_edges, then_edge, plain_edge = self._classify_outgoing(current)
-            child_chains, child_exits = self._build_children(section_edges)
+            child_chains, child_exits = self._build_children(current, section_edges)
             if then_edge is not None and child_chains:
                 # Sentinel: sections pack left of the continuation lane (the spine).
                 child_chains.append([])
@@ -180,38 +221,106 @@ class _Layouter:
                 y += RHYTHM_Y
         return y
 
-    def place_starts(self, starts: list[str], y: float) -> float:
-        for start in starts:
-            if start not in self.by_id or start in self.visited:
-                continue
-            chain, _exit = self.build_chain(start)
-            y = self.place_chain(chain, 0, y)
-        return y
+    def top_chains(self, nodes: list[dict[str, Any]]) -> list[_Chain]:
+        """The flows from the start first, then each flow nothing reaches."""
+        chains: list[_Chain] = []
+        for node_id in [*self.starts, *(str(node["id"]) for node in nodes)]:
+            if node_id in self.by_id and node_id not in self.visited:
+                chains.append(self.build_chain(node_id)[0])
+        return chains
 
-    def place_orphans(self, nodes: list[dict[str, Any]], y: float) -> float:
-        for node in nodes:
-            node_id = str(node["id"])
-            if node_id in self.positions:
-                continue
-            chain, _exit = self.build_chain(node_id)
-            if chain:
-                y = self.place_chain(chain, 0, y)
-        return y
+    def tree(self, chain: _Chain) -> FlowTree:
+        return [
+            (node_id, {handle: self.tree(sub) for handle, sub in self.sections.get(node_id, [])})
+            for node_id, _children in chain
+        ]
+
+    def record_follows(self, chain: _Chain, above: set[str]) -> set[str]:
+        """Note what each row of the chain sits below; returns every node of the chain."""
+        everything: set[str] = set()
+        for node_id, _children in chain:
+            self.follows[node_id] = above
+            row = {node_id}
+            for _handle, sub_chain in self.sections.get(node_id, []):
+                row |= self.record_follows(sub_chain, {node_id})
+            everything |= row
+            above = row
+        return everything
+
+    def _box(self, node_id: str, positions: _Positions, top: float) -> _Box:
+        width, height = self._size(node_id)
+        return (positions[node_id]["x"], top, width, height)
+
+    def _blocks(self, other: str, node_id: str, top: float, positions: _Positions) -> bool:
+        other_box = self._box(other, positions, positions[other]["y"])
+        box = self._box(node_id, positions, top)
+        if _crowds(other_box, box):
+            return True
+        other_x, other_y, other_width, other_height = other_box
+        # In one column, a node the flow puts above this one stays a row above it.
+        return (
+            other in self.follows.get(node_id, ())
+            and _gap(other_x, other_width, box[0], box[2]) < GUTTER_X
+            and top < other_y + _row_step(other_height)
+        )
+
+    def _free_top(
+        self, node_id: str, top: float, others: list[str], positions: _Positions
+    ) -> float:
+        """The first top at or below `top` where none of `others` is in the node's way."""
+        while True:
+            blockers = [other for other in others if self._blocks(other, node_id, top, positions)]
+            if not blockers:
+                return top
+            top = max(positions[other]["y"] + _row_step(self._size(other)[1]) for other in blockers)
+
+    def make_room(
+        self, order: list[str], positions: dict[str, dict[str, float]], moved: set[str]
+    ) -> None:
+        """In flow order, move each node down just enough to clear the moved nodes before it."""
+        settled: list[str] = []
+        for node_id in order:
+            top = positions[node_id]["y"]
+            if node_id not in moved:
+                cleared = self._free_top(
+                    node_id, top, [other for other in settled if other in moved], positions
+                )
+                if cleared != top:
+                    moved.add(node_id)
+                top = cleared
+            if node_id in moved:
+                top = self._free_top(node_id, top, settled, positions)
+            positions[node_id] = {"x": positions[node_id]["x"], "y": _num(top)}
+            settled.append(node_id)
+
+
+def flow_tree(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> FlowTree:
+    """Every node in flow order, each row holding its sections' flows by handle."""
+    layouter = _Layouter(nodes, edges)
+    return [row for chain in layouter.top_chains(nodes) for row in layouter.tree(chain)]
 
 
 def layout_workflow(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
-    pinned: dict[str, dict[str, float]] | None = None,
+    pinned: _Positions | None = None,
+    grown: Collection[str] = (),
 ) -> dict[str, dict[str, float]]:
-    """node_id -> {x, y} placement; pinned entries are returned verbatim."""
+    """node_id -> {x, y}: a pinned node keeps its place unless a placed or grown one needs it."""
     if not nodes:
         return {}
     layouter = _Layouter(nodes, edges)
-    starts = [str(e["target"]) for e in edges if str(e["source"]) == START_NODE_ID]
-    y = layouter.place_starts(starts, float(RHYTHM_Y))
-    layouter.place_orphans(nodes, y)
-    for node_id, position in (pinned or {}).items():
-        if node_id in layouter.positions:
-            layouter.positions[node_id] = dict(position)
-    return layouter.positions
+    y = float(RHYTHM_Y)
+    for chain in layouter.top_chains(nodes):
+        y = layouter.place_chain(chain, 0, y)
+        layouter.record_follows(chain, set())
+    fresh = layouter.positions
+    kept = pinned or {}
+    positions = {
+        node_id: dict(kept[node_id]) if node_id in kept else dict(position)
+        for node_id, position in fresh.items()
+    }
+    order = sorted(fresh, key=lambda node_id: (fresh[node_id]["y"], fresh[node_id]["x"]))
+    moved = {node_id for node_id in fresh if node_id not in kept or node_id in grown}
+    layouter.make_room(order, positions, moved)
+    return positions

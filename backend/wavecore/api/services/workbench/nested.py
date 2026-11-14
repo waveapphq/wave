@@ -52,7 +52,7 @@ async def _dispatch_nested_branch(
     environment_id: str | None,
 ) -> str:
     """Dispatch a branch signal (if-else, assert-split) inside a nested context."""
-    from wavecore.api.services.workbench.block_status import skip_lanes_not_run
+    from wavecore.api.services.workbench.block_status import skip_lanes_not_run, take_wired_lane
     from wavecore.api.services.workbench.for_loop import (
         _execute_body_chain_iteration,
         _trace_body_chain,
@@ -60,6 +60,7 @@ async def _dispatch_nested_branch(
 
     branch_key = signals["branch"]
     outgoing = adj.get(node_id, [])
+    await take_wired_lane(session, session_id, node_id, branch_key, adj)
 
     branch_target = _find_branch_target(outgoing, branch_key)
     # Same-handle children fan out from the taken branch; the skip stops where they merge.

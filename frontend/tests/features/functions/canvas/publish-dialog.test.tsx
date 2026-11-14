@@ -269,6 +269,19 @@ describe('PublishDialog - layout & defaults', () => {
     )
   })
 
+  it('puts the cursor in Name when it opens', () => {
+    render(
+      <PublishDialog
+        isOpen={true}
+        onClose={() => {}}
+        onPublished={() => {}}
+        localFunction={defaultLocalFunction()}
+        onSubmit={makeSubmit()}
+      />,
+    )
+    expect(screen.getByTestId('publish-name-input')).toHaveFocus()
+  })
+
   it('accepts user input for Changelog and Details textareas', async () => {
     const user = userEvent.setup()
     render(

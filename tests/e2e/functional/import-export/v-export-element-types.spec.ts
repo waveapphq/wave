@@ -50,7 +50,7 @@ function sidecarsOf(test: Json): Json {
     a: { value: test.variables.a.value, elementTypes: test.variables.a.elementTypes },
     setter: {
       values: setter.data.config.values.variables,
-      variableElementTypes: setter.data.variableElementTypes,
+      elementTypes: setter.data.elementTypes,
     },
     lite: { values: lite.data.config.values.driver_options, elementTypes: lite.data.elementTypes },
   }
@@ -106,6 +106,9 @@ test.describe('V-EXPORT-ELEMENT-TYPES: element types travel through export and i
       const originalId = await importValidated(request, fixture)
       created.push(() => deleteTest(request, originalId))
       const before = sidecarsOf(await getTest(request, originalId))
+      expect(before.setter.elementTypes, 'the stored Setter row keeps its element types').toEqual({
+        'variables.sm': { n: 'integer', zip: 'string' },
+      })
 
       const file = await exported(request, `/tests/${originalId}/export?format=${format}&secrets=encrypted`)
       await deleteTest(request, originalId)

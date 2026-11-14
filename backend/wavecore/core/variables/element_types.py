@@ -148,29 +148,45 @@ def realize_typed_settings(
     element_types: Mapping[str, Any] | None,
     expression_fields: Collection[str],
 ) -> dict[str, Any]:
-    """Block settings, declared entries realized exactly; expression entries keep their source."""
+    """Block settings, declared entries realized exactly; expression entries keep their source.
+
+    A dotted place ``<setting>.<key>`` (a Variable Setter row) realizes that map entry."""
     if not element_types:
         return values
     realized = dict(values)
     for name, types in element_types.items():
-        setting = values.get(name)
         if name in expression_fields:
             continue
-        if isinstance(setting, dict) and isinstance(types, dict):
-            realized[name] = {
-                key: _typed_entry(item, types.get(key), f"{name}.{key}" in expression_fields)
-                for key, item in setting.items()
+        if name in values:
+            realized[name] = _typed_value(values[name], types, name, expression_fields)
+            continue
+        setting, _, key = name.partition(".")
+        holder = realized.get(setting)
+        if key and isinstance(holder, dict) and key in holder:
+            realized[setting] = {
+                **holder,
+                key: _typed_value(holder[key], types, name, expression_fields),
             }
-        elif isinstance(setting, list) and isinstance(types, list):
-            realized[name] = [
-                _typed_entry(
-                    item,
-                    types[index] if index < len(types) else None,
-                    f"{name}.{index}" in expression_fields,
-                )
-                for index, item in enumerate(setting)
-            ]
     return realized
+
+
+def _typed_value(value: Any, types: Any, place: str, expression_fields: Collection[str]) -> Any:
+    """One list or map realized by its entry types; ``place`` names its flagged entries."""
+    if isinstance(value, dict) and isinstance(types, dict):
+        return {
+            key: _typed_entry(item, types.get(key), f"{place}.{key}" in expression_fields)
+            for key, item in value.items()
+        }
+    if isinstance(value, list) and isinstance(types, list):
+        return [
+            _typed_entry(
+                item,
+                types[index] if index < len(types) else None,
+                f"{place}.{index}" in expression_fields,
+            )
+            for index, item in enumerate(value)
+        ]
+    return value
 
 
 def _typed_entry(item: Any, declared: Any, is_expression: bool) -> Any:

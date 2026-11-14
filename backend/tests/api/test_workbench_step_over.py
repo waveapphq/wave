@@ -69,7 +69,6 @@ def _log_node(node_id: str, label: str, message: str = "'ok'") -> dict[str, Any]
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -92,7 +91,6 @@ def _for_node(node_id: str, label: str, count: int) -> dict[str, Any]:
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

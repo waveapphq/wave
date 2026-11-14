@@ -91,7 +91,6 @@ def _make_node(
             "description": description or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -150,7 +149,7 @@ def _make_setter_node(
         description=description,
     )
     if expressions:
-        node["data"]["variableExpressionKeys"] = list(values)
+        node["data"]["expressionFields"] = [f"variables.{name}" for name in values]
     return node
 
 

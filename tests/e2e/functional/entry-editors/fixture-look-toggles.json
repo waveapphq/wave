@@ -143,15 +143,10 @@
           "version": "1.0.0",
           "description": "Toggles Setter",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "out_v"
+          "expressionFields": [
+            "variables.out_v"
           ],
-          "variableTemplateKeys": [],
-          "variableTypes": {
-            "out_v": "string"
-          },
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {

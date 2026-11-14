@@ -71,7 +71,6 @@ function assertNullNode(): Record<string, unknown> {
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: {
           assertions: [{ type: 'expression', expression: NULL_ASSERTION, id: 'a-null' }],

@@ -48,7 +48,6 @@ function csvNode(id: string, label: string, writes: string, position: { x: numbe
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { operation: 'parse', csv_content: 'a,b\n1,2', delimiter: ',', has_header: true },
         outputBindings: { row_count: writes },

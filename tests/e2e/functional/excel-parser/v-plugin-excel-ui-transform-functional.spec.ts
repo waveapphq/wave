@@ -94,7 +94,6 @@ const STORED_TRANSFORM = {
           value_type: 'integer',
           operator: 'greater_than',
           reference_value: '5',
-          reference_is_expression: false,
         },
       ],
     },

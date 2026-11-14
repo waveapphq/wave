@@ -78,7 +78,6 @@ def _make_log_node(
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -275,6 +274,23 @@ class TestPostFunctionsSurfacesEveryDimension:
         assert _has_code(body, "NODE_UNREACHABLE")
         assert any(RE_NODE_UNREACHABLE.match(m) for m in _all_messages(body))
 
+    def test_repeated_edge_id_returns_422_naming_the_id(self, client: TestClient) -> None:
+        payload = _make_function_payload(
+            name="repeatedwire",
+            workflow={
+                "nodes": [_make_log_node("n-1"), _make_log_node("n-2")],
+                "edges": [
+                    {"id": "e-1", "source": "start-node", "target": "n-1"},
+                    {"id": "e-1", "source": "n-1", "target": "n-2"},
+                ],
+            },
+        )
+        resp = client.post("/functions", json=payload)
+        assert resp.status_code == 422, resp.text
+        assert [(d["code"], d["message"]) for d in _details(resp.json())] == [
+            ("DUPLICATE_EDGE_ID", "Edge ID 'e-1' is used by more than one edge")
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Warnings do not block save (severity=warning persists)
@@ -303,6 +319,75 @@ class TestWarningsDoNotBlockSave:
         )
         resp = client.post("/functions", json=payload)
         assert resp.status_code in (200, 201), resp.text
+
+
+# ---------------------------------------------------------------------------
+# A Note nothing connects to sits beside the Function flow (REQ-5.2.7.3)
+# ---------------------------------------------------------------------------
+
+
+def _note_node(node_id: str) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "type": "noteNode",
+        "position": {"x": 0, "y": 0},
+        "data": {
+            "label": "Note",
+            "elementType": "note",
+            "nodeType": "control",
+            "version": "1.0.0",
+            "config": {
+                "values": {"text": "Helper owner note", "color": "pink"},
+                "profileBindings": [],
+                "outputBindings": {},
+            },
+        },
+    }
+
+
+def _annotated_body(*extra_edges: dict[str, Any]) -> dict[str, Any]:
+    """A Function body of one wired Log and one Note, plus ``extra_edges``."""
+    return _make_function_payload(
+        name="annotated_helper",
+        workflow={
+            "nodes": [_make_log_node("n-1"), _note_node("note-1")],
+            "edges": [{"id": "e-1", "source": "start-node", "target": "n-1"}, *extra_edges],
+        },
+    )
+
+
+class TestANoteBesideTheFunctionFlow:
+    """A Function save accepts a Note with no wire and still names a wired Note it never reaches."""
+
+    def test_post_functions_stores_a_note_with_no_wire(self, client: TestClient) -> None:
+        resp = client.post("/functions", json=_annotated_body())
+
+        assert resp.status_code == 201, resp.text
+        workflow = resp.json()["data"]["workflow"]
+        assert [n["id"] for n in workflow["nodes"]] == ["n-1", "note-1"]
+        assert [(e["source"], e["target"]) for e in workflow["edges"]] == [("start-node", "n-1")]
+
+    def test_post_functions_refuses_a_wired_note_the_entry_does_not_reach(
+        self, client: TestClient
+    ) -> None:
+        body = _annotated_body()
+        body["workflow"]["nodes"].append(_make_log_node("n-2"))
+        body["workflow"]["edges"].append({"id": "e-2", "source": "note-1", "target": "n-2"})
+
+        resp = client.post("/functions", json=body)
+
+        assert resp.status_code == 422, resp.text
+        unreached = [d for d in _details(resp.json()) if d["code"] == "NODE_UNREACHABLE"]
+        assert sorted(d["node_id"] for d in unreached) == ["n-2", "note-1"]
+
+    def test_post_tests_stores_a_local_function_note_with_no_wire(self, client: TestClient) -> None:
+        resp = client.post("/tests", json=_test_holding(_annotated_body(), {}))
+
+        assert resp.status_code == 201, resp.text
+        stored = client.get(f"/tests/{resp.json()['data']['id']}").json()["data"]
+        body = stored["workflow"]["nodes"][0]["data"]["localDefinition"]["workflow"]
+        assert [n["id"] for n in body["nodes"]] == ["n-1", "note-1"]
+        assert [(e["source"], e["target"]) for e in body["edges"]] == [("start-node", "n-1")]
 
 
 # ---------------------------------------------------------------------------
@@ -1191,7 +1276,6 @@ class TestFunctionNumbersFollowTheOneRuleAtSave:
         self, client: TestClient
     ) -> None:
         setter = _setter("set-1", {"n": "1e3"})
-        setter["data"]["variableTypes"] = {"n": "integer"}
         payload = _make_function_payload(
             variables=[{"name": "n", "type": "integer", "value": "1"}],
             workflow=_chained(setter),
@@ -1205,7 +1289,6 @@ class TestFunctionNumbersFollowTheOneRuleAtSave:
 
     def test_a_muted_block_keeps_its_literal_rows_unchecked(self, client: TestClient) -> None:
         setter = _setter("set-1", {"n": "1e3"})
-        setter["data"]["variableTypes"] = {"n": "integer"}
         setter["data"]["disabled"] = True
         payload = _make_function_payload(
             variables=[{"name": "n", "type": "integer", "value": "1"}],
@@ -1215,6 +1298,259 @@ class TestFunctionNumbersFollowTheOneRuleAtSave:
         resp = client.post("/functions", json=payload)
 
         assert resp.status_code == 201, resp.text
+
+
+def _body_block(
+    node_id: str, element_type: str, node_type: str, values: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "type": "workflowNode",
+        "data": {
+            "label": node_id,
+            "elementType": element_type,
+            "nodeType": node_type,
+            "version": "1.0.0",
+            "config": {"values": values, "profileBindings": [], "outputBindings": {}},
+        },
+    }
+
+
+def _if_else(node_id: str, conditions: list[dict[str, Any]]) -> dict[str, Any]:
+    """An If/Else whose ``if`` branch checks ``conditions``, then an ``else``."""
+    branches = [
+        {"id": "b1", "type": "if", "label": "", "conditions": conditions},
+        {"id": "b2", "type": "else", "label": ""},
+    ]
+    return _body_block(node_id, "if-else", "control", {"branches": branches})
+
+
+def _refused(resp: Any) -> list[tuple[Any, Any, Any]]:
+    """The (code, message, node id) of every save error of a 422 Function save."""
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    details = _details(body)
+    assert body["error"]["message"] == f"Function has {len(details)} validation error(s)"
+    return [(d.get("code"), d.get("message"), d.get("node_id")) for d in details]
+
+
+_GHOST = (
+    "Variable 'ghost' is not defined in this Function's scope "
+    "(inputs, outputs, and local variables)"
+)
+
+
+class TestFunctionBodyControls:
+    """REQ-3.4.1.14, REQ-3.5.0.3: a Function save gives a control Block in its body the checks
+    the Test save gives it."""
+
+    @pytest.mark.parametrize(
+        ("output", "rows", "flag", "expected"),
+        [
+            pytest.param(
+                {"name": "out", "type": "string"},
+                {"out": ""},
+                "variables.out",
+                "'out' in 'variables' is required",
+                id="row",
+            ),
+            pytest.param(
+                {"name": "hosts", "type": "array"},
+                {"hosts": ["web-1", ""]},
+                "variables.hosts.1",
+                "Row 2 in 'variables.hosts' is required",
+                id="list-entry",
+            ),
+            pytest.param(
+                {"name": "limits", "type": "map"},
+                {"limits": {"max": ""}},
+                "variables.limits.max",
+                "'max' in 'variables.limits' is required",
+                id="map-entry",
+            ),
+        ],
+    )
+    def test_a_blank_flagged_setter_row_in_a_function_is_refused(
+        self,
+        client: TestClient,
+        output: dict[str, Any],
+        rows: dict[str, Any],
+        flag: str,
+        expected: str,
+    ) -> None:
+        setter = _setter("set-1", rows)
+        setter["data"]["expressionFields"] = [flag]
+        payload = _make_function_payload(outputs=[output], workflow=_chained(setter))
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [("REQUIRED_PARAM_EMPTY", expected, "set-1")]
+
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            pytest.param(
+                {
+                    "id": "c1",
+                    "type": "literal",
+                    "variable": "ghost",
+                    "value_type": "integer",
+                    "operator": "equals",
+                    "reference_value": "1",
+                },
+                id="checked-variable",
+            ),
+            pytest.param(
+                {
+                    "id": "c1",
+                    "type": "literal",
+                    "variable": "n",
+                    "value_type": "integer",
+                    "operator": "equals",
+                    "reference_value": "ghost + 1",
+                    "reference_is_expression": True,
+                },
+                id="compare-to-expression",
+            ),
+            pytest.param(
+                {
+                    "id": "c1",
+                    "type": "literal",
+                    "variable": "label",
+                    "value_type": "string",
+                    "operator": "equals",
+                    "reference_value": "Run {{ ghost }}",
+                    "reference_is_template": True,
+                },
+                id="compare-to-template",
+            ),
+            pytest.param(
+                {"id": "c1", "type": "expression", "expression": "ghost > 1"},
+                id="expression-item",
+            ),
+        ],
+    )
+    def test_an_undeclared_name_in_a_function_condition_row_is_refused(
+        self, client: TestClient, condition: dict[str, Any]
+    ) -> None:
+        payload = _make_function_payload(
+            variables=[
+                {"name": "n", "type": "integer", "value": "1"},
+                {"name": "label", "type": "string", "value": "x"},
+            ],
+            workflow=_chained(_if_else("if-1", [condition])),
+        )
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [("UNRESOLVED_VARIABLE_REFERENCE", _GHOST, "if-1")]
+
+    def test_an_undeclared_name_in_a_function_filter_row_is_refused(
+        self, client: TestClient
+    ) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.csv_parser import CSVParserPlugin
+
+        register_plugin(CSVParserPlugin())
+        cell_check = {
+            "id": "c1",
+            "type": "literal",
+            "variable": "_cell",
+            "value_type": "integer",
+            "operator": "equals",
+            "reference_value": "ghost + 1",
+            "reference_is_expression": True,
+        }
+        filter_block = {
+            "id": "f1",
+            "column": {"mode": "name", "value": "id"},
+            "asType": "integer",
+            "conditions": [cell_check],
+        }
+        parser = _body_block(
+            "csv-1",
+            "csv-parser",
+            "plugin",
+            {"operation": "parse", "csv_content": "id\n1\n", "filters": [filter_block]},
+        )
+        payload = _make_function_payload(workflow=_chained(parser))
+
+        resp = client.post("/functions", json=payload)
+
+        # The cell under test is bound as `_cell`; only `ghost` escapes the scope.
+        assert _refused(resp) == [("UNRESOLVED_VARIABLE_REFERENCE", _GHOST, "csv-1")]
+
+    def test_an_undeclared_collection_name_in_a_function_is_refused(
+        self, client: TestClient
+    ) -> None:
+        loop = _body_block("each-1", "for-each", "control", {"collection": "ghost"})
+        payload = _make_function_payload(workflow=_chained(loop))
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [("UNRESOLVED_VARIABLE_REFERENCE", _GHOST, "each-1")]
+
+    def test_a_setter_row_naming_an_input_keeps_the_save_text(self, client: TestClient) -> None:
+        # The row's type is read from the input it names; the one finding is the input write.
+        payload = _make_function_payload(
+            inputs=[_optional("x", "string")], workflow=_chained(_setter("set-1", {"x": "v"}))
+        )
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [
+            ("INPUT_WRITE_FORBIDDEN", "Writes to declared input 'x'; inputs are read-only", "set-1")
+        ]
+
+    def test_an_if_with_no_condition_in_a_function_is_refused(self, client: TestClient) -> None:
+        payload = _make_function_payload(workflow=_chained(_if_else("if-1", [])))
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [
+            ("REQUIRED_PARAM_EMPTY", "if branch must have conditions", "if-1")
+        ]
+
+    @pytest.mark.parametrize(
+        ("declarations", "rows", "expected"),
+        [
+            pytest.param(
+                {"outputs": [{"name": "total", "type": "integer"}]},
+                {"total": "1e3"},
+                ("INVALID_VARIABLE_VALUE", "Value for variable 'total' is not a valid integer"),
+                id="output",
+            ),
+            pytest.param(
+                {"variables": [{"name": "total", "type": "integer", "value": "1"}]},
+                {"total": "1e3"},
+                ("INVALID_VARIABLE_VALUE", "Value for variable 'total' is not a valid integer"),
+                id="local-variable",
+            ),
+            pytest.param(
+                {"outputs": [{"name": "ready", "type": "boolean"}]},
+                {"ready": "yes"},
+                (
+                    "INVALID_SETTING_TYPE",
+                    "Setting 'variables.ready' of block 'variable-setter' expects boolean, "
+                    "got string",
+                ),
+                id="boolean-output",
+            ),
+        ],
+    )
+    def test_a_setter_row_reads_the_function_declared_type(
+        self,
+        client: TestClient,
+        declarations: dict[str, Any],
+        rows: dict[str, Any],
+        expected: tuple[str, str],
+    ) -> None:
+        # No row type is stored on the Block: the Function's declaration gives it.
+        payload = _make_function_payload(workflow=_chained(_setter("set-1", rows)), **declarations)
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [(*expected, "set-1")]
 
 
 def _remote_execution_workflow() -> dict[str, Any]:
@@ -1236,7 +1572,6 @@ def _remote_execution_workflow() -> dict[str, Any]:
                     },
                     "expressionFields": ["session_id"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                 },
             },
             _make_log_node("in-body"),

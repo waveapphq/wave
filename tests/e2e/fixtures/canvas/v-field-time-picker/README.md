@@ -26,7 +26,7 @@ zero errors, opens it and deletes it afterwards.
   `Open editor for From` / `To`) and `{ }` in their own columns
 - **Values:** From `now-15m` in the string color with the reset icon; To not set shows `now` in Text Muted
   with no reset icon
-- **Other rows:** Query language `DQL` and Mode `Search` with no expand and no `{ }`; Query empty with `{ }`
+- **Other rows:** Query language `DQL` and Mode `Search` with no expand and no `{ }`; Query, held as Template while blank, an empty Template code box with `{ }`
 - **Picker:** Absolute / Relative / Now tabs, Relative pressed in the primary color; Amount `15`, Unit
   `minutes ago`, `Round to the minute` unticked; result line `now-15m`
 - **Footer:** `Cancel` (outlined, 1 px border) then `Save` (primary fill), right-aligned, 32 px tall

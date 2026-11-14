@@ -31,8 +31,7 @@
               "caught": "run_caught"
             },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 200,
@@ -261,8 +260,7 @@
               "caught": "stop_caught"
             },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 200,
@@ -529,8 +527,7 @@
               "caught": "undef_caught"
             },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 200,

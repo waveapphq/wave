@@ -8,10 +8,8 @@
 import { OUTPUT_TYPE_COMPAT } from '@/features/workbench/lib/node-parameters/types'
 import { describeBindingRejection } from '@/features/workbench/lib/validation/output-binding-rules'
 import { isParameterVisible, matchesCondition, type Parameter as TableParameter } from './parameters/parameter-table-types'
-import type { AssertionItem } from '../config/assertion-builder'
-import type { ConditionBranch } from '../config/condition-branch-editor'
-import type { CaseBranch } from '../config/case-branch-editor'
-import type { ParallelBranch } from '../config/parallel-branch-editor'
+import { dropUnusedCompareTo, type AssertionItem } from '../config/assertion-builder/types'
+import { conditionListsOf } from '@/features/workbench/lib/validation/condition-checks'
 import type { SecretMaskingSetting } from '@/features/workbench/lib/node-parameters/secret-reveal'
 import type { ProfileBinding } from './dialogs/profile-binding-modal'
 import type { Parameter, SaveData, EnrichedVariable } from './types'
@@ -21,6 +19,8 @@ import { canonicalEqual } from '@/features/workbench/lib/canonical-workflow'
 
 export interface SaveContext {
   elementId: string
+  /** The Block type: it decides the condition lists, the lanes and the Setter rows the Save shapes. */
+  elementType: string
   selectedVersion: string
   values: Record<string, unknown>
   outputBindings: Record<string, string>
@@ -37,40 +37,11 @@ export interface SaveContext {
   unmaskedSecretFields?: string[]
   secretMasking?: SecretMaskingSetting
   variables: EnrichedVariable[]
-  // Element type flags
-  isVariableSetter: boolean
-  isXmlParser: boolean
-  isJsonParser: boolean
-  isAssert: boolean
-  isIfElse: boolean
-  isSwitch: boolean
-  isWhile: boolean
-  isWaitUntil?: boolean
-  isParallel?: boolean
-  // Assert state
-  assertAssertions: AssertionItem[]
-  assertMode: 'single' | 'split'
-  assertFailCurrentScope: boolean
-  // If-Else state
-  ifElseBranches: ConditionBranch[]
-  // Switch/Case state
-  switchBranches: CaseBranch[]
-  // While state
-  whileConditions: AssertionItem[]
-  // Wait Until state (present whenever isWaitUntil)
-  waitConditions?: AssertionItem[]
-  waitMode?: 'retry' | 'watch'
-  waitFailCurrentScope?: boolean
-  // Parallel state (present whenever isParallel)
-  parallelBranches?: ParallelBranch[]
-  parallelJoin?: 'all' | 'first'
-  // Variable setter state
-  variableExpressionKeys: string[]
-  variableTemplateKeys: string[]
-  variableSecretKeys: string[]
-  variableTypes: Record<string, string>
-  /** Variable Setter rows' element types, and typed block settings' (REQ-3.1.3.19). */
-  variableElementTypes?: Record<string, ElementTypes>
+  /** Variable Setter rows marked secret, `variables.<row>` (REQ-3.4.1.14). */
+  secretFields?: string[]
+  /** Variable Setter: the type picked for each row; a row of an undeclared target is typed by it. */
+  newTargetTypes?: Record<string, string>
+  /** Typed block settings' element types, a Setter list or map row's at `variables.<row>` (REQ-3.1.3.19). */
   settingElementTypes?: Record<string, ElementTypes>
   /** The block runs on the execution host, where a remote-locked row shows no stored choice (HTTP-13). */
   runsOnRemoteHost?: boolean
@@ -113,13 +84,6 @@ export function validateOutputBindings(
   return errors
 }
 
-/** A branch row as storage holds it: snake_case limit, and no key when unset. */
-function storedBranch(branch: ParallelBranch): Record<string, unknown> {
-  const stored: Record<string, unknown> = { id: branch.id, name: branch.name }
-  if (branch.timeLimit !== undefined) stored.time_limit = branch.timeLimit
-  return stored
-}
-
 /** The rows the remote-host lock replaces: a Save stores nothing for them (HTTP-13). */
 function remoteLockedNames(ctx: SaveContext): ReadonlySet<string> {
   if (!ctx.runsOnRemoteHost) return new Set()
@@ -147,13 +111,99 @@ function numberRowType(parameters: readonly Parameter[], name: string): NumberTy
   return descriptors.some((param) => param.type === 'float') ? 'float' : 'integer'
 }
 
-/** A literal number row's text stored as the JSON number the Block takes, when that number keeps every digit (REQ-3.1.3.14). */
+/** A number text stored as the JSON number it stands for, when that number keeps every digit (REQ-3.1.3.14). */
+function wireIfNumber(value: unknown, type: string | null | undefined): unknown {
+  return typeof value === 'string' && (type === 'integer' || type === 'float') ? wireNumber(value, type) : value
+}
+
+/** A literal number row's text stored as the JSON number the Block takes. */
 function storedValue(ctx: SaveContext, name: string, value: unknown): unknown {
-  if (typeof value !== 'string' || ctx.expressionFields.includes(name) || ctx.templateFields.includes(name)) {
-    return value
+  if (ctx.expressionFields.includes(name) || ctx.templateFields.includes(name)) return value
+  return wireIfNumber(value, numberRowType(ctx.versionParameters, name))
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** A Setter row's type: its declared variable's, else the type picked for its new target (REQ-3.4.1.14). */
+function setterRowType(ctx: SaveContext, row: string): string | undefined {
+  return ctx.variables.find((variable) => variable.name === row)?.type ?? ctx.newTargetTypes?.[row]
+}
+
+/** The Setter rows with each plain literal number row in the number wire form of its row type; a secret row stays as typed. */
+function storedSetterRows(ctx: SaveContext, rows: unknown): unknown {
+  if (!isRecord(rows)) return rows
+  const asWritten = new Set([...ctx.expressionFields, ...ctx.templateFields, ...(ctx.secretFields ?? [])])
+  return Object.fromEntries(
+    Object.entries(rows).map(([row, value]) => [
+      row,
+      asWritten.has(`variables.${row}`) ? value : wireIfNumber(value, setterRowType(ctx, row)),
+    ]),
+  )
+}
+
+/** The Parallel lanes as stored: a literal limit in the number wire form, no limit key while unset (REQ-3.2.3.7). */
+function storedLanes(ctx: SaveContext, lanes: unknown): unknown {
+  if (!Array.isArray(lanes)) return lanes
+  return lanes.map((lane: unknown, index) => {
+    if (!isRecord(lane)) return lane
+    const { time_limit: limit, ...rest } = lane
+    if (limit === undefined) return rest
+    const literal = !ctx.expressionFields.includes(`branches.${index}.time_limit`)
+    return { ...rest, time_limit: literal ? wireIfNumber(limit, 'integer') : limit }
+  })
+}
+
+/** A setting value as the Block stores it: the Setter rows and the Parallel lanes have their own number rows. */
+function storedSetting(ctx: SaveContext, name: string, value: unknown): unknown {
+  if (ctx.elementType === 'variable-setter' && name === 'variables') return storedSetterRows(ctx, value)
+  if (ctx.elementType === 'parallel' && name === 'branches') return storedLanes(ctx, value)
+  return storedValue(ctx, name, value)
+}
+
+/** The items with each operator-hidden compare value dropped, at every depth; the same list when nothing goes. */
+function withoutHiddenCompareValues(items: readonly AssertionItem[]): readonly AssertionItem[] {
+  let changed = false
+  const cleaned = items.map((item) => {
+    let next = item
+    if (item.type === 'literal') next = dropUnusedCompareTo(item)
+    else if (item.type === 'group' && Array.isArray(item.items)) {
+      const inner = withoutHiddenCompareValues(item.items)
+      if (inner !== item.items) next = { ...item, items: [...inner] }
+    }
+    changed ||= next !== item
+    return next
+  })
+  return changed ? cleaned : items
+}
+
+/** The value with `value` written at a dotted place of lists and records, copying only along the way. */
+function withAtPlace(target: unknown, place: readonly string[], value: unknown): unknown {
+  if (place.length === 0) return value
+  const [key, ...rest] = place
+  if (Array.isArray(target)) {
+    const copy = [...target]
+    copy[Number(key)] = withAtPlace(target[Number(key)], rest, value)
+    return copy
   }
-  const type = numberRowType(ctx.versionParameters, name)
-  return type === null ? value : wireNumber(value, type)
+  const record = target as Record<string, unknown>
+  return { ...record, [key]: withAtPlace(record[key], rest, value) }
+}
+
+/** Every condition list of a Block with the compare values their operators hide dropped (REQ-3.5.1.5). */
+export function normalizeConditionLists(
+  elementType: string,
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  let normalized = values
+  for (const { items, place } of conditionListsOf(elementType, values)) {
+    const cleaned = withoutHiddenCompareValues(items)
+    if (cleaned !== items) {
+      normalized = withAtPlace(normalized, place.split('.'), cleaned) as Record<string, unknown>
+    }
+  }
+  return normalized
 }
 
 /** The values the user set: a locked row and a blank whole-field expression store nothing. */
@@ -166,32 +216,9 @@ function buildEffectiveValues(
     if (value === undefined || locked.has(name)) continue
     // A whole-field expression left blank means not set: the default applies (REQ-3.1.1.5).
     if (ctx.expressionFields.includes(name) && !holdsValue(value)) continue
-    effectiveValues[name] = storedValue(ctx, name, value)
+    effectiveValues[name] = storedSetting(ctx, name, value)
   }
-  if (ctx.isAssert) {
-    effectiveValues.assertions = ctx.assertAssertions
-    effectiveValues.mode = ctx.assertMode
-    effectiveValues.fail_current_scope = ctx.assertFailCurrentScope
-  }
-  if (ctx.isIfElse) {
-    effectiveValues.branches = ctx.ifElseBranches
-  }
-  if (ctx.isSwitch) {
-    effectiveValues.branches = ctx.switchBranches
-  }
-  if (ctx.isWhile) {
-    effectiveValues.conditions = ctx.whileConditions
-  }
-  if (ctx.isWaitUntil) {
-    effectiveValues.conditions = ctx.waitConditions
-    effectiveValues.mode = ctx.waitMode
-    effectiveValues.fail_current_scope = ctx.waitFailCurrentScope
-  }
-  if (ctx.isParallel) {
-    effectiveValues.branches = (ctx.parallelBranches ?? []).map(storedBranch)
-    effectiveValues.join = ctx.parallelJoin
-  }
-  return effectiveValues
+  return normalizeConditionLists(ctx.elementType, effectiveValues)
 }
 
 /** Build output type map from output parameters */
@@ -210,7 +237,7 @@ function buildParserBindings(
   outputTypes: Record<string, string>,
 ): Record<string, string> {
   const effectiveBindings = { ...ctx.outputBindings }
-  if (!ctx.isXmlParser && !ctx.isJsonParser) return effectiveBindings
+  if (ctx.elementType !== 'xml-parser' && ctx.elementType !== 'json-parser') return effectiveBindings
 
   const isIndividual = String(effectiveValues.output_mode) === 'individual'
   const fixedOutputNames = new Set(ctx.outputParameters.map((o) => o.name))
@@ -310,16 +337,25 @@ function savedSecretFields(ctx: SaveContext): string[] | undefined {
   return unchanged ? undefined : ctx.outputSecretFields
 }
 
-/** The element types of the entries still present, or undefined when none remain. */
+/** The element types of the settings and Setter rows still held and literal, or undefined when none remain. */
 function presentElementTypes(
   types: Record<string, ElementTypes> | undefined,
   present: Record<string, unknown>,
   expressionNames: ReadonlySet<string>,
 ): Record<string, ElementTypes> | undefined {
   const kept = Object.entries(types ?? {}).filter(
-    ([name]) => name in present && !expressionNames.has(name),
+    ([name]) => flagHeld(present, name) && !expressionNames.has(name),
   )
   return kept.length === 0 ? undefined : Object.fromEntries(kept)
+}
+
+/** The picked type of each Setter row the Save keeps, for the canvas to declare a new target. */
+function keptTargetTypes(
+  types: Record<string, string>,
+  values: Record<string, unknown>,
+): Record<string, string> {
+  const rows = isRecord(values.variables) ? values.variables : {}
+  return Object.fromEntries(Object.entries(types).filter(([row]) => Object.hasOwn(rows, row)))
 }
 
 /** The save data the context describes, without the output-binding check. */
@@ -333,6 +369,7 @@ export function assembleSaveData(ctx: SaveContext): SaveData {
   )
   const outputTypes = buildOutputTypes(ctx.outputParameters)
   const effectiveBindings = buildParserBindings(ctx, effectiveValues, outputTypes)
+  const savedSetterSecrets = heldFlags(ctx.secretFields ?? [], effectiveValues)
 
   return {
     id: ctx.elementId,
@@ -353,16 +390,9 @@ export function assembleSaveData(ctx: SaveContext): SaveData {
       effectiveValues,
       new Set(savedExpressionFields),
     ),
-    ...(ctx.isVariableSetter && {
-      variableExpressionKeys: ctx.variableExpressionKeys,
-      variableTemplateKeys: ctx.variableTemplateKeys,
-      variableSecretKeys: ctx.variableSecretKeys,
-      variableTypes: ctx.variableTypes,
-      variableElementTypes: presentElementTypes(
-        ctx.variableElementTypes,
-        (effectiveValues.variables as Record<string, unknown> | undefined) ?? {},
-        new Set(ctx.variableExpressionKeys),
-      ),
+    ...(savedSetterSecrets.length > 0 && { secretFields: savedSetterSecrets }),
+    ...(ctx.newTargetTypes !== undefined && {
+      newTargetTypes: keptTargetTypes(ctx.newTargetTypes, effectiveValues),
     }),
   }
 }
@@ -396,54 +426,21 @@ interface HasChangesContext {
   elementExpressionFields: string[] | undefined
   templateFields: string[]
   elementTemplateFields: string[] | undefined
+  secretFields: string[]
+  elementSecretFields?: string[]
   outputSecretFields: string[]
   elementOutputSecretFields: string[] | undefined
   unmaskedSecretFields: string[]
   elementUnmaskedSecretFields: string[] | undefined
   secretMasking: string
   elementSecretMasking: string | undefined
-  variableExpressionKeys: string[]
-  elementVariableExpressionKeys: string[] | undefined
-  variableTemplateKeys: string[]
-  elementVariableTemplateKeys: string[] | undefined
-  variableSecretKeys: string[]
-  elementVariableSecretKeys: string[] | undefined
-  variableTypes: Record<string, string>
-  elementVariableTypes: Record<string, string> | undefined
-  variableElementTypes?: Record<string, ElementTypes>
-  elementVariableElementTypes?: Record<string, ElementTypes>
   settingElementTypes?: Record<string, ElementTypes>
   elementSettingElementTypes?: Record<string, ElementTypes>
-  isAssert: boolean
-  assertAssertions: AssertionItem[]
-  assertMode: string
-  assertFailCurrentScope: boolean
-  isIfElse: boolean
-  ifElseBranches: ConditionBranch[]
-  isSwitch: boolean
-  switchBranches: CaseBranch[]
-  isWhile: boolean
-  whileConditions: AssertionItem[]
-  isWaitUntil?: boolean
-  waitConditions?: AssertionItem[]
-  waitMode?: string
-  waitFailCurrentScope?: boolean
-  isParallel?: boolean
-  parallelBranches?: ParallelBranch[]
-  parallelJoin?: string
 }
 
 /** Compare two values as JSON for deep equality */
 function jsonDiffers(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) !== JSON.stringify(b)
-}
-
-/** Check if assert-specific fields have changed */
-function hasAssertChanges(ctx: HasChangesContext): boolean {
-  if (jsonDiffers(ctx.assertAssertions, (ctx.elementCurrentValues.assertions as AssertionItem[]) ?? [])) return true
-  if (ctx.assertMode !== ((ctx.elementCurrentValues.mode as string) ?? 'split')) return true
-  if (ctx.assertFailCurrentScope !== ((ctx.elementCurrentValues.fail_current_scope as boolean) ?? false)) return true
-  return false
 }
 
 /** Check scalar field changes (version, name, description) */
@@ -455,7 +452,7 @@ function hasScalarChanges(ctx: HasChangesContext): boolean {
   return false
 }
 
-/** Check structured data changes (values, bindings, fields) */
+/** Check structured data changes: values (control fields and Setter rows included), bindings, flag lists */
 function hasStructuredChanges(ctx: HasChangesContext): boolean {
   if (jsonDiffers(ctx.values, ctx.elementCurrentValues)) return true
   /* v8 ignore next - COV-BRANCH-073 */
@@ -464,47 +461,16 @@ function hasStructuredChanges(ctx: HasChangesContext): boolean {
   if (jsonDiffers(ctx.expressionFields, ctx.elementExpressionFields ?? [])) return true
   /* v8 ignore next - COV-BRANCH-099 */
   if (jsonDiffers(ctx.templateFields, ctx.elementTemplateFields ?? [])) return true
+  if (jsonDiffers(ctx.secretFields, ctx.elementSecretFields ?? [])) return true
   if (jsonDiffers(ctx.outputSecretFields, ctx.elementOutputSecretFields ?? [])) return true
   if (jsonDiffers(ctx.unmaskedSecretFields ?? [], ctx.elementUnmaskedSecretFields ?? [])) return true
   if ((ctx.secretMasking ?? 'system') !== (ctx.elementSecretMasking ?? 'system')) return true
-  if (jsonDiffers(ctx.variableExpressionKeys, ctx.elementVariableExpressionKeys ?? [])) return true
-  if (jsonDiffers(ctx.variableTemplateKeys, ctx.elementVariableTemplateKeys ?? [])) return true
-  if (jsonDiffers(ctx.variableSecretKeys, ctx.elementVariableSecretKeys ?? [])) return true
-  if (jsonDiffers(ctx.variableTypes, ctx.elementVariableTypes ?? {})) return true
-  if (!canonicalEqual(ctx.variableElementTypes ?? {}, ctx.elementVariableElementTypes ?? {})) return true
-  if (!canonicalEqual(ctx.settingElementTypes ?? {}, ctx.elementSettingElementTypes ?? {})) return true
-  return false
-}
-
-/** Check wait-specific fields have changed */
-function hasWaitChanges(ctx: HasChangesContext): boolean {
-  if (jsonDiffers(ctx.waitConditions, (ctx.elementCurrentValues.conditions as AssertionItem[]) ?? [])) return true
-  if (ctx.waitMode !== ((ctx.elementCurrentValues.mode as string) ?? 'retry')) return true
-  if (ctx.waitFailCurrentScope !== ((ctx.elementCurrentValues.fail_current_scope as boolean) ?? false)) return true
-  return false
-}
-
-/** Check parallel-specific fields have changed */
-function hasParallelChanges(ctx: HasChangesContext): boolean {
-  const stored = (ctx.parallelBranches ?? []).map(storedBranch)
-  if (jsonDiffers(stored, ctx.elementCurrentValues.branches ?? [])) return true
-  return (ctx.parallelJoin ?? 'all') !== ((ctx.elementCurrentValues.join as string) ?? 'all')
-}
-
-/** Check control-specific changes (assert, if-else, while, wait) */
-function hasControlChanges(ctx: HasChangesContext): boolean {
-  if (ctx.isAssert && hasAssertChanges(ctx)) return true
-  if (ctx.isIfElse && jsonDiffers(ctx.ifElseBranches, (ctx.elementCurrentValues.branches as ConditionBranch[]) ?? [])) return true
-  if (ctx.isSwitch && jsonDiffers(ctx.switchBranches, (ctx.elementCurrentValues.branches as CaseBranch[]) ?? [])) return true
-  if (ctx.isWhile && jsonDiffers(ctx.whileConditions, (ctx.elementCurrentValues.conditions as AssertionItem[]) ?? [])) return true
-  if (ctx.isWaitUntil && hasWaitChanges(ctx)) return true
-  if (ctx.isParallel && hasParallelChanges(ctx)) return true
-  return false
+  return !canonicalEqual(ctx.settingElementTypes ?? {}, ctx.elementSettingElementTypes ?? {})
 }
 
 /**
  * Determine if the form has unsaved changes compared to the original element data.
  */
 export function computeHasChanges(ctx: HasChangesContext): boolean {
-  return hasScalarChanges(ctx) || hasStructuredChanges(ctx) || hasControlChanges(ctx)
+  return hasScalarChanges(ctx) || hasStructuredChanges(ctx)
 }

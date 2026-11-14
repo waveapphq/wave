@@ -5,14 +5,16 @@
  *
  * Pass Criteria:
  *   For EACH surface:
- *     (a) Var Setter row string value (the "Edit value" sheet's wrapping
+ *     (a) Var Setter row string value (the row's "Edit value" sheet's wrapping
  *         CodeMirror editor - wraps instead of widening the sheet)
- *     (b) Assertion Builder literal reference value (`assert-value-input-...`)
+ *     (b) Assertion Builder compare value: the one value field's text box
+ *         (`param-input-assert-value-<path>`); a long value scrolls inside it
  *     (c) Variable window String value: the one-line field (VMGR-110); a long
  *         value scrolls inside it and the window keeps its width
  *     (d) Scalar Variable Edit Dialog string value (`variable-value-input`, single-line)
  *
- *   1. The element is a `<textarea rows="1">` (TextField primitive output).
+ *   1. The element is a `<textarea rows="1">` (TextField primitive output), or
+ *      for (b) and (c) the one value field's single-line `<input>`.
  *   2. After typing 60+ chars, `scrollWidth > clientWidth` (visible horizontal
  *      scrollbar inside the input).
  *   3. The host modal/dialog width is unchanged (no horizontal modal overflow).
@@ -59,15 +61,6 @@ async function ensureVariableManagerExpanded(page: Page) {
   return panel
 }
 
-async function expectTextareaOverflow(target: Locator) {
-  const overflow = await target.evaluate((el) => {
-    const t = el as HTMLTextAreaElement
-    return { scrollWidth: t.scrollWidth, clientWidth: t.clientWidth, tag: t.tagName }
-  })
-  expect(overflow.tag).toBe('TEXTAREA')
-  expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth)
-}
-
 test.describe('V-SHARED-TEXT-INPUT-OVERFLOW: shared TextField overflow contract', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
@@ -82,11 +75,9 @@ test.describe('V-SHARED-TEXT-INPUT-OVERFLOW: shared TextField overflow contract'
       testId: 'palette-item-variable-setter',
     })
 
-    // The setter's string value edits in the shared
-    // "Edit value" sheet via a wrapping CodeMirror editor (not an inline
-    // textarea), so a long value wraps + scrolls inside the body instead of
-    // widening the sheet - the same contract as the Create modal (S3).
-    await modal.locator('[data-testid="varset-edit-value-0"]').click()
+    // The row's expand button opens its "Edit value" sheet, whose wrapping
+    // CodeMirror editor wraps a long value instead of widening the sheet.
+    await modal.locator('[data-testid="param-expand-varset-value-0"]').click()
     const sheet = page.locator('[data-testid="value-editor-sheet"]')
     await expect(sheet).toBeVisible()
 
@@ -112,13 +103,12 @@ test.describe('V-SHARED-TEXT-INPUT-OVERFLOW: shared TextField overflow contract'
     await modal.locator('[data-testid="assert-add-literal"]').click()
 
     const startW = await modal.evaluate((el) => el.getBoundingClientRect().width)
-    // In literal mode the TextField directly carries the testid (it's a
-    // textarea); in expression mode a wrapper div has the testid. Pick the
-    // textarea explicitly.
-    const refValue = modal.locator('textarea[data-testid^="assert-value-input-"]').first()
+    // In literal mode the compare value is the field's text box; in expression mode a code box carries the id.
+    const refValue = modal.locator('input[data-testid^="param-input-assert-value-"]').first()
     await expect(refValue).toBeVisible()
     await refValue.fill(LONG)
-    await expectTextareaOverflow(refValue)
+    await expect(refValue).toHaveValue(LONG)
+    expect(await refValue.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
     const endW = await modal.evaluate((el) => el.getBoundingClientRect().width)
     // Tolerance covers the inner-scrollbar appearance when the body grows
     // vertically past the dialog's max-h. The dialog itself does NOT grow

@@ -9,6 +9,8 @@ export const inputs: InputParam[] = [
   param('count', 'Count', 'integer', false, 'Number of iterations', {
     showWhen: { field: 'mode', values: ['count'] },
     requiredWhen: { field: 'mode', values: ['count'] },
+    acceptsNull: true,
+    minimum: 0,
   }),
   param('start', 'Start', 'integer', false, 'Starting value (inclusive)', {
     showWhen: { field: 'mode', values: ['range'] },

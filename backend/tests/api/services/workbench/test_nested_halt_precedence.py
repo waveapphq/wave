@@ -96,7 +96,6 @@ def _make_node(
             "description": description or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -197,6 +196,8 @@ def _signals(**overrides: Any) -> dict[str, Any]:
         "for_each": None,
         "while_loop": None,
         "wait_until": None,
+        "wait_timeout": None,
+        "check_interval": None,
     }
     base.update(overrides)
     return base

@@ -48,7 +48,6 @@ const FIXTURE_FOR_SAVE = {
           // string Input, matching the behavior of a freshly-dropped Log.
           expressionFields: [],
           templateFields: [],
-          variableExpressionKeys: [],
           config: {
             values: { message: 'initial', level: 'INFO' },
             outputBindings: {},

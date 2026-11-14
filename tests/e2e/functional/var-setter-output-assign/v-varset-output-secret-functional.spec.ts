@@ -50,7 +50,7 @@ const OUTPUT = 'res'
 interface StoredNode {
   id: string
   data: {
-    config?: { values?: { variables?: Record<string, unknown> }; variableSecretKeys?: string[] }
+    config?: { values?: { variables?: Record<string, unknown> }; secretFields?: string[] }
     localDefinition?: { workflow?: { nodes?: StoredNode[] } }
   }
 }
@@ -68,9 +68,6 @@ function setterNode(literal: string): Record<string, unknown> {
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
-      variableTemplateKeys: [],
-      variableTypes: { [OUTPUT]: 'string' },
       config: { values: { variables: { [OUTPUT]: literal } }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },
@@ -142,7 +139,7 @@ test.describe('V-VARSET-OUTPUT-SECRET: a Setter Secret row on a Function output'
       const stored = (await (await request.get(`${BACKEND_URL}/tests/${testId}`)).json()).data
       const fn = (stored.workflow.nodes as StoredNode[]).find((node) => node.id === FN_ID)
       const setter = fn?.data.localDefinition?.workflow?.nodes?.find((node) => node.id === SETTER_ID)
-      expect(setter?.data.config?.variableSecretKeys).toEqual([OUTPUT])
+      expect(setter?.data.config?.secretFields).toEqual([`variables.${OUTPUT}`])
       expect(String(setter?.data.config?.values?.variables?.[OUTPUT])).toContain(SECRET_ENVELOPE)
     })
 

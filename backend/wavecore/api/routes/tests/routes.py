@@ -778,6 +778,8 @@ async def fix_test(test_id: str) -> dict[str, Any] | JSONResponse:
             "warnings": fix_result.get("warnings", []),
         }
 
+    except SaveValidationError as e:
+        return _save_validation_response(e)
     except (ValueError, ValidationException) as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

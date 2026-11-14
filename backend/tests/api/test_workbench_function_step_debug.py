@@ -75,7 +75,6 @@ def _log_node(node_id: str, message: str = "'ok'") -> dict[str, Any]:
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

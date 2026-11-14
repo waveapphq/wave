@@ -33,7 +33,7 @@ export function useCanvasFocus(): void {
     if (node) {
       const width = node.width ?? FALLBACK_WIDTH
       const height = node.height ?? FALLBACK_HEIGHT
-      setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+      void setCenter(node.position.x + width / 2, node.position.y + height / 2, {
         zoom: focusOptions?.zoom ?? getViewport().zoom,
         duration: focusOptions?.duration ?? FOCUS_DURATION_MS,
       })

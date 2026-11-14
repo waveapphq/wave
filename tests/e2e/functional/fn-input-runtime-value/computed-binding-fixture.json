@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["target"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "target": "expr_url"
@@ -62,7 +61,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn-expr:' + target",
@@ -111,7 +109,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["target"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "target": "tmpl_url"
@@ -152,7 +149,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'fn-tmpl:' + target",
@@ -203,7 +199,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'outer-read:' + expr_url + '|' + tmpl_url",

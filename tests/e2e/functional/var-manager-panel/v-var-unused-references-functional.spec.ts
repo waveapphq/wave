@@ -160,10 +160,13 @@ test.describe('V-VAR-UNUSED-REFERENCES-FUNCTIONAL: references from conditions an
       const sheet = await openBlockSheet(page, setterId)
       const nameInput = sheet.locator('[data-testid="varset-name-input-0"]')
       if ((await nameInput.count()) === 0) await sheet.locator('[data-testid="varset-add-button"]').click()
+      // {x} first, while the new row holds null: a named row starts on its type's value, which {x} would ask about.
+      const toggle = sheet.locator('[data-testid="varset-expression-toggle-0"]')
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true')
       await nameInput.fill('setter_target')
       await sheet.locator('[data-testid="varset-add-button"]').focus()
-      await sheet.locator('[data-testid="varset-expression-toggle-0"]').click()
-      const editor = sheet.locator('[data-testid="param-input-setter_target"] .cm-content')
+      const editor = sheet.locator('[data-testid="param-input-varset-value-0"] .cm-content')
       await editor.click()
       await page.keyboard.insertText("setter_source + '!'")
       await leaveExpressionEditor(editor)
@@ -171,9 +174,10 @@ test.describe('V-VAR-UNUSED-REFERENCES-FUNCTIONAL: references from conditions an
       await expect(editor).toHaveText("setter_source + '!'")
       await saveBlockSheet(sheet)
       await saveTest(page)
-      const variables = (storedNode(await readStoredTest(page, testId), setterId).data.config?.values?.variables ??
-        {}) as Record<string, unknown>
+      const stored = storedNode(await readStoredTest(page, testId), setterId)
+      const variables = (stored.data.config?.values?.variables ?? {}) as Record<string, unknown>
       expect(variables.setter_target, 'the stored Setter row').toBe("setter_source + '!'")
+      expect(stored.data.expressionFields, 'the row is stored as an expression').toContain('variables.setter_target')
     })
 
     // Per VMGR-105: a Variable Setter row's value and its target are references.

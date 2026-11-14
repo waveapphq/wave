@@ -1,109 +1,89 @@
 /**
  * Variable Setter Editor - REQ-3.4.1.14
  *
- * Custom inline variable editing UI for the Variable Setter control. Each row
- * lists a target variable; its value edits inline (numeric / boolean scalar or
- * expression) or via the shared "Edit value" sheet (string + array / map / table).
+ * The Variable Setter's rows: each lists a target variable and sets its value on the one value field of a
+ * Block (FIELD-1). The rows read and write the Block's shared slots; a row's type is its declared variable's.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { VariableType } from '@/lib/variable-types'
-import type { ElementTypes } from '@/lib/variable-validation'
-import { ValueEditorSheet } from '@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet'
-import { useProtectedValueConfirm } from '@/components/shared/variable-bodies/protected-value-field'
+import { EntryChangeQuestions } from '@/components/shared/variable-bodies/entry-change-questions'
 import {
   RowRemovalQuestion,
   useRowRemovalGuard,
 } from '@/components/shared/child-editors/row-removal-guard'
-import { openEditorAfterRemoval } from '@/lib/child-editors'
-import type { VariableRow, VariableSetterEditorProps } from './types'
-import { nextRowKey, useRowOperations } from './use-row-operations'
+import { entryFlagsFor } from '@/features/workbench/lib/node-parameters/field-modes'
+import { literalFits } from '@/features/workbench/lib/saved-block-fields'
+import type { SecretSaveTarget } from '@/features/workbench/common/variables/variable-inspect-modal/secret-visibility-notice'
+import type { AvailableVariable, SetterSlots, VariableRow } from './types'
+import { newSetterRow, nextRowKey, useRowOperations } from './use-row-operations'
 import { VariableRowComponent } from './variable-row'
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+export interface VariableSetterEditorProps {
+  slots: SetterSlots
+  availableVariables: AvailableVariable[]
+  onSlotsChange: (next: SetterSlots) => void
+  onValidChange: (valid: boolean) => void
+  /** Whose save seals a typed secret: the Test, or the Function a library Function view shows. */
+  secretSaveTarget?: SecretSaveTarget
+}
 
-export type { VariableSetterEditorProps } from './types'
+/** The row on its variable's declared type: a literal that no longer fits it has no value, never another one (FNCFG-9). */
+function onDeclaredType(row: VariableRow, type: string): VariableRow {
+  const kept = row.isExpression || row.isTemplate === true || literalFits(row.value, { name: row.name, type })
+  if (kept) return { ...row, type }
+  return { ...row, type, value: undefined, entryExpressions: [], elementTypes: undefined }
+}
 
-const NO_ELEMENT_TYPES: Record<string, ElementTypes> = {}
+/** One stored row: its flags from the `variables.<row>` places, its type from its declared variable (VARSET-5). */
+function storedRow(
+  name: string,
+  stored: unknown,
+  slots: SetterSlots,
+  availableVariables: AvailableVariable[],
+): VariableRow {
+  const place = `variables.${name}`
+  const row: VariableRow = {
+    key: nextRowKey(),
+    name,
+    value: stored,
+    type: slots.rowTypes[name] ?? 'string',
+    isExpression: slots.expressionFields.includes(place),
+    isTemplate: slots.templateFields.includes(place),
+    isSecret: slots.secretFields.includes(place),
+    entryExpressions: entryFlagsFor(place, slots.expressionFields),
+    elementTypes: slots.elementTypes[place],
+  }
+  const declared = availableVariables.find((v) => v.name === name)
+  return declared === undefined ? row : onDeclaredType(row, declared.type)
+}
+
+function rowsAtOpen(slots: SetterSlots, availableVariables: AvailableVariable[]): VariableRow[] {
+  const entries = Object.entries(slots.variables)
+  if (entries.length === 0) return [newSetterRow()]
+  return entries.map(([name, stored]) => storedRow(name, stored, slots, availableVariables))
+}
+
+/** The rows on their variables' types as declared now, so a retype in the Variable Manager reaches an open row (VARSET-5). */
+function declaredRows(rows: VariableRow[], availableVariables: AvailableVariable[]): VariableRow[] {
+  return rows.map((row) => {
+    const declared = availableVariables.find((v) => v.name === row.name)
+    return declared === undefined || declared.type === row.type ? row : onDeclaredType(row, declared.type)
+  })
+}
 
 export function VariableSetterEditor({
-  variables,
-  expressionKeys,
-  templateKeys,
-  secretKeys,
-  variableTypes,
-  variableElementTypes = NO_ELEMENT_TYPES,
+  slots,
   availableVariables,
-  onVariablesChange,
-  onExpressionKeysChange,
-  onTemplateKeysChange,
-  onSecretKeysChange,
-  onTypesChange,
-  onElementTypesChange,
+  onSlotsChange,
   onValidChange,
+  secretSaveTarget,
 }: Readonly<VariableSetterEditorProps>) {
-  // Build row state from props
-  const [rows, setRows] = useState<VariableRow[]>(() => {
-    const exprSet = new Set(expressionKeys)
-    const tmplSet = new Set(templateKeys)
-    const secretSet = new Set(secretKeys)
-    const entries = Object.entries(variables)
-    if (entries.length === 0) {
-      return [
-        { key: nextRowKey(), name: '', value: '', type: 'string', isExpression: false, isTemplate: false, isSecret: false },
-      ]
-    }
-    return entries.map(([name, value]) => ({
-      key: nextRowKey(),
-      name,
-      value,
-      type: variableTypes[name] ?? 'string',
-      elementTypes: variableElementTypes[name],
-      isExpression: exprSet.has(name),
-      isTemplate: tmplSet.has(name),
-      isSecret: secretSet.has(name),
-    }))
-  })
-
-  // Clear-and-edit confirm for a row's masked secret value (write-only replace).
-  const secretConfirm = useProtectedValueConfirm()
+  const [heldRows, setRows] = useState<VariableRow[]>(() => rowsAtOpen(slots, availableVariables))
+  const rows = useMemo(() => declaredRows(heldRows, availableVariables), [heldRows, availableVariables])
   const rowGuard = useRowRemovalGuard()
-
-  const {
-    validationState,
-    touchedRows,
-    editingValueRow,
-    setEditingValueRow,
-    valueSheetRef,
-    openAutocomplete,
-    setOpenAutocomplete,
-    revalidate,
-    handleNameChange,
-    handleNameBlur,
-    handleTypeChange,
-    handleValueChange,
-    handleExpressionToggle,
-    handleSecretToggle,
-    handleClearSecretValue,
-    handleDelete,
-    handleSheetSave,
-    handleEditValue,
-    getFilteredSuggestions,
-    isExistingVariable,
-  } = useRowOperations(rows, setRows, {
-    availableVariables,
-    onVariablesChange,
-    onExpressionKeysChange,
-    onTemplateKeysChange,
-    onSecretKeysChange,
-    onTypesChange,
-    onElementTypesChange,
-    onValidChange,
-  })
+  const ops = useRowOperations(rows, setRows, { availableVariables, onSlotsChange, onValidChange })
 
   // Auto-focus: first empty row on mount, or newly added row
   const firstNameRef = useRef<HTMLTextAreaElement>(null)
@@ -116,29 +96,19 @@ export function VariableSetterEditor({
     }
   }, [rows])
 
-  // Run initial validation on mount so parent knows if form starts invalid
-  const didInitialValidate = useRef(false)
+  // The rows' messages show from the moment the window opens and follow the declarations, so Save does too.
+  const { revalidate } = ops
   useEffect(() => {
-    if (!didInitialValidate.current) {
-      didInitialValidate.current = true
-      revalidate(rows)
-    }
-  })
+    revalidate(rows)
+  }, [revalidate, rows])
 
+  // A row that goes takes its value field's sheets with it, asking first while they hold unsaved changes.
   const handleRowDelete = (rowIndex: number) =>
-    rowGuard.request([rows[rowIndex].name], () => {
-      // The editor of a row that goes closes with it; the rows after it keep theirs.
-      setEditingValueRow((editing) => openEditorAfterRemoval(editing, rowIndex))
-      handleDelete(rowIndex)
-    })
+    rowGuard.request([rows[rowIndex].name], () => ops.handleDelete(rowIndex))
 
   const handleAdd = () => {
-    const updated = [
-      ...rows,
-      { key: nextRowKey(), name: '', value: '', type: 'string', isExpression: false, isTemplate: false, isSecret: false },
-    ]
-    focusRowIndex.current = updated.length - 1
-    setRows(updated)
+    focusRowIndex.current = rows.length
+    ops.handleAdd()
   }
 
   return (
@@ -157,30 +127,29 @@ export function VariableSetterEditor({
         </Button>
       </div>
 
-      {/* Column headers - align with VariableRowComponent's columns so the Secret
-          checkbox column is labeled (parity with the profile / entity variable table). */}
+      {/* Column headers over the row's columns: name, type, secret, value, expand, {x}, delete. */}
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <div className="flex-1 min-w-[120px]">Name</div>
-        <div className="w-[100px]">Type</div>
-        <div className="w-8 text-center">Secret</div>
-        <div className="flex-1 min-w-[140px] pl-2">Value</div>
-        <div className="w-8" aria-hidden="true" />
-        <div className="w-8" aria-hidden="true" />
+        <div className="w-[189px] shrink-0">Name</div>
+        <div className="w-[100px] shrink-0">Type</div>
+        <div className="flex w-8 shrink-0 justify-center whitespace-nowrap">Secret</div>
+        <div className="min-w-0 flex-1 pl-1">Value</div>
+        <div className="w-8 shrink-0" aria-hidden="true" />
+        <div className="w-8 shrink-0" aria-hidden="true" />
+        <div className="w-8 shrink-0" aria-hidden="true" />
       </div>
 
-      {/* Variable rows */}
       {rows.map((row, index) => (
         <VariableRowComponent
           key={row.key}
           row={row}
           index={index}
           totalRows={rows.length}
-          validation={validationState[row.key]}
-          isTouched={touchedRows.has(row.key)}
-          isExisting={isExistingVariable(row.name)}
-          isAutocompleteOpen={openAutocomplete === index}
+          nameProblem={ops.problems[index].name}
+          valueMessage={ops.problems[index].value}
+          isExisting={ops.isExistingVariable(row.name)}
+          isAutocompleteOpen={ops.openAutocomplete === index}
           availableVariables={availableVariables}
-          filteredSuggestions={getFilteredSuggestions(row.name, index)}
+          filteredSuggestions={ops.getFilteredSuggestions(row.name, index)}
           nameInputRef={(el) => {
             if (index === 0) firstNameRef.current = el
             if (el && focusRowIndex.current === index) {
@@ -188,41 +157,22 @@ export function VariableSetterEditor({
               focusRowIndex.current = null
             }
           }}
-          onNameChange={handleNameChange}
-          onNameBlur={handleNameBlur}
-          onTypeChange={handleTypeChange}
-          onValueChange={handleValueChange}
-          onExpressionToggle={handleExpressionToggle}
-          onSecretToggle={handleSecretToggle}
+          secretSaveTarget={secretSaveTarget}
+          onNameChange={ops.handleNameChange}
+          onNameBlur={ops.handleNameBlur}
+          onTypeChange={ops.handleTypeChange}
+          onSecretToggle={ops.handleSecretToggle}
+          onRowValue={ops.handleRowValue}
+          onRowModes={ops.handleRowModes}
+          onCellValidation={ops.handleCellValidation}
           onDelete={handleRowDelete}
-          onOpenAutocomplete={setOpenAutocomplete}
-          onEditValue={handleEditValue}
-          onEditSecret={(rowIndex) => secretConfirm.open(() => handleClearSecretValue(rowIndex))}
+          onOpenAutocomplete={ops.setOpenAutocomplete}
         />
       ))}
 
-      {/* Shared "Edit value" sheet for string + array / map / table rows */}
-      {editingValueRow !== null && (
-        <ValueEditorSheet
-          ref={valueSheetRef}
-          key={rows[editingValueRow].key}
-          label={rows[editingValueRow].name}
-          name={rows[editingValueRow].name}
-          type={rows[editingValueRow].type as VariableType}
-          value={rows[editingValueRow].value}
-          isTemplate={rows[editingValueRow].isTemplate === true}
-          elementTypes={rows[editingValueRow].elementTypes}
-          availableVariables={availableVariables.map((v) => ({ name: v.name, type: v.type }))}
-          onSave={(value, isTemplate, _exprKeys, elementTypes) =>
-            handleSheetSave(editingValueRow, value, isTemplate, elementTypes)
-          }
-          onClose={() => setEditingValueRow(null)}
-        />
-      )}
-
       <RowRemovalQuestion guard={rowGuard} />
 
-      {secretConfirm.dialog}
+      <EntryChangeQuestions change={ops.entryChange} subject="variable" />
     </div>
   )
 }

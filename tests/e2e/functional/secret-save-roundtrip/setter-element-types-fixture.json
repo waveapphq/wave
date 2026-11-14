@@ -21,17 +21,12 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTypes": {
-            "xm": "map",
-            "xa": "array"
-          },
-          "variableElementTypes": {
-            "xm": {
+          "elementTypes": {
+            "variables.xm": {
               "n": "integer",
               "zip": "string"
             },
-            "xa": [
+            "variables.xa": [
               "integer",
               "string"
             ]
@@ -49,9 +44,9 @@
                 ]
               }
             },
-            "variableSecretKeys": [
-              "xm",
-              "xa"
+            "secretFields": [
+              "variables.xm",
+              "variables.xa"
             ],
             "outputBindings": {},
             "profileBindings": []
@@ -81,7 +76,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"XSEC n={xm['n'] + 1} zt={type(xm['zip']) == str} a0={xa[0] + 1} a1t={type(xa[1]) == str} plain={plain_counter}\"",

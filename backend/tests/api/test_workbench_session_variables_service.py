@@ -1,6 +1,6 @@
 """Unit tests for workbench session-variables service functions (REQ-3.2.2.18).
 
-Covers ``get_session_variables`` and ``_serialize_runtime_value`` directly,
+Covers ``get_session_variables`` and the ``wire_values`` form it sends a value in,
 plus the run-start capture of declared-secret variable names onto the
 session dict.
 """
@@ -27,6 +27,7 @@ from wavecore.core.regression_object import RegressionObject
 from wavecore.core.suite_object import SuiteObject
 from wavecore.core.system_object import SystemObject
 from wavecore.core.table import Table
+from wavecore.core.variables.wire_form import wire_values
 
 _VALID_ENVIRONMENT_ID = "10000000-0000-0000-0000-000000000060"
 
@@ -505,13 +506,13 @@ class TestSessionVariablesByScopeEndpoint:
 
 
 class TestSerializeRuntimeValue:
-    """Serialization matrix for ``workbench_service._serialize_runtime_value``."""
+    """Serialization matrix for ``wire_values``, the form a session value is sent in."""
 
     def test_table_instance_serializes_to_columns_rows_dict(self) -> None:
         table = Table(columns=[("id", "integer"), ("label", "string")])
         table.add_row([7, "seven"])
 
-        result = workbench_service._serialize_runtime_value(table)
+        result = wire_values(table)
 
         assert result == {
             "columns": [{"name": "id", "type": "integer"}, {"name": "label", "type": "string"}],
@@ -521,25 +522,25 @@ class TestSerializeRuntimeValue:
     def test_zero_row_table_keeps_column_schema(self) -> None:
         table = Table(columns=[("only", "boolean")])
 
-        result = workbench_service._serialize_runtime_value(table)
+        result = wire_values(table)
 
         assert result == {"columns": [{"name": "only", "type": "boolean"}], "rows": []}
 
     def test_dict_passes_through_unchanged(self) -> None:
         value = {"nested": {"deep": [1, 2]}}
-        assert workbench_service._serialize_runtime_value(value) == value
+        assert wire_values(value) == value
 
     def test_list_passes_through_unchanged(self) -> None:
         value = [1, "two", {"three": 3}]
-        assert workbench_service._serialize_runtime_value(value) == value
+        assert wire_values(value) == value
 
     def test_list_of_dicts_not_converted_to_table_shape(self) -> None:
         value = [{"a": 1}, {"a": 2}]
-        assert workbench_service._serialize_runtime_value(value) == value
+        assert wire_values(value) == value
 
     @pytest.mark.parametrize("scalar", ["text", 42, 3.5, True, None])
     def test_scalars_pass_through_unchanged(self, scalar: Any) -> None:
-        assert workbench_service._serialize_runtime_value(scalar) == scalar
+        assert wire_values(scalar) == scalar
 
 
 def _seed_environment() -> str:
@@ -577,7 +578,6 @@ def _log_node(node_id: str, message: str) -> dict[str, Any]:
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -745,42 +745,35 @@ class TestSerializeRuntimeValueDecimal:
     """A Decimal runtime value serializes to a plain decimal string."""
 
     def test_serialize_decimal_returns_plain_string(self) -> None:
-        assert workbench_service._serialize_runtime_value(Decimal("1.08")) == "1.08"
+        assert wire_values(Decimal("1.08")) == "1.08"
 
     def test_serialize_decimal_avoids_exponent_notation(self) -> None:
-        assert workbench_service._serialize_runtime_value(Decimal("1E+3")) == "1000"
+        assert wire_values(Decimal("1E+3")) == "1000"
 
     def test_serialize_high_precision_decimal_is_exact(self) -> None:
-        assert (
-            workbench_service._serialize_runtime_value(Decimal("-2123.123213123123699999"))
-            == "-2123.123213123123699999"
-        )
+        assert wire_values(Decimal("-2123.123213123123699999")) == "-2123.123213123123699999"
 
     def test_serialize_nested_array_decimal_is_converted_and_json_safe(self) -> None:
         # A Decimal nested in an array stays JSON-serializable.
-        result = workbench_service._serialize_runtime_value([Decimal("1.5"), "x"])
+        result = wire_values([Decimal("1.5"), "x"])
         assert result == ["1.5", "x"]
         json.dumps(result)
 
     def test_serialize_nested_map_decimal_is_converted_and_json_safe(self) -> None:
-        result = workbench_service._serialize_runtime_value(
-            {"amt": Decimal("9.876543210987654321098765432")}
-        )
+        result = wire_values({"amt": Decimal("9.876543210987654321098765432")})
         assert result == {"amt": "9.876543210987654321098765432"}
         json.dumps(result)
 
     def test_serialize_table_with_decimal_cell_is_json_safe(self) -> None:
         table = Table(columns=[("id", "integer"), ("amt", "float")])
         table.add_row([1234567890123456789, Decimal("9.876543210987654321098765432")])
-        result = workbench_service._serialize_runtime_value(table)
+        result = wire_values(table)
         dumped = json.dumps(result)
         assert "9.876543210987654321098765432" in dumped
         assert "1234567890123456789" in dumped
 
     def test_serialize_deeply_nested_decimal_is_converted(self) -> None:
-        result = workbench_service._serialize_runtime_value(
-            {"deep": [Decimal("1.234567890123456789012345678")]}
-        )
+        result = wire_values({"deep": [Decimal("1.234567890123456789012345678")]})
         assert result == {"deep": ["1.234567890123456789012345678"]}
         json.dumps(result)
 
@@ -1233,6 +1226,44 @@ class TestSessionReadValueScrub:
         assert variables["embedded"]["value"] == "Bearer ********!"
         assert variables["nested"]["value"] == {"auth": "********", "host": "example.local"}
         assert variables["plain"]["value"] == "open"
+
+    def test_an_unflagged_copy_of_a_secret_table_map_or_list_is_masked_whole(self) -> None:
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        def vault_rows() -> Table:
+            table = Table(columns=[("zt_login", "string"), ("zt_code", "string")])
+            table.add_row(["zwadm", "kq4z"])
+            return table
+
+        plain = Table(columns=[("region", "string")])
+        plain.add_row(["eu-west"])
+        registry = SecretRegistry()
+        registry.register("vault_rows", vault_rows(), "declared")
+        registry.register("vault_map", {"zm_login": "zwadm", "zm_code": "kq4z"}, "declared")
+        registry.register("vault_list", ["zwadm", "kq4z"], "declared")
+        session_id = str(uuid.uuid4())
+        session = _seed_session(
+            session_id,
+            variables=LazyVariables(
+                {
+                    "copied_rows": vault_rows(),
+                    "copied_map": {"zm_login": "zwadm", "zm_code": "kq4z"},
+                    "copied_list": ["zwadm", "kq4z"],
+                    "plain_copy": plain,
+                }
+            ),
+        )
+        session["secret_registry"] = registry
+
+        variables = workbench_service.get_session_variables(session_id)["variables"]
+
+        assert variables["copied_rows"] == {"value": "********", "type": "table"}
+        assert variables["copied_map"] == {"value": "********", "type": "map"}
+        assert variables["copied_list"] == {"value": "********", "type": "array"}
+        assert variables["plain_copy"] == {
+            "value": {"columns": [{"name": "region", "type": "string"}], "rows": [["eu-west"]]},
+            "type": "table",
+        }
 
     def test_override_echo_scrubs_registered_bytes_in_plain_variable(self) -> None:
         session_id = self._session_with_copy()

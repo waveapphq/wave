@@ -10,12 +10,13 @@ from typing import Any
 import yaml
 
 from wavecore.core.recipes.model import (
+    ALL_STEP_SIBLING_KEYS,
     COMPARISON_KEYS,
     CONSTRUCT_KEYS,
     ELIF_ENTRY_KEYS,
     FOR_RANGE_KEYS,
     FUNCTION_ENTRY_KEYS,
-    FUNCTION_STEP_KEYS,
+    GROUP_KEYS,
     INPUT_KEYS,
     INPUT_KIND_KEYS,
     OUTPUT_KEYS,
@@ -61,7 +62,7 @@ def _walk_steps(steps: list[Any], path_prefix: str, findings: list[dict[str, Any
             continue
         keywords = [key for key in step if key in STEP_KEYWORDS]
         if len(keywords) != 1:
-            known = set(STEP_KEYWORDS) | FUNCTION_STEP_KEYS
+            known = set(STEP_KEYWORDS) | ALL_STEP_SIBLING_KEYS
             unknown = [key for key in step if key not in known]
             if not keywords and unknown:
                 findings.append(
@@ -163,25 +164,42 @@ def _check_entries(
         _check_step_keys(entry, allowed, subject, f"{path}[{index}]", findings)
 
 
+def _listed(place: str, held: Any) -> list[tuple[str, Any]]:
+    """One condition at its place, or each condition of a list at its index."""
+    if not isinstance(held, list):
+        return [(place, held)]
+    return [(f"{place}[{index}]", condition) for index, condition in enumerate(held)]
+
+
 def _conditions(keyword: str, value: dict[str, Any]) -> list[tuple[str, Any]]:
     """Each condition a construct holds, by its path under the construct."""
     if keyword == "if":
-        return [("when", value.get("when"))] + [
+        places = [("when", value.get("when"))] + [
             (f"elif[{index}].when", entry.get("when"))
             for index, entry in _dict_entries(value.get("elif"))
         ]
-    if keyword == "switch":
-        return [
+    elif keyword == "switch":
+        places = [
             (f"cases[{index}].when", entry.get("when"))
             for index, entry in _dict_entries(value.get("cases"))
         ]
-    listed = _CONDITION_LISTS.get(keyword)
-    if listed is None:
-        return []
-    held = value.get(listed)
-    if not isinstance(held, list):
-        return [(listed, held)]
-    return [(f"{listed}[{index}]", condition) for index, condition in enumerate(held)]
+    else:
+        listed = _CONDITION_LISTS.get(keyword)
+        places = [] if listed is None else [(listed, value.get(listed))]
+    return [item for place, held in places for item in _listed(place, held)]
+
+
+def _check_condition_keys(condition: Any, path: str, findings: list[dict[str, Any]]) -> None:
+    """A group takes only `group`, and its conditions are checked at their own places."""
+    if not isinstance(condition, dict):
+        return
+    if "group" not in condition:
+        _check_step_keys(condition, COMPARISON_KEYS, "a comparison condition", path, findings)
+        return
+    _check_step_keys(condition, GROUP_KEYS, "a condition group", path, findings)
+    items = condition["group"]
+    for index, item in enumerate(items if isinstance(items, list) else []):
+        _check_condition_keys(item, f"{path}.group[{index}]", findings)
 
 
 def _check_nested_keys(
@@ -195,10 +213,7 @@ def _check_nested_keys(
     if isinstance(loop_range, dict):
         _check_step_keys(loop_range, FOR_RANGE_KEYS, "a 'for' range", f"{path}.range", findings)
     for place, condition in _conditions(keyword, value):
-        if isinstance(condition, dict):
-            _check_step_keys(
-                condition, COMPARISON_KEYS, "a comparison condition", f"{path}.{place}", findings
-            )
+        _check_condition_keys(condition, f"{path}.{place}", findings)
 
 
 def _check_keys(
@@ -269,7 +284,9 @@ def _check_test_section(raw: dict[str, Any], findings: list[dict[str, Any]]) -> 
 
 def _check_flow_section(raw: dict[str, Any], findings: list[dict[str, Any]]) -> list[Any]:
     flow = raw.get("flow")
-    if not isinstance(flow, list) or not flow:
+    beside = raw.get("notes")
+    # A canvas that holds only Notes has an empty flow beside its notes.
+    if not isinstance(flow, list) or not (flow or (isinstance(beside, list) and beside)):
         findings.append(
             finding(
                 "flow",
@@ -280,6 +297,39 @@ def _check_flow_section(raw: dict[str, Any], findings: list[dict[str, Any]]) -> 
         )
         return []
     return flow
+
+
+def _check_notes_section(
+    holder: dict[str, Any], path: str, findings: list[dict[str, Any]]
+) -> list[Any]:
+    """The note steps of the Notes beside a flow; any other item is refused."""
+    notes = holder.get("notes")
+    if notes is None:
+        return []
+    if not isinstance(notes, list):
+        findings.append(
+            finding(
+                path,
+                "INVALID_CONSTRUCT",
+                "'notes' construct is malformed: must be a list of note steps",
+                None,
+            )
+        )
+        return []
+    for index, item in enumerate(notes):
+        item_path = f"{path}[{index}]"
+        if isinstance(item, dict) and [key for key in item if key in STEP_KEYWORDS] == ["note"]:
+            _check_unknown_keys("note", item, item_path, findings)
+            continue
+        findings.append(
+            finding(
+                item_path,
+                "INVALID_CONSTRUCT",
+                "'notes' construct is malformed: each item must be a note step",
+                "Write it as '- note: ...', or move it into flow",
+            )
+        )
+    return notes
 
 
 def _check_functions_section(
@@ -319,6 +369,7 @@ def _check_functions_section(
         _check_parameter_keys(entry, f"functions[{name}]", findings)
         _check_variables_section(entry, findings, f"functions[{name}].variables")
         _walk_steps(flow, f"functions[{name}].flow", findings)
+        _check_notes_section(entry, f"functions[{name}].notes", findings)
     return entries
 
 
@@ -378,6 +429,7 @@ def parse_recipe(text: str) -> tuple[RecipeDoc | None, list[dict[str, Any]]]:
     variables = _check_variables_section(raw, findings)
     functions = _check_functions_section(raw, findings)
     _walk_steps(flow, "flow", findings)
+    notes = _check_notes_section(raw, "notes", findings)
 
     if findings:
         return None, findings
@@ -395,6 +447,7 @@ def parse_recipe(text: str) -> tuple[RecipeDoc | None, list[dict[str, Any]]]:
             variables=variables,
             functions=functions,
             flow=flow,
+            notes=notes,
         ),
         [],
     )

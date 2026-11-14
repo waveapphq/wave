@@ -23,7 +23,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isColumnsRowsDict(
+/** True for the {columns, rows} dict a core Table serializes to: named columns plus row arrays. */
+export function isColumnsRowsDict(
   value: unknown,
 ): value is { columns: unknown[]; rows: unknown[][] } {
   if (!isPlainObject(value)) return false

@@ -404,7 +404,7 @@ def _secret_block(place: str, value: Any) -> dict[str, Any]:
             "version": "1.0.0",
             "config": {
                 "values": {"variables": {"set_tok": value}},
-                "variableSecretKeys": ["set_tok"],
+                "secretFields": ["variables.set_tok"],
             },
         }
     else:
@@ -479,8 +479,8 @@ def _function_secret(place: str, definition: Mapping[str, Any]) -> tuple[Any, bo
     if place in ("Setter literal", "plugin credential"):
         config = definition["workflow"]["nodes"][0]["data"]["config"]
         if place == "Setter literal":
-            return config["values"]["variables"]["set_tok"], config["variableSecretKeys"] == [
-                "set_tok"
+            return config["values"]["variables"]["set_tok"], config["secretFields"] == [
+                "variables.set_tok"
             ]
         # The HTTP block declares this field a credential, so it is secret by declaration.
         return config["values"]["auth_token"], True

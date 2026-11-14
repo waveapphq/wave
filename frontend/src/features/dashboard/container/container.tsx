@@ -133,7 +133,7 @@ export function DashboardContainer(): ReactNode {
 
   const handleNavigate = useCallback(
     (path: string) => {
-      navigate(path)
+      void navigate(path)
     },
     [navigate]
   )

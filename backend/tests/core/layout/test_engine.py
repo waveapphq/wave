@@ -12,10 +12,13 @@ def layout(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
     pinned: dict[str, dict[str, float]] | None = None,
+    grown: set[str] | None = None,
 ) -> dict[str, dict[str, float]]:
     from wavecore.core.layout.engine import layout_workflow
 
-    return layout_workflow(nodes, edges, pinned)
+    if grown is None:
+        return layout_workflow(nodes, edges, pinned)
+    return layout_workflow(nodes, edges, pinned, grown)
 
 
 def estimate(node: dict[str, Any], ingress_count: int) -> tuple[int, int]:
@@ -171,6 +174,14 @@ class TestConstants:
         assert engine.RHYTHM_Y == 140
         assert engine.GUTTER_X == 80
         assert engine.MIN_COLUMN_WIDTH == 240
+
+    def test_the_room_clearance_is_what_a_row_leaves_under_the_tallest_collapsed_card(
+        self,
+    ) -> None:
+        from wavecore.core.layout import engine
+
+        assert engine.ROOM_CLEARANCE_X == 40
+        assert engine.ROOM_CLEARANCE_Y == 32
 
 
 class TestCanonicalPixelCases:
@@ -389,3 +400,283 @@ class TestIngressCounts:
 
         assert count_ingress([]) == {}
         assert "node-9" not in count_ingress([make_edge("start-node", "node-1")])
+
+
+def chain_workflow(count: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """node-1 .. node-<count> in one straight flow."""
+    nodes = [make_node(f"node-{index}") for index in range(1, count + 1)]
+    edges = [make_edge("start-node", "node-1")]
+    edges += [make_edge(f"node-{index}", f"node-{index + 1}") for index in range(1, count)]
+    return nodes, edges
+
+
+def crowding_pairs(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    positions: dict[str, dict[str, float]],
+) -> list[tuple[str, str]]:
+    boxes = bounding_boxes(nodes, edges, positions)
+    ids = sorted(boxes)
+    return [
+        (first, second)
+        for index, first in enumerate(ids)
+        for second in ids[index + 1 :]
+        if boxes_overlap(boxes[first], boxes[second])
+    ]
+
+
+def nested_release_workflow() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """An If/Else whose then-branch holds a Remote Execution with a two-Block body; the
+    Remote's continuation carries the rest of the flow, the else-branch ends in a Halt."""
+    nodes = [
+        make_node("node-1"),
+        make_node("node-2", "if-else", "control", values=two_branch_if_values()),
+        make_node("node-3", "remote-execution", "control"),
+        make_node("node-4"),
+        make_node("node-5"),
+        make_node("node-6"),
+        make_node("node-7", "halt", "control"),
+        make_node("node-8"),
+        make_node("node-9"),
+    ]
+    edges = [
+        make_edge("start-node", "node-1"),
+        make_edge("node-1", "node-2"),
+        make_edge("node-2", "node-3", source_handle="branch_0"),
+        make_edge("node-3", "node-4", source_handle="body"),
+        make_edge("node-4", "node-5"),
+        make_edge("node-2", "node-6", source_handle="branch_1"),
+        make_edge("node-6", "node-7"),
+        make_edge("node-3", "node-8", source_handle="then"),
+        make_edge("node-8", "node-9"),
+    ]
+    return nodes, edges
+
+
+class TestFreshLayoutNeverOverlaps:
+    def test_rows_of_the_tallest_collapsed_cards_keep_the_rhythm(self) -> None:
+        nodes, edges = chain_workflow(3)
+        for node in nodes:
+            node["data"]["description"] = "x" * 64
+        positions = layout(nodes, edges)
+        assert positions == {
+            "node-1": {"x": -80, "y": 140},
+            "node-2": {"x": -80, "y": 280},
+            "node-3": {"x": -80, "y": 420},
+        }
+        assert crowding_pairs(nodes, edges, positions) == []
+
+    def test_a_remote_body_inside_a_branch_overlaps_nothing(self) -> None:
+        nodes, edges = nested_release_workflow()
+        assert crowding_pairs(nodes, edges, layout(nodes, edges)) == []
+
+    def test_the_nested_flow_keeps_its_columns(self) -> None:
+        nodes, edges = nested_release_workflow()
+        assert layout(nodes, edges) == {
+            "node-1": {"x": -80, "y": 140},
+            "node-2": {"x": -80, "y": 280},
+            "node-3": {"x": -240, "y": 420},
+            "node-4": {"x": -400, "y": 560},
+            "node-5": {"x": -400, "y": 700},
+            "node-6": {"x": 240, "y": 420},
+            "node-7": {"x": 240, "y": 560},
+            "node-8": {"x": -240, "y": 840},
+            "node-9": {"x": -240, "y": 980},
+        }
+
+
+class TestMakingRoom:
+    """A pinned node keeps its place unless a placed or grown node needs the room: it moves
+    down when that node crowds it or when the flow puts that node above it, in whole rhythm
+    rows, and the nodes below it follow just as far as they must."""
+
+    def test_a_pinned_node_in_the_way_of_a_placed_node_moves_down_one_row(self) -> None:
+        nodes, edges = sequential_workflow()
+        positions = layout(nodes, edges, {"node-2": {"x": -80, "y": 140}})
+        assert positions == {"node-1": {"x": -80, "y": 140}, "node-2": {"x": -80, "y": 280}}
+
+    def test_the_nodes_below_follow_only_as_far_as_they_must(self) -> None:
+        nodes, edges = chain_workflow(4)
+        pinned = {
+            "node-2": {"x": -80, "y": 140},
+            "node-3": {"x": -80, "y": 280},
+            "node-4": {"x": -80, "y": 700},
+        }
+        assert layout(nodes, edges, pinned) == {
+            "node-1": {"x": -80, "y": 140},
+            "node-2": {"x": -80, "y": 280},
+            "node-3": {"x": -80, "y": 420},
+            "node-4": {"x": -80, "y": 700},
+        }
+
+    def test_a_placed_node_that_lands_on_a_pinned_node_before_it_moves_below_it(self) -> None:
+        nodes, edges = sequential_workflow()
+        positions = layout(nodes, edges, {"node-1": {"x": -80, "y": 280}})
+        assert positions == {"node-1": {"x": -80, "y": 280}, "node-2": {"x": -80, "y": 420}}
+
+    def test_a_pinned_branch_closer_than_the_clearance_beside_a_placed_one_moves_down(
+        self,
+    ) -> None:
+        nodes, edges = branching_workflow()
+        positions = layout(nodes, edges, {"node-3": {"x": -60, "y": 280}})
+        assert positions["node-3"] == {"x": -60, "y": 420}
+        assert positions["node-4"] == {"x": -80, "y": 560}
+
+    def test_a_pinned_branch_the_clearance_away_keeps_its_place(self) -> None:
+        nodes, edges = branching_workflow()
+        positions = layout(nodes, edges, {"node-3": {"x": -40, "y": 280}})
+        assert positions["node-3"] == {"x": -40, "y": 280}
+        assert positions["node-4"] == {"x": -80, "y": 420}
+
+    def test_a_stored_height_on_a_pinned_node_takes_no_room(self) -> None:
+        nodes, edges = sequential_workflow()
+        nodes[0]["height"] = 200
+        positions = layout(nodes, edges, {"node-1": {"x": -80, "y": 140}})
+        assert positions["node-2"] == {"x": -80, "y": 280}
+
+    def test_a_node_below_an_expanded_description_clears_the_whole_card(self) -> None:
+        nodes, edges = sequential_workflow()
+        nodes[0]["data"].update(description="x" * 64, descriptionExpanded=True)
+        positions = layout(nodes, edges, {"node-1": {"x": -80, "y": 140}})
+        assert positions["node-2"] == {"x": -80, "y": 420}
+
+    def test_a_grown_pinned_node_makes_room_below_it(self) -> None:
+        nodes, edges = sequential_workflow()
+        pinned = {"node-1": {"x": -80, "y": 140}, "node-2": {"x": -80, "y": 200}}
+        positions = layout(nodes, edges, pinned, {"node-1"})
+        assert positions == {"node-1": {"x": -80, "y": 140}, "node-2": {"x": -80, "y": 280}}
+
+    def test_pinned_nodes_a_person_stacked_stay_as_they_are(self) -> None:
+        nodes, edges = sequential_workflow()
+        pinned = {"node-1": {"x": -80, "y": 140}, "node-2": {"x": -80, "y": 200}}
+        assert layout(nodes, edges, pinned) == pinned
+
+    def test_a_placed_node_goes_below_the_node_before_it_in_its_column(self) -> None:
+        nodes, edges = chain_workflow(3)
+        pinned = {"node-1": {"x": -80, "y": 420}, "node-3": {"x": -80, "y": 280}}
+        assert layout(nodes, edges, pinned) == {
+            "node-1": {"x": -80, "y": 420},
+            "node-2": {"x": -80, "y": 560},
+            "node-3": {"x": -80, "y": 700},
+        }
+
+    def test_a_node_before_it_that_a_person_moved_to_another_column_holds_nothing_back(
+        self,
+    ) -> None:
+        nodes, edges = chain_workflow(3)
+        pinned = {"node-1": {"x": 300, "y": 420}, "node-3": {"x": -80, "y": 280}}
+        assert layout(nodes, edges, pinned) == {
+            "node-1": {"x": 300, "y": 420},
+            "node-2": {"x": -80, "y": 280},
+            "node-3": {"x": -80, "y": 420},
+        }
+
+    def test_a_node_that_had_to_move_also_clears_the_unmoved_nodes_before_it(self) -> None:
+        nodes, edges = branching_workflow()
+        pinned = {"node-2": {"x": 80, "y": 300}, "node-3": {"x": 80, "y": 140}}
+        assert layout(nodes, edges, pinned) == {
+            "node-1": {"x": -80, "y": 140},
+            "node-2": {"x": 80, "y": 300},
+            "node-3": {"x": 80, "y": 440},
+            "node-4": {"x": -80, "y": 580},
+        }
+
+    def test_the_step_after_a_construct_stays_below_everything_in_its_sections(self) -> None:
+        nodes = [
+            make_node("node-1", "for", "control", values={"mode": "count", "count": 3}),
+            make_node("node-2"),
+            {**make_node("node-3"), "width": 328},
+            make_node("node-5"),
+            make_node("node-4"),
+        ]
+        edges = [
+            make_edge("start-node", "node-1"),
+            make_edge("node-1", "node-2", source_handle="body"),
+            make_edge("node-2", "node-3"),
+            make_edge("node-3", "node-5"),
+            make_edge("node-1", "node-4", source_handle="then"),
+        ]
+        pinned = {
+            "node-1": {"x": -80, "y": 140},
+            "node-3": {"x": -368, "y": 280},
+            "node-5": {"x": -284, "y": 420},
+            "node-4": {"x": -80, "y": 560},
+        }
+        assert layout(nodes, edges, pinned) == {
+            "node-1": {"x": -80, "y": 140},
+            "node-2": {"x": -284, "y": 280},
+            "node-3": {"x": -368, "y": 420},
+            "node-5": {"x": -284, "y": 560},
+            "node-4": {"x": -80, "y": 700},
+        }
+
+    def test_a_pinned_branch_column_beside_a_placed_one_keeps_its_place(self) -> None:
+        nodes, edges = branching_workflow()
+        pinned = {"node-1": {"x": -80, "y": 140}, "node-3": {"x": 80, "y": 280}}
+        positions = layout(nodes, edges, pinned)
+        assert positions == layout(nodes, edges)
+
+
+class TestFlowTree:
+    """Every node in flow order, with the flows of its sections keyed by handle."""
+
+    def tree(
+        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
+    ) -> list[tuple[str, dict[str, Any]]]:
+        from wavecore.core.layout.engine import flow_tree
+
+        return flow_tree(nodes, edges)
+
+    def test_a_straight_flow_is_one_row_per_node(self) -> None:
+        nodes, edges = sequential_workflow()
+        assert self.tree(nodes, edges) == [("node-1", {}), ("node-2", {})]
+
+    def test_branches_are_sections_and_the_rejoin_continues_the_flow(self) -> None:
+        nodes, edges = branching_workflow()
+        assert self.tree(nodes, edges) == [
+            ("node-1", {"branch_0": [("node-2", {})], "branch_1": [("node-3", {})]}),
+            ("node-4", {}),
+        ]
+
+    def test_a_loop_body_is_a_section_and_then_continues_the_flow(self) -> None:
+        nodes, edges = loop_workflow()
+        assert self.tree(nodes, edges) == [("node-1", {"body": [("node-2", {})]}), ("node-3", {})]
+
+    def test_sections_nest(self) -> None:
+        nodes, edges = complex_workflow()
+        assert self.tree(nodes, edges) == [
+            (
+                "node-1",
+                {
+                    "try": [
+                        ("node-2", {"branch_0": [("node-3", {})], "branch_1": [("node-4", {})]}),
+                        ("node-5", {}),
+                    ],
+                    "catch": [("node-6", {})],
+                    "finally": [("node-7", {})],
+                },
+            ),
+            ("node-8", {}),
+        ]
+
+    def test_a_branch_wired_straight_to_the_rejoin_has_no_section(self) -> None:
+        nodes = [
+            make_node("node-1", "if-else", "control", values=two_branch_if_values()),
+            make_node("node-2"),
+            make_node("node-3"),
+        ]
+        edges = [
+            make_edge("start-node", "node-1"),
+            make_edge("node-1", "node-3", source_handle="branch_0"),
+            make_edge("node-1", "node-2", source_handle="branch_1"),
+            make_edge("node-2", "node-3", target_handle="ingress_1"),
+        ]
+        assert self.tree(nodes, edges) == [
+            ("node-1", {"branch_1": [("node-2", {})]}),
+            ("node-3", {}),
+        ]
+
+    def test_flows_nothing_reaches_follow_the_start_flow(self) -> None:
+        nodes = [make_node("node-1"), make_node("node-2"), make_node("node-3")]
+        edges = [make_edge("start-node", "node-2"), make_edge("node-1", "node-3")]
+        assert self.tree(nodes, edges) == [("node-2", {}), ("node-1", {}), ("node-3", {})]

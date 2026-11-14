@@ -16,14 +16,17 @@ vi.mock('@uiw/react-codemirror', () => ({
     value,
     onChange,
     extensions,
+    autoFocus,
   }: {
     value: string
     onChange?: (value: string) => void
     extensions?: unknown[]
+    autoFocus?: boolean
   }) => (
     <textarea
       data-testid="codemirror-editor"
       data-extensions={JSON.stringify(extensions ?? [])}
+      autoFocus={autoFocus}
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
     />
@@ -46,6 +49,7 @@ interface RenderOptions {
   onValidChange?: (valid: boolean) => void
   format?: 'json' | 'yaml' | 'xml' | 'plain'
   extraExtensions?: unknown[]
+  autoFocus?: boolean
 }
 
 function renderBody({
@@ -54,6 +58,7 @@ function renderBody({
   onValidChange = vi.fn(),
   format,
   extraExtensions,
+  autoFocus,
 }: RenderOptions = {}) {
   render(
     <StringEditBody
@@ -62,6 +67,7 @@ function renderBody({
       onValidChange={onValidChange}
       format={format}
       extraExtensions={extraExtensions as never}
+      autoFocus={autoFocus}
     />,
   )
   return { onChange, onValidChange }
@@ -103,6 +109,16 @@ describe('StringEditBody', () => {
   it('renders inside the bordered editor container', () => {
     renderBody()
     expect(screen.getByTestId('string-edit-editor')).toBeInTheDocument()
+  })
+
+  it('takes the cursor once built when its host asks for it', () => {
+    renderBody({ autoFocus: true })
+    expect(getEditor()).toHaveFocus()
+  })
+
+  it('leaves the cursor where it is when its host does not ask', () => {
+    renderBody()
+    expect(getEditor()).not.toHaveFocus()
   })
 })
 

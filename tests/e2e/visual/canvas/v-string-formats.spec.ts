@@ -60,7 +60,6 @@ function buildFixture() {
             hasNewerVersion: false,
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { message: "'anchor'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
           },
           measured: { width: 120, height: 62 },
@@ -84,7 +83,7 @@ function buildFixture() {
 const rowFor = (page: Page, name: string): Locator =>
   page.locator('[data-testid="variable-manager-content"]').locator(`[aria-label="Variable ${name}"]`)
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 // Syntax-highlight token spans inside the CodeMirror line. Exclude the always-on
 // bracket-match / selection decorations (@uiw basicSetup's bracketMatching paints
 // the {} pair regardless of format), so the count reflects language highlighting

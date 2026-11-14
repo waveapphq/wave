@@ -4,6 +4,7 @@ Every entry point reads the script; none of them ever runs it.
 """
 
 import ast
+import contextlib
 import keyword
 import os
 import sys
@@ -11,6 +12,7 @@ import threading
 from typing import Any
 
 import jedi
+from jedi.api.environment import Environment, InvalidPythonEnvironment
 
 from wavecore.api.exceptions import ValidationException
 
@@ -34,15 +36,22 @@ _ENVIRONMENTS: dict[str, Any] = {}
 
 
 def resolve_environment(interpreter: str) -> Any:
-    """The interpreter jedi introspects: the row when it names an executable, else WAVE's own."""
+    """The interpreter jedi introspects: the row when its path starts a Python, else WAVE's own."""
     path = interpreter.strip()
-    if not (path and os.path.isfile(path) and os.access(path, os.X_OK)):
-        path = sys.executable
     with _LOCK:
-        environment = _ENVIRONMENTS.get(path)
-        if environment is None:
-            environment = jedi.create_environment(path, safe=False)
-            _ENVIRONMENTS[path] = environment
+        # A bare program name is looked up on PATH only when the block runs.
+        if os.path.dirname(path):
+            with contextlib.suppress(InvalidPythonEnvironment):
+                return _environment(path)
+        return _environment(sys.executable)
+
+
+def _environment(executable: str) -> Any:
+    """The introspected interpreter started from that executable, kept for the next request."""
+    environment = _ENVIRONMENTS.get(executable)
+    if environment is None:
+        environment = Environment(executable)
+        _ENVIRONMENTS[executable] = environment
     return environment
 
 

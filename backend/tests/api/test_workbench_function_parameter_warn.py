@@ -93,7 +93,6 @@ def _log_node(
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -473,7 +472,6 @@ class TestWarningTiming:
                 "displayName": "For Loop",
                 "expressionFields": [],
                 "templateFields": [],
-                "variableExpressionKeys": [],
             },
         }
         nodes = [for_node, _local_instance(function_def)]

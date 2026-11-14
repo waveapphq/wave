@@ -339,17 +339,29 @@ describe('useTestCrud - handleNewTest session gate', () => {
     expect(deps.setUploadCount).toHaveBeenCalledWith(0)
   })
 
-  it('lets a failed upload read pass rather than block the dialog', async () => {
+  it('lets a failed upload read pass rather than block the dialog, and drops the earlier count', async () => {
     mockSession(makeSession({ status: 'passed' }))
     storeState.editingTestId = 'test-7'
-    vi.mocked(testdataApi.uploadState).mockRejectedValue(new Error('gone'))
+    vi.mocked(testdataApi.uploadState).mockResolvedValue({
+      uploads: [uploadRow('a.csv'), uploadRow('b.csv')],
+      interruptions: [],
+    })
     const deps = createDeps()
     const { result } = renderHook(() => useTestCrud(deps))
+    await act(async () => {
+      await result.current.handleNewTest()
+    })
+    expect(deps.setUploadCount).toHaveBeenLastCalledWith(2)
 
+    vi.mocked(testdataApi.uploadState).mockRejectedValue(
+      Object.assign(new Error('Test not found: test-7'), { type: 'not_found', status: 404, isRetryable: false })
+    )
+    deps.setSwitchTestDialogOpen.mockClear()
     await act(async () => {
       await result.current.handleNewTest()
     })
 
+    expect(deps.setUploadCount).toHaveBeenLastCalledWith(0)
     expect(deps.setSwitchTestDialogOpen).toHaveBeenCalledWith(true)
   })
 

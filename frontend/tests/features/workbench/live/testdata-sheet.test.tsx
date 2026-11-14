@@ -130,7 +130,7 @@ describe('TestDataSheet - shell', () => {
     renderSheet()
 
     const sheet = screen.getByTestId('testdata-sheet')
-    expect(sheet).toHaveAttribute('aria-label', 'Test Data')
+    expect(screen.getByRole('dialog', { name: 'Test Data' })).toBe(sheet)
     expect(within(header()).getByText('Test Data')).toBeInTheDocument()
   })
 

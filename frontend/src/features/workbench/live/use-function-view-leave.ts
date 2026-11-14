@@ -35,7 +35,7 @@ export function useFunctionViewLeave({ onCanvasClosed, clearDraft }: UseFunction
     store.reset()
     clearDraft()
     store.requestFitView({ padding: 0.2, duration: 0 })
-    navigate('/workbench')
+    void navigate('/workbench')
   }, [onCanvasClosed, clearDraft, navigate])
 
   const close = useCallback(() => {

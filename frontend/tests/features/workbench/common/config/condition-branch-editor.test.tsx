@@ -9,12 +9,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock AssertionBuilder to avoid rendering the full assertion builder
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: (props: {
     assertions: unknown[]
     availableVariables: unknown[]
     onAssertionsChange: (v: unknown[]) => void
-    onValidChange?: (v: boolean) => void
   }) => {
     return (
       <div data-testid="assertion-builder-mock">
@@ -50,12 +49,10 @@ import {
 
 describe('ConditionBranchEditor', () => {
   let onBranchesChange: ReturnType<typeof vi.fn>
-  let onValidChange: ReturnType<typeof vi.fn>
   const defaultVars = [{ name: 'myVar', type: 'string' }]
 
   beforeEach(() => {
     onBranchesChange = vi.fn()
-    onValidChange = vi.fn()
   })
 
   describe('Default branches', () => {
@@ -65,7 +62,6 @@ describe('ConditionBranchEditor', () => {
           branches={[]}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -89,7 +85,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -109,7 +104,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -127,7 +121,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -145,7 +138,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -166,7 +158,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -195,7 +186,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -220,7 +210,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -237,7 +226,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -256,7 +244,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -274,7 +261,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -294,7 +280,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -318,7 +303,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -341,7 +325,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -361,7 +344,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -382,7 +364,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -407,7 +388,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -429,7 +409,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -450,7 +429,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -472,7 +450,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -491,7 +468,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -516,7 +492,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -541,7 +516,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -560,7 +534,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -588,7 +561,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -606,7 +578,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -626,7 +597,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -644,7 +614,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -654,8 +623,9 @@ describe('ConditionBranchEditor', () => {
     })
   })
 
+  // The card alert comes from the shared check of the branch's list (REQ-3.5.1.6, REQ-3.5.1.5).
   describe('Validation', () => {
-    it('reports valid when if branch has conditions', () => {
+    it('leaves the if card unmarked when its branch has a complete condition', () => {
       const branches: ConditionBranch[] = [
         {
           id: 'branch_0',
@@ -673,14 +643,13 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      expect(onValidChange).toHaveBeenCalledWith(true)
+      expect(screen.queryByTestId('branch-alert-branch_0')).not.toBeInTheDocument()
     })
 
-    it('reports invalid when if branch has no conditions', () => {
+    it('marks the if card when its branch has no conditions', () => {
       const branches: ConditionBranch[] = [
         { id: 'branch_0', type: 'if', label: '', conditions: [] },
         { id: 'branch_1', type: 'else', label: '' },
@@ -691,14 +660,13 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('branch-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports invalid when else-if branch has no conditions', () => {
+    it('marks only the else-if card when it has no conditions', () => {
       const branches: ConditionBranch[] = [
         {
           id: 'branch_0',
@@ -716,14 +684,14 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.queryByTestId('branch-alert-branch_0')).not.toBeInTheDocument()
+      expect(screen.getByTestId('branch-alert-branch_1')).toBeInTheDocument()
     })
 
-    it('else branch does not affect validity', () => {
+    it('never marks the else card', () => {
       const branches: ConditionBranch[] = [
         {
           id: 'branch_0',
@@ -741,15 +709,15 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      // Valid because if has conditions, else has no conditions requirement
-      expect(onValidChange).toHaveBeenCalledWith(true)
+      // The if branch has conditions; the else branch carries none by design.
+      expect(screen.queryByTestId('branch-alert-branch_0')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('branch-alert-branch_1')).not.toBeInTheDocument()
     })
 
-    it('treats operator-only conditions as invalid', () => {
+    it('marks a branch holding only operator items', () => {
       const branches: ConditionBranch[] = [
         {
           id: 'branch_0',
@@ -766,11 +734,10 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('branch-alert-branch_0')).toBeInTheDocument()
     })
 
     it('marks a conditional branch that has no assertions', () => {
@@ -784,7 +751,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -793,7 +759,7 @@ describe('ConditionBranchEditor', () => {
       expect(screen.queryByTestId('branch-alert-branch_1')).not.toBeInTheDocument()
     })
 
-    it('treats a condition with no variable picked as invalid', () => {
+    it('marks a branch whose condition names no variable', () => {
       // A half-built row does not count as a condition.
       const branches: ConditionBranch[] = [
         {
@@ -819,11 +785,32 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+      expect(screen.getByTestId('branch-alert-branch_0')).toBeInTheDocument()
+    })
+
+    it('marks a branch whose condition has no compare value', () => {
+      const branches: ConditionBranch[] = [
+        {
+          id: 'branch_0',
+          type: 'if',
+          label: '',
+          conditions: [{ id: 'a1', type: 'literal', variable: 'myVar', value_type: 'string', operator: 'equals' }],
+        },
+        { id: 'branch_1', type: 'else', label: '' },
+      ]
+
+      render(
+        <ConditionBranchEditor
+          branches={branches}
+          availableVariables={defaultVars}
+          onBranchesChange={onBranchesChange}
+        />
+      )
+
+      expect(screen.getByTestId('branch-alert-branch_0')).toBeInTheDocument()
     })
   })
 
@@ -839,7 +826,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -871,7 +857,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -891,7 +876,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -902,7 +886,7 @@ describe('ConditionBranchEditor', () => {
       expect(lastCall[1].type).toBe('else_if')
     })
 
-    it('validates branches where conditions is undefined (uses ?? [] fallback)', () => {
+    it('marks a branch whose conditions are undefined (uses ?? [] fallback)', () => {
       // Branch with conditions=undefined triggers the `?? []` fallback in validation
       const branches: ConditionBranch[] = [
         { id: 'branch_0', type: 'if', label: '' },
@@ -914,12 +898,11 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
-      // If branch has no conditions (undefined) - should be invalid
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      // If branch has no conditions (undefined) - the card says so
+      expect(screen.getByTestId('branch-alert-branch_0')).toBeInTheDocument()
     })
 
     it('passes conditions ?? [] to AssertionBuilder when conditions is undefined', () => {
@@ -933,7 +916,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -953,7 +935,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -980,7 +961,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1001,7 +981,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1023,7 +1002,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1045,7 +1023,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1068,7 +1045,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1090,7 +1066,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -1111,7 +1086,6 @@ describe('ConditionBranchEditor', () => {
           branches={branches}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 

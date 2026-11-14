@@ -8,6 +8,7 @@ referenced test or suite is confirmed to exist before the write is accepted.
 """
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from wavecore.api.exceptions import ConflictException, ValidationException
@@ -38,20 +39,29 @@ def _no_value_variable_items(variables: dict[str, Any] | None) -> list[dict[str,
     return owed_action_items(owed_variables(variables))
 
 
+_Resolver = Callable[[str], dict[str, Any]]
+
+
+def _member_id(ref: str, resolver: _Resolver) -> str | None:
+    """Members accept an id or a unique name, like every other reference."""
+    try:
+        return str(resolver(ref)["id"])
+    except Exception:
+        return None
+
+
 def _resolve_members(
     refs: list[str] | None,
     *,
     label: str,
     code: str,
-    resolver: Any,
+    resolver: _Resolver,
 ) -> tuple[list[str], list[dict[str, Any]]]:
-    """Members accept an id or a unique name, like every other reference."""
     resolved: list[str] = []
     findings: list[dict[str, Any]] = []
     for ref in refs or []:
-        try:
-            resolved.append(str(resolver(ref)["id"]))
-        except Exception:
+        member_id = _member_id(ref, resolver)
+        if member_id is None:
             findings.append(
                 _finding(
                     code,
@@ -59,7 +69,14 @@ def _resolve_members(
                     _MEMBER_FIX.format(label=label),
                 )
             )
+        else:
+            resolved.append(member_id)
     return resolved, findings
+
+
+def _removal_ids(current: list[Any], refs: list[str] | None, resolver: _Resolver) -> list[str]:
+    """A removal names a stored member id, or a member by id or unique name like an addition."""
+    return [ref if ref in current else (_member_id(ref, resolver) or ref) for ref in refs or []]
 
 
 def _resolve_tests(refs: list[str] | None) -> tuple[list[str], list[dict[str, Any]]]:
@@ -75,13 +92,13 @@ def _resolve_suites(refs: list[str] | None) -> tuple[list[str], list[dict[str, A
 
 
 def _removal_findings(
-    current: list[Any], remove: list[str] | None, label: str
+    current: list[Any], removals: list[tuple[str, str]], label: str
 ) -> list[dict[str, Any]]:
     """A removal that matches nothing is a typo, not a silent success."""
     return [
         _finding("NOT_A_MEMBER", f"{label.capitalize()} '{ref}' is not in this {_OWNER[label]}")
-        for ref in remove or []
-        if ref not in current
+        for ref, member_id in removals
+        if member_id not in current
     ]
 
 
@@ -89,16 +106,16 @@ _OWNER = {"test": "suite", "suite": "regression"}
 
 
 def _contradiction_findings(
-    add: list[str] | None, remove: list[str] | None, label: str
+    add_ids: list[str], removals: list[tuple[str, str]], label: str
 ) -> list[dict[str, Any]]:
-    both = [ref for ref in add or [] if ref in (remove or [])]
     return [
         _finding(
             "CONTRADICTORY_MEMBERSHIP",
             f"{label.capitalize()} '{ref}' is both added and removed in one call",
             "Add or remove it, not both",
         )
-        for ref in both
+        for ref, member_id in removals
+        if member_id in add_ids
     ]
 
 
@@ -225,11 +242,13 @@ def _member_change_findings(
     current: list[Any],
     add_ids: list[str],
     remove: list[str] | None,
+    remove_ids: list[str],
     label: str,
 ) -> list[dict[str, Any]]:
+    removals = list(zip(remove or [], remove_ids, strict=True))
     return [
-        *_contradiction_findings(add_ids, remove, label),
-        *_removal_findings(current, remove, label),
+        *_contradiction_findings(add_ids, removals, label),
+        *_removal_findings(current, removals, label),
     ]
 
 
@@ -265,8 +284,10 @@ def update_suite(
         findings.extend(_validate_suite_name(name))
     add_ids, member_findings = _resolve_tests(add_tests)
     findings.extend(member_findings)
+    current_tests = suite.get("tests") or []
+    remove_ids = _removal_ids(current_tests, remove_tests, resolve_test)
     findings.extend(
-        _member_change_findings(suite.get("tests") or [], add_ids, remove_tests, "test")
+        _member_change_findings(current_tests, add_ids, remove_tests, remove_ids, "test")
     )
     findings.extend(_variable_removal_findings(suite.get("variables") or {}, remove_variables))
     findings.extend(_untyped_variable_findings(set_variables))
@@ -275,7 +296,7 @@ def update_suite(
 
     payload: dict[str, Any] = _scalar_payload(name, description, tags)
     if add_tests is not None or remove_tests is not None:
-        payload["tests"] = _merge_members(suite.get("tests") or [], add_ids, remove_tests)
+        payload["tests"] = _merge_members(current_tests, add_ids, remove_ids)
     if set_variables is not None or remove_variables is not None:
         payload["variables"] = _merge_variables(
             suite.get("variables") or {}, set_variables, remove_variables
@@ -356,8 +377,10 @@ def update_regression(
     regression_id = str(regression["id"])
 
     add_ids, findings = _resolve_suites(add_suites)
+    current_suites = regression.get("suites") or []
+    remove_ids = _removal_ids(current_suites, remove_suites, resolve_suite)
     findings.extend(
-        _member_change_findings(regression.get("suites") or [], add_ids, remove_suites, "suite")
+        _member_change_findings(current_suites, add_ids, remove_suites, remove_ids, "suite")
     )
     findings.extend(_variable_removal_findings(regression.get("variables") or {}, remove_variables))
     findings.extend(_untyped_variable_findings(set_variables))
@@ -366,7 +389,7 @@ def update_regression(
 
     payload: dict[str, Any] = _scalar_payload(name, description, tags)
     if add_suites is not None or remove_suites is not None:
-        payload["suites"] = _merge_members(regression.get("suites") or [], add_ids, remove_suites)
+        payload["suites"] = _merge_members(current_suites, add_ids, remove_ids)
     if set_variables is not None or remove_variables is not None:
         payload["variables"] = _merge_variables(
             regression.get("variables") or {}, set_variables, remove_variables
@@ -451,7 +474,7 @@ def create_profile(
     if not profile_type:
         return {
             "created": False,
-            "findings": [_finding("TYPE_REQUIRED", "Field 'type' is required")],
+            "findings": [_finding("TYPE_REQUIRED", "Field 'profile_type' is required")],
         }
     env_findings = _unknown_environment_findings(environment_values)
     if env_findings:

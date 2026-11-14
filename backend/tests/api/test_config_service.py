@@ -200,6 +200,7 @@ class TestConfigServiceGetConfigValue:
 
             result = get_config_value("api.secret_key")
 
+            assert result is not None
             assert result["value"] == "********"
             assert result.get("sensitive") is True
 
@@ -218,6 +219,7 @@ class TestConfigServiceGetConfigValue:
 
             result = get_config_value("api.secret_key")
 
+            assert result is not None
             assert result["value"] == ""
             assert result.get("sensitive") is True
 
@@ -348,3 +350,11 @@ class TestConfigServiceValidation:
 
         with pytest.raises(ValidationException, match="invalid characters"):
             _validate_key_path("123.invalid")
+
+    def test_validate_key_path_refuses_a_trailing_line_feed(self) -> None:
+        from wavecore.api.services.config_service import _validate_key_path
+
+        with pytest.raises(
+            ValidationException, match=r"^Invalid key path format: invalid characters in key$"
+        ):
+            _validate_key_path("server.port\n")

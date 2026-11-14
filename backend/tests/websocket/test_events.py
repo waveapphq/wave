@@ -1,5 +1,6 @@
 """Fire-and-forget topic broadcasts (wavecore.api.websocket.events)."""
 
+import logging
 from unittest.mock import AsyncMock
 
 import pytest
@@ -88,3 +89,30 @@ class TestBroadcast:
             app.state.ws_manager = original
 
         manager.broadcast_to_topic.assert_awaited_once()
+
+    @pytest.mark.parametrize(
+        ("topic", "logged_topic"),
+        [
+            (TOPIC, TOPIC),
+            ("testdata:abc\nWARN forged", "base64:dGVzdGRhdGE6YWJjCldBUk4gZm9yZ2Vk"),
+        ],
+    )
+    async def test_a_failed_send_logs_the_topic_on_one_line(
+        self, caplog: pytest.LogCaptureFixture, topic: str, logged_topic: str
+    ) -> None:
+        """REQ-6.4.1: a plain topic is logged as it is; one with a line break as Base64."""
+        from wavecore.api.app import app
+
+        manager = AsyncMock()
+        manager.broadcast_to_topic.side_effect = RuntimeError("socket gone")
+        original = getattr(app.state, "ws_manager", None)
+        app.state.ws_manager = manager
+        try:
+            with caplog.at_level(logging.WARNING, logger=events.__name__):
+                await events.broadcast(topic, EVENT)
+        finally:
+            app.state.ws_manager = original
+
+        assert [
+            record.getMessage() for record in caplog.records if record.name == events.__name__
+        ] == [f"Failed to broadcast {logged_topic} event: socket gone"]

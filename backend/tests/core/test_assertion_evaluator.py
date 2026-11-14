@@ -1927,6 +1927,20 @@ class TestNullHoldsNothing:
             evaluate_assertions(items, {"x": 5, "nothing": None})
 
     @pytest.mark.parametrize(
+        ("reference", "is_expression"),
+        [(None, False), ("nothing", True)],
+        ids=["literal-null", "expression-giving-null"],
+    )
+    def test_a_null_compare_to_value_in_a_filter_names_the_cell(
+        self, reference: str | None, is_expression: bool
+    ) -> None:
+        row = _null_rule_check("equals", "string", reference, reference_is_expression=is_expression)
+        row["variable"] = "_cell"
+
+        with pytest.raises(NullValueError, match=r"^The value compared with the cell is null$"):
+            evaluate_assertions([row], {"_cell": "web-1", "nothing": None})
+
+    @pytest.mark.parametrize(
         ("value_type", "operator", "held", "expected"),
         [
             pytest.param("boolean", "is_true", True, True, id="boolean-is_true"),
@@ -1995,3 +2009,246 @@ class TestNullHoldsNothing:
         assert unary == frozenset(
             {"is_true", "is_false", "is_empty", "is_not_empty", "is_null", "is_not_null"}
         )
+
+
+# ============================================================================
+# Template compare-to (REQ-3.5.1.5, REQ-3.4.1.12, REQ-3.4.1.13)
+# ============================================================================
+
+
+def _template_row(
+    value_type: str, operator: str, template: str, *, variable: str = "host"
+) -> dict[str, object]:
+    return {
+        "type": "literal",
+        "variable": variable,
+        "value_type": value_type,
+        "operator": operator,
+        "reference_value": template,
+        "reference_is_template": True,
+    }
+
+
+class TestTemplateCompareTo:
+    """A text compare-to value held as a Template is filled before every compare."""
+
+    @pytest.mark.parametrize(
+        ("value_type", "operator", "template", "held"),
+        [
+            ("string", "equals", "{{ prefix }}-1", "web-1"),
+            ("string", "starts_with", "{{ prefix }}-", "web-1"),
+            ("array", "contains", "{{ prefix }}-1", ["db-1", "web-1"]),
+            ("map", "has_key", "{{ prefix }}", {"web": 1}),
+        ],
+        ids=["string-equals", "string-starts-with", "array-contains", "map-has-key"],
+    )
+    def test_a_template_compare_to_is_filled_before_the_compare(
+        self, value_type: str, operator: str, template: str, held: object
+    ) -> None:
+        items = [_template_row(value_type, operator, template)]
+
+        assert evaluate_assertions(items, {"host": held, "prefix": "web"}).passed is True
+        assert evaluate_assertions(items, {"host": held, "prefix": "db-x"}).passed is False
+
+    def test_a_template_compare_to_is_filled_again_on_every_check(self) -> None:
+        items = [_template_row("string", "equals", "{{ prefix }}-1")]
+
+        first = evaluate_assertions(items, {"host": "web-1", "prefix": "web"})
+        second = evaluate_assertions(items, {"host": "db-1", "prefix": "db"})
+
+        assert first.passed is True
+        assert second.passed is True
+        assert items[0]["reference_value"] == "{{ prefix }}-1"
+
+    def test_a_null_template_piece_names_the_value_compared_with_the_variable(self) -> None:
+        items = [_template_row("string", "equals", "{{ missing }}-1")]
+        message = "'{{ missing }}' in 'value compared with host' is null"
+
+        with pytest.raises(NullValueError, match=f"^{re.escape(message)}$"):
+            evaluate_assertions(items, {"host": "web-1", "missing": None})
+
+    def test_a_null_template_piece_in_a_filter_names_the_cell(self) -> None:
+        items = [_template_row("string", "equals", "{{ missing }}-1", variable="_cell")]
+        message = "'{{ missing }}' in 'value compared with the cell' is null"
+
+        with pytest.raises(NullValueError, match=f"^{re.escape(message)}$"):
+            evaluate_assertions(items, {"_cell": "web-1", "missing": None})
+
+    @pytest.mark.parametrize(
+        ("value_type", "operator"),
+        [("integer", "equals"), ("float", "less_than"), ("array", "length_equals")],
+        ids=["integer-equals", "float-less-than", "array-length-equals"],
+    )
+    def test_a_template_compare_to_skips_the_number_rule(
+        self, value_type: str, operator: str
+    ) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        row = _template_row(value_type, operator, "{{ limit }}", variable="x")
+
+        assert assertion_evaluator.compare_to_problem(row) is None
+
+    @pytest.mark.parametrize(
+        ("value_type", "operator", "held"),
+        [
+            ("integer", "equals", 30),
+            ("float", "less_than", 1.5),
+            ("array", "length_equals", [1, 2]),
+        ],
+        ids=["integer-equals", "float-less-than", "array-length-equals"],
+    )
+    def test_a_template_on_a_number_compare_to_is_filled_then_compared(
+        self, value_type: str, operator: str, held: object
+    ) -> None:
+        # The save refuses this row; a run that still gets it fills the text like any template.
+        limit = {"integer": 30, "float": 2, "array": 2}[value_type]
+        items = [_template_row(value_type, operator, "{{ limit }}", variable="x")]
+
+        assert evaluate_assertions(items, {"x": held, "limit": limit}).passed is True
+
+    def test_a_template_piece_that_changes_data_is_refused(self) -> None:
+        rows = [1]
+        items = [_template_row("string", "equals", "{{ rows.append(5) }}")]
+        explanation = (
+            r"^The append method changes data\. An expression can only read data, not change "
+            r"it\. To change a variable, add a Variable Setter Block\.$"
+        )
+
+        with pytest.raises(BlockedExpressionError) as exc_info:
+            evaluate_assertions(items, {"host": "web-1", "rows": rows})
+
+        assert re.match(explanation, exc_info.value.explanation)
+        assert str(exc_info.value) == (f"{exc_info.value.explanation} Expression: rows.append(5)")
+        assert rows == [1]
+
+
+_NUMBER_OPERATORS = (
+    "equals",
+    "not_equals",
+    "less_than",
+    "greater_than",
+    "less_or_equal",
+    "greater_or_equal",
+)
+_STRING_OPERATORS = (
+    "equals",
+    "not_equals",
+    "contains",
+    "does_not_contain",
+    "starts_with",
+    "ends_with",
+    "matches_regex",
+)
+_COMPARE_TO_TYPES = [
+    *[("integer", operator, "integer") for operator in _NUMBER_OPERATORS],
+    *[("float", operator, "float") for operator in _NUMBER_OPERATORS],
+    ("array", "length_equals", "integer"),
+    *[("string", operator, "string") for operator in _STRING_OPERATORS],
+    ("array", "contains", "string"),
+    ("array", "does_not_contain", "string"),
+    ("map", "has_key", "string"),
+    ("map", "does_not_have_key", "string"),
+    ("integer", "is_null", None),
+    ("string", "is_not_null", None),
+    ("boolean", "is_true", None),
+    ("boolean", "is_false", None),
+    ("array", "is_empty", None),
+    ("map", "is_not_empty", None),
+    ("table", "is_empty", None),
+    ("table", "is_not_empty", None),
+]
+
+
+class TestCompareToType:
+    """One table names the type of a row's compare-to value, from its value type and operator."""
+
+    @pytest.mark.parametrize(
+        ("value_type", "operator", "expected"),
+        _COMPARE_TO_TYPES,
+        ids=[f"{value_type}-{operator}" for value_type, operator, _ in _COMPARE_TO_TYPES],
+    )
+    def test_the_compare_to_type_follows_the_value_type_and_operator(
+        self, value_type: str, operator: str, expected: str | None
+    ) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        row = {"type": "literal", "variable": "x", "value_type": value_type, "operator": operator}
+
+        assert assertion_evaluator.compare_to_type(row) == expected
+
+    def test_compare_to_setting_names_the_variable(self) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        row = _template_row("string", "equals", "{{ prefix }}")
+
+        assert assertion_evaluator.compared_subject(row, as_setting=True) == (
+            "value compared with host"
+        )
+        assert assertion_evaluator.compared_subject(row) == "The value compared with 'host'"
+
+    def test_compare_to_setting_names_the_cell_in_a_filter(self) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        row = _template_row("string", "equals", "{{ prefix }}", variable="_cell")
+
+        assert assertion_evaluator.compared_subject(row, as_setting=True) == (
+            "value compared with the cell"
+        )
+        assert assertion_evaluator.compared_subject(row) == "The value compared with the cell"
+
+
+_NO_VALUE_OPERATORS = ("is_null", "is_not_null", "is_true", "is_false", "is_empty", "is_not_empty")
+_COMPARE_TO = {
+    "reference_value": "",
+    "reference_is_expression": True,
+    "reference_is_template": False,
+}
+
+
+def _unused_compare_to_row(operator: object, **fields: object) -> dict[str, object]:
+    return {
+        "id": "c1",
+        "type": "literal",
+        "variable": "x",
+        "value_type": "string",
+        "operator": operator,
+        **fields,
+    }
+
+
+class TestUnusedCompareTo:
+    """A row whose operator takes no value keeps no compare-to value and no mode (REQ-3.5.1.5)."""
+
+    @pytest.mark.parametrize("operator", _NO_VALUE_OPERATORS)
+    def test_a_row_on_an_operator_that_takes_no_value_loses_its_compare_to_keys(
+        self, operator: str
+    ) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        row = _unused_compare_to_row(operator, **_COMPARE_TO)
+
+        assertion_evaluator.drop_unused_compare_to(row)
+
+        assert row == _unused_compare_to_row(operator)
+
+    @pytest.mark.parametrize(
+        "row",
+        [
+            pytest.param(_unused_compare_to_row("equals", **_COMPARE_TO), id="takes-a-value"),
+            pytest.param(
+                _unused_compare_to_row(["is_null"], **_COMPARE_TO), id="operator-not-text"
+            ),
+            pytest.param(
+                {"id": "e1", "type": "expression", "operator": "is_null"}, id="expression"
+            ),
+            pytest.param({"type": "group", "operator": "is_null", **_COMPARE_TO}, id="group"),
+        ],
+    )
+    def test_any_other_item_stays_as_given(self, row: dict[str, object]) -> None:
+        from wavecore.controls import assertion_evaluator
+
+        given = dict(row)
+
+        assertion_evaluator.drop_unused_compare_to(row)
+
+        assert row == given

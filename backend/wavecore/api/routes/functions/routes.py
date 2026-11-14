@@ -56,16 +56,19 @@ async def list_functions(
     page: Annotated[int, Query()] = 1,
     per_page: Annotated[int, Query()] = 50,
     search: Annotated[str, Query()] = "",
+    search_in: Annotated[str, Query()] = "",
     tags: Annotated[str, Query()] = "",
     sort_by: Annotated[str | None, Query()] = None,
     sort_order: Annotated[str | None, Query()] = "asc",
 ) -> dict[str, Any]:
     _validate_pagination(page, per_page)
     tag_list = [t for t in tags.split(",") if t] if tags else []
+    fields = [field for field in search_in.split(",") if field]
     result = function_service.list_functions(
         page=page,
         per_page=per_page,
         search=search,
+        search_in=fields or function_service.DEFAULT_SEARCH_FIELDS,
         tags=tag_list,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -198,6 +201,7 @@ async def add_function_version(
         return _malformed_draft_response("draft_definition is required and must be a dict")
     if not isinstance(source_version, str) or not source_version:
         return _malformed_draft_response("source_version is required and must be a string")
+    repairs: list[dict[str, Any]] = []
     try:
         result = function_service.add_function_version(
             function_id,
@@ -208,10 +212,11 @@ async def add_function_version(
             description=payload.get("description", "") or "",
             tags=payload.get("tags") or [],
             details=payload.get("details", "") or "",
+            repairs=repairs,
         )
     except SaveValidationError as exc:
         return _save_validation_response(exc)
-    return {"success": True, "data": result}
+    return {"success": True, "data": result, "repairs": repairs}
 
 
 @router.get("/{function_id}/versions/{version}", response_model=None)
@@ -264,12 +269,13 @@ async def create_function(
     response: Response,
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> Any:
+    repairs: list[dict[str, Any]] = []
     try:
-        definition, etag = function_service.create_function(payload)
+        definition, etag = function_service.create_function(payload, repairs=repairs)
     except SaveValidationError as exc:
         return _save_validation_response(exc)
     response.headers["ETag"] = etag
-    return {"success": True, "data": definition}
+    return {"success": True, "data": definition, "repairs": repairs}
 
 
 @router.delete("/{function_id}", response_model=None)

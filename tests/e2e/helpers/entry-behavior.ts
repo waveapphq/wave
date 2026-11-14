@@ -189,9 +189,9 @@ export async function expectWarningColor(note: Locator): Promise<void> {
   expect(colors.note, 'the note uses the amber warning color').toBe(colors.warning)
 }
 
-/** A masked secret's control in a Block row. */
-export function maskedControl(sheet: Locator, name: string): Locator {
-  return paramRow(sheet, name).getByRole('button', { name: 'Edit protected value', exact: true })
+/** A masked secret's control in a Block row, named by the field's visible label. */
+export function maskedControl(sheet: Locator, name: string, label: string): Locator {
+  return paramRow(sheet, name).getByRole('button', { name: `${label}: Edit protected value`, exact: true })
 }
 
 /** `control` names `note` among the ids of its aria-describedby. */
@@ -205,7 +205,7 @@ export async function expectDescribedBy(control: Locator, note: Locator): Promis
 /** Click a masked secret and answer `Edit Protected Value?` with Delete & Edit. */
 export async function deleteAndEdit(page: Page, masked: Locator): Promise<void> {
   await masked.click()
-  const dialog = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  const dialog = page.getByRole('dialog', { name: 'Edit Protected Value?' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Delete & Edit', exact: true }).click()
   await expect(dialog).toHaveCount(0)

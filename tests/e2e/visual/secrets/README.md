@@ -20,7 +20,7 @@ system masking flags to all-off in beforeEach so a sealed literal renders write-
 
 ## Validation
 
-- **Sealed literal:** masked write-only affordance (`Edit protected value`) + a gray
+- **Sealed literal:** masked write-only affordance (`Password: Edit protected value`) + a gray
   Lock carrying the literal tooltip; the `wave:enc:v1:` envelope never renders.
 - **Non-secret expression:** an amber alert with the exact copy naming the variable.
 - **Secret expression:** a gray Lock ("Value protected - references a secret variable.").
@@ -40,8 +40,9 @@ focus back to the row whichever way it is answered (SECUI-9, REQ-3.1.3.5, REQ-3.
 
 Self-seeds via the API - no seed script. Imports
 `tests/e2e/fixtures/secrets/varset-gate.json` (one Variable Setter whose `saved_secret`
-row is a saved secret text) and opens the block's config sheet. Resets the system
-masking flags to all-off in beforeEach so the sealed value renders write-only.
+row is a saved secret text), adds a saved secret list row `saved_list` to it, and opens
+the block's config sheet. Resets the system masking flags to all-off in beforeEach so
+the sealed values render write-only.
 
 ## Steps
 
@@ -51,20 +52,23 @@ masking flags to all-off in beforeEach so the sealed value renders write-only.
    "Delete & Edit" (each in the test that covers it)
 4. After Cancel and Escape: change the Description, save the config sheet and the
    test, reopen the sheet and read the saved test over `GET /tests/{id}/workflow`
-5. After "Delete & Edit": type a value in the editor, save the config sheet and the
-   test, and reopen the sheet without a page reload
+5. After "Delete & Edit" on the text secret: type a value in the row's value box, save
+   the config sheet and the test, and reopen the sheet without a page reload
+6. "Delete & Edit" on the list secret, then Escape in its "Edit value" sheet
 
 ## Validation
 
 - **Columns:** the Secret and Value columns carry their labels.
-- **Saved secret:** exactly one masked field (`Edit protected value`); the stored text
-  and the `wave:enc:v1:` envelope never render.
+- **Saved secret:** exactly one masked field (`saved_secret: Edit protected value`); the
+  stored text and the `wave:enc:v1:` envelope never render.
 - **Cancel and Escape:** the question is gone, the config sheet stays open, no
   "Edit value" sheet opened, exactly one masked field shows and it holds keyboard focus.
 - **Save after Cancel and Escape:** the reopened field is still masked; the saved test
   holds the new Description and the same sealed value as before, byte for byte.
-- **Delete & Edit:** the "Edit value" sheet opens empty, the row is no longer masked,
-  and keyboard focus is on the row's own Edit control, not on the page body.
+- **Delete & Edit, text secret:** no "Edit value" sheet opens, the row is no longer
+  masked, and its value box is empty and holds keyboard focus, not the page body.
+- **Delete & Edit, list secret:** the "Edit value" sheet opens empty with keyboard focus
+  inside; Escape closes it and focus is on the row's value box, not the page body.
 - **Typed secret:** a value typed this session stays readable in the row until the test
   is saved, then masks again without a reload and never shows the typed text.
 

@@ -98,7 +98,7 @@ const content = (page: Page): Locator =>
 const rowFor = (page: Page, name: string): Locator =>
   content(page).locator(`[aria-label="Variable ${name}"]`)
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 // Eye (expand) -> read-mode watcher in the default Current mode.
 async function openRead(page: Page, name: string): Promise<Locator> {
@@ -147,7 +147,7 @@ test.describe('V-VMGR-07: watcher without Edit & the Edit window chrome', () => 
 
     // The pencil opens the variable's Edit window on its saved name and value.
     const win = await openEditWindow(page, 'ratio')
-    await expect(win).toHaveAttribute('aria-label', 'Edit variable')
+    await expect(win).toHaveAccessibleName('Edit variable')
     await expect(win.getByTestId('create-variable-name')).toHaveValue('ratio')
     await expect(win.getByTestId('scalar-edit-input')).toHaveValue('0.5')
     await expect(windowCancelButton(win)).toHaveText('Cancel')

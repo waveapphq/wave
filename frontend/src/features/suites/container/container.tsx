@@ -154,7 +154,7 @@ export function SuitesListContainer(): ReactNode {
 
   const handleEditSuite = useCallback(
     (suiteId: string) => {
-      navigate(`/suites/${suiteId}`)
+      void navigate(`/suites/${suiteId}`)
     },
     [navigate]
   )
@@ -167,7 +167,7 @@ export function SuitesListContainer(): ReactNode {
       createSuite(data)
         .then((newSuite) => {
           setCreateModalOpen(false)
-          navigate(`/suites/${newSuite.id}`)
+          void navigate(`/suites/${newSuite.id}`)
         })
         .finally(() => setCreateLoading(false))
         .catch((err: unknown) => {
@@ -268,7 +268,7 @@ export function SuitesListContainer(): ReactNode {
   const handleBulkRun = useCallback(() => {
     // Navigate to batch execution
     const ids = selectedIds.join(',')
-    navigate(`/executions/new?suites=${ids}`)
+    void navigate(`/executions/new?suites=${ids}`)
   }, [selectedIds, navigate])
 
   const handleBulkExport = exportImport.handleBulkExport

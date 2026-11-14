@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -52,10 +51,8 @@
           "version": "1.0.0",
           "description": "Inc c1",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c1"],
           "templateFields": [],
-          "variableExpressionKeys": ["c1"],
-          "variableTypes": { "c1": "integer" },
           "config": {
             "values": { "variables": { "c1": "c1 + 1" } },
             "outputBindings": {},
@@ -78,7 +75,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'wd-count-{w1}'", "level": "INFO" },
             "outputBindings": {},
@@ -101,7 +97,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -137,7 +132,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "scope": "test", "status": "failed", "message": "while-wd-zero body executed - BUG" },
             "outputBindings": {},
@@ -160,7 +154,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "do-while",
@@ -194,10 +187,8 @@
           "version": "1.0.0",
           "description": "Inc c3",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c3"],
           "templateFields": [],
-          "variableExpressionKeys": ["c3"],
-          "variableTypes": { "c3": "integer" },
           "config": {
             "values": { "variables": { "c3": "c3 + 1" } },
             "outputBindings": {},
@@ -220,7 +211,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'dw-count-{w3}'", "level": "INFO" },
             "outputBindings": {},
@@ -243,7 +233,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "do-while",
@@ -277,10 +266,8 @@
           "version": "1.0.0",
           "description": "Inc c4",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c4"],
           "templateFields": [],
-          "variableExpressionKeys": ["c4"],
-          "variableTypes": { "c4": "integer" },
           "config": {
             "values": { "variables": { "c4": "c4 + 1" } },
             "outputBindings": {},
@@ -303,7 +290,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'dw-once-{w4}'", "level": "INFO" },
             "outputBindings": {},
@@ -326,7 +312,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -370,10 +355,8 @@
           "version": "1.0.0",
           "description": "Inc c5",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c5"],
           "templateFields": [],
-          "variableExpressionKeys": ["c5"],
-          "variableTypes": { "c5": "integer" },
           "config": {
             "values": { "variables": { "c5": "c5 + 1" } },
             "outputBindings": {},
@@ -396,7 +379,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'wd-and-{w5}'", "level": "INFO" },
             "outputBindings": {},
@@ -419,7 +401,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -463,10 +444,8 @@
           "version": "1.0.0",
           "description": "Inc c6",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c6"],
           "templateFields": [],
-          "variableExpressionKeys": ["c6"],
-          "variableTypes": { "c6": "integer" },
           "config": {
             "values": { "variables": { "c6": "c6 + 1" } },
             "outputBindings": {},
@@ -489,7 +468,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'wd-or-{w6}'", "level": "INFO" },
             "outputBindings": {},
@@ -512,7 +490,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -542,10 +519,8 @@
           "version": "1.0.0",
           "description": "Inc c8",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c8"],
           "templateFields": [],
-          "variableExpressionKeys": ["c8"],
-          "variableTypes": { "c8": "integer" },
           "config": {
             "values": { "variables": { "c8": "c8 + 1" } },
             "outputBindings": {},
@@ -568,7 +543,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'wd-expr-{w8}'", "level": "INFO" },
             "outputBindings": {},
@@ -591,7 +565,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -625,10 +598,8 @@
           "version": "1.0.0",
           "description": "Capture idx",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.c9", "variables.last_idx"],
           "templateFields": [],
-          "variableExpressionKeys": ["c9", "last_idx"],
-          "variableTypes": { "c9": "integer", "last_idx": "integer" },
           "config": {
             "values": { "variables": { "c9": "c9 + 1", "last_idx": "w9" } },
             "outputBindings": {},
@@ -651,7 +622,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'idx-body-{w9}'", "level": "INFO" },
             "outputBindings": {},
@@ -674,7 +644,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'idx-then-{w9}'", "level": "INFO" },
             "outputBindings": {},
@@ -697,7 +666,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'after-all-loops'", "level": "INFO" },
             "outputBindings": {},
@@ -720,7 +688,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_mi_err", "caught": "tc_mi_caught" },
@@ -743,7 +710,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -776,7 +742,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'mi-iter-{mi_idx}'", "level": "INFO" },
             "outputBindings": {},
@@ -799,7 +764,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'maxiter-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -822,7 +786,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_to_err", "caught": "tc_to_caught" },
@@ -845,7 +808,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -878,7 +840,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "duration": 200 },
             "outputBindings": {},
@@ -901,7 +862,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'to-iter-{to_idx}'", "level": "INFO" },
             "outputBindings": {},
@@ -924,7 +884,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'timeout-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -947,7 +906,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_be_err", "caught": "tc_be_caught" },
@@ -970,7 +928,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -1006,7 +963,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'body-err-ran'", "level": "INFO" },
             "outputBindings": {},
@@ -1029,7 +985,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "scope": "test", "status": "failed", "message": "1 / 0" },
             "outputBindings": {},
@@ -1052,7 +1007,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'body-err-caught'", "level": "WARN" },
             "outputBindings": {},

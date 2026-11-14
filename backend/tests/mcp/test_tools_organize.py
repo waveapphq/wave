@@ -43,7 +43,7 @@ REGRESSION_NAME_CONFLICT = "Regression with name '{name}' already exists"
 SUITE_REF_MISSING = "Suite '{suite_id}' not found"
 
 PROFILE_NAME_REQUIRED = "Field 'name' is required"
-PROFILE_TYPE_REQUIRED = "Field 'type' is required"
+PROFILE_TYPE_REQUIRED = "Field 'profile_type' is required"
 PROFILE_INVALID_TYPE = (
     "Invalid profile type '{profile_type}': valid types are "
     "database, ssh, http, kubernetes, opensearch, custom"
@@ -116,8 +116,8 @@ def _get_suite(suite_id: str) -> dict[str, Any]:
     return suite
 
 
-def _write_raw_suite(name: str) -> str:
-    """Persist a suite straight to disk, bypassing the create-time name gate."""
+def _write_raw_suite(name: str, tests: list[str] | None = None) -> str:
+    """Persist a suite straight to disk, bypassing the create-time gates."""
     from wavecore.api.services.suites import _storage as suite_storage
 
     suite_id = str(uuid.uuid4())
@@ -127,7 +127,7 @@ def _write_raw_suite(name: str) -> str:
             "name": name,
             "version": "1.0.0",
             "description": "",
-            "tests": [],
+            "tests": tests or [],
             "tags": [],
             "variables": {},
             "metadata": {},
@@ -871,6 +871,72 @@ class TestMembershipAcceptsNames:
         finding = result["findings"][0]
         assert finding["code"] == "ATTACHED_SUITE_NOT_FOUND"
         assert finding["problem"] == "Suite 'No Such Suite' not found"
+
+    def test_update_suite_remove_tests_accepts_a_test_name(self) -> None:
+        leaving = create_test_entity("Named Removal One")
+        staying = create_test_entity("Named Removal Two")
+        suite = _make_suite("Suite Remove By Name", tests=[leaving["id"], staying["id"]])
+        result = organize().update_suite(suite["id"], remove_tests=["Named Removal One"])
+        assert result["updated"] is True
+        assert _get_suite(suite["id"])["tests"] == [staying["id"]]
+
+    def test_update_regression_remove_suites_accepts_a_suite_name(self) -> None:
+        leaving = _make_suite("Named Suite Removal One")
+        staying = _make_suite("Named Suite Removal Two")
+        regression = _make_regression(
+            "Regression Remove By Name", suites=[leaving["id"], staying["id"]]
+        )
+        result = organize().update_regression(
+            regression["id"], remove_suites=["Named Suite Removal One"]
+        )
+        assert result["updated"] is True
+        assert _get_regression(regression["id"])["suites"] == [staying["id"]]
+
+    def test_a_removal_by_name_of_a_non_member_names_the_reference(self) -> None:
+        create_test_entity("Named Stranger")
+        suite = _make_suite("Suite Stranger By Name")
+        result = organize().update_suite(suite["id"], remove_tests=["Named Stranger"])
+        assert result == {
+            "updated": False,
+            "findings": [
+                {
+                    "step": "input",
+                    "code": "NOT_A_MEMBER",
+                    "severity": "error",
+                    "problem": "Test 'Named Stranger' is not in this suite",
+                    "fix": None,
+                }
+            ],
+        }
+        assert _get_suite(suite["id"])["version"] == "1.0.0"
+
+    def test_a_removal_that_names_nothing_is_not_a_member(self) -> None:
+        regression = _make_regression("Regression Ghost Removal")
+        result = organize().update_regression(regression["id"], remove_suites=["No Such Suite"])
+        assert result["updated"] is False
+        assert [item["problem"] for item in result["findings"]] == [
+            "Suite 'No Such Suite' is not in this regression"
+        ]
+
+    def test_a_stored_member_whose_test_is_gone_is_still_removed_by_id(self) -> None:
+        staying = create_test_entity("Named Survivor")
+        gone_id = str(uuid.uuid4())
+        suite_id = _write_raw_suite("Suite Holding A Gone Test", tests=[gone_id, staying["id"]])
+        result = organize().update_suite(suite_id, remove_tests=[gone_id])
+        assert result["updated"] is True
+        assert _get_suite(suite_id)["tests"] == [staying["id"]]
+
+    def test_adding_by_id_and_removing_by_name_is_contradictory(self) -> None:
+        member = create_test_entity("Contradiction By Name")
+        suite = _make_suite("Suite Contradiction By Name", tests=[member["id"]])
+        result = organize().update_suite(
+            suite["id"], add_tests=[member["id"]], remove_tests=["Contradiction By Name"]
+        )
+        assert result["updated"] is False
+        assert [item["problem"] for item in result["findings"]] == [
+            "Test 'Contradiction By Name' is both added and removed in one call"
+        ]
+        assert _get_suite(suite["id"])["version"] == "1.0.0"
 
 
 class TestNoOpWrites:

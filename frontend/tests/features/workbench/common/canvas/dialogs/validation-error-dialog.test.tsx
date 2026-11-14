@@ -478,6 +478,32 @@ describe('ValidationErrorDialog', () => {
       expect(screen.getByText('Remove dangling edge')).toBeInTheDocument()
       expect(screen.getAllByRole('cell', { name: '-' })).toHaveLength(2)
     })
+
+    it('offers no fix on any row and shows the manual headline when no Fix All is offered', () => {
+      // A set the fix endpoint refuses, such as one with a repeated wire id, gets no onFixAll.
+      const withFixableRow: ValidationError[] = [
+        contentOnlyErrors[0],
+        {
+          path: 'edges[0]',
+          node_id: 'edge-1',
+          code: 'DANGLING_EDGE',
+          message: "Edge references missing node 'gone'",
+          severity: 'error',
+          fix_action: 'Remove dangling edge',
+        },
+      ]
+
+      render(
+        <ValidationErrorDialog isOpen={true} fatal={false} errors={withFixableRow} onClose={vi.fn()} />
+      )
+
+      expect(screen.queryByTestId('validation-fix-all-btn')).not.toBeInTheDocument()
+      expect(screen.queryByText(/can be automatically fixed/)).not.toBeInTheDocument()
+      expect(screen.getByText(/must be resolved manually/)).toBeInTheDocument()
+      expect(screen.getByTestId('validation-error-count')).toHaveTextContent('2')
+      expect(screen.queryByText('Remove dangling edge')).not.toBeInTheDocument()
+      expect(screen.getAllByRole('cell', { name: '-' })).toHaveLength(2)
+    })
   })
 
   describe('save variant (mode="save")', () => {

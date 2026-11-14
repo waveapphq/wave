@@ -1,30 +1,32 @@
 /**
- * V-VARSET-VALUE-FIELD-OVERFLOW: Variable Setter string value field truncates a long
- * value instead of spilling onto its sibling controls.
+ * V-VARSET-VALUE-FIELD-OVERFLOW: Variable Setter string value field keeps a long
+ * value inside its box instead of spilling onto its sibling controls.
  *
- * The Variable Setter row and the Profile parameter cell share the SAME value
- * affordance (`components/shared/variable-bodies/value-field.tsx`) - a plain truncating
- * <button>, NOT the shadcn Button. A long
- * string preview must therefore truncate with an ellipsis INSIDE its bounded value field
- * and never push onto the sibling `{}` expression toggle or the trash button. The profile
- * half of this contract is asserted in profiles/v-prof-param-cell.spec.ts (S2); together
- * they prove the extracted shared component cannot drift on either surface.
+ * The Variable Setter row value is the inline one value field in the 880 px window:
+ * name 189, type 100, secret 32, value box 357, expand 32, {x} 32, delete 32, 8 px
+ * apart. A long string scrolls inside its bounded box and never pushes onto the
+ * expand button, the {x} toggle or the trash button.
  *
  * Phase: no-data (parallel) - drops a Var Setter; no backend data needed.
- * Design Decisions: none (setter parity, shared ValueField extraction).
+ * Design Decisions: VARSET-7, VARSET-8, FIELD-16
  *
  * Pass Criteria:
- * 1. After setting a 60+ char string value via the "Edit value" sheet, the row's value
- *    field (`varset-edit-value-0`) shows a truncating preview (span.truncate).
- * 2. The value field's right edge does NOT overlap the `{}` expression toggle.
- * 3. The value field's right edge stays inside the config sheet (no spill outside).
+ * 1. After typing a 60+ char string value into the row's value box
+ *    (`param-input-varset-value-0`), the box keeps its 357 px width and the text is
+ *    clipped inside it (the text is wider than the box).
+ * 2. The value box's right edge does NOT overlap the expand button, and the expand
+ *    button ends before the `{}` expression toggle.
+ * 3. The value box's right edge stays inside the config sheet (no spill outside).
  */
 
 import { test, expect, type Page, type Locator } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { configSheet, openSelectedBlockSheet } from '../../helpers/workbench'
+import { cellBox } from '../../helpers/value-field'
 
 const LONG_VALUE = '{{ s1 * 2 }} ' + 't'.repeat(60)
+// The value column at the 880 px window (VARSET-8).
+const VALUE_WIDTH = 357
 
 async function dropVarSetterAndOpenConfig(page: Page): Promise<Locator> {
   const canvas = page.locator('[data-testid="workflow-canvas"]')
@@ -56,36 +58,36 @@ test.describe('V-VARSET-VALUE-FIELD-OVERFLOW: long string value truncates inside
     await waitForCanvasLoad(page)
   })
 
-  test('S1: a long string value truncates inside the value field, not onto the {} toggle or trash', async ({
+  test('S1: a long string value stays inside the value field, not onto the expand, {} toggle or trash', async ({
     page,
   }) => {
     const modal = await dropVarSetterAndOpenConfig(page)
 
-    // Default row 0 is a string -> open the shared "Edit value" sheet and enter a
-    // long single-token value, then save it back into the row.
-    await modal.locator('[data-testid="varset-edit-value-0"]').click()
-    const sheet = page.locator('[data-testid="value-editor-sheet"]')
-    await expect(sheet).toBeVisible()
-    await sheet.locator('.cm-content').first().click()
-    await page.keyboard.type(LONG_VALUE)
-    await sheet.locator('[data-testid="value-editor-save-button"]').click()
-    await sheet.locator('[data-testid="value-editor-cancel-button"]').click()
-    await expect(sheet).toBeHidden()
+    // Default row 0 is a string: type a long single-token value into its inline box.
+    const input = modal.locator('input[data-testid="param-input-varset-value-0"]')
+    await input.fill(LONG_VALUE)
+    await expect(input).toHaveValue(LONG_VALUE)
+    await modal.locator('[data-testid="varset-add-button"]').focus()
 
-    const editBtn = modal.locator('[data-testid="varset-edit-value-0"]')
-    await expect(editBtn).toBeVisible()
-    await expect(editBtn).toContainText('{{ s1 * 2 }}')
+    const box = cellBox(modal, 'varset-value-0')
+    await expect(box).toBeVisible()
 
-    // (1) The preview span truncates (ellipsis) rather than stretching the row.
-    await expect(editBtn.locator('span.truncate')).toHaveCount(1)
+    // (1) The box keeps its column width and the text is clipped inside it.
+    const boxWidth = await box.evaluate((el) => el.getBoundingClientRect().width)
+    expect(Math.abs(boxWidth - VALUE_WIDTH), `value box is ${VALUE_WIDTH} px wide`).toBeLessThanOrEqual(1)
+    const clipped = await input.evaluate((el) => el.scrollWidth > el.clientWidth)
+    expect(clipped, 'the long value scrolls inside the box').toBe(true)
 
-    // (2) The value field does not overlap the sibling `{}` expression toggle.
-    const btnRight = await rightEdge(editBtn)
+    // (2) The value box does not overlap the expand button, which ends before the `{}` toggle.
+    const boxRight = await rightEdge(box)
+    const expand = modal.locator('[data-testid="param-expand-varset-value-0"]')
+    const expandLeft = await leftEdge(expand)
+    expect(boxRight, 'value box must not spill onto the expand button').toBeLessThanOrEqual(expandLeft + 1)
     const toggleLeft = await leftEdge(modal.locator('[data-testid="varset-expression-toggle-0"]'))
-    expect(btnRight, 'value field must not spill onto the {} toggle').toBeLessThanOrEqual(toggleLeft + 1)
+    expect(await rightEdge(expand), 'expand button must not spill onto the {} toggle').toBeLessThanOrEqual(toggleLeft + 1)
 
-    // (3) The value field stays inside the config sheet (no spill outside the modal).
+    // (3) The value box stays inside the config sheet (no spill outside the modal).
     const modalRight = await rightEdge(modal)
-    expect(btnRight).toBeLessThanOrEqual(modalRight + 1)
+    expect(boxRight).toBeLessThanOrEqual(modalRight + 1)
   })
 })

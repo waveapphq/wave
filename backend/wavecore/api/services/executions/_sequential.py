@@ -121,6 +121,7 @@ def _persist_child_snapshot(
         "test_id": test_id,
         "status": status,
         "block_states": dict(block_states),
+        "lanes_taken": snapshot_source.get("lanes_taken") or {},
         "variables": variables,
     }
     if workflow is not None:

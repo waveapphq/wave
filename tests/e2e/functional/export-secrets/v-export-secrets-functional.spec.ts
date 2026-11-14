@@ -62,7 +62,6 @@ async function createSecretTest(page: Page, name: string): Promise<string> {
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: { message: 'export secrets seed', level: 'INFO' },
                 outputBindings: {},

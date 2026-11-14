@@ -1,8 +1,8 @@
 """File-surface helpers shared by artifacts, session artifacts and test data (REQ-5.2.4.12).
 
-One safe-relative-path rule, one flat directory walk, one content type lookup and
-one download response builder; every file surface answers with the same shapes
-and headers.
+One safe-relative-path rule with its containment check, one flat directory walk,
+one content type lookup, one set of download headers and one download response
+builder; every file surface answers with the same shapes and headers.
 """
 
 import os
@@ -15,6 +15,7 @@ from urllib.parse import quote
 from fastapi.responses import FileResponse
 
 from wavecore.api.exceptions import ValidationException
+from wavecore.api.services.storage_paths import path_under
 from wavecore.plugins._content_types import CONTENT_TYPES, content_type_for
 
 _VALID_DISPOSITIONS = ("attachment", "inline")
@@ -22,6 +23,24 @@ _FALLBACK_DOWNLOAD_NAME = "download"
 _GZIP_SUFFIX = ".gz"
 # Printable ASCII without the double quote and the backslash, which a quoted name cannot hold.
 _NOT_PLAIN = re.compile(r"[^ !#-\[\]-~]")
+# The types a browser renders as a page and runs script from.
+_PAGE_TYPES = frozenset(
+    {
+        "application/mathml+xml",
+        "application/rdf+xml",
+        "application/vnd.wap.xhtml+xml",
+        "application/xhtml+xml",
+        "application/xml",
+        "image/svg+xml",
+        "multipart/x-mixed-replace",
+        "text/html",
+        "text/rdf",
+        "text/xml",
+        "text/xsl",
+    }
+)
+# Scripts still run, so WAVE's own report keeps working, but in an origin of their own.
+_PAGE_POLICY = "sandbox allow-scripts"
 
 
 class Entry(TypedDict):
@@ -34,9 +53,40 @@ class Entry(TypedDict):
 
 
 def is_safe_relative_path(path: str) -> bool:
-    """True for a non-empty relative posix path without empty or parent segments."""
+    """True for a non-empty relative posix path without empty or parent segments or a NUL."""
     parts = path.split("/")
-    return not path.startswith("/") and "" not in parts and ".." not in parts
+    return not path.startswith("/") and "" not in parts and ".." not in parts and "\0" not in path
+
+
+def contained_path(root: Path, rel: str, message: str) -> Path:
+    """The canonical path of the entry rel names under root; ``.`` names root itself.
+
+    The entry's real location and the real folder it sits in must both stay inside
+    root's real location, else ValidationException(message). A link at the end stays
+    the link, so a rename or delete acts on the link and never on its target.
+    """
+    if not is_safe_relative_path(rel):
+        raise ValidationException(message)
+    base = root.resolve()
+    entry = base / rel
+    real = _canonical_within(base, entry, message)
+    if entry == base:
+        return real
+    folder = _canonical_within(base, entry.parent, message)
+    return path_under(folder, entry.name)
+
+
+def _canonical_within(base: Path, path: Path, message: str) -> Path:
+    try:
+        canonical = path.resolve()
+    except RuntimeError:
+        # A link loop has no real location.
+        raise ValidationException(message) from None
+    try:
+        canonical.relative_to(base)
+    except ValueError:
+        raise ValidationException(message) from None
+    return canonical
 
 
 def walk_entries(root: Path) -> list[Entry]:
@@ -83,20 +133,34 @@ def content_type(file_name: str) -> str:
 
 def content_response(path: Path, disposition: str) -> FileResponse:
     """Serve a file from disk with the download headers every file surface sends."""
+    media_type = content_type(path.name)
+    return FileResponse(
+        path,
+        media_type=media_type,
+        headers=download_headers(disposition, path.name, media_type),
+    )
+
+
+def download_headers(disposition: str, name: str, media_type: str) -> dict[str, str]:
+    """The headers every file surface sends with a file's bytes of media_type."""
     if disposition not in _VALID_DISPOSITIONS:
         raise ValidationException(
             f"Invalid disposition '{disposition}': "
             f"valid values are {', '.join(_VALID_DISPOSITIONS)}"
         )
-    return FileResponse(
-        path,
-        media_type=content_type(path.name),
-        headers={
-            "Content-Disposition": content_disposition(disposition, path.name),
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store",
-        },
-    )
+    return {
+        "Content-Disposition": content_disposition(disposition, name),
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+        **isolation_headers(media_type),
+    }
+
+
+def isolation_headers(media_type: str) -> dict[str, str]:
+    """The sandbox policy for a page type; no header for any other type."""
+    if media_type in _PAGE_TYPES:
+        return {"Content-Security-Policy": _PAGE_POLICY}
+    return {}
 
 
 def content_disposition(disposition: str, name: str) -> str:

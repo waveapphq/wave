@@ -40,7 +40,6 @@ function buildSeed(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 mode: 'split',
@@ -268,7 +267,6 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               // No config.values.mode - fresh palette-drop shape.
               config: {
                 values: {
@@ -292,7 +290,6 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: { message: "'p'", level: 'INFO' }, profileBindings: [], outputBindings: {} },
             },
           },
@@ -307,7 +304,6 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: { message: "'f'", level: 'INFO' }, profileBindings: [], outputBindings: {} },
             },
           },

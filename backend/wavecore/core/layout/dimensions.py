@@ -1,21 +1,43 @@
-"""Node size estimation mirroring the canvas width formula.
+"""Node size estimation mirroring the canvas card.
 
 Mirrors frontend workflow-node constants and computeNodeMinWidth; the recipe
-compiler persists the fitted width, so a drift here lands in stored tests.
+compiler persists the fitted width, so a drift here lands in stored tests. The
+height is the whole card the canvas draws: its body and its status bar.
 """
 
+import math
 from typing import Any
 
 NODE_MIN_WIDTH = 160
 NODE_FUNCTION_MIN_WIDTH = 192
 NODE_MAX_WIDTH = 360
 NODE_DEFAULT_HEIGHT = 44
-DESCRIPTION_HEIGHT = 24
 
 # Title row chrome: 1 px borders, 12 px side padding, 24 px icon, 8 px gap.
 TITLE_CHROME_WIDTH = 58
 # Average glyph advance of the 16 px bold title font.
 TITLE_CHAR_WIDTH = 10
+
+# Card body: 1 px borders, 10 px top and 6 px bottom padding, the 24 px title row.
+BODY_CHROME_HEIGHT = 42
+DESCRIPTION_GAP = 4
+# 12 px description text at a 1.375 line height, two lines unless expanded.
+DESCRIPTION_LINE_HEIGHT = 16.5
+DESCRIPTION_MAX_LINES = 2
+# Description text box chrome: 1 px borders, 12 px side padding, the 32 px indent.
+DESCRIPTION_CHROME_WIDTH = 58
+# Room an expanded description leaves beside it for the chevron.
+DESCRIPTION_CHEVRON_WIDTH = 20
+# The title's glyph advance scaled to the 12 px description font.
+DESCRIPTION_CHAR_WIDTH = TITLE_CHAR_WIDTH * 12 / 16
+# The persistent status bar: a 28 px bar and its 1 px bottom border.
+STATUS_BAR_HEIGHT = 29
+TALLEST_COLLAPSED_HEIGHT = (
+    BODY_CHROME_HEIGHT
+    + DESCRIPTION_GAP
+    + DESCRIPTION_MAX_LINES * DESCRIPTION_LINE_HEIGHT
+    + STATUS_BAR_HEIGHT
+)
 
 _HANDLE_EDGE_PAD = 96
 _HANDLE_STEP = 64
@@ -94,14 +116,33 @@ def fit_node_width(node: dict[str, Any], ingress_count: int) -> int:
     return max(text_fit, _handle_min(data, ingress_count))
 
 
-def estimate_node_size(node: dict[str, Any], ingress_count: int) -> tuple[int, int]:
+def _description_lines(description: str, width: int, expanded: bool) -> int:
+    text_width = width - DESCRIPTION_CHROME_WIDTH - (DESCRIPTION_CHEVRON_WIDTH if expanded else 0)
+    lines = sum(
+        max(1, math.ceil(len(line) * DESCRIPTION_CHAR_WIDTH / text_width))
+        for line in description.splitlines()
+    )
+    return lines if expanded else min(lines, DESCRIPTION_MAX_LINES)
+
+
+def _card_height(data: dict[str, Any], width: int) -> float:
+    description = str(data.get("description") or "")
+    body = float(NODE_DEFAULT_HEIGHT)
+    if description:
+        lines = _description_lines(description, width, bool(data.get("descriptionExpanded")))
+        body = max(body, BODY_CHROME_HEIGHT + DESCRIPTION_GAP + lines * DESCRIPTION_LINE_HEIGHT)
+    return body + STATUS_BAR_HEIGHT
+
+
+def estimate_node_size(node: dict[str, Any], ingress_count: int) -> tuple[int, float]:
     """Estimated (width, height) for a node given its incoming edge count."""
     data = node.get("data") or {}
 
     # A stored width is honored as on the canvas; un-resized nodes sit at the floor.
+    # The height follows the card's content only; it is never set by hand.
     stored = node.get("width")
     base = (
         _clamp_width(round(stored), data) if isinstance(stored, int | float) else _width_floor(data)
     )
-    height = NODE_DEFAULT_HEIGHT + (DESCRIPTION_HEIGHT if data.get("description") else 0)
-    return max(base, _handle_min(data, ingress_count)), height
+    width = max(base, _handle_min(data, ingress_count))
+    return width, _card_height(data, width)

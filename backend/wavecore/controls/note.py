@@ -2,10 +2,11 @@
 Note control implementation.
 
 A sticky-note annotation element for visual documentation and flow placeholders.
-Invisible to the execution engine - passes through like a skipped element.
+A Note does nothing when the run reaches it and passes the flow straight on.
 """
 
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, TypeVar
 
 from wavecore.controls.base import ControlBase
 from wavecore.models.controls.parameters import ControlParameter
@@ -14,13 +15,29 @@ from wavecore.models.enums import ControlId
 # Valid note colors
 VALID_NOTE_COLORS = {"yellow", "pink", "blue", "green", "slate"}
 
+NOTE_NODE_TYPE = "noteNode"
+
+_Node = TypeVar("_Node", bound=Mapping[str, Any])
+
+
+def edgeless_notes(nodes: Sequence[_Node], edges: Sequence[Mapping[str, Any]]) -> list[_Node]:
+    """The Notes nothing connects to: annotations beside the flow, never reached."""
+    touched = {str(edge.get("source")) for edge in edges} | {
+        str(edge.get("target")) for edge in edges
+    }
+    return [
+        node
+        for node in nodes
+        if node.get("type") == NOTE_NODE_TYPE and str(node.get("id")) not in touched
+    ]
+
 
 class NoteControl(ControlBase):
     """
     Note control - canvas annotation element.
 
     Provides sticky-note-style visual documentation on the workflow canvas.
-    Invisible to the execution engine with pass-through flow connections.
+    It does nothing when the run reaches it and passes the flow straight on.
     """
 
     CONTROL_ID = ControlId.NOTE
@@ -67,19 +84,4 @@ class NoteControl(ControlBase):
         return None
 
     async def validate(self, params: dict[str, Any]) -> None:
-        """
-        Validate Note parameters.
-
-        Text is optional (any string accepted).
-        Color must be one of the valid color presets if provided.
-
-        Args:
-            params: Parameter values to validate
-
-        Raises:
-            ValueError: If color is not a valid preset
-        """
-        color = params.get("color")
-        if color is not None and color not in VALID_NOTE_COLORS:
-            valid = ", ".join(sorted(VALID_NOTE_COLORS))
-            raise ValueError(f"Invalid note color: {color!r}. Must be one of: {valid}")
+        """Note has no rule beyond its declared fields; the shared check reads the color list."""

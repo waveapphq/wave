@@ -2177,6 +2177,7 @@ class TestConcreteControlExecuteValidate:
                     }
                 ],
                 "mode": "single",
+                "fail_current_scope": False,
             },
             "variables": {"x": 10},
         }
@@ -2210,7 +2211,7 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import ForControl
 
         control = ForControl()
-        context = {"parameters": {"mode": "count", "count": 5}, "variables": {}}
+        context = {"parameters": {"mode": "count", "count": 5, "step": 1}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert result["__for_loop"] is True
 
@@ -2280,7 +2281,14 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import WhileControl
 
         control = WhileControl()
-        result = asyncio.run(control.execute({"conditions": [], "mode": "while-do"}))
+        context = {
+            "parameters": {
+                "conditions": [{"id": "c1", "type": "expression", "expression": "ready"}],
+                "mode": "while-do",
+            },
+            "variables": {},
+        }
+        result = asyncio.run(control.execute(context))
         assert result is not None
         assert result["__while_loop"] is True
         assert result["__mode"] == "while-do"
@@ -2303,7 +2311,14 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import WhileControl
 
         control = WhileControl()
-        asyncio.run(control.validate({"conditions": [], "mode": "while-do"}))
+        asyncio.run(
+            control.validate(
+                {
+                    "conditions": [{"id": "c1", "type": "expression", "expression": "ready"}],
+                    "mode": "while-do",
+                }
+            )
+        )
 
     def test_break_execute_returns_break_signal(self):
         """Verify Break execute returns __break signal with target."""
@@ -2376,7 +2391,11 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.flow import TryCatchFinallyControl
 
         control = TryCatchFinallyControl()
-        result = asyncio.run(control.execute({"parameters": {}, "variables": {}}))
+        context = {
+            "parameters": {"enable_catch": True, "enable_finally": False},
+            "variables": {},
+        }
+        result = asyncio.run(control.execute(context))
         assert result["__branch"] == "try"
         assert result["__try_catch"] is True
 
@@ -2393,27 +2412,28 @@ class TestConcreteControlExecuteValidate:
         """Verify Halt execute returns __halt signal dict."""
         import asyncio
 
+        from tests.core.run_fill_support import run_fill
         from wavecore.controls.flow import HaltControl
 
         control = HaltControl()
-        result = asyncio.run(control.execute({}))
+        context = {"parameters": run_fill(control, {}), "variables": {}}
+        result = asyncio.run(control.execute(context))
         assert result["__halt"] is True
         assert result["__halt_scope"] == "test"
         assert result["__halt_status"] == "failed"
 
-    def test_halt_validate_rejects_invalid_scope(self):
-        """Verify Halt validate rejects invalid scope (unified runtime enum format)."""
-        import asyncio
-
+    def test_halt_run_fill_refuses_invalid_scope(self):
+        """The run fill refuses a Halt scope outside the declared list (unified runtime enum
+        format)."""
+        from tests.core.run_fill_support import run_fill
         from wavecore.controls.flow import HaltControl
 
-        control = HaltControl()
         with pytest.raises(
             ValueError,
             match=r"^Parameter 'scope' must be one of: test, suite, regression, function; Actual "
             r"value was 'invalid'\.$",
         ):
-            asyncio.run(control.validate({"scope": "invalid"}))
+            run_fill(HaltControl(), {"scope": "invalid"})
 
     def test_halt_validate_passes_with_valid_scope(self):
         """Verify Halt validate passes with valid scope."""
@@ -2471,6 +2491,9 @@ class TestConcreteControlExecuteValidate:
                     "parameters": {
                         "conditions": [{"id": "c1", "type": "expression", "expression": "ready"}],
                         "timeout": 30000,
+                        "mode": "retry",
+                        "check_interval": 1000,
+                        "fail_current_scope": False,
                     },
                     "variables": {},
                 }

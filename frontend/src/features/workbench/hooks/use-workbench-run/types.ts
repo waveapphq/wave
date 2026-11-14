@@ -5,7 +5,6 @@
  * and internal WebSocket event types.
  */
 
-import type { WorkbenchWarning } from '@/features/workbench/api/workbench'
 import type { FunctionVariablesSeed } from '@/types/function-variables'
 
 export interface DebugOptionsClient {
@@ -30,12 +29,6 @@ export interface Progress {
   percentage: number
 }
 
-export interface Warning {
-  type: string
-  profileName: string
-  message: string
-}
-
 export interface WorkbenchRunState {
   status: WorkbenchStatus
   sessionId: string | null
@@ -43,7 +36,6 @@ export interface WorkbenchRunState {
   websocketTopic: string | null
   currentBlock: CurrentBlock | null
   progress: Progress | null
-  warnings: Warning[]
   isRunning: boolean
   error: Error | null
   /** True once session recovery has completed (whether a session was found or not) */
@@ -176,8 +168,16 @@ export interface DebugBreakpointHitEvent {
   exception_message: string | null
 }
 
+/** The lanes the flow took from one block in its current pass. */
+export interface LanesTakenEvent {
+  type: 'lanes_taken'
+  block_id: string
+  lanes: string[]
+}
+
 export type WorkbenchEvent =
   | BlockStatusChangedEvent
+  | LanesTakenEvent
   | ExecutionCompletedEvent
   | ExecutionPausedEvent
   | DebugBreakpointHitEvent
@@ -185,14 +185,6 @@ export type WorkbenchEvent =
 // ===========================================================================
 // Helpers
 // ===========================================================================
-
-export function transformWarning(warning: WorkbenchWarning): Warning {
-  return {
-    type: warning.type,
-    profileName: warning.profile_name,
-    message: warning.message,
-  }
-}
 
 export function isRunningStatus(status: WorkbenchStatus): boolean {
   return status === 'running' || status === 'paused'

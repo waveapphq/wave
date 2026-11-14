@@ -59,9 +59,9 @@ function expectOpaque(variables: Declarations, name: string): void {
 
 /** The setter's secret rows expose no readable element types: no key named, no item counted. */
 function expectSetterRowsOpaque(node: Record<string, any>, surface: string): void {
-  const record = (node.data?.variableElementTypes ?? {}) as Record<string, unknown>
+  const record = (node.data?.elementTypes ?? {}) as Record<string, unknown>
   for (const name of SETTER_SECRET_ROWS) {
-    expect(typeof record[name], `${surface}: ${name} element types are not readable`).not.toBe('object')
+    expect(typeof record[`variables.${name}`], `${surface}: ${name} element types are not readable`).not.toBe('object')
   }
   expect(JSON.stringify(record), `${surface}: no secret key is named`).not.toContain('zip')
 }

@@ -1560,7 +1560,7 @@ class TestRunHelmDeadline:
         )
         result, _communicate = self._timed_out(tmp_path, 300, expired)
 
-        assert (result.stdout, result.stderr) == ("partial out", "�")
+        assert (result.stdout, result.stderr) == ("partial out", "\ufffd")
 
     def test_an_expired_run_with_no_partial_output_reports_empty_streams(
         self, tmp_path: Any

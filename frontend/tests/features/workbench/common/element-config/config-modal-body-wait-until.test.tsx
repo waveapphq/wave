@@ -24,22 +24,19 @@ vi.mock('@/features/workbench/common/element-config/parameters/parameter-table',
   ),
 }))
 
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: (props: {
-    assertions: unknown[]
-    onAssertionsChange: (items: unknown[]) => void
-    onValidChange: (valid: boolean) => void
+    assertions?: unknown[]
+    onAssertionsChange?: (items: unknown[]) => void
+    onValidChange?: unknown
   }) => (
-    <div data-testid="assertion-builder-mock">
-      <span data-testid="assertion-builder-count">{props.assertions.length}</span>
+    <div data-testid="assertion-builder-mock" data-valid-callback={String(props.onValidChange !== undefined)}>
+      <span data-testid="assertion-builder-count">{(props.assertions ?? []).length}</span>
       <button
         data-testid="mock-wait-conditions-change"
-        onClick={() => props.onAssertionsChange([{ id: 'c-1', type: 'expression', expression: 'ready' }])}
+        onClick={() => props.onAssertionsChange?.([{ id: 'c-1', type: 'expression', expression: 'ready' }])}
       >
         ChangeConditions
-      </button>
-      <button data-testid="mock-wait-invalidate" onClick={() => props.onValidChange(false)}>
-        Invalidate
       </button>
     </div>
   ),
@@ -53,7 +50,7 @@ vi.mock('@/features/workbench/common/config/case-branch-editor', () => ({
   CaseBranchEditor: () => <div data-testid="case-branch-editor-mock" />,
 }))
 
-vi.mock('@/features/workbench/common/variables/variable-setter-editor', () => ({
+vi.mock('@/features/workbench/common/variables/variable-setter-editor/editor', () => ({
   VariableSetterEditor: () => <div data-testid="variable-setter-editor-mock" />,
 }))
 
@@ -102,12 +99,9 @@ function makeProps(overrides: Partial<BodyProps> = {}): BodyProps {
     outputBindings: {},
     outputErrors: {},
     enrichedVariables: [],
-    variableExpressionKeys: [],
-    variableTemplateKeys: [],
-    variableSecretKeys: [],
-    variableTypes: {},
     expressionFields: [],
     templateFields: [],
+    secretFields: [],
     outputSecretFields: [],
     isPlugin: false,
     secretMasking: 'system',
@@ -116,42 +110,16 @@ function makeProps(overrides: Partial<BodyProps> = {}): BodyProps {
     secretMaskFields: [],
     unmaskedSecretFields: [],
     setUnmaskedSecretFields: vi.fn(),
-    assertAssertions: [],
-    assertMode: 'split',
-    assertFailCurrentScope: false,
-    ifElseBranches: [],
-    whileConditions: [],
-    switchBranches: [],
-    waitConditions: [],
-    waitMode: 'retry',
-    waitFailCurrentScope: false,
     handleInputChange: vi.fn(),
     handleOutputChange: vi.fn(),
     handleFieldValidationChange: vi.fn(),
     setExpressionFields: vi.fn(),
     setTemplateFields: vi.fn(),
-    setVariableExpressionKeys: vi.fn(),
-    setVariableTemplateKeys: vi.fn(),
-    setVariableSecretKeys: vi.fn(),
+    setSecretFields: vi.fn(),
     setOutputSecretFields: vi.fn(),
-    setVariableTypes: vi.fn(),
     setVarSetterValid: vi.fn(),
     setXmlQueryValid: vi.fn(),
     setJsonQueryValid: vi.fn(),
-    setAssertValid: vi.fn(),
-    setIfElseValid: vi.fn(),
-    setWhileValid: vi.fn(),
-    setSwitchValid: vi.fn(),
-    setWaitValid: vi.fn(),
-    setAssertAssertions: vi.fn(),
-    setAssertMode: vi.fn(),
-    setAssertFailCurrentScope: vi.fn(),
-    setIfElseBranches: vi.fn(),
-    setWhileConditions: vi.fn(),
-    setSwitchBranches: vi.fn(),
-    setWaitConditions: vi.fn(),
-    setWaitMode: vi.fn(),
-    setWaitFailCurrentScope: vi.fn(),
     ...overrides,
   }
 }
@@ -187,38 +155,36 @@ describe('ConfigModalBody - Wait Until', () => {
       expect(names).toEqual(['timeout', 'check_interval', 'message'])
     })
 
-    it('hands the condition builder the wait conditions, not the assert ones', () => {
+    it('hands the condition builder values.conditions, not the assertions list', () => {
       renderWait({
-        waitConditions: [{ id: 'c-1', type: 'expression', expression: 'ready' }],
-        assertAssertions: [
-          { id: 'a-1', type: 'expression', expression: 'x' },
-          { id: 'a-2', type: 'expression', expression: 'y' },
-        ],
+        values: {
+          conditions: [{ id: 'c-1', type: 'expression', expression: 'ready' }],
+          assertions: [
+            { id: 'a-1', type: 'expression', expression: 'x' },
+            { id: 'a-2', type: 'expression', expression: 'y' },
+          ],
+        },
       })
 
       expect(screen.getByTestId('assertion-builder-count')).toHaveTextContent('1')
     })
 
-    it('forwards a condition change to setWaitConditions', async () => {
+    it('forwards a condition change to values.conditions through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setWaitConditions = vi.fn()
-      renderWait({ setWaitConditions })
+      const handleInputChange = vi.fn()
+      renderWait({ handleInputChange })
 
       await user.click(screen.getByTestId('mock-wait-conditions-change'))
 
-      expect(setWaitConditions).toHaveBeenCalledWith([
+      expect(handleInputChange).toHaveBeenCalledWith('conditions', [
         { id: 'c-1', type: 'expression', expression: 'ready' },
       ])
     })
 
-    it('forwards a validity change to setWaitValid', async () => {
-      const user = userEvent.setup()
-      const setWaitValid = vi.fn()
-      renderWait({ setWaitValid })
+    it('hands the condition builder no validity callback: the shared check decides', () => {
+      renderWait()
 
-      await user.click(screen.getByTestId('mock-wait-invalidate'))
-
-      expect(setWaitValid).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('assertion-builder-mock')).toHaveAttribute('data-valid-callback', 'false')
     })
 
     it('does not render any other element type editor', () => {
@@ -245,19 +211,19 @@ describe('ConfigModalBody - Wait Until', () => {
     })
 
     it('reflects a node saved in Watch mode', () => {
-      renderWait({ waitMode: 'watch' })
+      renderWait({ values: { mode: 'watch' } })
 
       expect(screen.getByRole('radio', { name: 'Watch' })).toBeChecked()
     })
 
-    it('forwards a mode change to setWaitMode', async () => {
+    it('forwards a mode change to values.mode through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setWaitMode = vi.fn()
-      renderWait({ setWaitMode })
+      const handleInputChange = vi.fn()
+      renderWait({ handleInputChange })
 
       await user.click(screen.getByLabelText('Watch'))
 
-      expect(setWaitMode).toHaveBeenCalledWith('watch')
+      expect(handleInputChange).toHaveBeenCalledWith('mode', 'watch')
     })
 
     it('renders Fail Current Scope under the mode options', () => {
@@ -277,19 +243,19 @@ describe('ConfigModalBody - Wait Until', () => {
     })
 
     it('reflects a node saved with Fail Current Scope on', () => {
-      renderWait({ waitFailCurrentScope: true })
+      renderWait({ values: { fail_current_scope: true } })
 
       expect(screen.getByRole('checkbox', { name: 'Fail Current Scope' })).toBeChecked()
     })
 
-    it('forwards a Fail Current Scope toggle to its setter', async () => {
+    it('forwards a Fail Current Scope toggle to values.fail_current_scope through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setWaitFailCurrentScope = vi.fn()
-      renderWait({ setWaitFailCurrentScope })
+      const handleInputChange = vi.fn()
+      renderWait({ handleInputChange })
 
       await user.click(screen.getByLabelText('Fail Current Scope'))
 
-      expect(setWaitFailCurrentScope).toHaveBeenCalledWith(true)
+      expect(handleInputChange).toHaveBeenCalledWith('fail_current_scope', true)
     })
 
     it('places the Wait Mode section after the Output Variables section', () => {
@@ -298,8 +264,8 @@ describe('ConfigModalBody - Wait Until', () => {
       renderWait()
 
       const outputs = screen.getByText('Output Variables')
-      const waitMode = screen.getByText('Wait Mode')
-      const order = outputs.compareDocumentPosition(waitMode)
+      const modeHeading = screen.getByText('Wait Mode')
+      const order = outputs.compareDocumentPosition(modeHeading)
 
       expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })

@@ -190,7 +190,7 @@ test.describe('V-SECRET-SAVE-ROUNDTRIP-FUNCTIONAL', () => {
     await test.step('a plain variable: the watcher carries no secret control, the Edit window an unticked Mark as secret', async () => {
       const row = variableRow(page, 'plain_counter')
       await row.locator('[data-testid^="expand-button-"]').click()
-      const seen = page.locator('section[aria-label="Inspect variable plain_counter"]')
+      const seen = page.getByRole('dialog', { name: 'plain_counter', exact: true, includeHidden: true })
       await expect(seen).toBeVisible()
       await expect(secretControls(seen)).toHaveCount(0)
       await seen.locator('[aria-label="Close inspector for plain_counter"]').click()

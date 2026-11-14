@@ -192,7 +192,7 @@ class TestSetterNodeSecretsAtRest:
                         "version": "1.0.0",
                         "config": {
                             "values": {"variables": {"api_key": SETTER_CANARY, "count": "5"}},
-                            "variableSecretKeys": secret_keys,
+                            "secretFields": [f"variables.{key}" for key in secret_keys],
                         },
                     },
                 }
@@ -259,7 +259,7 @@ def _setter_body_node(canary: str, secret_keys: list[str]) -> dict[str, Any]:
             "version": "1.0.0",
             "config": {
                 "values": {"variables": {"api_key": canary, "count": "5"}},
-                "variableSecretKeys": secret_keys,
+                "secretFields": [f"variables.{key}" for key in secret_keys],
             },
         },
     }

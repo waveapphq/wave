@@ -66,7 +66,8 @@ def _storage_write[Mutation: Callable[..., Any]](func: Mutation) -> Mutation:
 # ---------------------------------------------------------------------------
 
 
-def _require_test(test_id: str) -> dict[str, Any]:
+def require_test(test_id: str) -> dict[str, Any]:
+    """The test, or 404 when it does not exist."""
     # Local import: tests.service cascades into this module on delete and clone.
     from wavecore.api.services.tests import service as test_service
 
@@ -77,7 +78,9 @@ def _require_test(test_id: str) -> dict[str, Any]:
 
 
 def _root(test_id: str) -> Path:
-    return get_test_testdata_path(test_id)
+    """The test's folder in the zone's real location; the folder itself is never followed."""
+    folder = get_test_testdata_path(test_id)
+    return folder.parent.resolve() / folder.name
 
 
 def check_name(name: str) -> None:
@@ -92,13 +95,16 @@ def check_name(name: str) -> None:
 
 def _resolve_under(root: Path, rel: str, *, must_exist: bool, allow_root: bool) -> Path:
     """Validate a relative path and pin it inside the test's folder by real path."""
+    invalid = f"Invalid test data path: {rel}"
+    # A folder that is a link puts every entry's real location outside the test's folder.
+    if root.is_symlink():
+        raise ValidationException(invalid)
     if rel == "" and allow_root:
         return root
-    if not file_tree.is_safe_relative_path(rel):
-        raise ValidationException(f"Invalid test data path: {rel}")
-    path = root / rel
-    if not path.resolve().is_relative_to(root.resolve()):
-        raise ValidationException(f"Invalid test data path: {rel}")
+    path = file_tree.contained_path(root, rel, invalid)
+    # The empty path is the only name of the folder itself.
+    if path == root:
+        raise ValidationException(invalid)
     if must_exist and not path.exists():
         raise NotFoundException(f"Test data entry not found: {rel}")
     return path
@@ -134,9 +140,14 @@ def _entries(root: Path) -> list[file_tree.Entry]:
     return [entry for entry in file_tree.walk_entries(root) if not _is_in_progress(entry["path"])]
 
 
+def _test_entries(root: Path) -> list[file_tree.Entry]:
+    """The test's own listing; a folder that is a link holds no test data."""
+    return [] if root.is_symlink() else _entries(root)
+
+
 def _sweep_orphans(test_id: str, root: Path) -> None:
     """Remove abandoned in-progress uploads; a file a live upload still owns is never swept."""
-    if not root.is_dir():
+    if root.is_symlink() or not root.is_dir():
         return
     live = {
         _in_progress_name(rel.rsplit("/", 1)[-1])
@@ -236,10 +247,10 @@ def _ensure_folder(root: Path, folder: Path) -> None:
 
 def list_entries(test_id: str) -> dict[str, Any]:
     """Flat listing of the test's folder plus the file count and byte total."""
-    _require_test(test_id)
+    require_test(test_id)
     root = _root(test_id)
     _sweep_orphans(test_id, root)
-    entries = _entries(root)
+    entries = _test_entries(root)
     files = [entry for entry in entries if entry["kind"] == "file"]
     return {
         "entries": entries,
@@ -252,7 +263,7 @@ def resolve_entry(
     test_id: str, rel: str, *, must_exist: bool = True, allow_root: bool = False
 ) -> Path:
     """Resolve a relative path inside the test's folder; "" needs allow_root."""
-    _require_test(test_id)
+    require_test(test_id)
     return _resolve_under(_root(test_id), rel, must_exist=must_exist, allow_root=allow_root)
 
 
@@ -266,7 +277,7 @@ def content_path(test_id: str, rel: str) -> Path:
 
 def zip_entry(test_id: str, rel: str, sink: BinaryIO) -> str:
     """Zip a folder ("" = the whole test folder) into sink; returns the download name."""
-    test = _require_test(test_id)
+    test = require_test(test_id)
     folder = _resolve_under(_root(test_id), rel, must_exist=True, allow_root=True)
     if rel and not folder.is_dir():
         raise ValidationException(f"Not a folder: {rel}")
@@ -283,7 +294,7 @@ def zip_entry(test_id: str, rel: str, sink: BinaryIO) -> str:
 def iter_files(test_id: str) -> Iterator[tuple[str, Path]]:
     """(relative path, on-disk path) pairs of every file, for export and backup."""
     root = _root(test_id)
-    for entry in _entries(root):
+    for entry in _test_entries(root):
         if entry["kind"] == "file":
             yield entry["path"], root / entry["path"]
 
@@ -315,7 +326,7 @@ def is_running(test_id: str) -> bool:
 
 def assert_not_running(test_id: str) -> None:
     """409 while any tracked execution or workbench session holds the test."""
-    test = _require_test(test_id)
+    test = require_test(test_id)
     if is_running(test_id):
         raise ConflictException(
             f"Test '{test['name']}' is running; test data cannot be changed until it finishes",
@@ -384,7 +395,8 @@ def begin_upload(
     assert_not_running(test_id)
     check_name(name)
     root = _root(test_id)
-    target_dir = _resolve_under(root, folder, must_exist=False, allow_root=True)
+    # A folder named through a link is written, and locked again, at its real location.
+    target_dir = _resolve_under(root, folder, must_exist=False, allow_root=True).resolve()
     if folder and not target_dir.is_dir():
         raise NotFoundException(f"Folder not found: {folder}")
     rel = f"{folder}/{name}" if folder else name
@@ -484,6 +496,9 @@ def delete_for_test(test_id: str) -> None:
     """Cascade: remove the test's whole folder; nothing to remove is not an error."""
     testdata_uploads.clear_for_test(test_id)
     root = _root(test_id)
+    if root.is_symlink():
+        root.unlink()
+        return
     if not root.is_dir():
         return
     with _unlocked(root, recursive=True):
@@ -493,11 +508,34 @@ def delete_for_test(test_id: str) -> None:
 def copy_for_clone(source_id: str, clone_id: str) -> None:
     """Give the clone a locked copy of the source's folder when the source has one."""
     source = _root(source_id)
-    if not source.is_dir():
+    if source.is_symlink() or not source.is_dir():
         return
     target = _root(clone_id)
-    shutil.copytree(source, target)
+    shutil.copytree(source, target, ignore=functools.partial(_links_not_copied, source))
     _lock_tree(target)
+
+
+def _links_not_copied(root: Path, folder: str, names: list[str]) -> set[str]:
+    """The links in folder a copy must not follow: out of root, back into the copy, or nowhere."""
+    walked = Path(folder)
+    being_copied = [walked, *walked.parents[: len(walked.relative_to(root).parts)]]
+    real_folders = [path.resolve() for path in being_copied]
+    return {
+        name
+        for name in names
+        if (walked / name).is_symlink() and not _copyable_link(walked / name, root, real_folders)
+    }
+
+
+def _copyable_link(link: Path, root: Path, real_folders: list[Path]) -> bool:
+    """Copied as content only when its target exists in root and holds no folder being copied."""
+    try:
+        target = link.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return False
+    return target.is_relative_to(root) and not any(
+        folder.is_relative_to(target) for folder in real_folders
+    )
 
 
 @_storage_write

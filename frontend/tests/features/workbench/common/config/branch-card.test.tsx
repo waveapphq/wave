@@ -15,7 +15,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { BranchCard } from '@/features/workbench/common/config/branch-card'
+import { BranchCard, incompleteBranchReason } from '@/features/workbench/common/config/branch-card'
+import type { AssertionItem, LiteralAssertion } from '@/features/workbench/common/config/assertion-builder/types'
 
 function renderCard(overrides: Partial<React.ComponentProps<typeof BranchCard>> = {}) {
   const onLabelChange = (overrides.onLabelChange ?? vi.fn()) as ReturnType<typeof vi.fn>
@@ -114,6 +115,21 @@ describe('BranchCard', () => {
       await user.click(screen.getByTestId('branch-label-branch_0'))
 
       expect(screen.getByTestId('branch-body-branch_0')).toBeInTheDocument()
+    })
+
+    it('keeps the label input at its own width when the host sets no column', () => {
+      renderCard()
+
+      const column = screen.getByTestId('branch-label-branch_0').closest('.input-wrapper')
+      expect(column).toHaveClass('input-wrapper', 'relative')
+      expect(column).not.toHaveClass('flex-1')
+    })
+
+    it('sizes the label column as the host sets it', () => {
+      renderCard({ labelColumnClassName: 'min-w-0 flex-1 max-w-[201px]' })
+
+      const column = screen.getByTestId('branch-label-branch_0').closest('.input-wrapper')
+      expect(column).toHaveClass('min-w-0', 'flex-1', 'max-w-[201px]')
     })
   })
 
@@ -593,5 +609,108 @@ describe('BranchCard', () => {
 
       expect(await screen.findByRole('tooltip')).toHaveTextContent(message)
     })
+
+    it('is a button named by the reason, whose tooltip opens from the keyboard', async () => {
+      const user = userEvent.setup()
+      const message = 'This branch has no assertions yet - Save is blocked until it has one'
+      renderCard({ alert: message })
+
+      const marker = screen.getByRole('button', { name: message })
+      expect(marker).toBe(screen.getByTestId('branch-alert-branch_0'))
+      expect(marker).toHaveAttribute('type', 'button')
+      expect(marker.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+
+      await user.tab()
+      await user.tab()
+      expect(marker).toHaveFocus()
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(message)
+    })
+  })
+})
+
+const UNFINISHED = 'This branch has an unfinished assertion - Save stays blocked until it is complete'
+const NO_ASSERTIONS = 'This branch has no assertions - Save stays blocked until it has one'
+
+/** A complete literal row: a variable, a binary operator and a compare value that fits. */
+function row(overrides: Partial<LiteralAssertion> = {}): LiteralAssertion {
+  return { id: 'a1', type: 'literal', variable: 'status', value_type: 'string', operator: 'equals', reference_value: 'ready', ...overrides }
+}
+
+/** The row with no compare value key. */
+function unset(item: LiteralAssertion): LiteralAssertion {
+  const rest: Partial<LiteralAssertion> = { ...item }
+  delete rest.reference_value
+  return rest as LiteralAssertion
+}
+
+// The card alert reads the shared check of the branch's list (REQ-3.5.1.6, REQ-3.5.1.5).
+describe('incompleteBranchReason - the unfinished alert', () => {
+  it('gives no alert for a list whose rows are all complete', () => {
+    const list: AssertionItem[] = [
+      row(),
+      { type: 'operator', value: 'and' },
+      row({ id: 'a2', reference_value: 'expected_status', reference_is_expression: true }),
+      { type: 'operator', value: 'or' },
+      row({ id: 'a3', reference_value: '{{ host }}', reference_is_template: true }),
+      { type: 'operator', value: 'and' },
+      { id: 'e1', type: 'expression', expression: 'len(errors) == 0' },
+      { type: 'operator', value: 'and' },
+      unset(row({ id: 'a4', operator: 'is_null' })),
+      { type: 'operator', value: 'and' },
+      // Empty text typed on purpose is a value and compares with empty text (FIELD-4, FIELD-15).
+      row({ id: 'a5', reference_value: '' }),
+    ]
+    expect(incompleteBranchReason(list, 'branch')).toBeUndefined()
+  })
+
+  it.each<[string, AssertionItem[]]>([
+    ['an empty list', []],
+    ['a list of operator items only', [{ type: 'operator', value: 'and' }]],
+  ])('says the branch has no assertions for %s', (_what, list) => {
+    expect(incompleteBranchReason(list, 'branch')).toBe(NO_ASSERTIONS)
+  })
+
+  it.each<[string, AssertionItem]>([
+    ['Choose a variable.', row({ variable: '' })],
+    ['Value is required (a compare value not set)', unset(row())],
+    ['Value is required (empty text on a number compare)', row({ variable: 'retries', value_type: 'integer', reference_value: '' })],
+    ['Value is required (a blank {x})', row({ reference_value: '', reference_is_expression: true })],
+    ['Value is required (a blank Template)', row({ reference_value: '', reference_is_template: true })],
+    ['a number rule message', row({ variable: 'retries', value_type: 'integer', reference_value: 'abc' })],
+    ['Condition is required', { id: 'e1', type: 'expression', expression: '' }],
+  ])('names an unfinished assertion for a row with %s', (_what, item) => {
+    expect(incompleteBranchReason([item], 'branch')).toBe(UNFINISHED)
+  })
+
+  it('names an unfinished assertion for an incomplete row beside a complete one', () => {
+    const list: AssertionItem[] = [row(), { type: 'operator', value: 'and' }, unset(row({ id: 'a2' }))]
+    expect(incompleteBranchReason(list, 'branch')).toBe(UNFINISHED)
+  })
+
+  it('names an unfinished assertion for an incomplete row inside a group', () => {
+    const list: AssertionItem[] = [{ id: 'g1', type: 'group', items: [unset(row())] }]
+    expect(incompleteBranchReason(list, 'branch')).toBe(UNFINISHED)
+  })
+
+  it('names an unfinished assertion for an empty group beside a complete row', () => {
+    const list: AssertionItem[] = [row(), { type: 'operator', value: 'and' }, { id: 'g1', type: 'group', items: [] }]
+    expect(incompleteBranchReason(list, 'branch')).toBe(UNFINISHED)
+  })
+
+  it('words the alert with the noun of a Switch case', () => {
+    expect(incompleteBranchReason([unset(row())], 'case')).toBe(
+      'This case has an unfinished assertion - Save stays blocked until it is complete',
+    )
+    expect(incompleteBranchReason([], 'case')).toBe('This case has no assertions - Save stays blocked until it has one')
+  })
+
+  it('shows the unfinished alert on the card while the card is collapsed', async () => {
+    const user = userEvent.setup()
+    renderCard({ alert: incompleteBranchReason([unset(row())], 'branch') })
+
+    await user.click(screen.getByTestId('branch-toggle-branch_0'))
+    await user.hover(screen.getByTestId('branch-alert-branch_0'))
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(new RegExp(`^${UNFINISHED}$`))
   })
 })

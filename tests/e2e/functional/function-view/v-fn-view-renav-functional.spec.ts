@@ -38,7 +38,6 @@ const REAL_DRAFT = JSON.stringify({
         displayName: 'DRAFT-MARKER',
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         config: { values: {}, profileBindings: [], outputBindings: {} },
       },
     },

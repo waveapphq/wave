@@ -55,10 +55,10 @@ function ErrorCard({
         <div className="text-base font-semibold">Execution still in progress</div>
         <p className="text-sm text-muted-foreground">{error.message}</p>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" onClick={() => { navigate(`/executions/${executionId}`) }}>
+          <Button variant="default" size="sm" onClick={() => { void navigate(`/executions/${executionId}`) }}>
             View Execution
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { navigate('/reports') }}>
+          <Button variant="outline" size="sm" onClick={() => { void navigate('/reports') }}>
             Back to Reports
           </Button>
         </div>
@@ -75,7 +75,7 @@ function ErrorCard({
       <p className="text-sm text-muted-foreground">{error.message}</p>
       <div className="flex gap-2">
         {permanent ? (
-          <Button variant="default" size="sm" onClick={() => { navigate('/reports') }}>
+          <Button variant="default" size="sm" onClick={() => { void navigate('/reports') }}>
             Back to Reports
           </Button>
         ) : (
@@ -86,7 +86,7 @@ function ErrorCard({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { navigate(`/executions/${executionId}`) }}
+              onClick={() => { void navigate(`/executions/${executionId}`) }}
             >
               View Execution
             </Button>

@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-before'", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "tc_error", "caught": "tc_caught" },
@@ -64,7 +62,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-in-try'", "level": "INFO" },
             "outputBindings": {},
@@ -87,7 +84,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "1/0", "level": "INFO" },
             "outputBindings": {},
@@ -110,7 +106,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-in-catch'", "level": "WARN" },
             "outputBindings": {},
@@ -133,7 +128,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tc-after'", "level": "INFO" },
             "outputBindings": {},

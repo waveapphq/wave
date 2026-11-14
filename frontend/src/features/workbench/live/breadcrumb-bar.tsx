@@ -48,7 +48,7 @@ export function LiveBreadcrumbBar({
       return
     }
     /* v8 ignore next - COV-V8-003: defensive guard - back arrow hidden when backHref null */
-    if (backHref) navigate(backHref)
+    if (backHref) void navigate(backHref)
   }
 
   // Intermediate segment click: a function-segment's id is the 1-indexed
@@ -64,7 +64,7 @@ export function LiveBreadcrumbBar({
       popDrillTo(fnDepth)
       return
     }
-    navigate(href)
+    void navigate(href)
   }
 
   return (

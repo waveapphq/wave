@@ -215,17 +215,22 @@ class TableParserBase(PluginBase):
             table = table.order_by(
                 *[(_column_ref(key["column"]), key.get("direction", "asc")) for key in sorts]
             )
-        for block in filters:
-            table = self._apply_filter_block(table, block, variables)
+        for index, block in enumerate(filters):
+            table = self._apply_filter_block(table, block, variables, f"filters.{index}")
         return table
 
     def _apply_filter_block(
-        self, table: Table, block: dict[str, Any], variables: dict[str, Any]
+        self, table: Table, block: dict[str, Any], variables: dict[str, Any], place: str
     ) -> Table:
         """Keep the rows whose cell, bound as ``_cell``, passes the block's check conditions."""
-        from wavecore.controls.assertion_evaluator import evaluate_assertions
+        from wavecore.controls.assertion_evaluator import (
+            condition_join_problems,
+            evaluate_assertions,
+        )
+        from wavecore.controls.base import raise_first_problem
 
         conditions = block["conditions"]
+        raise_first_problem(condition_join_problems(conditions, f"{place}.conditions"))
         col_type = ColumnType(block["asType"])
         for row in conditions:
             if row["type"] == "literal":

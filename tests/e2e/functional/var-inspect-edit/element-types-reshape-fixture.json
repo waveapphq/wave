@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"RESHAPE count={m['count'] + 1} f={m['f'] * 2} big={m['big'] + 1} z2={m['z2'] + 'x'} keys={','.join(m.keys())} a0={a[0] * 2} a1={a[1] + '-x'} a2={a[2][1] * 2} a3={a[3] + 1} n={len(a)}\"",

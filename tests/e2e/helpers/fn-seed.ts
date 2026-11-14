@@ -49,7 +49,6 @@ export function logNode(
       version: '1.0.0',
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { message, level: 'INFO' }, outputBindings: {}, profileBindings: [] },
     },
     measured: { ...NODE_DIMS },
@@ -76,7 +75,6 @@ export function delayNode(
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { duration: durationMs }, outputBindings: {}, profileBindings: [] },
     },
     measured: { ...NODE_DIMS },
@@ -112,7 +110,6 @@ export function localFunctionNode(
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       localDefinition: {
         workflow: { nodes: body.nodes, edges: body.edges ?? [] },
         inputs: body.inputs ?? [],
@@ -172,7 +169,6 @@ export function sharedNode(id: string, opts: SharedNodeOptions): Record<string, 
     hasNewerVersion: false,
     expressionFields: [...(opts.expressionFields ?? [])],
     templateFields: [],
-    variableExpressionKeys: [],
     config: { values: { ...(opts.values ?? {}) }, outputBindings: {}, profileBindings: [] },
   }
   if (opts.disabled) data.disabled = true

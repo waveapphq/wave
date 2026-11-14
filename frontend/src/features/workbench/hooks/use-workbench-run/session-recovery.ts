@@ -195,6 +195,10 @@ export async function hydrateWorkbenchSession(
   if (session.block_states) {
     restoreBlockStates(deps, execId, session.block_states)
   }
+  // After the statuses: a restored 'running' status would drop the lanes.
+  for (const [blockId, lanes] of Object.entries(session.lanes_taken ?? {})) {
+    deps.updateBlockExecution(execId, blockId, { lanes })
+  }
 
   if (TERMINAL_STATUSES.has(session.status)) {
     deps.completeStoreExecution(execId, mapSessionStatus(session.status))

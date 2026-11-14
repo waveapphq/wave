@@ -48,6 +48,7 @@ def make_recipe(
     tags: list[str] | None = None,
     variables: dict[str, Any] | None = None,
     functions: list[dict[str, Any]] | None = None,
+    notes: list[Any] | None = None,
 ) -> str:
     """Build a recipe YAML text from parts."""
     test: dict[str, Any] = {"name": name}
@@ -61,6 +62,8 @@ def make_recipe(
     if functions is not None:
         doc["functions"] = functions
     doc["flow"] = flow
+    if notes is not None:
+        doc["notes"] = notes
     return dump_recipe(doc)
 
 

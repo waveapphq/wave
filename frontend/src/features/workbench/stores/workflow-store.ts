@@ -131,12 +131,7 @@ interface NodeType {
     disabled?: boolean
     expressionFields?: string[]
     templateFields?: string[]
-    variableExpressionKeys?: string[]
-    variableTemplateKeys?: string[]
-    variableTypes?: Record<string, string>
-    /** Variable Setter: each array / map literal row's element types (REQ-3.1.3.19). */
-    variableElementTypes?: Record<string, ElementTypes>
-    /** Typed block settings: each one's element types (REQ-3.1.3.19). */
+    /** Typed block settings and Variable Setter list / map rows: each one's element types (REQ-3.1.3.19). */
     elementTypes?: Record<string, ElementTypes>
     /** Function nodes only: 'local' = inline in this Test, 'shared' = library reference. */
     functionLifecycle?: 'local' | 'shared'

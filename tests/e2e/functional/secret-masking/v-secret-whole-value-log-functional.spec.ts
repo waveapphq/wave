@@ -13,10 +13,13 @@
  * 4. A Log Block printing a whole secret map of the Test's Suite logs exactly `********`.
  * 5. A plain map of the same shape prints in WAVE's print form, so the mask is the secret's.
  * 6. No console line carries any text held inside the secrets, and the run passes.
+ * 7. A Log Block printing a whole secret map nested 150 levels deep, deeper than the masking depth,
+ *    logs exactly `********`: no key or bracket of the map shows, and the run passes.
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
+import { chainEdges, logBlock } from '../../helpers/fn-block'
 import { logNode, openTest, validateTest } from '../../helpers/fn-seed'
 import { formatEntries, type LogEntry } from '../../helpers/log-reader'
 import { runToEnd, selectEnvironment } from '../../helpers/workbench'
@@ -35,6 +38,33 @@ const PRINTS: Array<{ label: string; message: string; line: string }> = [
 const DONE = 'whole-value-done'
 
 const uniqueSuffix = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+/** Levels of the deep secret map: past the 100 levels a masking pass walks. */
+const DEEP_LEVELS = 150
+const DEEP_KEY = 'deepk7'
+const DEEP_DONE = 'deep-value-done'
+
+/** A map of `DEEP_LEVELS` maps, each holding the next under `DEEP_KEY`; the innermost holds a short pin. */
+function deepMap(): Record<string, unknown> {
+  let value: Record<string, unknown> = { pin: 'kq4z' }
+  for (let level = 1; level < DEEP_LEVELS; level++) value = { [DEEP_KEY]: value }
+  return value
+}
+
+function deepFixture(): Record<string, unknown> {
+  const nodes = [
+    logBlock('sdeep', 'sdeep', 'deep_conf', { position: { x: 300, y: 120 } }),
+    logBlock('done', 'done', `'${DEEP_DONE}'`, { position: { x: 300, y: 220 } }),
+  ]
+  return {
+    name: `Secret Deep Value Log ${uniqueSuffix()}`,
+    version: '1.0.0',
+    description: 'A Log Block printing a whole secret map nested deeper than the masking depth.',
+    workflow: { nodes, edges: chainEdges(['sdeep', 'done']) },
+    variables: { deep_conf: { type: 'map', scope: 'test', secret: true, value: deepMap() } },
+    metadata: { tags: [], suite_id: null, parent_suite: null },
+  }
+}
 
 function fixture(): Record<string, unknown> {
   const labels = [...PRINTS.map((print) => print.label), 'done']
@@ -124,6 +154,30 @@ test.describe('V-SECRET-WHOLE-VALUE-LOG', () => {
     for (const leaf of LEAVES) {
       expect(dump, `no console line carries "${leaf}"`).not.toContain(leaf)
     }
+    expect(run.verdict, `run verdict:\n${dump}`).toBe('passed')
+  })
+
+  test('a whole secret map nested deeper than the masking depth logs the mask', async ({ page, request }) => {
+    test.setTimeout(180_000)
+    await ensureEnvironment(request)
+
+    const created = await request.post(`${BACKEND_URL}/tests`, { data: deepFixture() })
+    expect(created.ok(), `POST /tests: ${created.status()} ${(await created.text()).slice(0, 500)}`).toBeTruthy()
+    testId = (await created.json()).data.id as string
+    const validation = await validateTest(request, testId, 'run')
+    expect(validation.errors, JSON.stringify(validation.errors)).toEqual([])
+
+    await openTest(page, testId)
+    await selectEnvironment(page)
+    const run = await runToEnd(page)
+    const dump = formatEntries(run.entries)
+
+    expect(linesOf(run.entries, 'done'), `the run reached its last Block:\n${dump}`).toEqual([DEEP_DONE])
+    expect(
+      linesOf(run.entries, 'sdeep'),
+      `Log sdeep prints the ${DEEP_LEVELS}-level secret map as one placeholder:\n${dump}`,
+    ).toEqual([MASK])
+    expect(dump, `no console line carries a key of the deep secret map`).not.toContain(DEEP_KEY)
     expect(run.verdict, `run verdict:\n${dump}`).toBe('passed')
   })
 })

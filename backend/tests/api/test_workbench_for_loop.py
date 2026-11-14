@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.api.services.workbench.parallel_harness import lifecycle_lines
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.api.services.workbench.for_loop import (
@@ -72,7 +73,6 @@ def _make_node(
             "displayName": display_name or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -171,6 +171,32 @@ class TestForLoopWorkflowExecution:
         assert session["status"] == "passed"
         assert session["block_states"]["body-log"] == "passed"
         assert session["block_states"]["after-log"] == "passed"
+
+    @pytest.mark.asyncio
+    async def test_every_iteration_logs_the_body_blocks_start_and_completion(self) -> None:
+        """REQ-3.7.2.5: each run of a body Block writes both lines, inside the loop's own."""
+        session_id = "fl-lifecycle-lines"
+        _wb_common._workbench_sessions[session_id] = _make_session(session_id)
+
+        nodes = [
+            _make_for_node("for-1", mode="count", count=2),
+            _make_log_node("body-log", "Body Log", "'iteration'"),
+        ]
+        edges = [
+            {"source": "start-node", "target": "for-1"},
+            {"source": "for-1", "target": "body-log", "sourceHandle": "body"},
+        ]
+
+        await workbench_service._execute_workflow(session_id, nodes, edges, {"i": None})
+
+        assert _wb_common._workbench_sessions[session_id]["status"] == "passed"
+        body_run = ["Executing 'Log' (plugin/log)", "Completed 'Log' (<n> ms)"]
+        assert lifecycle_lines(session_id) == [
+            "Executing 'For Loop' (control/for)",
+            *body_run,
+            *body_run,
+            "Completed 'For Loop' (<n> ms)",
+        ]
 
     @pytest.mark.asyncio
     async def test_for_count_0_empty(self) -> None:

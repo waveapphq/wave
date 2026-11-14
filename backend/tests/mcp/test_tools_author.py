@@ -26,6 +26,14 @@ from tests.core.recipes.conftest import (
     find_finding,
     make_recipe,
 )
+from tests.core.recipes.test_amend import (
+    PING_STEP,
+    RELEASE_BODY,
+    log_step,
+    overlapping_pairs,
+    positions_by_label,
+    release_recipe,
+)
 from tests.core.recipes.test_decompiler import DECLARED_INPUTS, assert_round_trip
 from tests.mcp.conftest import create_test_entity
 from tests.plugins._stub_plugin import let_saved_tests_use_the_stub, register_stub_plugin
@@ -371,7 +379,185 @@ def _remote_body_block_ids(node: Any) -> list[str]:
     return ids
 
 
+BLOCKS_STEP_FORMS_PARAGRAPH = (
+    "A plugin block runs with the uniform `- block: <id>` form. Get ids and setting schemas "
+    "from `list_blocks` / `get_block`. A control is written with its own step keyword (see "
+    "Constructs and Leaf shorthand steps); Delay and Halt also take `- block:`, and any other "
+    "control written that way is refused (`USE_STEP_KEYWORD`). Remote Execution, which "
+    "`list_blocks` also lists, is written as its own `remote:` construct, and "
+    "`- block: remote-execution` is refused the same way. A control's settings take the same "
+    "value forms as a block's. `description` (at most 64 characters) and `disabled: true` (the "
+    "block is skipped when the test runs) sit beside `label` on every step except a note step, "
+    "which takes only `label` and `key`, and inside the mapping on a construct."
+)
+SETTING_VALUE_FORMS_LIST = (
+    "- Plain YAML literal: used as-is and type-checked against the block schema. - Template "
+    'string: any string containing `{{ expression }}` markers. `{template: "..."}` writes a '
+    'template with no markers. - Expression: `{expr: "..."}` - a Python-style expression over '
+    "variables. - `{literal: ...}`: the value exactly as written, never read. Use it for text "
+    "that must keep its `{{ }}` (a Go template, a Helm value) and for a map whose only key is "
+    "`expr`, `template` or `literal`."
+)
+CONDITION_LIST_EXAMPLE: list[Any] = [
+    "home_status == 200",
+    {"variable": "transport", "operator": "equals", "value": "TCP", "value_type": "string"},
+    "or",
+    {"group": ["retries > 3", {"variable": "mode", "operator": "equals", "value": "fast"}]},
+]
+CONDITION_LIST_PARAGRAPH = (
+    "A condition list is what `that`, `conditions` and `when` hold. Each item is one of:"
+)
+CONDITION_JOINING_PARAGRAPH = (
+    "Two conditions side by side are joined with `and`; write `or` between them to join them "
+    "with `or`. `and` binds tighter than `or`, so `[a, or, b, c]` reads `a or (b and c)`. `and` "
+    "and `or` stand only between two conditions. A `when` or `conditions` that holds one "
+    "condition may drop the list."
+)
+COMPARISON_VALUE_PARAGRAPH = (
+    'A comparison\'s `value` takes the value forms of a block setting: `{expr: "limit + 1"}` is '
+    'worked out each time the condition is checked; a template (`"{{ prefix }}-1"` or '
+    '`{template: "..."}`) builds text, so it is refused wherever the value compared is not '
+    "text, such as a number or a `length_equals` count (`TEMPLATE_NOT_STRING`); "
+    '`{literal: "..."}` keeps text that holds `{{ }}` as written.'
+)
+SETTER_ROWS_PARAGRAPH = (
+    "A `set:` row takes the value forms of a block setting: a plain value, `{expr: ...}`, a "
+    "template (a `string` variable only, else `TEMPLATE_NOT_STRING`) or `{literal: ...}`. Each "
+    "entry of a list or map row may itself be `{expr: ...}` or, as text, a template; a value "
+    "form deeper than that first-level entry is refused (`VALUE_FORM_TOO_DEEP`). "
+    "`secret_rows: [name, ...]` beside `set:` marks rows Secret, as the Setter's Secret column "
+    "does: a plain value is sealed at rest, an `{expr: ...}` or template row is kept as written, "
+    "and the variable is masked once the row writes it, so an expression or template row that "
+    "reads a secret gives no `SECRET_DERIVED_VALUE` warning. A secret row holds a plain value, "
+    "`{expr: ...}` or a template, never `{expr: ...}` or template entries "
+    "(`INVALID_SECRET_ROW`); a name the step does not set is refused (`UNKNOWN_SECRET_ROW`). "
+    "A secret row written `null` holds no value, and the authoring result lists it for a person "
+    "to fill in. A note's text is stored as written; it takes no expression."
+)
+EXPRESSIBLE_VERDICT_PARAGRAPH = (
+    "A test that holds something the recipe format cannot express - hand-built wiring "
+    "(cross-branch edges, cycles, unstructured joins) or a stored setting with no recipe form - "
+    "reports `expressible: false` with a named `inexpressible` list; amendment is refused for "
+    "it (`TARGET_NOT_RECIPE_EXPRESSIBLE`) so that nothing is silently dropped. Edit such a test "
+    "in the workbench. Everything a person sets in a block's window has a recipe form, "
+    "condition lists, branch labels and Setter rows included."
+)
+
+NOTE_PLACE_PARAGRAPH = (
+    "A `note` step stands in the flow at its place, wired in and out like a `delay`, so it can "
+    "hold the place of a block not added yet. When the run reaches it, it passes the flow "
+    "straight on, with no outputs and no side effects. A Note with no connection at all is an "
+    "annotation only, and the run never reaches it: write it in `notes:` beside `flow:`, at the "
+    "top of the recipe for the test's canvas or in a Function entry for that Function's canvas. "
+    "Each item of `notes:` is a note step, with `label` and `key` beside it as in the flow; any "
+    "other item is refused (`INVALID_CONSTRUCT`)."
+)
+NOTE_READBACK_PARAGRAPH = (
+    "A readback writes each Note where it is: in the flow at its place, or in the `notes:` of "
+    "its canvas. A test whose canvas holds only Notes reads back as `flow: []` beside its "
+    "`notes:`; `flow` may be empty only when `notes:` holds a Note, else it is refused "
+    "(`EMPTY_FLOW`). A Note that is connected but never reached from the start is reported in "
+    "`inexpressible`, like any unreachable block."
+)
+
+
 class TestGetRecipeGuide:
+    def test_the_conditions_section_shows_or_groups_and_compare_to_value_forms(self) -> None:
+        # REQ-5.2.7.7: the condition list grammar and the compare-to value forms.
+        conditions = guide_section("### Conditions")
+        examples = re.findall(r"```yaml\n(.*?)```", conditions, re.DOTALL)
+
+        assert examples, "the Conditions section shows no condition list"
+        assert yaml.safe_load(examples[0]) == CONDITION_LIST_EXAMPLE
+        assert guide_paragraphs("### Conditions", "Each item is one of") == (
+            CONDITION_LIST_PARAGRAPH
+        )
+        assert guide_paragraphs("### Conditions", "side by side") == CONDITION_JOINING_PARAGRAPH
+        assert guide_paragraphs("### Conditions", "A comparison's `value`") == (
+            COMPARISON_VALUE_PARAGRAPH
+        )
+
+    def test_the_blocks_section_shows_every_value_form_and_the_step_identity_keys(self) -> None:
+        # REQ-5.2.7.7, REQ-5.2.7.6: `{literal}`, `{template}`, description, disabled.
+        blocks = blocks_section_text()
+
+        spans = ["`{literal: ...}`", '`{template: "..."}`', "`description`", "`disabled: true`"]
+        assert [span for span in spans if span not in blocks] == []
+        assert "`USE_STEP_KEYWORD`" in blocks
+        assert guide_paragraphs("### Blocks (plugins and controls)", "USE_STEP_KEYWORD") == (
+            BLOCKS_STEP_FORMS_PARAGRAPH
+        )
+        assert guide_paragraphs(
+            "### Blocks (plugins and controls)", "the value exactly as written, never read"
+        ) == (SETTING_VALUE_FORMS_LIST)
+
+    def test_the_leaf_section_documents_secret_rows(self) -> None:
+        # REQ-5.2.7.7: secret_rows and the two refusals that guard it.
+        leaf = guide_text("### Leaf shorthand steps")
+
+        codes = ["`secret_rows", "`INVALID_SECRET_ROW`", "`UNKNOWN_SECRET_ROW`"]
+        assert [code for code in codes if code not in leaf] == []
+        assert guide_paragraphs("### Leaf shorthand steps", "secret_rows") == (
+            SETTER_ROWS_PARAGRAPH
+        )
+
+    def test_the_leaf_section_places_a_note_in_the_flow_or_beside_it(self) -> None:
+        # REQ-5.2.7.3, REQ-5.2.7.6: a Note keeps its place, in the flow or in `notes:`.
+        leaf = guide_section("### Leaf shorthand steps")
+        example = yaml.safe_load(re.findall(r"```yaml\n(.*?)```", leaf, re.DOTALL)[1])
+
+        assert guide_paragraphs("### Leaf shorthand steps", "stands in the flow at its") == (
+            NOTE_PLACE_PARAGRAPH
+        )
+        assert guide_paragraphs("### Leaf shorthand steps", "A readback writes each Note") == (
+            NOTE_READBACK_PARAGRAPH
+        )
+        assert list(example) == ["flow", "notes"]
+        recipe = yaml.safe_dump({"test": {"name": "Guide Notes"}, **example}, sort_keys=False)
+        assert author().validate_recipe(recipe) == {
+            "valid": True,
+            "test_name": "Guide Notes",
+            "findings": [],
+        }
+        assert "free-floating" not in leaf
+        assert guide_paragraphs("## Functions", "A Function entry takes `notes:`") == (
+            "A Function entry takes `notes:` beside its `flow:` for the Notes on the Function's "
+            "canvas that nothing connects to, as the test does."
+        )
+
+    def test_the_document_shape_lists_the_notes_beside_the_flow(self) -> None:
+        shape = guide_section("## Document shape")
+        document = yaml.safe_load(re.findall(r"```yaml\n(.*?)```", shape, re.DOTALL)[0])
+
+        assert list(document) == ["test", "variables", "functions", "flow", "notes"]
+
+    def test_the_amending_section_names_settings_in_the_verdict(self) -> None:
+        # REQ-5.2.7.6: the verdict covers stored settings as well as wiring.
+        paragraph = guide_paragraphs(
+            "## Amending an existing test (round-trip)", "TARGET_NOT_RECIPE_EXPRESSIBLE"
+        )
+
+        assert paragraph == EXPRESSIBLE_VERDICT_PARAGRAPH
+
+    def test_the_amending_section_says_how_an_amend_keeps_each_block_in_place(self) -> None:
+        # REQ-5.2.7.4: Blocks are recognized by what they are, and the ones below make room.
+        paragraph = guide_paragraphs("## Amending an existing test (round-trip)", "`key: <name>`")
+
+        assert paragraph.endswith(
+            "Every step and construct may carry `key: <name>`, a name of your own for it: an "
+            "amendment keeps a Block's place on the canvas when its step keeps the same `key`. "
+            "A step with no `key` is recognized by what it is - its block, name and settings, "
+            "in the same section of the same construct - so adding, removing or moving other "
+            "steps never costs it its place. A block you add or move is placed in the flow, and "
+            "when it, or a block that grew, needs the room, the blocks below it move down just "
+            "enough to make room, so no two blocks overlap."
+        )
+
+    def test_the_guide_no_longer_says_any_catalog_block_runs_as_a_block_step(self) -> None:
+        guide = " ".join(author().get_recipe_guide()["guide"].split())
+
+        assert "Any catalog block runs with the uniform" not in guide
+
     def test_envelope_carries_the_guide_and_all_examples(self) -> None:
         result = author().get_recipe_guide()
         assert set(result.keys()) == {"guide", "examples"}
@@ -691,6 +877,15 @@ class TestGetRecipeGuide:
         ]
         assert missing == []
 
+    def test_the_guide_says_a_filter_item_taking_no_value_stores_none(self) -> None:
+        # REQ-3.5.1.5: an operator that takes no value keeps no compare-to value or flag.
+        paragraph = guide_paragraphs("### Blocks (plugins and controls)", "filters")
+
+        assert (
+            "An item on an operator that takes no value is stored with no `reference_value` "
+            "and no flag, whatever it is written with."
+        ) in paragraph
+
 
 def _branching_example_switch() -> dict[str, Any]:
     """The single switch construct in the packaged 02-branching-loops example."""
@@ -901,6 +1096,18 @@ class TestValidateRecipe:
         finding = find_finding(result["findings"], "UNDECLARED_VARIABLE")
         assert finding["step"] == "flow[0]"
         assert finding["severity"] == "error"
+
+    def test_a_set_step_on_an_undeclared_name_is_refused_by_the_save(self) -> None:
+        """The compile declares no Setter target, so the save's undeclared-name rule refuses it."""
+        recipe = make_recipe([{"set": {"ghost_target": 1}}], name="Validate Ghost Target")
+        result = author().validate_recipe(recipe)
+        assert result["valid"] is False
+        (finding,) = [item for item in result["findings"] if item["code"] == "UNDECLARED_VARIABLE"]
+        assert (finding["step"], finding["severity"], finding["problem"]) == (
+            "flow[0]",
+            "error",
+            "Variable 'ghost_target' is used in 1 block(s) but not declared in variable manager",
+        )
 
     def test_undeclared_variable_in_a_template_is_reported(self) -> None:
         """A '{{ }}' typo fails validation, not only the run."""
@@ -1173,8 +1380,8 @@ class TestCreateTestFromRecipe:
 
 
 TARGET_NOT_EXPRESSIBLE_PROBLEM = (
-    "The target test uses connectivity the recipe format cannot express; "
-    "amending it through a recipe would drop that wiring."
+    "The target test holds wiring or settings the recipe format cannot express; "
+    "amending it through a recipe would drop them."
 )
 TARGET_NOT_EXPRESSIBLE_FIX = (
     "Edit this test directly in the workbench. Recipe amendment is available "
@@ -1216,7 +1423,7 @@ def _inexpressible_workflow() -> dict[str, Any]:
 
 
 def _expressible_workflow() -> dict[str, Any]:
-    """Near-tree single reachable node with NO recipeKey (nothing to pin on amend)."""
+    """One reachable Block placed by hand, so it carries no recipe key."""
     return {
         "nodes": [
             {
@@ -1286,6 +1493,122 @@ def _write_test_with_workflow(name: str, workflow: dict[str, Any]) -> str:
     )
     _clear_in_memory_cache()
     return test_id
+
+
+def _canvas_node(node_id: str, element_type: str, values: dict[str, Any]) -> dict[str, Any]:
+    """A Block as the canvas stores it; a Note is a noteNode."""
+    return {
+        "id": node_id,
+        "type": "noteNode" if element_type == "note" else "workflowNode",
+        "position": {"x": 100, "y": 100},
+        "data": {
+            "label": "Note" if element_type == "note" else "Log",
+            "elementType": element_type,
+            "nodeType": "control" if element_type == "note" else "plugin",
+            "version": "1.0.0",
+            "config": {"values": values, "outputBindings": {}, "profileBindings": []},
+        },
+    }
+
+
+def _hand_wired_note_workflow() -> dict[str, Any]:
+    """Start -> Log -> Note -> Log, wired on the canvas with the default handles."""
+    return {
+        "nodes": [
+            _canvas_node("log-1", "log", {"message": "first", "level": "INFO"}),
+            _canvas_node("note-1", "note", {"text": "Add the login here", "color": "yellow"}),
+            _canvas_node("log-2", "log", {"message": "second", "level": "INFO"}),
+        ],
+        "edges": [
+            {"id": "e1", "source": "start-node", "target": "log-1"},
+            {"id": "e2", "source": "log-1", "target": "note-1"},
+            {"id": "e3", "source": "note-1", "target": "log-2"},
+        ],
+    }
+
+
+def _stored_chain(test_id: str) -> list[tuple[str, str]]:
+    """Each stored edge as (source element type, target element type)."""
+    from wavecore.api.services.tests import service as test_service
+
+    stored = test_service.get_test(test_id)
+    assert stored is not None
+    types = {node["id"]: node["data"]["elementType"] for node in stored["workflow"]["nodes"]}
+    types["start-node"] = "start"
+    return [(types[edge["source"]], types[edge["target"]]) for edge in stored["workflow"]["edges"]]
+
+
+class TestNoteAmendLoop:
+    """A Note keeps its place through the readback, and an untouched readback amends."""
+
+    def test_an_untouched_readback_of_a_hand_wired_note_amends(self) -> None:
+        test_id = _write_test_with_workflow("Hand Wired Note", _hand_wired_note_workflow())
+
+        readback = author().get_test_recipe(test_id)
+        result = author().amend_test_from_recipe(test_id, readback["recipe"])
+
+        assert readback["expressible"] is True
+        assert yaml.safe_load(readback["recipe"])["flow"][1] == {
+            "note": {"text": "Add the login here", "color": "yellow"}
+        }
+        assert result["amended"] is True, result
+        assert _stored_chain(test_id) == [("start", "log"), ("log", "note"), ("note", "log")]
+
+    def test_an_untouched_readback_of_a_test_with_only_notes_amends(self) -> None:
+        workflow = {
+            "nodes": [_canvas_node("note-1", "note", {"text": "TODO", "color": "yellow"})],
+            "edges": [],
+        }
+        test_id = _write_test_with_workflow("Only Notes", workflow)
+
+        readback = author().get_test_recipe(test_id)
+        result = author().amend_test_from_recipe(test_id, readback["recipe"])
+
+        assert readback["expressible"] is True
+        assert yaml.safe_load(readback["recipe"])["flow"] == []
+        assert result["amended"] is True, result
+        assert _stored_chain(test_id) == []
+
+    def test_notes_in_and_beside_the_flow_keep_their_place_through_an_amend(self) -> None:
+        recipe = make_recipe(
+            [LOG_STEP, {"note": "Add the login here"}, LOG_STEP],
+            name="Placed Notes",
+            notes=[{"note": {"text": "Owned by payments", "color": "blue"}}],
+        )
+        created = author().create_test_from_recipe(recipe)
+        assert created["created"] is True, created
+
+        readback = author().get_test_recipe(created["test_id"])
+        result = author().amend_test_from_recipe(created["test_id"], readback["recipe"])
+
+        assert readback["expressible"] is True
+        written = yaml.safe_load(readback["recipe"])
+        assert written["flow"][1] == {"note": {"text": "Add the login here", "color": "slate"}}
+        assert written["notes"] == [{"note": {"text": "Owned by payments", "color": "blue"}}]
+        assert result["amended"] is True, result
+        assert _stored_chain(created["test_id"]) == [
+            ("start", "log"),
+            ("log", "note"),
+            ("note", "log"),
+        ]
+
+    def test_a_note_in_a_local_function_notes_validates_saves_and_reads_back_there(
+        self,
+    ) -> None:
+        # REQ-5.2.7.3, REQ-5.2.7.6: the Function save takes a Note with no wire as beside the flow.
+        notes = [{"note": {"text": "Helper owner note", "color": "pink"}}]
+        functions = [{"name": "annotated_helper", "flow": [LOG_STEP], "notes": notes}]
+        recipe = make_recipe(
+            [{"function": "annotated_helper"}], name="Function Notes", functions=functions
+        )
+
+        verdict = author().validate_recipe(recipe)
+        created = author().create_test_from_recipe(recipe)
+
+        assert verdict == {"valid": True, "test_name": "Function Notes", "findings": []}
+        assert created["created"] is True, created
+        written = yaml.safe_load(author().get_test_recipe(created["test_id"])["recipe"])
+        assert written["functions"][0]["notes"] == notes
 
 
 class TestGetTestRecipe:
@@ -1530,12 +1853,15 @@ class TestAmendTestFromRecipe:
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
             author().amend_test_from_recipe("ghost", simple_recipe("ghost"))
 
-    def test_amend_with_no_pinnable_nodes_still_succeeds(self) -> None:
-        # An expressible target whose nodes carry no recipeKey pins nothing;
-        # the pinned-layout pass is a no-op and the amend goes through.
-        _write_test_with_workflow("Amend No Pins", _expressible_workflow())
-        result = author().amend_test_from_recipe("Amend No Pins", simple_recipe("Amend No Pins"))
+    def test_a_block_placed_by_hand_keeps_its_place_through_an_amend(self) -> None:
+        # REQ-5.2.7.4: a hand-placed Block carries no recipe key; it is recognized by what it is.
+        test_id = _write_test_with_workflow("Amend Hand Placed", _expressible_workflow())
+        result = author().amend_test_from_recipe(
+            "Amend Hand Placed", simple_recipe("Amend Hand Placed")
+        )
         assert result["amended"] is True
+        (node,) = stored_workflow(test_id)["nodes"]
+        assert node["position"] == {"x": 100, "y": 100}
 
     def test_amend_with_missing_secret_file_amends_nothing(
         self, monkeypatch: Any, tmp_path: Path
@@ -1605,7 +1931,8 @@ class TestAmendTestFromRecipe:
         assert result["amended"] is False
         assert result["findings"] == []
 
-    def test_amend_keeps_a_hand_resized_block_size(self) -> None:
+    def test_amend_keeps_a_hand_resized_width_and_drops_a_stored_height(self) -> None:
+        # A Block's height is never set by hand, so a height in a saved test is not carried.
         from wavecore.api.services.tests import service as test_service
 
         test_id = _write_test_with_workflow("Amend Resized", _keyed_workflow(width=230, height=73))
@@ -1621,7 +1948,7 @@ class TestAmendTestFromRecipe:
         assert stored is not None
         by_key = {node["data"]["recipeKey"]: node for node in stored["workflow"]["nodes"]}
         assert by_key["flow[0]"]["width"] == 230
-        assert by_key["flow[0]"]["height"] == 73
+        assert "height" not in by_key["flow[0]"]
         assert by_key["flow[0]"]["position"] == {"x": 100, "y": 100}
         assert by_key["flow[1]"]["width"] == 160
         assert "height" not in by_key["flow[1]"]
@@ -1664,8 +1991,8 @@ class TestAmendTestFromRecipe:
         (node,) = [n for n in stored["workflow"]["nodes"] if n["data"]["recipeKey"] == "flow[0]"]
         assert node["width"] == 230
 
-    def test_amend_keeps_a_hand_set_height_on_a_block_at_its_generated_width(self) -> None:
-        """The compiler never writes a height, so a stored one is always the person's."""
+    def test_amend_carries_no_stored_height_on_a_block_at_its_generated_width(self) -> None:
+        """A Block's height follows its content, so a stored one is never carried."""
         from wavecore.api.services.tests import service as test_service
 
         test_id = _write_test_with_workflow("Amend Tall", _keyed_workflow(width=160, height=73))
@@ -1679,7 +2006,7 @@ class TestAmendTestFromRecipe:
         stored = test_service.get_test(test_id)
         assert stored is not None
         (node,) = [n for n in stored["workflow"]["nodes"] if n["data"]["recipeKey"] == "flow[0]"]
-        assert node["height"] == 73
+        assert "height" not in node
         assert node["width"] == 160
 
     def test_amend_sizes_a_block_with_no_stored_width_to_fit_its_name(self) -> None:
@@ -1701,6 +2028,293 @@ class TestAmendTestFromRecipe:
         assert node["width"] == 348
         assert "height" not in node
         assert node["position"] == {"x": 100, "y": 100}
+
+    def test_a_readback_of_a_setter_with_a_secret_row_amends_and_owes_the_null_row(self) -> None:
+        # REQ-5.2.7.6, REQ-5.2.7.12: the readback holds the secret row as null for a person.
+        step = {
+            "set": {"api_tok": "tok-classified", "greeting": "hi"},
+            "secret_rows": ["api_tok"],
+        }
+        recipe = make_recipe(
+            [step, LOG_STEP],
+            name="Amend Secret Row",
+            variables={"api_tok": {"type": "string"}, "greeting": {"type": "string", "value": ""}},
+        )
+        created = author().create_test_from_recipe(recipe)
+        assert created["created"] is True, created.get("findings")
+        readback = author().get_test_recipe(created["test_id"])
+        assert readback["expressible"] is True
+        assert "tok-classified" not in readback["recipe"]
+        read_step = yaml.safe_load(readback["recipe"])["flow"][0]
+        assert read_step == {"set": {"api_tok": None, "greeting": "hi"}, "secret_rows": ["api_tok"]}
+
+        result = author().amend_test_from_recipe(created["test_id"], readback["recipe"])
+
+        assert result["amended"] is True, result.get("findings")
+        assert result["action_items"] == [
+            {
+                "step": "blocks.node-1.variables.api_tok",
+                "code": "NO_VALUE_VARIABLE",
+                "severity": "warning",
+                "problem": "Secret variable 'api_tok' holds no value",
+                "fix": "A person must fill it in before dependent definitions can run",
+            }
+        ]
+
+
+def stored_workflow(test_id: str) -> dict[str, Any]:
+    from wavecore.api.services.tests import service as test_service
+
+    stored = test_service.get_test(test_id)
+    assert stored is not None
+    return dict(stored["workflow"])
+
+
+def created_test(recipe: str) -> str:
+    created = author().create_test_from_recipe(recipe)
+    assert created["created"] is True, created
+    return str(created["test_id"])
+
+
+def amended_workflow(test_id: str, recipe: str) -> dict[str, Any]:
+    result = author().amend_test_from_recipe(test_id, recipe)
+    assert result["amended"] is True, result
+    return stored_workflow(test_id)
+
+
+def store_geometry(test_id: str, match: Callable[[dict[str, Any]], bool], **geometry: Any) -> None:
+    """Store a position or size on the Blocks `match` picks, as a person on the canvas does."""
+    from wavecore.api.services.tests import service as test_service
+
+    workflow = stored_workflow(test_id)
+    for node in workflow["nodes"]:
+        if match(node):
+            node.update(geometry)
+    test_service.update_test(test_id, {"workflow": workflow})
+
+
+def labeled(label: str) -> Callable[[dict[str, Any]], bool]:
+    return lambda node: bool(node["data"]["label"] == label)
+
+
+def rows_down(position: dict[str, float], rows: int = 1) -> dict[str, float]:
+    return {"x": position["x"], "y": position["y"] + 140 * rows}
+
+
+ALPHA = log_step("Alpha")
+BRAVO_LABEL = "Bravo step with a long name"
+BRAVO = log_step(BRAVO_LABEL)
+CHARLIE = log_step("Charlie")
+INSERTED = log_step("Inserted")
+AFTER_LOOP = "After the loop"
+LOOP_LABEL = "For Loop"
+
+
+def loop_recipe(body: list[dict[str, Any]], name: str) -> str:
+    """A For whose body is `body`, followed by one step on the main flow."""
+    return make_recipe([{"for": {"count": 2, "body": body}}, log_step(AFTER_LOOP)], name=name)
+
+
+class TestAmendRecognizesEachBlock:
+    """REQ-5.2.7.4: an amend recognizes an untouched Block by what it is, never by its place
+    in the list; it keeps its exact position unless an added, moved or grown Block needs the
+    room, and then the Blocks below move down just enough, so no two Blocks ever overlap."""
+
+    def test_a_fresh_create_of_the_nested_flow_overlaps_nothing(self) -> None:
+        test_id = created_test(release_recipe(RELEASE_BODY, name="Release Fresh"))
+        assert overlapping_pairs(stored_workflow(test_id)) == []
+
+    def test_a_block_inserted_first_in_a_nested_body_moves_only_the_blocks_below_it(
+        self,
+    ) -> None:
+        test_id = created_test(release_recipe(RELEASE_BODY, name="Release Insert"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, release_recipe([PING_STEP, *RELEASE_BODY], name="Release Insert")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        for label in (
+            "Connect to app server",
+            "Check orders-api service",
+            "If/Else",
+            "Remote Execution",
+            "Alert on-call",
+            "Halt",
+        ):
+            assert after[label] == before[label], label
+        for label in (
+            "API health check",
+            "Verify API health",
+            "Query release DB",
+            "Verify release",
+            "Disconnect",
+        ):
+            assert after[label] == rows_down(before[label]), label
+        assert after["Ping app server"] == {"x": -424, "y": 700}
+
+    def test_a_block_inserted_at_the_start_of_a_body_pushes_the_body_down(self) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Insert Start"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, loop_recipe([INSERTED, ALPHA, BRAVO, CHARLIE], "Loop Insert Start")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        assert after[LOOP_LABEL] == before[LOOP_LABEL]
+        assert after["Inserted"] == before["Alpha"]
+        for label in ("Alpha", BRAVO_LABEL, "Charlie", AFTER_LOOP):
+            assert after[label] == rows_down(before[label]), label
+
+    def test_a_block_inserted_in_the_middle_of_a_body_keeps_the_blocks_above_it(self) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Insert Middle"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, loop_recipe([ALPHA, INSERTED, BRAVO, CHARLIE], "Loop Insert Middle")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        assert after[LOOP_LABEL] == before[LOOP_LABEL]
+        assert after["Alpha"] == before["Alpha"]
+        assert after["Inserted"] == rows_down(before["Alpha"])
+        for label in (BRAVO_LABEL, "Charlie", AFTER_LOOP):
+            assert after[label] == rows_down(before[label]), label
+
+    def test_a_block_appended_to_a_body_moves_only_the_step_after_the_loop(self) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Insert End"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, loop_recipe([ALPHA, BRAVO, CHARLIE, INSERTED], "Loop Insert End")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        for label in (LOOP_LABEL, "Alpha", BRAVO_LABEL, "Charlie"):
+            assert after[label] == before[label], label
+        assert after["Inserted"] == rows_down(before["Charlie"])
+        assert after[AFTER_LOOP] == rows_down(before[AFTER_LOOP])
+
+    def test_a_deleted_block_leaves_every_other_block_where_it_was(self) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Delete"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after = positions_by_label(
+            amended_workflow(test_id, loop_recipe([ALPHA, CHARLIE], "Loop Delete"))
+        )
+
+        assert after == {
+            label: before[label] for label in (LOOP_LABEL, "Alpha", "Charlie", AFTER_LOOP)
+        }
+
+    def test_a_moved_block_goes_below_the_blocks_it_passed_and_they_stay(self) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Move"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, loop_recipe([BRAVO, CHARLIE, ALPHA], "Loop Move")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        for label in (LOOP_LABEL, BRAVO_LABEL, "Charlie"):
+            assert after[label] == before[label], label
+        assert after["Alpha"] == rows_down(before["Charlie"])
+        assert after[AFTER_LOOP] == rows_down(before[AFTER_LOOP])
+
+    def test_blocks_sharing_a_name_keep_their_own_hand_set_size(self) -> None:
+        first, second = log_step("Notify", "first"), log_step("Notify", "second")
+        test_id = created_test(make_recipe([first, second], name="Same Names"))
+        store_geometry(
+            test_id, lambda node: node["data"]["config"]["values"]["message"] == "first", width=300
+        )
+
+        inserted = log_step("Notify", "inserted")
+        after_workflow = amended_workflow(
+            test_id, make_recipe([inserted, first, second], name="Same Names")
+        )
+
+        widths = {
+            node["data"]["config"]["values"]["message"]: node["width"]
+            for node in after_workflow["nodes"]
+        }
+        assert widths == {"inserted": 160, "first": 300, "second": 160}
+        assert overlapping_pairs(after_workflow) == []
+
+    def test_a_dragged_block_keeps_its_place_when_nothing_needs_the_room(self) -> None:
+        test_id = created_test(make_recipe([ALPHA, BRAVO, CHARLIE], name="Dragged Keeps"))
+        store_geometry(test_id, labeled("Charlie"), position={"x": 600, "y": 900})
+        before = positions_by_label(stored_workflow(test_id))
+
+        after_workflow = amended_workflow(
+            test_id, make_recipe([INSERTED, ALPHA, BRAVO, CHARLIE], name="Dragged Keeps")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        assert after["Charlie"] == {"x": 600, "y": 900}
+        assert after["Inserted"] == before["Alpha"]
+        assert after["Alpha"] == rows_down(before["Alpha"])
+        assert after[BRAVO_LABEL] == rows_down(before[BRAVO_LABEL])
+
+    def test_a_renamed_block_that_grew_moves_the_block_beside_it_down(self) -> None:
+        def branches(then_label: str) -> str:
+            step = {
+                "if": {
+                    "when": "go",
+                    "then": [log_step(then_label, "then side")],
+                    "else": [log_step("Bravo")],
+                }
+            }
+            variables = {"go": {"type": "boolean", "value": True}}
+            return make_recipe([step, log_step("After")], name="Grown Rename", variables=variables)
+
+        test_id = created_test(branches("Alpha"))
+        before = positions_by_label(stored_workflow(test_id))
+
+        renamed = "apply the gateway manifest to the staging namespace"
+        after_workflow = amended_workflow(test_id, branches(renamed))
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        assert after["If/Else"] == before["If/Else"]
+        assert after[renamed] == before["Alpha"]
+        assert after["Bravo"] == rows_down(before["Bravo"])
+        assert after["After"] == rows_down(before["After"])
+
+    def test_a_key_keeps_its_place_for_one_step_only(self) -> None:
+        keyed = {**ALPHA, "key": "alpha"}
+        test_id = created_test(make_recipe([keyed, BRAVO], name="Shared Key"))
+        store_geometry(test_id, labeled("Alpha"), position={"x": 500, "y": 140})
+        before = positions_by_label(stored_workflow(test_id))
+
+        second = {**CHARLIE, "key": "alpha"}
+        after_workflow = amended_workflow(
+            test_id, make_recipe([keyed, BRAVO, second], name="Shared Key")
+        )
+
+        after = positions_by_label(after_workflow)
+        assert overlapping_pairs(after_workflow) == []
+        assert after["Alpha"] == {"x": 500, "y": 140}
+        assert after[BRAVO_LABEL] == before[BRAVO_LABEL]
+        assert after["Charlie"] == {"x": -80, "y": 420}
+
+    def test_a_keyed_step_keeps_its_place_when_renamed_changed_and_moved(self) -> None:
+        test_id = created_test(make_recipe([{**ALPHA, "key": "alpha"}, BRAVO], name="Keyed Move"))
+        store_geometry(test_id, labeled("Alpha"), position={"x": 500, "y": 140})
+
+        renamed = {**log_step("Alpha renamed", "new"), "key": "alpha"}
+        after = positions_by_label(
+            amended_workflow(test_id, make_recipe([BRAVO, renamed], name="Keyed Move"))
+        )
+
+        assert after["Alpha renamed"] == {"x": 500, "y": 140}
 
 
 class TestAmendRefusesInexpressibleTarget:

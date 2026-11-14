@@ -49,7 +49,7 @@ const EMPTY_COPY =
 describe('FunctionsLibraryModal - closed', () => {
   it('renders nothing when isOpen is false', () => {
     render(<FunctionsLibraryModal isOpen={false} onClose={() => {}} />)
-    expect(screen.queryByRole('region', { name: /functions library/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /functions library/i })).not.toBeInTheDocument()
   })
 })
 
@@ -102,7 +102,7 @@ describe('FunctionsLibraryModal - close behavior', () => {
 
 describe('FunctionsLibraryModal - drag behavior', () => {
   function getModalRoot(): HTMLElement {
-    return screen.getByRole('region', { name: /functions library/i })
+    return screen.getByRole('dialog', { name: /functions library/i })
   }
 
   function getDragHandle(): HTMLElement {
@@ -250,7 +250,7 @@ describe('FunctionsLibraryModal - listFunctions cancellation', () => {
       pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 },
     })
     await Promise.resolve()
-    expect(screen.queryByRole('region', { name: /functions library/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /functions library/i })).not.toBeInTheDocument()
   })
 
   it('ignores the listFunctions rejection when the modal unmounts before it settles', async () => {
@@ -266,7 +266,7 @@ describe('FunctionsLibraryModal - listFunctions cancellation', () => {
     unmount()
     rejectList(new Error('network down'))
     await Promise.resolve()
-    expect(screen.queryByRole('region', { name: /functions library/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /functions library/i })).not.toBeInTheDocument()
   })
 
   // Covers the executed (`!canceled === true`) side of the spinner-clear
@@ -362,7 +362,7 @@ describe('FunctionsLibraryModal - viewport-clamp edge cases', () => {
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 })
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10000, clientY: 10000 })
     })
-    const root = screen.getByRole('region', { name: /functions library/i })
+    const root = screen.getByRole('dialog', { name: /functions library/i })
     // The X is clamped to 400 (vw/2 - halfW); Y is clamped to 300 (vh/2 - halfH).
     expect(root.style.transform).toContain('400')
     expect(root.style.transform).toContain('300')
@@ -405,7 +405,7 @@ describe('FunctionsLibraryModal - viewport-clamp edge cases', () => {
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 })
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 100, clientY: 0 })
     })
-    const root = screen.getByRole('region', { name: /functions library/i })
+    const root = screen.getByRole('dialog', { name: /functions library/i })
     // halfW - vw/2 = 1000 - 400 = 600
     expect(root.style.transform).toContain('600')
   })
@@ -419,7 +419,7 @@ describe('FunctionsLibraryModal - viewport-clamp edge cases', () => {
       fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 0, clientY: 0 })
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 0, clientY: 100 })
     })
-    const root = screen.getByRole('region', { name: /functions library/i })
+    const root = screen.getByRole('dialog', { name: /functions library/i })
     // halfH - vh/2 = 500 - 200 = 300
     expect(root.style.transform).toContain('300')
   })
@@ -433,7 +433,7 @@ describe('FunctionsLibraryModal - width resize handle (FN-LC-6)', () => {
 
   it('resizes the sheet width within the shared 520-1200 clamp', () => {
     render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
-    const root = screen.getByRole('region', { name: /functions library/i })
+    const root = screen.getByRole('dialog', { name: /functions library/i })
     const handle = screen.getByTestId('dialog-resize-handle')
 
     fireEvent.mouseDown(handle, { clientX: 0 })

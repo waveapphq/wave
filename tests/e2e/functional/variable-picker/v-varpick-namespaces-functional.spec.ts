@@ -16,6 +16,7 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
+import { answerTypeChange, typeChangeQuestion } from '../../helpers/entry-behavior'
 import { configSheet, openBlockSheet } from '../../helpers/workbench'
 
 const SWITCH_ID = 'vp-switch'
@@ -50,7 +51,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Picker host',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -91,7 +91,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Output binder',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 mode: 'while-do',
@@ -127,7 +126,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Autocomplete host',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: "'hello'", level: 'INFO' },
               outputBindings: {},
@@ -302,10 +300,15 @@ test.describe('V-VARPICK-NAMESPACES: namespace members are variables, roots are 
     const options = await openCasePicker(page, sheet)
 
     await options.filter({ hasText: 'system.sys_count' }).first().click()
+    // The text compare value 'go' cannot stay on a whole-number row, so the pick asks first (FIELD-13).
+    const question = typeChangeQuestion(page, 'entry')
+    await expect(question).toBeVisible()
+    await answerTypeChange(question, 'Change type')
     const anchor = sheet.locator('[data-testid="case-body-branch_0"] [data-testid="assert-variable-0"]')
     await expect(anchor).toHaveValue('system.sys_count')
     // The row now compares a whole number, so its compare-to value must be one (REQ-3.1.3.14).
-    const compareTo = sheet.locator('[data-testid="case-body-branch_0"] [data-testid="assert-value-input-0"]')
+    const compareTo = sheet.locator('[data-testid="case-body-branch_0"] [data-testid="param-input-assert-value-0"]')
+    await expect(compareTo, 'the dropped value leaves the box empty').toHaveValue('')
     await compareTo.fill('3')
     await expect(compareTo).toHaveValue('3')
 

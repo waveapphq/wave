@@ -133,7 +133,7 @@ def _secret_workflow_node(place: str, value: Any) -> dict[str, Any]:
                 "version": "1.0.0",
                 "config": {
                     "values": {"variables": {"set_tok": value}},
-                    "variableSecretKeys": ["set_tok"],
+                    "secretFields": ["variables.set_tok"],
                 },
             },
         )
@@ -185,7 +185,8 @@ def _stored_secret(place: str, test: dict[str, Any]) -> tuple[Any, bool]:
     data = test["workflow"]["nodes"][0]["data"]
     if place == "Setter literal":
         config = data["config"]
-        return config["values"]["variables"]["set_tok"], config["variableSecretKeys"] == ["set_tok"]
+        secret = config["secretFields"] == ["variables.set_tok"]
+        return config["values"]["variables"]["set_tok"], secret
     if place == "plugin credential":
         # The HTTP block declares this field a credential, so it is secret by declaration.
         return data["config"]["values"]["auth_token"], True
@@ -1329,7 +1330,7 @@ class TestImportForeignEnvelopeRemediation:
                 "version": "1.0.0",
                 "config": {
                     "values": {"variables": {"tok": self._foreign_envelope("setter-secret")}},
-                    "variableSecretKeys": ["tok"],
+                    "secretFields": ["variables.tok"],
                 },
             },
         }
@@ -1357,7 +1358,7 @@ class TestImportForeignEnvelopeRemediation:
         assert stored["variables"]["api_key"]["value"] is None
         assert stored["variables"]["api_key"]["secret"] is True
         assert setter_config["values"]["variables"]["tok"] is None
-        assert setter_config["variableSecretKeys"] == ["tok"]
+        assert setter_config["secretFields"] == ["variables.tok"]
 
     @pytest.mark.usefixtures("http_client_plugin")
     @pytest.mark.parametrize("place", _FUNCTION_AND_CREDENTIAL_PLACES)

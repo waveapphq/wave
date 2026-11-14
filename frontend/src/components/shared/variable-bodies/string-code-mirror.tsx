@@ -46,6 +46,8 @@ export interface StringCodeMirrorProps {
   format?: ResolvedFormat
   /** Host-injected extensions (e.g. the {{}} template stack). */
   extraExtensions?: Extension[]
+  /** The editor takes the cursor once it is built. */
+  autoFocus?: boolean
 }
 
 export function StringCodeMirror({
@@ -54,6 +56,7 @@ export function StringCodeMirror({
   onChange,
   format,
   extraExtensions,
+  autoFocus,
 }: Readonly<StringCodeMirrorProps>) {
   const [draft, setDraft] = useState(() => valueToText(value ?? ''))
   const { resolvedTheme } = useThemeSafe()
@@ -79,6 +82,7 @@ export function StringCodeMirror({
       extensions={extensions}
       basicSetup={BASIC_SETUP}
       readOnly={readOnly}
+      autoFocus={autoFocus}
     />
   )
 }

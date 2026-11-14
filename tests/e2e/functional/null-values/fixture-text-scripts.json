@@ -398,14 +398,10 @@
           "version": "1.0.0",
           "description": "Set vs_target to None",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "vs_target"
+          "expressionFields": [
+            "variables.vs_target"
           ],
-          "variableTypes": {
-            "vs_target": "integer"
-          },
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {

@@ -279,6 +279,9 @@ test.describe('V-FN-SECRET-INPUT: secret input parameters', () => {
 
     await test.step('the row says why, also with Required ticked', async () => {
       await expect(nullBox).toHaveAttribute('aria-description', SECRET_REASON)
+      // The clicks above left the pointer on the row; a hover opens the hint when the pointer enters it (SHELL-7b).
+      await modal.locator('[data-testid="create-variable-name"]').hover()
+      await expect(tooltip).toHaveCount(0)
       await nullLabel.hover()
       await expect(tooltip).toHaveText(SECRET_REASON)
       const required = modal.locator('[data-testid="param-required-checkbox"]')
@@ -403,7 +406,7 @@ test.describe('V-FN-SECRET-INPUT: secret input parameters', () => {
       await test.step('the row reopens masked, never showing the literal', async () => {
         const sheet = await openBlockSheet(page, FN)
         const row = paramRow(sheet, 'tok')
-        await expect(row.getByRole('button', { name: /Edit protected value$/ })).toBeVisible()
+        await expect(row.getByRole('button', { name: 'tok: Edit protected value', exact: true })).toBeVisible()
         await expect(row).not.toContainText(canary)
         await page.keyboard.press('Escape')
         await expect(sheet).toHaveCount(0)

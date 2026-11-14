@@ -22,10 +22,6 @@ import { ListItemNounContext } from '@/components/shared/variable-bodies/list-it
 import type { MapExpressionEditorProps } from '@/components/shared/variable-bodies/map-edit-body'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import { FreezableFieldset } from '@/components/shared/sheet-layer'
-import {
-  partsExprIndicesFor,
-  withPartsExprIndices,
-} from '@/features/workbench/lib/node-parameters/indexed-expression-fields'
 import { inferRuntimeType, type ValueType } from '@/lib/variable-validation'
 import { ChildEditorParent } from '../../../utils/child-editor-parent'
 
@@ -816,6 +812,14 @@ describe('ArrayEditBody - per-item {x} through the injected slot', () => {
 
 // Each row's {x} flag is stored under the dotted key <param>.<i>.value (Arguments, Out arguments).
 describe('ArrayEditBody - dotted per-row {x} flags', () => {
+  const ROW_FLAG = /^arguments\.(\d+)\.value$/
+  const flaggedRows = (fields: string[]) =>
+    new Set(fields.flatMap((field) => ROW_FLAG.exec(field)?.[1] ?? []).map(Number))
+  const withFlaggedRows = (fields: string[], indices: number[]) => [
+    ...fields.filter((field) => !field.startsWith('arguments.')),
+    ...indices.map((index) => `arguments.${index}.value`),
+  ]
+
   function renderArguments(initialFields: string[], value: unknown[] = ['a', 'b']) {
     const onFieldsChange = vi.fn()
     const onChange = vi.fn()
@@ -836,10 +840,10 @@ describe('ArrayEditBody - dotted per-row {x} flags', () => {
           stringValuesOnly
           positionLabel={dollarLabel}
           expressionEditor={ExpressionSlot}
-          expressionIndices={partsExprIndicesFor('arguments', fields)}
+          expressionIndices={flaggedRows(fields)}
           onExpressionIndicesChange={(next: Iterable<number>) => {
             const indices = [...new Set(next)].sort((a, b) => a - b)
-            const nextFields = withPartsExprIndices('arguments', fields, indices)
+            const nextFields = withFlaggedRows(fields, indices)
             setFields(nextFields)
             onFieldsChange(nextFields)
           }}

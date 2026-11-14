@@ -21,10 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTypes": {
-            "not_a_table": "string"
-          },
           "config": {
             "values": {
               "variables": {

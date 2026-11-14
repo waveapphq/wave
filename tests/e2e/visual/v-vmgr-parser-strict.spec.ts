@@ -247,8 +247,8 @@ test.describe('V-VMGR-PARSER-STRICT: locked formats, blocking validation, VMGR-9
     await modal.locator('[data-testid="varset-type-select-0"]').click()
     await page.getByRole('option', { name: 'Array', exact: true }).click()
 
-    // Open the setter row's value sheet (its own affordance), switch to Code.
-    await modal.locator('[data-testid="varset-edit-value-0"]').click()
+    // Open the setter row's value sheet (its expand button), switch to Code.
+    await modal.locator('[data-testid="param-expand-varset-value-0"]').click()
     const valueSheet = sheetOf(page)
     await expect(valueSheet).toBeVisible()
     await valueSheet.locator('[data-testid="view-dropdown"]').click()

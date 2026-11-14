@@ -32,9 +32,8 @@ from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.entity_cache import DirectoryCache
 from wavecore.api.services.storage_paths import entity_dir, get_executions_storage_path
 from wavecore.core.namespace_base import is_engine_injected
-from wavecore.core.secrets.masking import mask_structure
+from wavecore.core.secrets.masking import mask_wire_structure
 from wavecore.core.secrets.registry import SecretRegistry
-from wavecore.core.secrets.render_scope import render_scope
 from wavecore.core.variables.decimal_value import decimal_to_str
 from wavecore.core.variables.wire_form import wire_values
 
@@ -132,12 +131,17 @@ def _snapshots_dir(execution_id: str) -> Path:
     return _get_execution_dir(execution_id) / "snapshots"
 
 
+def _run_file(folder: Path, run_id: str) -> Path:
+    """``<run_id>.yaml`` in folder; refuses a run ID that is not one plain path segment."""
+    return entity_dir(folder, f"{run_id}.yaml")
+
+
 def _log_file(execution_id: str, run_id: str) -> Path:
-    return _logs_dir(execution_id) / f"{run_id}.yaml"
+    return _run_file(_logs_dir(execution_id), run_id)
 
 
 def _snapshot_file(execution_id: str, run_id: str) -> Path:
-    return _snapshots_dir(execution_id) / f"{run_id}.yaml"
+    return _run_file(_snapshots_dir(execution_id), run_id)
 
 
 # ---------------------------------------------------------------------------
@@ -555,13 +559,12 @@ def _save_snapshot(
     temporary reveal can never bake plaintext onto disk (execution records are a
     masked surface - export offers no secrets choice)."""
     if "variables" in snapshot:
-        variables = _drop_engine_injected(snapshot["variables"])
+        variables = _stored_variables(snapshot["variables"], registry)
+        snapshot = {**snapshot, "variables": variables}
         if registry is not None:
-            variables = mask_structure(variables, registry)
-        snapshot = {**snapshot, "variables": wire_values(variables)}
-    # A value _yaml_safe stringifies (a Table) masks its cells before it lays them out.
-    with render_scope(registry, None):
-        _yaml_write(_snapshot_file(execution_id, run_id), _yaml_safe(snapshot))
+            # A copy reads masked too, so the run page marks secret only the names listed here.
+            snapshot["secret_variables"] = sorted(filter(registry.is_secret_name, variables))
+    _yaml_write(_snapshot_file(execution_id, run_id), _yaml_safe(snapshot))
 
 
 def _load_snapshot(execution_id: str, run_id: str) -> dict[str, Any] | None:
@@ -581,18 +584,24 @@ def _drop_engine_injected(variables: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in variables.items() if not is_engine_injected(k, v)}
 
 
+def _stored_variables(variables: dict[str, Any], registry: SecretRegistry | None) -> dict[str, Any]:
+    """Run variables as a stored run keeps them: masked, in their wire form (REQ-3.1.3.5)."""
+    payload = _drop_engine_injected(variables)
+    if registry is not None:
+        return mask_wire_structure(payload, registry)
+    stored: dict[str, Any] = wire_values(payload)
+    return stored
+
+
 def _save_variables(
     execution_id: str,
     variables: dict[str, Any],
     registry: SecretRegistry | None = None,
 ) -> None:
-    payload = _drop_engine_injected(variables)
-    if registry is not None:
-        payload = mask_structure(payload, registry)
-    with render_scope(registry, None):
-        _yaml_write(
-            _get_execution_dir(execution_id) / "variables.yaml", _yaml_safe(wire_values(payload))
-        )
+    _yaml_write(
+        _get_execution_dir(execution_id) / "variables.yaml",
+        _yaml_safe(_stored_variables(variables, registry)),
+    )
 
 
 def _load_variables(execution_id: str) -> dict[str, Any]:

@@ -436,7 +436,6 @@ def _log_node(node_id: str, label: str = "Log", message: str = "'ok'") -> dict[s
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -455,7 +454,6 @@ def _control_node(node_id: str, element_type: str, label: str = "") -> dict[str,
             "displayName": label or element_type,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -1054,6 +1052,39 @@ class TestAdHocInheritsPreviousSessionState:
                 "v": 42
             }, "ad-hoc must inherit variables from the previous terminal session"
             assert result["block_states"] == {"node-prev": "passed"}
+
+    def test_adhoc_keeps_the_lanes_the_previous_run_took(
+        self, test_id: str, environment_id: str
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
+
+        previous_id = self._seed_previous_session(
+            user_id=workbench_service.DEFAULT_USER_ID,
+            test_id=test_id,
+            status="passed",
+            variables={},
+            block_states={"node-prev": "passed"},
+        )
+        _wb_common._workbench_sessions[previous_id]["lanes_taken"] = {"node-prev": ["branch_0"]}
+
+        nodes = [_log_node("node-a"), _log_node("node-prev")]
+        edges = [{"source": "start-node", "target": "node-a"}]
+        test_record = _make_test_record(test_id, nodes, edges)
+        environment = {"id": environment_id, "name": "Env"}
+
+        get_test_p, get_env_p, validate_p, exec_p = self._common_patches(test_record, environment)
+        with get_test_p, get_env_p, validate_p, exec_p:
+            result = workbench_service.start_workbench_run(
+                test_id=test_id,
+                environment_id=environment_id,
+                target=workbench_service.RunTarget(single_node_id="node-a"),
+            )
+
+        session = _wb_common._workbench_sessions[result["session_id"]]
+        assert session["lanes_taken"] == {"node-prev": ["branch_0"]}
+        assert session["lanes_taken"]["node-prev"] is not (
+            _wb_common._workbench_sessions[previous_id]["lanes_taken"]["node-prev"]
+        )
 
     def test_adhoc_inherits_live_ssh_session_registry(
         self, test_id: str, environment_id: str

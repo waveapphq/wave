@@ -445,7 +445,7 @@ export async function setCurrentValue(page: Page, name: string, value: WindowVal
   const win = await openEditWindow(page, name, { view: 'Current' })
   await setWindowValue(page, win, value)
   await saveWindow(page, win)
-  const watcher = page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  const watcher = page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
   const row = variableRow(page, name)
   const expand = row.locator('[data-testid^="expand-button-"]')
   // A saved secret's watcher is locked: there is nothing to open.

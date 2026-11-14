@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, type Ref } from 'react'
-import { DraggableSheet, type SheetHandle } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle, type SheetHandle } from '@/components/shared/draggable-sheet'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import { Button } from '@/components/ui/button'
 import { SearchInput } from '@/components/ui/search-input'
@@ -218,7 +218,6 @@ export function ProfileBindingModal({
       onClose={onClose}
       sheetId="profile-binding"
       resizable
-      ariaLabel="Profiles"
       data-testid="profile-binding-sheet"
       initialWidth={460}
       minWidth={420}
@@ -229,7 +228,7 @@ export function ProfileBindingModal({
         <>
           <div className="flex flex-1 items-center gap-2 min-w-0">
             <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-semibold truncate">Profiles</h2>
+            <SheetTitle className="text-sm font-semibold truncate">Profiles</SheetTitle>
           </div>
           <Button
             type="button"

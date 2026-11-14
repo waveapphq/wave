@@ -73,7 +73,7 @@ test.describe('V-FN-SHARED-CONFIG (functional)', () => {
     // HTML5 drop handler reliably - see v-fn-lib-drop-functional).
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
-    const modal = page.locator('[aria-label="Functions Library"]')
+    const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
     await expect(modal).toBeVisible({ timeout: 10_000 })
 
     // Filter to our entry so its card is the one we drag.

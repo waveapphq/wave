@@ -56,7 +56,7 @@ function SuiteCell({ test }: Readonly<{ test: Test }>) {
         testId="test-suite"
         className="max-w-[clamp(8rem,18vw,22rem)]"
         /* v8 ignore next - COV-V8-003: navigate fires only on click of a row with a suite */
-        onClick={suiteId ? () => { navigate(`/suites/${suiteId}`) } : undefined}
+        onClick={suiteId ? () => { void navigate(`/suites/${suiteId}`) } : undefined}
         ariaLabel={`Open suite ${suiteName}`}
       />
     )
@@ -78,7 +78,7 @@ function SuiteCell({ test }: Readonly<{ test: Test }>) {
         href: `/suites/${id}`,
         icon: <BreadcrumbSegmentIcon type="suite" iconClassName="h-3.5 w-3.5" />,
       }))}
-      onNavigate={(href) => { navigate(href) }}
+      onNavigate={(href) => { void navigate(href) }}
     />
   )
 }

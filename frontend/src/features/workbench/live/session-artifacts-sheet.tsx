@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { Archive, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { FileRow } from '@/components/shared/file-row'
 import { buildArtifactReference } from '@/lib/file-references'
 import { formatBytes } from '@/lib/format-bytes'
@@ -68,7 +68,6 @@ export function SessionArtifactsSheet(props: Readonly<SessionArtifactsSheetProps
       open={open}
       onClose={closeSheet}
       sheetId="session-artifacts"
-      ariaLabel="Session Artifacts"
       data-testid="session-artifacts-sheet"
       initialWidth={460}
       minWidth={420}
@@ -76,7 +75,7 @@ export function SessionArtifactsSheet(props: Readonly<SessionArtifactsSheetProps
         <>
           <div className="flex min-w-0 items-center gap-2">
             <Archive className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-[13px] font-semibold">Session Artifacts</h2>
+            <SheetTitle className="text-[13px] font-semibold">Session Artifacts</SheetTitle>
             {!isEmpty && (
               <span className="truncate text-xs text-muted-foreground">
                 {count} files - {formatBytes(totalBytes)}

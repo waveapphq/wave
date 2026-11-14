@@ -3400,6 +3400,37 @@ class TestOnWorkbenchSessionTerminatedHelpers:
         finally:
             _wb_common._workbench_sessions.pop(session_id, None)
 
+    def test_callback_persists_the_lanes_each_block_took(self) -> None:
+        """The run history paints the lane wires from the lanes the run stored."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _exec_storage._clear_storage()
+        session_id = str(uuid.uuid4())
+        _exec_storage._execution_storage[session_id] = {
+            "id": session_id,
+            "status": "running",
+            "entity_type": "test",
+            "entity_id": str(uuid.uuid4()),
+            "started_at": "2026-04-22T00:00:00+00:00",
+            "run_id": session_id,
+        }
+        _exec_storage._save_execution(_exec_storage._execution_storage[session_id])
+        _wb_common._workbench_sessions[session_id] = {
+            "session_id": session_id,
+            "block_states": {"route": "passed", "loop": "passed"},
+            "lanes_taken": {"route": ["branch_0"], "loop": ["body"]},
+            "variables": {},
+        }
+
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "passed", None)
+            snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+            assert snapshot["lanes_taken"] == {"route": ["branch_0"], "loop": ["body"]}
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
     def test_is_namespace_object_true_for_namespace_base_subclass(self) -> None:
         from wavecore.api.services.executions import service as execution_service
         from wavecore.core.namespace_base import NamespaceObjectBase

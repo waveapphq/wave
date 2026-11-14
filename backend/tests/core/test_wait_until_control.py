@@ -9,10 +9,12 @@ REQ-3.5.4.3, REQ-3.5.4.4.
 """
 
 import asyncio
+import re
 from typing import Any
 
 import pytest
 
+from tests.core import run_fill_support
 from wavecore.controls.timing import WaitUntilControl
 from wavecore.models.enums import ControlId
 
@@ -50,10 +52,14 @@ def run_execute(context: dict[str, Any]) -> Any:
     return asyncio.run(WaitUntilControl().execute(context))
 
 
+def run_fill(stored: dict[str, Any]) -> dict[str, Any]:
+    return run_fill_support.run_fill(WaitUntilControl(), stored)
+
+
 def execute_with(**overrides: Any) -> dict[str, Any]:
     params: dict[str, Any] = {"conditions": CONDITIONS, "timeout": 30000}
     params.update(overrides)
-    result = run_execute({"parameters": params, "variables": {}})
+    result = run_execute({"parameters": run_fill(params), "variables": {}})
     assert isinstance(result, dict)
     return result
 
@@ -188,12 +194,9 @@ class TestWaitUntilExecuteSignals:
     def test_fail_current_scope_defaults_off(self) -> None:
         assert execute_with()["__wait_fail_scope"] is False
 
-    def test_execute_carries_the_wait_mode(self) -> None:
-        assert execute_with(mode="watch")["__mode"] == "watch"
-
     def test_an_omitted_mode_is_retry(self) -> None:
         # A fresh drop waits with a retry lane, the shape that works today.
-        assert execute_with()["__mode"] == "retry"
+        assert execute_with()["__wait_mode"] == "retry"
 
     def test_execute_writes_to_the_session_logger_when_one_is_present(self) -> None:
         logged: list[str] = []
@@ -205,7 +208,7 @@ class TestWaitUntilExecuteSignals:
         result = asyncio.run(
             WaitUntilControl().execute(
                 {
-                    "parameters": {"conditions": CONDITIONS, "timeout": 30000},
+                    "parameters": run_fill({"conditions": CONDITIONS, "timeout": 30000}),
                     "variables": {},
                     "logger": _Logger(),
                 }
@@ -253,6 +256,14 @@ class TestWaitUntilValidate:
         with pytest.raises(ValueError, match=r"^at least one condition is required$"):
             run_validate({"conditions": [], "timeout": 30000})
 
+    def test_conditions_side_by_side_are_rejected_with_the_save_text(self) -> None:
+        side_by_side = [*CONDITIONS, {**CONDITIONS[0], "id": "cond-2"}]
+        with pytest.raises(
+            ValueError,
+            match=r"^Condition items in 'conditions' must be joined by 'and' or 'or'$",
+        ):
+            run_validate({"conditions": side_by_side, "timeout": 30000})
+
     def test_missing_timeout_is_rejected(self) -> None:
         with pytest.raises(ValueError, match=r"^timeout parameter is required$"):
             run_validate({"conditions": CONDITIONS})
@@ -272,9 +283,28 @@ class TestWaitUntilValidate:
 
     @pytest.mark.parametrize("mode", ["poll", "RETRY", "", "single"])
     def test_an_unknown_mode_is_rejected(self, mode: str) -> None:
-        with pytest.raises(ValueError, match=r"^mode must be 'retry' or 'watch'$"):
-            run_validate({"conditions": CONDITIONS, "timeout": 30000, "mode": mode})
+        expected = (
+            "^"
+            + re.escape(
+                f"Parameter 'mode' must be one of: retry, watch; Actual value was '{mode}'."
+            )
+            + "$"
+        )
+        with pytest.raises(ValueError, match=expected):
+            run_fill({"conditions": CONDITIONS, "timeout": 30000, "mode": mode})
 
     @pytest.mark.parametrize("mode", ["retry", "watch"])
     def test_both_declared_modes_validate(self, mode: str) -> None:
         run_validate({"conditions": CONDITIONS, "timeout": 30000, "mode": mode})
+
+
+class TestWaitModeSignal:
+    """The Wait mode rides its own signal key, apart from the While mode (REQ-3.5.4.3)."""
+
+    @pytest.mark.parametrize("mode", ["retry", "watch"])
+    def test_execute_emits_the_mode_as_wait_mode(self, mode: str) -> None:
+        assert execute_with(mode=mode)["__wait_mode"] == mode
+
+    @pytest.mark.parametrize("mode", ["retry", "watch"])
+    def test_execute_no_longer_emits_the_shared_mode_key(self, mode: str) -> None:
+        assert "__mode" not in execute_with(mode=mode)

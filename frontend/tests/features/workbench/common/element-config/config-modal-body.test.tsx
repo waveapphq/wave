@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ElementTypes } from '@/lib/variable-validation'
 
 /** Renders the variable names an editor was handed, for prop inspection. */
 function VarNames({
@@ -39,67 +40,95 @@ vi.mock('@/features/workbench/common/element-config/parameters/parameter-table',
   ),
 }))
 
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: (props: {
-    assertions: unknown[]
+    assertions?: unknown[]
     availableVariables: Array<{ name: string }>
+    onAssertionsChange: (items: unknown[]) => void
+    onValidChange?: unknown
   }) => (
-    <div data-testid="assertion-builder-mock">
+    <div data-testid="assertion-builder-mock" data-valid-callback={String(props.onValidChange !== undefined)}>
       <VarNames testId="assertion-builder-vars" vars={props.availableVariables} />
-      <span data-testid="mock-assertion-count">{props.assertions.length}</span>
+      <span data-testid="mock-assertion-count">{(props.assertions ?? []).length}</span>
+      <button
+        data-testid="mock-assertions-change"
+        onClick={() => props.onAssertionsChange?.([{ id: 'c-1', type: 'expression', expression: 'ready' }])}
+      >
+        ChangeAssertions
+      </button>
     </div>
   ),
 }))
 
 vi.mock('@/features/workbench/common/config/condition-branch-editor', () => ({
   ConditionBranchEditor: (props: {
-    branches: unknown[]
+    branches?: unknown[]
     availableVariables: Array<{ name: string }>
+    onBranchesChange: (branches: unknown[]) => void
+    onValidChange?: unknown
   }) => (
-    <div data-testid="condition-branch-editor-mock">
+    <div data-testid="condition-branch-editor-mock" data-valid-callback={String(props.onValidChange !== undefined)}>
       <VarNames testId="condition-branch-editor-vars" vars={props.availableVariables} />
-      <span data-testid="mock-branch-count">{props.branches.length}</span>
+      <span data-testid="mock-branch-count">{(props.branches ?? []).length}</span>
+      <button
+        data-testid="mock-if-branches-change"
+        onClick={() => props.onBranchesChange?.([{ id: 'branch_0', type: 'if', label: 'Ready', conditions: [] }])}
+      >
+        ChangeBranches
+      </button>
     </div>
   ),
 }))
 
 vi.mock('@/features/workbench/common/config/case-branch-editor', () => ({
   CaseBranchEditor: (props: {
-    branches: unknown[]
+    branches?: unknown[]
     availableVariables: Array<{ name: string; type: string; source?: string }>
     onBranchesChange: (branches: unknown[]) => void
-    onValidChange: (valid: boolean) => void
+    onValidChange?: unknown
   }) => (
-    <div data-testid="case-branch-editor-mock">
+    <div data-testid="case-branch-editor-mock" data-valid-callback={String(props.onValidChange !== undefined)}>
       <VarNames testId="case-branch-editor-vars" vars={props.availableVariables} />
       <span data-testid="case-branch-editor-vars-json">
         {JSON.stringify(props.availableVariables)}
       </span>
-      <span data-testid="case-branch-editor-branches">{JSON.stringify(props.branches)}</span>
+      <span data-testid="case-branch-editor-branches">{JSON.stringify(props.branches ?? null)}</span>
       <button
         data-testid="mock-case-branches-change"
         onClick={() =>
-          props.onBranchesChange([
+          props.onBranchesChange?.([
             { id: 'branch_0', type: 'case', label: 'Fast', conditions: [], break: false },
           ])
         }
       >
         ChangeBranches
       </button>
-      <button data-testid="mock-case-invalidate" onClick={() => props.onValidChange(false)}>
-        Invalidate
-      </button>
     </div>
   ),
 }))
 
-vi.mock('@/features/workbench/common/variables/variable-setter-editor', () => ({
-  VariableSetterEditor: (props: { availableVariables: Array<{ name: string }> }) => (
-    <div data-testid="variable-setter-editor-mock">
+/** What the Setter editor stand-in hands back on its change button: the slots it was given with these keys replaced. */
+const setterChange: { patch: Record<string, unknown> } = { patch: {} }
+
+vi.mock('@/features/workbench/common/variables/variable-setter-editor/editor', () => ({
+  VariableSetterEditor: (props: {
+    availableVariables: Array<{ name: string }>
+    secretSaveTarget?: string
+    slots: Record<string, unknown>
+    onSlotsChange: (next: Record<string, unknown>) => void
+  }) => (
+    <div data-testid="variable-setter-editor-mock" data-secret-save-target={props.secretSaveTarget ?? ''}>
       <span data-testid="variable-setter-editor-vars-json">
         {JSON.stringify(props.availableVariables)}
       </span>
       <VarNames testId="variable-setter-editor-vars" vars={props.availableVariables} />
+      <span data-testid="variable-setter-editor-slots">{JSON.stringify(props.slots)}</span>
+      <button
+        data-testid="variable-setter-editor-change"
+        onClick={() => props.onSlotsChange({ ...props.slots, ...setterChange.patch })}
+      >
+        Change
+      </button>
     </div>
   ),
 }))
@@ -172,12 +201,9 @@ function makeProps(overrides: Partial<BodyProps> = {}): BodyProps {
     outputBindings: {},
     outputErrors: {},
     enrichedVariables: ENRICHED_VARIABLES,
-    variableExpressionKeys: [],
-    variableTemplateKeys: [],
-    variableSecretKeys: [],
-    variableTypes: {},
     expressionFields: [],
     templateFields: [],
+    secretFields: [],
     outputSecretFields: [],
     isPlugin: false,
     secretMasking: 'system',
@@ -186,35 +212,16 @@ function makeProps(overrides: Partial<BodyProps> = {}): BodyProps {
     secretMaskFields: [],
     unmaskedSecretFields: [],
     setUnmaskedSecretFields: vi.fn(),
-    assertAssertions: [],
-    assertMode: 'split',
-    assertFailCurrentScope: false,
-    ifElseBranches: [],
-    whileConditions: [],
-    switchBranches: [],
     handleInputChange: vi.fn(),
     handleOutputChange: vi.fn(),
     handleFieldValidationChange: vi.fn(),
     setExpressionFields: vi.fn(),
     setTemplateFields: vi.fn(),
-    setVariableExpressionKeys: vi.fn(),
-    setVariableTemplateKeys: vi.fn(),
-    setVariableSecretKeys: vi.fn(),
+    setSecretFields: vi.fn(),
     setOutputSecretFields: vi.fn(),
-    setVariableTypes: vi.fn(),
     setVarSetterValid: vi.fn(),
     setXmlQueryValid: vi.fn(),
     setJsonQueryValid: vi.fn(),
-    setAssertValid: vi.fn(),
-    setIfElseValid: vi.fn(),
-    setWhileValid: vi.fn(),
-    setAssertAssertions: vi.fn(),
-    setAssertMode: vi.fn(),
-    setAssertFailCurrentScope: vi.fn(),
-    setIfElseBranches: vi.fn(),
-    setWhileConditions: vi.fn(),
-    setSwitchBranches: vi.fn(),
-    setSwitchValid: vi.fn(),
     ...overrides,
   }
 }
@@ -316,10 +323,12 @@ describe('ConfigModalBody', () => {
     it('passes the configured branches through to the case branch editor', () => {
       renderBody({
         isSwitch: true,
-        switchBranches: [
-          { id: 'branch_0', type: 'case', label: '', conditions: [], break: true },
-          { id: 'branch_1', type: 'default', label: '' },
-        ],
+        values: {
+          branches: [
+            { id: 'branch_0', type: 'case', label: '', conditions: [], break: true },
+            { id: 'branch_1', type: 'default', label: '' },
+          ],
+        },
       })
 
       expect(JSON.parse(screen.getByTestId('case-branch-editor-branches').textContent ?? '[]')).toEqual([
@@ -328,37 +337,46 @@ describe('ConfigModalBody', () => {
       ])
     })
 
-    it('forwards a branch change to setSwitchBranches', async () => {
+    it('writes a branch change to values.branches through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setSwitchBranches = vi.fn()
-      renderBody({ isSwitch: true, setSwitchBranches })
+      const handleInputChange = vi.fn()
+      renderBody({ isSwitch: true, handleInputChange })
 
       await user.click(screen.getByTestId('mock-case-branches-change'))
 
-      expect(setSwitchBranches).toHaveBeenCalledWith([
+      expect(handleInputChange).toHaveBeenCalledWith('branches', [
         { id: 'branch_0', type: 'case', label: 'Fast', conditions: [], break: false },
       ])
     })
 
-    it('forwards a validity change to setSwitchValid', async () => {
-      const user = userEvent.setup()
-      const setSwitchValid = vi.fn()
-      renderBody({ isSwitch: true, setSwitchValid })
+    it('hands the case branch editor no validity callback: the shared check decides', () => {
+      renderBody({ isSwitch: true })
 
-      await user.click(screen.getByTestId('mock-case-invalidate'))
-
-      expect(setSwitchValid).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('case-branch-editor-mock')).toHaveAttribute('data-valid-callback', 'false')
     })
   })
 
   describe('Editor dispatch for the other element types', () => {
     it('renders the condition branch editor for an if-else element', () => {
-      renderBody({ isIfElse: true, ifElseBranches: [{ id: 'branch_0', type: 'if', label: '' }] })
+      renderBody({ isIfElse: true, values: { branches: [{ id: 'branch_0', type: 'if', label: '' }] } })
 
       expect(screen.getByTestId('condition-branch-editor-mock')).toBeInTheDocument()
       expect(screen.getByTestId('mock-branch-count')).toHaveTextContent('1')
       expect(screen.queryByTestId('case-branch-editor-mock')).not.toBeInTheDocument()
       expect(screen.queryByTestId('parameter-table-mock')).not.toBeInTheDocument()
+    })
+
+    it('writes an If/Else branch change to values.branches through handleInputChange, with no validity callback', async () => {
+      const user = userEvent.setup()
+      const handleInputChange = vi.fn()
+      renderBody({ isIfElse: true, handleInputChange })
+
+      await user.click(screen.getByTestId('mock-if-branches-change'))
+
+      expect(handleInputChange).toHaveBeenCalledWith('branches', [
+        { id: 'branch_0', type: 'if', label: 'Ready', conditions: [] },
+      ])
+      expect(screen.getByTestId('condition-branch-editor-mock')).toHaveAttribute('data-valid-callback', 'false')
     })
 
     it('renders the assertion builder for an assert element', () => {
@@ -369,12 +387,46 @@ describe('ConfigModalBody', () => {
       expect(screen.queryByTestId('parameter-table-mock')).not.toBeInTheDocument()
     })
 
+    it('hands the Assert builder values.assertions and writes a change through handleInputChange', async () => {
+      const user = userEvent.setup()
+      const handleInputChange = vi.fn()
+      renderBody({
+        isAssert: true,
+        values: { assertions: [{ id: 'a-1', type: 'expression', expression: 'x' }, { id: 'a-2', type: 'expression', expression: 'y' }] },
+        handleInputChange,
+      })
+
+      expect(screen.getByTestId('mock-assertion-count')).toHaveTextContent('2')
+      expect(screen.getByTestId('assertion-builder-mock')).toHaveAttribute('data-valid-callback', 'false')
+
+      await user.click(screen.getByTestId('mock-assertions-change'))
+
+      expect(handleInputChange).toHaveBeenCalledWith('assertions', [{ id: 'c-1', type: 'expression', expression: 'ready' }])
+    })
+
     it('renders the parameter table and the assertion builder for a while element', () => {
       renderBody({ isWhile: true })
 
       expect(screen.getByTestId('parameter-table-mock')).toBeInTheDocument()
       expect(screen.getByTestId('assertion-builder-mock')).toBeInTheDocument()
       expect(screen.queryByTestId('case-branch-editor-mock')).not.toBeInTheDocument()
+    })
+
+    it('hands the While builder values.conditions and writes a change through handleInputChange', async () => {
+      const user = userEvent.setup()
+      const handleInputChange = vi.fn()
+      renderBody({
+        isWhile: true,
+        values: { conditions: [{ id: 'w-1', type: 'expression', expression: 'more' }] },
+        handleInputChange,
+      })
+
+      expect(screen.getByTestId('mock-assertion-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('assertion-builder-mock')).toHaveAttribute('data-valid-callback', 'false')
+
+      await user.click(screen.getByTestId('mock-assertions-change'))
+
+      expect(handleInputChange).toHaveBeenCalledWith('conditions', [{ id: 'c-1', type: 'expression', expression: 'ready' }])
     })
 
     it('renders the variable setter editor for a variable setter element', () => {
@@ -419,19 +471,26 @@ describe('ConfigModalBody', () => {
     })
 
     it('still marks the saved mode as selected', () => {
-      renderBody({ isAssert: true, assertMode: 'single' })
+      renderBody({ isAssert: true, values: { mode: 'single' } })
 
       expect(screen.getByRole('radio', { name: 'Single' })).toBeChecked()
     })
 
-    it('still forwards a mode change to setAssertMode', async () => {
+    it('shows Split, the declared default, when the Block stores no mode', () => {
+      renderBody({ isAssert: true, values: {} })
+
+      expect(screen.getByRole('radio', { name: 'Split' })).toBeChecked()
+      expect(screen.getByRole('radio', { name: 'Single' })).not.toBeChecked()
+    })
+
+    it('still forwards a mode change to values.mode through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setAssertMode = vi.fn()
-      renderBody({ isAssert: true, assertMode: 'split', setAssertMode })
+      const handleInputChange = vi.fn()
+      renderBody({ isAssert: true, values: { mode: 'split' }, handleInputChange })
 
       await user.click(screen.getByLabelText('Single'))
 
-      expect(setAssertMode).toHaveBeenCalledWith('single')
+      expect(handleInputChange).toHaveBeenCalledWith('mode', 'single')
     })
 
     it('still renders Fail Current Scope with its description', () => {
@@ -445,14 +504,20 @@ describe('ConfigModalBody', () => {
       ).toBeInTheDocument()
     })
 
-    it('still forwards a Fail Current Scope toggle', async () => {
+    it('reflects a stored Fail Current Scope', () => {
+      renderBody({ isAssert: true, values: { fail_current_scope: true } })
+
+      expect(screen.getByRole('checkbox', { name: 'Fail Current Scope' })).toBeChecked()
+    })
+
+    it('still forwards a Fail Current Scope toggle to values.fail_current_scope through handleInputChange', async () => {
       const user = userEvent.setup()
-      const setAssertFailCurrentScope = vi.fn()
-      renderBody({ isAssert: true, setAssertFailCurrentScope })
+      const handleInputChange = vi.fn()
+      renderBody({ isAssert: true, handleInputChange })
 
       await user.click(screen.getByLabelText('Fail Current Scope'))
 
-      expect(setAssertFailCurrentScope).toHaveBeenCalledWith(true)
+      expect(handleInputChange).toHaveBeenCalledWith('fail_current_scope', true)
     })
 
     it('is absent for a non-assert element', () => {
@@ -556,5 +621,85 @@ describe('ConfigModalBody unsaved-secret save target (REQ-3.1.3.18)', () => {
     })
     renderBody()
     expect(saveTargets()).toEqual(['Function'])
+  })
+
+  const setterSaveTarget = () =>
+    screen.getByTestId('variable-setter-editor-mock').getAttribute('data-secret-save-target')
+
+  it('names the test as the save of the Variable Setter rows on a Test canvas', () => {
+    renderBody({ isVariableSetter: true })
+    expect(setterSaveTarget()).toBe('test')
+  })
+
+  it('names the Function as the save of the Variable Setter rows inside a library Function view', () => {
+    useWorkflowStore.setState({
+      functionViewMode: { functionId: '00000000-0000-0000-0000-0000000000aa', version: '1.0.0', editable: true },
+    })
+    renderBody({ isVariableSetter: true })
+    expect(setterSaveTarget()).toBe('Function')
+  })
+})
+
+// The Setter editor writes its rows into the shared values and its marks into the Block lists (REQ-3.4.1.14, REQ-3.1.3.19).
+describe('ConfigModalBody Variable Setter rows on the shared Block lists', () => {
+  afterEach(() => {
+    setterChange.patch = {}
+  })
+
+  const HELD_TYPES: Record<string, ElementTypes> = {
+    'variables.hosts': ['string', 'string'],
+    'variables.ports': ['integer'],
+    headers: { 'X-Trace': 'string' },
+  }
+
+  const handedSlots = () =>
+    JSON.parse(screen.getByTestId('variable-setter-editor-slots').textContent ?? '{}') as Record<string, unknown>
+
+  it('hands the editor only the entry types of the Setter rows', () => {
+    renderBody({ isVariableSetter: true, settingElementTypes: HELD_TYPES })
+
+    expect(handedSlots().elementTypes).toEqual({
+      'variables.hosts': ['string', 'string'],
+      'variables.ports': ['integer'],
+    })
+  })
+
+  it('clears the entry types of a row the editor drops and writes the ones it keeps', async () => {
+    const user = userEvent.setup()
+    const setSettingElementTypes = vi.fn()
+    setterChange.patch = { elementTypes: { 'variables.ports': ['integer', 'integer'] } }
+    renderBody({ isVariableSetter: true, settingElementTypes: HELD_TYPES, setSettingElementTypes })
+
+    await user.click(screen.getByTestId('variable-setter-editor-change'))
+
+    expect(setSettingElementTypes.mock.calls).toEqual([
+      ['variables.hosts', undefined],
+      ['variables.ports', ['integer', 'integer']],
+    ])
+  })
+
+  it('writes the rows, their marks and their picked types on a host that keeps no entry types', async () => {
+    const user = userEvent.setup()
+    const setValues = vi.fn()
+    const setExpressionFields = vi.fn()
+    const setSetterRowTypes = vi.fn()
+    setterChange.patch = {
+      variables: { next_try: 'attempt + 1', ports: [80] },
+      expressionFields: ['variables.next_try'],
+      elementTypes: { 'variables.ports': ['integer'] },
+      rowTypes: { next_try: 'integer', ports: 'array' },
+    }
+    renderBody({ isVariableSetter: true, settingElementTypes: HELD_TYPES, setValues, setExpressionFields, setSetterRowTypes })
+
+    await user.click(screen.getByTestId('variable-setter-editor-change'))
+
+    const nextValues = setValues.mock.calls[0][0] as (prev: Record<string, unknown>) => Record<string, unknown>
+    expect(nextValues({ mode: 'all', variables: { old_row: 1 } })).toEqual({
+      mode: 'all',
+      variables: { next_try: 'attempt + 1', ports: [80] },
+    })
+    const nextFlags = setExpressionFields.mock.calls[0][0] as (prev: string[]) => string[]
+    expect(nextFlags(['url', 'variables.old_row'])).toEqual(['url', 'variables.next_try'])
+    expect(setSetterRowTypes).toHaveBeenCalledWith({ next_try: 'integer', ports: 'array' })
   })
 })

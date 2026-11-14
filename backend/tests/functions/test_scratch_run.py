@@ -107,7 +107,6 @@ def _log_body(message: str = "'standalone'") -> dict[str, Any]:
                     "displayName": "inner",
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                 },
             }
         ],
@@ -416,6 +415,36 @@ class TestStandaloneRunInvalidDraft:
         assert re.match(r"^Function draft has 1 validation error\(s\)$", error["message"])
         assert [(d["code"], d["message"]) for d in error["details"]["errors"]] == [
             ("REQUIRED_PARAM_MISSING", "Required parameter 'message' is missing")
+        ]
+        assert _workbench_sessions == {}
+
+    def test_a_draft_whose_nested_body_the_run_rules_refuse_is_refused_before_the_run(
+        self, client: TestClient
+    ) -> None:
+        from wavecore.api.services.workbench._common import _workbench_sessions
+
+        fn_id = _create_published_function(client)
+        inner = _draft_definition(name="inner_fn")
+        inner["workflow"]["nodes"][0]["data"]["config"]["values"] = {"level": "INFO"}
+        draft = _outer_with_block(inner)
+
+        resp = client.post(
+            f"/functions/{fn_id}/run",
+            json={"version": "1.0.0", "draft": draft, "environment_id": _VALID_ENVIRONMENT_ID},
+        )
+
+        assert resp.status_code == 422, resp.text
+        error = resp.json()["error"]
+        assert [
+            (d["code"], d["message"], d["node_id"], d["function_path"])
+            for d in error["details"]["errors"]
+        ] == [
+            (
+                "REQUIRED_PARAM_MISSING",
+                "Required parameter 'message' is missing",
+                "inner-log",
+                [{"node_id": "inner-fn", "label": "inner-fn", "element_type": "function"}],
+            )
         ]
         assert _workbench_sessions == {}
 

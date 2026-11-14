@@ -45,7 +45,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -65,10 +64,8 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       nodeType: 'control',
                       category: 'flow',
                       version: '1.0.0',
-                      expressionFields: [],
+                      expressionFields: ['variables.run_time'],
                       templateFields: [],
-                      variableExpressionKeys: ['run_time'],
-                      variableTypes: { run_time: 'float' },
                       config: {
                         values: { variables: { run_time: '3.14' } },
                         outputBindings: {},
@@ -88,7 +85,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "f'{run_time}'", level: 'INFO' },
                         outputBindings: {},

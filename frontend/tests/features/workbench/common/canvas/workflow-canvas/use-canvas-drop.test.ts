@@ -858,7 +858,7 @@ describe('useCanvasDrop', () => {
           type: 'noteNode',
           data: expect.objectContaining({
             elementType: 'note',
-            config: { text: '', color: 'slate' },
+            config: { values: { color: 'slate' } },
           }),
         })
       )

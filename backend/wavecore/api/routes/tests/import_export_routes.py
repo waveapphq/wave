@@ -11,7 +11,7 @@ Endpoints:
 """
 
 import json
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -151,6 +151,17 @@ async def validate_import(
     )
 
 
+def _refused_import(message: str, code: str, errors: list[dict[str, Any]]) -> JSONResponse:
+    """The 422 answer for an import its findings refuse."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={
+            "success": False,
+            "error": {"message": message, "code": code, "details": errors},
+        },
+    )
+
+
 @router.post("/tests/import")
 async def import_tests(
     file: Annotated[UploadFile, File(...)],
@@ -201,17 +212,9 @@ async def import_tests(
     try:
         result = test_service.import_tests(content, filename, resolutions)
     except test_service.ReadOnlyExpressionImportError as exc:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={
-                "success": False,
-                "error": {
-                    "message": exc.message,
-                    "code": "EXPRESSION_CHANGES_DATA",
-                    "details": exc.errors,
-                },
-            },
-        )
+        return _refused_import(exc.message, "EXPRESSION_CHANGES_DATA", exc.errors)
+    except test_service.RepeatedEdgeIdImportError as exc:
+        return _refused_import(exc.message, "DUPLICATE_EDGE_ID", exc.errors)
     except test_service.VariableValueImportError as exc:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

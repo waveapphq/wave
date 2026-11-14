@@ -15,6 +15,7 @@
  */
 
 import { expect, type Locator, type Page } from './playwright-fixtures'
+import { settled } from './list-fields'
 
 /**
  * Resolve when every request the profiles page issues on mount has answered
@@ -60,6 +61,8 @@ export async function openProfileCreateDialog(page: Page): Promise<Locator> {
     }
     await expect(dialog).toBeVisible({ timeout: 2000 })
   }).toPass({ timeout: 20000 })
+  // Geometry reads wait out the opening fade and zoom.
+  await settled(dialog)
   return dialog
 }
 

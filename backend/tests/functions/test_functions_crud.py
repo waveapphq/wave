@@ -121,6 +121,43 @@ class TestListFunctions:
         names = {row["name"] for row in body["data"]}
         assert names == {"alpha", "beta_alpha"}
 
+    def _seed_search_fields(self, client: TestClient) -> None:
+        client.post("/functions", json=make_function_payload(name="vault_by_name"))
+        client.post(
+            "/functions",
+            json=make_function_payload(name="by_description", description="Rotates Vault keys"),
+        )
+        client.post("/functions", json=make_function_payload(name="by_tag", tags=["vault-team"]))
+        client.post("/functions", json=make_function_payload(name="unrelated"))
+
+    def test_search_matches_the_name_only_by_default(self, client: TestClient) -> None:
+        self._seed_search_fields(client)
+        body = client.get("/functions?search=VAULT").json()
+        assert {row["name"] for row in body["data"]} == {"vault_by_name"}
+
+    def test_search_in_widens_the_search_to_description_and_tags(self, client: TestClient) -> None:
+        self._seed_search_fields(client)
+        body = client.get("/functions?search=VAULT&search_in=name,description,tags").json()
+        assert {row["name"] for row in body["data"]} == {
+            "vault_by_name",
+            "by_description",
+            "by_tag",
+        }
+        assert body["pagination"]["total"] == 3
+
+    def test_search_in_description_alone_skips_the_name(self, client: TestClient) -> None:
+        self._seed_search_fields(client)
+        body = client.get("/functions?search=vault&search_in=description").json()
+        assert {row["name"] for row in body["data"]} == {"by_description"}
+
+    def test_search_in_refuses_an_unknown_field(self, client: TestClient) -> None:
+        response = client.get("/functions?search=vault&search_in=name,owner")
+        assert response.status_code == 400
+        assert re.match(
+            r"^Invalid search field 'owner': valid fields are name, description, tags$",
+            response.json()["error"]["message"],
+        )
+
     def test_tags_filter_csv(self, client: TestClient) -> None:
         client.post(
             "/functions",

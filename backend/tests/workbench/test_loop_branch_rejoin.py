@@ -62,7 +62,6 @@ def _make_node(
             "displayName": label,
             "expressionFields": ["message"] if element_type == "log" else [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -99,7 +98,7 @@ def _for_each(node_id: str, collection: list[Any]) -> dict[str, Any]:
 
 def _setter(node_id: str, variables: dict[str, str]) -> dict[str, Any]:
     node = _make_node(node_id, "Var Setter", "variable-setter", "control", {"variables": variables})
-    node["data"]["variableExpressionKeys"] = list(variables)
+    node["data"]["expressionFields"] = [f"variables.{name}" for name in variables]
     return node
 
 

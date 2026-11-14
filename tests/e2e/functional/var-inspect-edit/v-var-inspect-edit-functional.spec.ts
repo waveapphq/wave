@@ -62,7 +62,7 @@ test.describe('V-VMGR-06-EDIT: editing in the one window', () => {
       const row = variableRow(page, 'count')
       await row.hover()
       await row.locator('[data-testid^="expand-button-"]').click()
-      const watcher = page.locator('section[aria-label="Inspect variable count"]')
+      const watcher = page.getByRole('dialog', { name: 'count', exact: true, includeHidden: true })
       await expect(watcher).toBeVisible()
       await expect(watcher.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0)
       await expect(watcher.locator('[data-testid="inspect-edit-button"]')).toHaveCount(0)
@@ -72,7 +72,7 @@ test.describe('V-VMGR-06-EDIT: editing in the one window', () => {
 
     await test.step('VMGR-106: the pencil opens Edit variable on the saved definition; a scalar edit saves', async () => {
       const win = await openEditWindow(page, 'count')
-      await expect(win).toHaveAttribute('aria-label', 'Edit variable')
+      await expect(win).toHaveAccessibleName('Edit variable')
       await expect(win.getByTestId('create-type-select')).toHaveText(/^Integer/)
       await expect(win.getByTestId('create-kind-select')).toHaveText('Literal')
       await expect(valueSwitch(win)).toHaveText('Initial')

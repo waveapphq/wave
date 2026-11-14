@@ -36,10 +36,10 @@ Executes a body chain of blocks repeatedly with a counter variable that incremen
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | Mode | string | yes | count | Iteration mode (count or range) |
-| Count | integer | yes (count) | - | Number of iterations |
+| Count | integer | yes (count) | - | Number of iterations, 0 or more. Null runs the body zero times |
 | Start | integer | yes (range) | - | Starting value (inclusive) |
 | End | integer | yes (range) | - | Ending value (exclusive) |
-| Step | integer | no | 1 | Increment per iteration |
+| Step | integer | yes | 1 | Increment per iteration. Never 0 |
 | Timeout | float | no | - | Max execution time in seconds |
 
 ### Output

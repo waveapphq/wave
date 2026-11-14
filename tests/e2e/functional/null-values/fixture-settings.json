@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "nothing",
@@ -57,7 +56,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "40 + 2",
@@ -91,7 +89,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "[1, None]",
@@ -125,7 +122,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "{'host': 'web-1', 'port': None}",
@@ -157,7 +153,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -193,7 +188,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "flag_on",
@@ -227,7 +221,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'true-log-caught'",
@@ -259,7 +252,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -295,7 +287,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "flag_off",
@@ -329,7 +320,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'false-log-caught'",
@@ -363,7 +353,6 @@
             "password"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "host": "127.0.0.1",
@@ -400,7 +389,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -437,7 +425,6 @@
             "local_port"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid",
@@ -476,7 +463,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'port-null-caught'",
@@ -511,7 +497,6 @@
             "local_port"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid",
@@ -550,7 +535,6 @@
             "url"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "f'http://127.0.0.1:{lport_blank}/health'",
@@ -599,7 +583,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid"
@@ -630,7 +613,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -666,7 +648,6 @@
             "headers.X-Null"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/echo",
@@ -719,7 +700,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'header-null-caught'",
@@ -753,7 +733,6 @@
             "headers.X-Blank"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/echo",
@@ -808,7 +787,6 @@
             "ca_cert"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "https://127.0.0.1:9460",
@@ -846,7 +824,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -883,7 +860,6 @@
             "namespace"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "k8s_session",
@@ -924,7 +900,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'namespace-null-caught'",
@@ -958,7 +933,6 @@
             "session"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "k8s_session",
@@ -1000,7 +974,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid"
@@ -1033,7 +1006,6 @@
             "token"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "http://k8s-gateway:8080/k8s/clusters/wave",
@@ -1071,7 +1043,6 @@
             "session"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "gw_session",
@@ -1113,7 +1084,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'null-settings-done'",

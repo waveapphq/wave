@@ -153,7 +153,7 @@ export function SettingsContainer(): ReactNode {
   // Handlers
   const handleSectionChange = useCallback(
     (section: SettingsSection) => {
-      navigate(settingsPath(section))
+      void navigate(settingsPath(section))
     },
     [navigate]
   )

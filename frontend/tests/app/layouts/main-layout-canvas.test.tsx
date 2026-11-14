@@ -28,7 +28,7 @@ import { MainLayout } from '@/app/layouts/main-layout'
 import { ThemeProvider } from '@/design-system/theme-provider'
 import { useSidebar } from '@/components/ui/sidebar'
 import { usePageBlockStore } from '@/stores/page-block-store'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 
 // Test component to expose sidebar state for assertions
 function SidebarStateInspector() {
@@ -75,8 +75,7 @@ function FloatingSheetPage() {
       <DraggableSheet
         open
         onClose={() => {}}
-        ariaLabel="Page Sheet"
-        header={<span>Page Sheet</span>}
+        header={<SheetTitle>Page Sheet</SheetTitle>}
         data-testid="page-sheet"
       >
         <button data-testid="page-sheet-field">field</button>

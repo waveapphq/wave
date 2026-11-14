@@ -6,7 +6,10 @@ Requirements tested:
 - REQ-3.4.2.2 / REQ-3.5.0.3: plugin and control parameter definitions drive the check
 - REQ-3.1.2.11: allowed values are typed (String, Integer or Float)
 - REQ-3.1.3.14: a save stores each literal number of a number field in its wire form
-- REQ-3.1.3.19: typed list, map and table entries of a setting follow the rule by their types
+- REQ-3.1.3.19: typed list, map and table entries of a setting follow the rule by their types,
+  and every element-type record names only the six element types
+- REQ-3.1.3.21: a required data field that accepts null takes a stored null
+- REQ-3.4.1.14: a blank {x} entry inside a Variable Setter list or map row is required
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -704,6 +707,59 @@ class TestValuesTheCheckSkips:
         assert _value(field, stored) == []
 
 
+def _null_setting(name: str, *, block_id: str = "f") -> Seen:
+    return (
+        "INVALID_SETTING_VALUE",
+        f"Setting '{name}' of block '{block_id}' cannot be null",
+        "Leave the setting out to use its default",
+        name,
+    )
+
+
+class TestNullSettings:
+    """A setting given null fails and names it, unless it takes null or is optional with no
+    default (REQ-3.1.3.21)."""
+
+    def test_an_optional_setting_with_a_default_given_null_is_refused(self) -> None:
+        field = {"name": "timeout", "type": "integer", "default": 30}
+
+        assert _check([field], {"timeout": None}, block_id="http-client") == [
+            _null_setting("timeout", block_id="http-client")
+        ]
+
+    def test_a_required_setting_with_a_default_given_null_is_refused(self) -> None:
+        field = {"name": "step", "type": "integer", "required": True, "default": 1}
+
+        assert _check([field], {"step": None}, block_id="for") == [
+            _null_setting("step", block_id="for")
+        ]
+
+    def test_an_empty_text_default_refuses_null_the_same_way(self) -> None:
+        field = {"name": "pattern", "type": "string", "default": ""}
+
+        assert _value(field, None) == [_null_setting("pattern")]
+
+    @pytest.mark.parametrize(
+        "field",
+        [
+            pytest.param({"name": "note", "type": "string"}, id="optional-no-default"),
+            pytest.param(
+                {"name": "message", "type": "string", "default": "", "accepts_null": True},
+                id="data-field",
+            ),
+            pytest.param(
+                {"name": "password", "type": "string", "default": "", "secret": True},
+                id="owed-secret",
+            ),
+        ],
+    )
+    def test_a_setting_that_may_hold_null_takes_it(self, field: dict[str, Any]) -> None:
+        assert _check([field], {field["name"]: None}) == []
+
+    def test_a_setting_left_out_takes_its_default(self) -> None:
+        assert _check([{"name": "timeout", "type": "integer", "default": 30}], {}) == []
+
+
 class TestExpressionsAndTemplates:
     """An expression or template is checked at run, not as a literal."""
 
@@ -716,6 +772,63 @@ class TestExpressionsAndTemplates:
         field = {"name": "level", "type": "string", "enum_values": ["low", "high"]}
 
         assert _check([field], {"level": "{{ lvl }}"}, template_fields={"level"}) == []
+
+    @pytest.mark.parametrize(
+        ("field", "values", "place"),
+        [
+            pytest.param(
+                {"name": "message", "type": "string"}, {"message": "'ok'"}, "message", id="field"
+            ),
+            pytest.param(
+                {"name": "headers", "type": "map"},
+                {"headers": {"X-Id": "'a'"}},
+                "headers.X-Id",
+                id="map-entry",
+            ),
+            pytest.param(
+                {"name": "variables", "type": "map"},
+                {"variables": {"greeting": "'hi'"}},
+                "variables.greeting",
+                id="setter-row",
+            ),
+            pytest.param(
+                {"name": "variables", "type": "map"},
+                {"variables": {"hosts": ["'a'"]}},
+                "variables.hosts.0",
+                id="setter-entry",
+            ),
+        ],
+    )
+    def test_a_place_marked_both_expression_and_template_is_refused(
+        self, field: dict[str, Any], values: dict[str, Any], place: str
+    ) -> None:
+        """The marks are exclusive per place, as on a compare-to value (REQ-3.1.1.5)."""
+        found = _check(
+            [field], values, block_id="log", expression_fields={place}, template_fields={place}
+        )
+
+        assert found == [
+            (
+                "INVALID_SETTING_VALUE",
+                f"Setting '{place}' of block 'log' cannot be both an expression and a template",
+                None,
+                place,
+            )
+        ]
+
+    def test_every_place_marked_both_is_refused_in_place_order(self) -> None:
+        fields = [{"name": "message", "type": "string"}, {"name": "level", "type": "string"}]
+        both = {"message", "level"}
+
+        found = _check(
+            fields,
+            {"message": "'ok'", "level": "'INFO'"},
+            block_id="log",
+            expression_fields=both | {"extra"},
+            template_fields=both,
+        )
+
+        assert [seen[3] for seen in found] == ["level", "message"]
 
     def test_a_blank_whole_field_expression_in_an_optional_field_means_not_set(self) -> None:
         field = {"name": "headers", "type": "map", "default": {}}
@@ -1231,3 +1344,244 @@ class TestTypeNames:
 
     def test_a_field_of_a_type_the_check_does_not_know_takes_any_value(self) -> None:
         assert _value({"name": "shape", "type": "widget"}, 30) == []
+
+
+def _control_fields(control_id: str) -> list[Any]:
+    """The declared fields of a built-in control, the list the save checks it against."""
+    from wavecore.controls.loop import ForControl, ForEachControl
+    from wavecore.controls.variable_setter import VariableSetterControl
+
+    controls: dict[str, Any] = {
+        "for": ForControl,
+        "for-each": ForEachControl,
+        "variable-setter": VariableSetterControl,
+    }
+    return list(controls[control_id]().metadata["parameter_schema"])
+
+
+class TestRequiredAcceptsNull:
+    """A required data field that accepts null takes a stored null as its value (REQ-3.1.3.21)."""
+
+    @pytest.mark.parametrize(
+        ("control_id", "values"),
+        [
+            ("for", {"mode": "count", "count": None}),
+            ("for-each", {"collection": None}),
+        ],
+        ids=["for-count", "for-each-collection"],
+    )
+    def test_a_required_field_that_accepts_null_takes_a_stored_null(
+        self, control_id: str, values: dict[str, Any]
+    ) -> None:
+        assert _check(_control_fields(control_id), values, block_id=control_id) == []
+
+    def test_a_left_out_field_that_accepts_null_is_still_missing(self) -> None:
+        found = _check(_control_fields("for"), {"mode": "count"}, block_id="for")
+
+        assert found == [_missing("count")]
+
+    def test_a_required_field_that_refuses_null_is_still_missing_on_null(self) -> None:
+        values = {"mode": "range", "start": None, "end": 3}
+
+        assert _check(_control_fields("for"), values, block_id="for") == [_missing("start")]
+
+
+class TestEntrySlotsTwoLevels:
+    """A blank {x} entry inside a Setter list or map row has nothing to fall back on
+    (REQ-3.4.1.14)."""
+
+    @pytest.mark.parametrize("blank", ["  ", "", None], ids=["spaces", "empty", "null"])
+    def test_a_blank_flagged_item_of_a_list_held_by_a_map_entry_is_required(
+        self, blank: str | None
+    ) -> None:
+        found = _check(
+            _control_fields("variable-setter"),
+            {"variables": {"hosts": ["web-1", blank, ""]}},
+            block_id="variable-setter",
+            expression_fields={"variables.hosts.1"},
+        )
+
+        assert found == [
+            (
+                "REQUIRED_PARAM_EMPTY",
+                "Row 2 in 'variables.hosts' is required",
+                None,
+                "variables.hosts.1",
+            )
+        ]
+
+    @pytest.mark.parametrize("blank", ["  ", "", None], ids=["spaces", "empty", "null"])
+    def test_a_blank_flagged_value_of_a_map_held_by_a_map_entry_is_required(
+        self, blank: str | None
+    ) -> None:
+        found = _check(
+            _control_fields("variable-setter"),
+            {"variables": {"limits": {"max": blank, "min": "", "step": "attempts"}}},
+            block_id="variable-setter",
+            expression_fields={"variables.limits.max", "variables.limits.step"},
+        )
+
+        assert found == [
+            (
+                "REQUIRED_PARAM_EMPTY",
+                "'max' in 'variables.limits' is required",
+                None,
+                "variables.limits.max",
+            )
+        ]
+
+
+_ELEMENT_TYPE_NAMES = "array, boolean, float, integer, map, string"
+
+
+def _bad_types(place: str, problem: str) -> tuple[str, str, str]:
+    return (
+        "INVALID_ELEMENT_TYPES",
+        f"Invalid element types for setting '{place}' of block 'variable-setter': {problem}",
+        place,
+    )
+
+
+def _unknown_type(place: str, element_type: str, where: str) -> tuple[str, str, str]:
+    listed = f"(must be one of: {_ELEMENT_TYPE_NAMES})"
+    return _bad_types(place, f"unknown element type '{element_type}' for {where} {listed}")
+
+
+def _type_findings(
+    rows: Mapping[str, Any],
+    element_types: Any,
+    *,
+    expression_fields: Iterable[str] = (),
+    template_fields: Iterable[str] = (),
+) -> list[tuple[str, str, str]]:
+    found = _check(
+        _control_fields("variable-setter"),
+        {"variables": dict(rows)},
+        block_id="variable-setter",
+        expression_fields=expression_fields,
+        template_fields=template_fields,
+        element_types=element_types,
+    )
+    return [(code, message, field) for code, message, _fix, field in found]
+
+
+class TestElementTypeFindings:
+    """Every place of a Block's element-type record names only the six element types
+    (REQ-3.1.3.19)."""
+
+    def test_an_unknown_type_in_a_map_record_is_refused(self) -> None:
+        found = _type_findings(
+            {"limits": {"max": "5", "min": "1"}},
+            {"variables.limits": {"max": "decimal", "min": "integer"}},
+        )
+
+        assert found == [_unknown_type("variables.limits", "decimal", "key 'max'")]
+
+    def test_an_unknown_type_in_a_list_record_is_refused(self) -> None:
+        found = _type_findings(
+            {"hosts": ["web-1", "web-2"]}, {"variables.hosts": ["decimal", "string"]}
+        )
+
+        assert found == [_unknown_type("variables.hosts", "decimal", "item 0")]
+
+    def test_a_map_literal_with_a_list_record_is_refused(self) -> None:
+        found = _type_findings({"limits": {"max": 5}}, {"variables.limits": ["integer"]})
+
+        assert found == [
+            _bad_types("variables.limits", "the element types of a map must map each key to a type")
+        ]
+
+    def test_a_list_literal_with_a_map_record_is_refused(self) -> None:
+        found = _type_findings({"hosts": ["web-1"]}, {"variables.hosts": {"0": "string"}})
+
+        assert found == [
+            _bad_types(
+                "variables.hosts", "the element types of an array must list one type per item"
+            )
+        ]
+
+    def test_a_record_on_a_scalar_setting_is_refused(self) -> None:
+        found = _type_findings({"retries": 3}, {"variables.retries": ["integer"]})
+
+        assert found == [
+            _bad_types("variables.retries", "element types apply only to an array or a map")
+        ]
+
+    def test_a_setter_row_place_is_checked(self) -> None:
+        found = _type_findings(
+            {
+                "hosts": ["web-1", 2],
+                "limits": {"max": 5, "nested": [1]},
+                "labels": {"env": "prod"},
+            },
+            {
+                "variables.hosts": ["string", "integer"],
+                "variables.limits": {"max": "integer", "nested": "array"},
+                "variables.labels": {"env": "text"},
+            },
+        )
+
+        assert found == [_unknown_type("variables.labels", "text", "key 'env'")]
+
+    @pytest.mark.parametrize("mode", ["expression", "template"])
+    def test_a_flagged_place_is_skipped(self, mode: str) -> None:
+        flagged = {"variables.hosts"}
+        rows = {
+            "hosts": "build_hosts()" if mode == "expression" else "{{ host_names }}",
+            "limits": {"max": 5},
+        }
+
+        found = _type_findings(
+            rows,
+            {"variables.hosts": ["decimal"], "variables.limits": {"max": "decimal"}},
+            expression_fields=flagged if mode == "expression" else (),
+            template_fields=flagged if mode == "template" else (),
+        )
+
+        assert found == [_unknown_type("variables.limits", "decimal", "key 'max'")]
+
+    @pytest.mark.parametrize("stored", [_SEALED, _MASKED], ids=["sealed", "masked"])
+    def test_a_sealed_record_is_skipped(self, stored: str) -> None:
+        found = _type_findings(
+            {"api_token": stored, "limits": {"max": 5}},
+            {"variables.api_token": stored, "variables.limits": {"max": "decimal"}},
+        )
+
+        assert found == [_unknown_type("variables.limits", "decimal", "key 'max'")]
+
+    def test_a_setting_place_of_any_block_is_checked(self) -> None:
+        found = _check(
+            [_LIMITS], {"limits": {"k": "5"}}, element_types={"limits": {"k": "decimal"}}
+        )
+
+        assert [(code, message, field) for code, message, _fix, field in found] == [
+            (
+                "INVALID_ELEMENT_TYPES",
+                "Invalid element types for setting 'limits' of block 'f': unknown element type "
+                f"'decimal' for key 'k' (must be one of: {_ELEMENT_TYPE_NAMES})",
+                "limits",
+            )
+        ]
+
+    def test_an_element_type_finding_offers_no_fix(self) -> None:
+        found = _check(
+            [_LIMITS],
+            {"limits": {"k": "5"}},
+            element_types={"limits": {"k": "decimal"}},
+        )
+
+        assert [(code, fix) for code, _message, fix, _field in found] == [
+            ("INVALID_ELEMENT_TYPES", None)
+        ]
+
+    def test_a_null_setting_is_read_by_its_declared_array_or_map_type(self) -> None:
+        found = _check([_IDS], {"ids": None}, element_types={"ids": {"0": "string"}})
+
+        assert [(code, message, field) for code, message, _fix, field in found] == [
+            (
+                "INVALID_ELEMENT_TYPES",
+                "Invalid element types for setting 'ids' of block 'f': the element types of an "
+                "array must list one type per item",
+                "ids",
+            )
+        ]

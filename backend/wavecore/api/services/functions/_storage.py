@@ -18,12 +18,16 @@ import yaml
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import settings_file
 from wavecore.api.services.block_node_checks import (
+    DUPLICATE_EDGE_ID_CODE,
     block_type_registered,
+    repeated_edge_id_message,
+    repeated_edge_ids,
+    validate_loop_targets,
     validate_node_element_type,
     validate_node_metadata,
     validate_read_only_expressions,
 )
-from wavecore.api.services.block_schema import block_schema
+from wavecore.api.services.block_schema import block_schema, field_default
 from wavecore.api.services.functions import _versioning
 from wavecore.api.services.storage_paths import (
     entity_dir,
@@ -33,8 +37,9 @@ from wavecore.api.services.storage_paths import (
     path_under,
 )
 from wavecore.api.services.typed_numbers import store_definition_numbers
+from wavecore.controls.note import edgeless_notes
 from wavecore.core.execution.field_checks import check_block_fields
-from wavecore.core.execution.row_checks import literal_row_findings
+from wavecore.core.execution.row_checks import block_row_findings
 from wavecore.core.functions.declarations import (
     DECLARATION_LISTS,
     DECLARED_TYPES,
@@ -46,8 +51,8 @@ from wavecore.core.functions.declarations import (
 )
 from wavecore.core.functions.references import iter_function_references, referenced_function_ids
 from wavecore.core.secrets.sealing import seal_definition_secrets
+from wavecore.core.variables.declared_types import types_of_function
 from wavecore.core.variables.usage import (
-    NameSite,
     block_sites,
     block_write_sites,
     computed_declarations,
@@ -843,6 +848,11 @@ def _validate_structural(definition: Mapping[str, Any]) -> list[ValidationIssue]
                 severity="warning",
             )
         )
+    edges = workflow.get("edges") if isinstance(workflow, dict) else None
+    issues.extend(
+        ValidationIssue(code=DUPLICATE_EDGE_ID_CODE, message=repeated_edge_id_message(edge_id))
+        for edge_id in repeated_edge_ids(edges)
+    )
     issues.extend(declaration_issues(definition))
     return issues
 
@@ -1077,9 +1087,10 @@ def _validate_binding_completeness(
     return issues
 
 
-def _validate_literal_rows(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Every unmuted Block's literal setter rows, compare-to values and column indexes follow
-    the one number rule (REQ-3.1.3.14)."""
+def _validate_rows(definition: Mapping[str, Any]) -> list[ValidationIssue]:
+    """Every unmuted Block's Setter rows, condition items, control structure and column indexes
+    pass the one save check, a Setter row by its variable's declared type (REQ-3.1.3.14)."""
+    declared_types = types_of_function(definition, every_input=True)
     issues: list[ValidationIssue] = []
     for node in _iter_workflow_nodes(definition):
         data = _node_data(node)
@@ -1091,13 +1102,14 @@ def _validate_literal_rows(definition: Mapping[str, Any]) -> list[ValidationIssu
             ValidationIssue(
                 code=finding.code, message=finding.message, node_id=node_id, node_label=display
             )
-            for finding in literal_row_findings(data)
+            for finding in block_row_findings(data, declared_types)
         )
     return issues
 
 
 def _validate_block_metadata(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Dimension 4: unknown control types, Block metadata and expressions that change data."""
+    """Dimension 4: unknown control types, Block metadata, expressions that change data and
+    loop signal targets."""
     control_ids = {control_id.value for control_id in ControlId}
     nodes = _iter_workflow_nodes(definition)
     displays = {str(node.get("id", "") or ""): _node_display_name(node) for node in nodes}
@@ -1116,6 +1128,7 @@ def _validate_block_metadata(definition: Mapping[str, Any]) -> list[ValidationIs
                 data, node_path, node_id, data.get("label"), element_type, control_ids, errors
             )
     validate_read_only_expressions(nodes, {}, errors)
+    validate_loop_targets(nodes, _iter_workflow_edges(definition), errors)
     return [
         ValidationIssue(
             code=error["code"],
@@ -1217,12 +1230,11 @@ def _is_try_catch_node(node: Mapping[str, Any]) -> bool:
 
 
 def _try_catch_enables_catch(node: Mapping[str, Any]) -> bool:
-    """Read ``enable_catch`` from either ``config`` or ``config.values``."""
-    config = _node_config(node)
-    if "enable_catch" in config:
-        return bool(config.get("enable_catch"))
-    values = _node_values(node)
-    return bool(values.get("enable_catch", True))
+    """``enable_catch`` from ``config.values``, else the control's declared default."""
+    enabled = _node_values(node).get("enable_catch")
+    if enabled is None:
+        enabled = field_default(_node_data(node), "enable_catch")
+    return bool(enabled)
 
 
 def _build_flow_adjacency(
@@ -1271,24 +1283,62 @@ def _try_without_catch_issue(
     )
 
 
-def _validate_flow_consistency(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Dimension 7: unreachable nodes and structurally-broken control constructs."""
+def _stranded_by_removed_retry_wire(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    removed_retry_wires: Iterable[Mapping[str, Any]],
+) -> dict[str, str]:
+    """Each Block whose only wire in was a removed Watch retry wire, with the wait's name."""
+    names = {str(node.get("id", "") or ""): _node_display_name(node) for node in nodes}
+    wired = {str(edge.get("target", "")) for edge in edges}
+    sources: dict[str, list[str]] = {}
+    for wire in removed_retry_wires:
+        sources.setdefault(str(wire.get("target", "")), []).append(str(wire.get("source", "")))
+    return {
+        target: names[from_ids[0]]
+        for target, from_ids in sources.items()
+        if len(from_ids) == 1 and target not in wired and from_ids[0] in names
+    }
+
+
+def _unreached_message(block_name: str, wait_name: str | None) -> str:
+    if wait_name is None:
+        return "Block is not reachable from the Function's entry"
+    return (
+        f"Block '{block_name}' is not reachable from the Function's entry: its only wire came "
+        f"from the retry lane of Watch-mode Wait Until '{wait_name}', which was removed"
+    )
+
+
+def _validate_flow_consistency(
+    definition: Mapping[str, Any],
+    removed_retry_wires: Iterable[Mapping[str, Any]] = (),
+) -> list[ValidationIssue]:
+    """Dimension 7: unreachable nodes and structurally-broken control constructs.
+
+    ``removed_retry_wires`` are the Watch retry wires the save's lane rule took out of this flow.
+    """
     nodes = _iter_workflow_nodes(definition)
     edges = _iter_workflow_edges(definition)
     node_ids = {n.get("id") for n in nodes}
     adj = _build_flow_adjacency(edges)
-    visited = _reachable_from_start(adj)
+    # A Note nothing connects to is an annotation beside the flow, never a Block to reach.
+    reached_or_beside = _reachable_from_start(adj) | {
+        str(note.get("id")) for note in edgeless_notes(nodes, edges)
+    }
+    stranded = _stranded_by_removed_retry_wire(nodes, edges, removed_retry_wires)
 
     issues: list[ValidationIssue] = []
     for node in nodes:
         node_id = str(node.get("id", "") or "")
-        if node_id and node_id in node_ids and node_id not in visited:
+        if node_id and node_id in node_ids and node_id not in reached_or_beside:
+            name = _node_display_name(node)
             issues.append(
                 ValidationIssue(
                     code="NODE_UNREACHABLE",
-                    message="Block is not reachable from the Function's entry",
+                    message=_unreached_message(name, stranded.get(node_id)),
                     node_id=node_id,
-                    node_label=_node_display_name(node),
+                    node_label=name,
                 )
             )
     for node in nodes:
@@ -1335,25 +1385,15 @@ def _function_scope_names(definition: Mapping[str, Any]) -> set[str]:
     return names
 
 
-def _is_checked_site(site: NameSite, flagged: set[str]) -> bool:
-    """A write target, or a setting or entry the Block marks expression or template."""
-    return site.writes or (site.path[:2] == ("config", "values") and site.setting in flagged)
-
-
 def _unresolved_reference_issues_for_node(
     node: Mapping[str, Any], scope: set[str]
 ) -> list[ValidationIssue]:
     """Flag every name a Block reads or writes that escapes ``scope``."""
-    data = _node_data(node)
-    flagged = {
-        str(name) for key in ("expressionFields", "templateFields") for name in data.get(key) or []
-    }
     node_id = str(node.get("id", "") or "")
     display = _node_display_name(node)
     return [
         _unresolved_reference(ref, node_id=node_id, node_label=display)
         for site in block_sites(node)
-        if _is_checked_site(site, flagged)
         for ref in sorted(site.names - scope)
     ]
 
@@ -1404,13 +1444,14 @@ def validate_function_for_save(
     *,
     function_registry: Mapping[str, Any] | None = None,
     required_function_inputs: bool = True,
+    removed_retry_wires: Iterable[Mapping[str, Any]] = (),
 ) -> list[ValidationIssue]:
     """Aggregate every save-validation dimension.
 
     No dimension writes to disk (a nested Shared Function Block's pinned version
     may be read), so this is safe to call from both the Function save endpoints
     and the Test save pipeline when a Function instance lives inside the Test's
-    workflow.
+    workflow. ``removed_retry_wires`` are the Watch retry wires the save took out of the flow.
     """
     registry = function_registry or {}
     aggregate: list[ValidationIssue] = []
@@ -1423,12 +1464,12 @@ def validate_function_for_save(
             required_function_inputs=required_function_inputs,
         )
     )
-    aggregate.extend(_validate_literal_rows(definition))
+    aggregate.extend(_validate_rows(definition))
     aggregate.extend(_validate_block_metadata(definition))
     aggregate.extend(_validate_input_reader(definition))
     aggregate.extend(_validate_output_producer(definition))
     aggregate.extend(_validate_scope_discipline(definition))
-    aggregate.extend(_validate_flow_consistency(definition))
+    aggregate.extend(_validate_flow_consistency(definition, removed_retry_wires))
     aggregate.extend(_validate_body_reference_scope(definition))
     aggregate.extend(_validate_computed_declarations(definition))
     return aggregate

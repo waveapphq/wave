@@ -190,7 +190,7 @@ test.describe('V-PLUGIN-CSV-01: CSV Parser config sheet', () => {
     await block.locator('[data-testid^="filter-add-literal-"]').click()
     const cond = modal.locator('[data-testid^="filter-condition-operator-"]').first()
     await expect(cond).toBeVisible()
-    const condValue = modal.locator('[data-testid^="filter-condition-value-"]').first()
+    const condValue = modal.locator('[data-testid^="param-input-filter-condition-value-"]').first()
     await expect(condValue).toBeVisible()
     const condExprToggle = modal.locator('[data-testid^="filter-condition-expr-toggle-"]').first()
     await expect(condExprToggle).toBeVisible()

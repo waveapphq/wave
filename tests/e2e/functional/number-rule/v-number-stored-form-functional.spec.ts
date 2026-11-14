@@ -78,7 +78,6 @@ function listTest(items: unknown[]): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             localDefinition: {
               name: 'scale_ids',
               inputs: [{ name: 'ids', type: 'array', required: true }],
@@ -136,7 +135,7 @@ test.describe('V-NUMBER-STORED-FORM-FUNCTIONAL: REST numbers are stored and show
       await expect(numberInput(http, 'retry_delay')).toHaveValue(TINY)
       await discardSheet(page, http)
       const setterSheet = await openBlockSheet(page, setter)
-      await expect(setterSheet.locator('[data-testid="scalar-edit-input"]')).toHaveValue(TINY)
+      await expect(setterSheet.locator('[data-testid="param-input-varset-value-0"]')).toHaveValue(TINY)
       await discardSheet(page, setterSheet)
       const assertSheet = await openBlockSheet(page, check)
       await expect(valueBox(assertSheet, '0')).toHaveValue(TINY)

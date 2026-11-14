@@ -324,9 +324,9 @@ export function useTestClose(params: UseTestCloseParams): TestCloseResult {
       // Restore the open entity's URL. A Function View keeps its ?viewFunction
       // param (the read-only guards depend on it); a Test returns to /workbench.
       if (functionViewMode) {
-        navigate(`/workbench?viewFunction=${functionViewMode.functionId}&version=${functionViewMode.version}`)
+        void navigate(`/workbench?viewFunction=${functionViewMode.functionId}&version=${functionViewMode.version}`)
       } else {
-        navigate('/workbench')
+        void navigate('/workbench')
       }
     },
     [navigate, setPendingEditTestId, functionViewMode]

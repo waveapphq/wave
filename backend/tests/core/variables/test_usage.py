@@ -91,8 +91,8 @@ def _setter(
     node_id: str,
     rows: dict[str, Any],
     *,
-    expression_keys: list[str] | None = None,
-    template_keys: list[str] | None = None,
+    expression_rows: list[str] | None = None,
+    template_rows: list[str] | None = None,
     disabled: bool = False,
 ) -> dict[str, Any]:
     return _node(
@@ -100,8 +100,8 @@ def _setter(
         "variable-setter",
         {"variables": rows},
         disabled=disabled,
-        variableExpressionKeys=expression_keys or [],
-        variableTemplateKeys=template_keys or [],
+        expression_fields=[f"variables.{row}" for row in expression_rows or []],
+        template_fields=[f"variables.{row}" for row in template_rows or []],
     )
 
 
@@ -216,12 +216,12 @@ BLOCK_READS = [
     ),
     pytest.param(_node("n", "for-each", {"collection": "src"}), {"src"}, id="reference-setting"),
     pytest.param(
-        _setter("n", {"out": "src + '!'"}, expression_keys=["out"]),
+        _setter("n", {"out": "src + '!'"}, expression_rows=["out"]),
         {"src"},
         id="setter-expression-row",
     ),
     pytest.param(
-        _setter("n", {"out": "x-{{ src }}"}, template_keys=["out"]),
+        _setter("n", {"out": "x-{{ src }}"}, template_rows=["out"]),
         {"src"},
         id="setter-template-row",
     ),
@@ -659,7 +659,7 @@ class TestBlockSites:
             "variable-setter",
             {"variables": {"out": "src + 1"}},
             output_bindings={"value": "result"},
-            variableExpressionKeys=["out"],
+            expression_fields=["variables.out"],
         )
 
         sites = [
@@ -722,6 +722,145 @@ class TestBlockSites:
 
         assert [(site.kind, site.names) for site in sites] == [("setter_target", set())]
         assert _usage().block_writes(_setter("n", {"": "x"})) == {""}
+
+
+_NO_VALUE_OPERATORS = [
+    pytest.param("integer", "is_null", id="is_null"),
+    pytest.param("integer", "is_not_null", id="is_not_null"),
+    pytest.param("boolean", "is_true", id="is_true"),
+    pytest.param("boolean", "is_false", id="is_false"),
+    pytest.param("array", "is_empty", id="is_empty"),
+    pytest.param("array", "is_not_empty", id="is_not_empty"),
+]
+
+
+class TestConditionSites:
+    """A compare-to value is a site in the mode it is held in, and only when its operator
+    takes a value (REQ-3.5.1.5)."""
+
+    @pytest.mark.parametrize(
+        ("node", "expected"),
+        [
+            pytest.param(
+                _node(
+                    "n",
+                    "assert",
+                    {
+                        "assertions": [
+                            {
+                                **_row("status", "Run {{ run_id }} of {{ src }}"),
+                                "reference_is_template": True,
+                            }
+                        ]
+                    },
+                ),
+                [
+                    ("name", "assertions.0.variable", {"status"}, frozenset()),
+                    ("template", "assertions.0.reference_value", {"run_id", "src"}, frozenset()),
+                ],
+                id="check-row",
+            ),
+            pytest.param(
+                _parser(
+                    [
+                        {
+                            **_cell_row(reference="{{ prefix }}-1"),
+                            "value_type": "string",
+                            "operator": "starts_with",
+                            "reference_is_template": True,
+                        }
+                    ]
+                ),
+                [
+                    (
+                        "template",
+                        "filters.0.conditions.0.reference_value",
+                        {"prefix"},
+                        frozenset({"_cell"}),
+                    )
+                ],
+                id="filter-row",
+            ),
+        ],
+    )
+    def test_a_template_compare_to_is_a_template_site(
+        self, node: dict[str, Any], expected: list[tuple[str, str, set[str], frozenset[str]]]
+    ) -> None:
+        sites = [
+            (site.kind, site.setting, site.names, site.bound) for site in _usage().block_sites(node)
+        ]
+
+        assert sites == expected
+
+    @pytest.mark.parametrize(("value_type", "operator"), _NO_VALUE_OPERATORS)
+    def test_a_compare_to_under_an_operator_that_takes_none_is_no_site(
+        self, value_type: str, operator: str
+    ) -> None:
+        takes_none = {"value_type": value_type, "operator": operator}
+        rows = [
+            {**_row("flag", "src", reference_is_expression=True), **takes_none},
+            {"type": "operator", "value": "and"},
+            {**_row("other", "{{ src }}"), **takes_none, "id": "c2", "reference_is_template": True},
+        ]
+        node = _node("n", "assert", {"assertions": rows})
+
+        sites = [(site.kind, site.setting) for site in _usage().block_sites(node)]
+
+        assert sites == [("name", "assertions.0.variable"), ("name", "assertions.2.variable")]
+        assert _usage().block_reads(node) == {"flag", "other"}
+
+
+class TestSetterSites:
+    """Variable Setter rows and their entries are sites through the shared expression and
+    template marks, named by their place under ``variables`` (REQ-3.4.1.14)."""
+
+    def test_setter_rows_come_through_the_shared_flags(self) -> None:
+        node = _setter(
+            "n",
+            {"next": "count + 1", "line": "Run {{ run_id }}", "plain": "src"},
+            expression_rows=["next"],
+            template_rows=["line"],
+        )
+        row = ("config", "values", "variables")
+
+        sites = [
+            (site.kind, site.path, site.setting, site.names) for site in _usage().block_sites(node)
+        ]
+
+        assert sites == [
+            ("expression", (*row, "next"), "variables.next", {"count"}),
+            ("template", (*row, "line"), "variables.line", {"run_id"}),
+            ("setter_target", (*row, "next"), "variables.next", {"next"}),
+            ("setter_target", (*row, "line"), "variables.line", {"line"}),
+            ("setter_target", (*row, "plain"), "variables.plain", {"plain"}),
+        ]
+        assert _usage().block_reads(node) == {"count", "run_id"}
+
+    def test_a_flagged_setter_entry_is_an_expression_site(self) -> None:
+        node = _node(
+            "n",
+            "variable-setter",
+            {
+                "variables": {
+                    "hosts": ["web-1", "prefix + '-2'"],
+                    "limits": {"max": "base * 2", "min": "1"},
+                }
+            },
+            expression_fields=["variables.hosts.1", "variables.limits.max"],
+        )
+        row = ("config", "values", "variables")
+
+        sites = [
+            (site.kind, site.path, site.setting, site.names)
+            for site in _usage().block_sites(node)
+            if not site.writes
+        ]
+
+        assert sites == [
+            ("expression", (*row, "hosts", "1"), "variables.hosts.1", {"prefix"}),
+            ("expression", (*row, "limits", "max"), "variables.limits.max", {"base"}),
+        ]
+        assert _usage().block_reads(node) == {"prefix", "base"}
 
 
 class TestNamespaceReads:

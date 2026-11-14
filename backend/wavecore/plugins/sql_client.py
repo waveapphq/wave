@@ -87,12 +87,12 @@ def _check_connection(params: dict[str, Any], database_type: str) -> None:
             raise ValueError(f"Missing required parameter: {name}")
 
 
-def _operation_rows(operation: str, script_type: str) -> tuple[str, ...]:
+def _operation_rows(operation: str, script_type: str) -> list[str]:
     if operation == "run_sql":
-        return ("sql",) if script_type == "source" else ("sql_file",)
+        return ["sql"] if script_type == "source" else ["sql_file"]
     if operation == "call_procedure":
-        return ("procedure",)
-    return ("table", "target_table")
+        return ["procedure"]
+    return ["table", "target_table"]
 
 
 def _check_types(params: dict[str, Any], operation: str, database_type: str) -> None:

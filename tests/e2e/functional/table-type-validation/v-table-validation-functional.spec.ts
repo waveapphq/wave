@@ -77,7 +77,7 @@ const content = (page: Page): Locator =>
 const rowFor = (page: Page, name: string): Locator =>
   content(page).locator(`[aria-label="Variable ${name}"]`)
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 const strip = (sheet: Locator): Locator => sheet.locator('[data-testid="value-editor-validation"]')
 const saveButton = (sheet: Locator): Locator =>
   sheet.locator('[data-testid="value-editor-save-button"]')

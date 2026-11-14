@@ -6,8 +6,8 @@
  *
  * Seeds (API): test 1 a blank zz- Test declaring `status` (string, null), `amount` (integer 5) and
  * `nothing` (integer, null); the five Asserts and their rows are built in the config sheet. Tests 2-10
- * import a generated zz- Test (one Single Assert per cell, built with `literalCondition` of
- * helpers/nesting-graph.ts, the row shape test 1 proves the sheet stores) and press Run. Every
+ * import a generated zz- Test (one Single Assert per cell, built with `sheetLiteralRow` of
+ * helpers/condition-builder.ts, the row shape test 1 proves the sheet stores) and press Run. Every
  * Test is deleted after.
  *
  * Pass Criteria:
@@ -26,6 +26,7 @@
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { ensureEnvironment } from '../../helpers/config'
+import { sheetLiteralRow } from '../../helpers/condition-builder'
 import { getTest } from '../../helpers/element-types'
 import { createValidTest } from '../../helpers/fn-seed'
 import {
@@ -47,7 +48,7 @@ import {
   type WorkflowNode,
 } from '../../helpers/k8s-nodes'
 import { expectConsoleLine, formatEntries, getLogCopyTexts, type LogEntry } from '../../helpers/log-reader'
-import { literalCondition, type CheckValueType } from '../../helpers/nesting-graph'
+import type { CheckValueType } from '../../helpers/nesting-graph'
 import { runToEnd } from '../../helpers/workbench'
 import { LANE_VIEWPORT, deleteTest, openLaneCanvas, saveCanvas } from '../canvas-lanes/lanes-helpers'
 import { consoleEntriesFromCopy } from '../shell-blocks/shell-helpers'
@@ -280,7 +281,7 @@ function nullCompareFixture(): Record<string, unknown> {
   for (const c of NULL_COMPARE_CASES) {
     const guard = `tc-${c.id}`
     // Per REQ-3.1.3.21: the compare-to value is a setting; an expression giving null fails the block.
-    const row = { ...literalCondition(`${c.id}-row`, c.variable, 'integer', 'equals', 'nothing'), reference_is_expression: true }
+    const row = sheetLiteralRow(`${c.id}-row`, c.variable, 'integer', 'equals', 'nothing', 'expression')
     main.push(tryCatchNode({ id: guard, description: guard, errorBinding: errorVar(c) }))
     side.push(
       controlNode({ id: c.id, label: c.id, elementType: c.elementType, category: c.category, description: c.name, values: c.values(row) }),
@@ -365,9 +366,9 @@ test.describe('V-NULL-CHECK-ASSERT: null holds nothing in every check', () => {
         expect(values.mode, `Assert ${index} is Single`).toBe('single')
         const saved = values.assertions?.[0] as Record<string, unknown>
         const reference = row.reference ?? row.expression ?? null
-        const expected = literalCondition(String(saved?.id), row.variable, row.type, wire[row.operator], reference)
-        if (row.expression !== undefined) expected.reference_is_expression = true
-        expect({ ...saved, reference_value: saved?.reference_value ?? null }, `stored row ${index}`).toEqual(expected)
+        const mode = row.expression === undefined ? 'literal' : 'expression'
+        const expected = sheetLiteralRow(String(saved?.id), row.variable, row.type, wire[row.operator], reference, mode)
+        expect(saved, `stored row ${index}`).toEqual(expected)
       }
     })
 

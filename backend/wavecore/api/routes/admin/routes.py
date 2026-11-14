@@ -30,6 +30,7 @@ from wavecore.api.services.regressions import _storage as _reg_storage
 from wavecore.api.services.suites import _storage as _suite_storage
 from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests import testdata_service
+from wavecore.core.logging.log_safe import log_safe
 from wavecore.core.ssh import trusted_hosts
 
 logger = logging.getLogger(__name__)
@@ -303,7 +304,9 @@ async def enable_admin(request: Request, body: AdminEnableRequest) -> AdminEnabl
     _admin_reason = reason.strip()
 
     logger.info(
-        "Admin mode enabled: reason=%s, timestamp=%s", _admin_reason, _admin_enabled_at.isoformat()
+        "Admin mode enabled: reason=%s, timestamp=%s",
+        log_safe(_admin_reason),
+        _admin_enabled_at.isoformat(),
     )
 
     return AdminEnableResponse(

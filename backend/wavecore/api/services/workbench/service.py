@@ -42,11 +42,11 @@ from wavecore.api.services.workbench._common import (
     _add_execution_log,
     _drain_ssh_sessions,
     _get_session,
-    _get_test_profiles,
     _infer_variable_type,
     _terminate_session,
     _user_active_session,
     _workbench_sessions,
+    copy_lanes,
     current_instance_path,
     function_instance,
 )
@@ -76,7 +76,7 @@ from wavecore.core.functions.declarations import declared_value_of
 from wavecore.core.functions.executor import BodyEntry, ScopedStart
 from wavecore.core.namespace_base import is_engine_injected
 from wavecore.core.secrets import masking_settings
-from wavecore.core.secrets.masking import mask_structure, structural_mask
+from wavecore.core.secrets.masking import MASK_PLACEHOLDER, mask_wire_values, structural_mask
 from wavecore.core.secrets.registry import SecretRegistry
 from wavecore.core.secrets.sealing import (
     collect_setter_secret_names,
@@ -100,7 +100,7 @@ from wavecore.core.variables.usage import (
     sources_graph,
 )
 from wavecore.core.variables.value_checks import ValueProblem, declared_value_problem
-from wavecore.core.variables.wire_form import wire_scalar
+from wavecore.core.variables.wire_form import wire_values
 
 logger = logging.getLogger(__name__)
 
@@ -119,28 +119,6 @@ def _log_task_exception(task: asyncio.Task[None]) -> None:
 # ===========================================================================
 # Public API
 # ===========================================================================
-
-
-def check_profile_completeness(
-    test_id: str,
-    environment_id: str,
-) -> list[dict[str, Any]]:
-    """Check if all profiles have values for the selected environment."""
-    warnings: list[dict[str, Any]] = []
-    profiles = _get_test_profiles(test_id)
-
-    for profile in profiles:
-        env_values = profile.get("environment_values", {})
-        if environment_id not in env_values:
-            warnings.append(
-                {
-                    "type": "INCOMPLETE_PROFILE",
-                    "profile_name": profile.get("name", "Unknown"),
-                    "message": f"Profile '{profile.get('name')}' has no value for this environment",
-                }
-            )
-
-    return warnings
 
 
 def get_active_session_for_user(user_id: str = DEFAULT_USER_ID) -> str | None:
@@ -180,6 +158,7 @@ def get_session_for_user(user_id: str = DEFAULT_USER_ID) -> dict[str, Any] | Non
         "current_block": session.get("current_block"),
         "progress": session.get("progress"),
         "block_states": session.get("block_states", {}),
+        "lanes_taken": session.get("lanes_taken", {}),
         "execution_id": session.get("execution_id"),
         "parent_execution_id": session.get("parent_execution_id"),
         "error": session.get("error"),
@@ -438,6 +417,7 @@ class _CarriedState:
     given_expressions: dict[str, tuple[str, str]] = field(default_factory=dict)
     given_templates: dict[str, str] = field(default_factory=dict)
     block_states: dict[str, str] = field(default_factory=dict)
+    lanes_taken: dict[str, list[str]] = field(default_factory=dict)
     function_scopes: dict[tuple[str, ...], dict[str, Any]] = field(default_factory=dict)
     function_scope_types: dict[tuple[str, ...], dict[str, str]] = field(default_factory=dict)
     ssh_session_registry: Any = None
@@ -460,6 +440,7 @@ def _carried_state(previous: dict[str, Any] | None) -> _CarriedState:
         given_expressions=dict(previous.get("given_expressions") or {}),
         given_templates=dict(previous.get("given_templates") or {}),
         block_states=dict(previous.get("block_states") or {}),
+        lanes_taken=copy_lanes(previous),
         function_scopes=dict(previous.get("function_scopes") or {}),
         function_scope_types=dict(previous.get("function_scope_types") or {}),
         ssh_session_registry=previous.get("ssh_session_registry"),
@@ -599,7 +580,7 @@ def _redefined(literals: dict[str, Any], name: str, seed: Any) -> bool:
     if name not in literals:
         return True
     value = literals[name]
-    return value is not seed and _serialize_runtime_value(value) != _serialize_runtime_value(seed)
+    return value is not seed and wire_values(value) != wire_values(seed)
 
 
 def _pending_sources(
@@ -1079,8 +1060,6 @@ def start_workbench_run(
     if not executable_blocks:
         raise ValidationException("Test must have at least one workflow block defined")
 
-    warnings = check_profile_completeness(test_id, environment_id)
-
     carried = _carried_state(previous)
     previous_session_id = _user_active_session.get(user_id)
 
@@ -1131,11 +1110,12 @@ def start_workbench_run(
         "user_id": user_id,
         "websocket_topic": websocket_topic,
         "log_topic": log_topic,
-        "warnings": warnings,
+        "warnings": [],
         "current_block": None,
         "progress": {"current": 0, "total": len(executable_blocks), "percentage": 0.0},
         "started_at": datetime.now(UTC).isoformat(),
         "block_states": dict(carried.block_states),
+        "lanes_taken": carried.lanes_taken,
         "function_scopes": dict(carried.function_scopes),
         "function_scope_types": dict(carried.function_scope_types),
         "function_seed": seed,
@@ -1203,7 +1183,7 @@ def start_workbench_run(
         "user_id": user_id,
         "websocket_topic": websocket_topic,
         "log_topic": log_topic,
-        "warnings": warnings,
+        "warnings": [],
         "current_block": None,
         "progress": session_data["progress"],
         "started_at": session_data["started_at"],
@@ -1234,13 +1214,9 @@ _CLEAN_SCOPE_ADVISORY: dict[str, Any] = {
 }
 
 
-def _scoped_run_warnings(test_id: str, environment_id: str, clean: bool) -> list[dict[str, Any]]:
-    """Profile-completeness warnings plus a clean-scope advisory when the Function
-    starts from declared defaults (no earlier run in the session to start from)."""
-    warnings: list[dict[str, Any]] = list(check_profile_completeness(test_id, environment_id))
-    if clean:
-        warnings.append(dict(_CLEAN_SCOPE_ADVISORY))
-    return warnings
+def _scoped_run_warnings(clean: bool) -> list[dict[str, Any]]:
+    """The clean-scope advisory when the Function starts from declared defaults."""
+    return [dict(_CLEAN_SCOPE_ADVISORY)] if clean else []
 
 
 @dataclass(frozen=True)
@@ -1453,6 +1429,7 @@ def _stage_scoped_function_session(
         "progress": {"current": 0, "total": 1, "percentage": 0.0},
         "started_at": datetime.now(UTC).isoformat(),
         "block_states": dict(carried.block_states),
+        "lanes_taken": carried.lanes_taken,
         "scope_failed": False,
         "breakpoints": set(breakpoint_list),
         "debug_options": debug_options,
@@ -1571,7 +1548,6 @@ def _start_scoped_function_run(
     held = previous is not None and previous.get("variables") is not None
     start = _function_start(run, previous, test_variables.maps.literals if held else None)
     start = _staged_start(start, seed.get(run.path) or {})
-    clean = start.clean
 
     return _stage_scoped_function_session(
         test_id=test_id,
@@ -1580,7 +1556,7 @@ def _start_scoped_function_run(
         user_id=user_id,
         run=run,
         start=start,
-        warnings=_scoped_run_warnings(test_id, environment_id, clean),
+        warnings=_scoped_run_warnings(start.clean),
         session_id=session_id,
         debug=debug,
         previous=previous,
@@ -1651,7 +1627,7 @@ def start_standalone_function_run(
         user_id=user_id,
         run=run,
         start=start,
-        warnings=[dict(_CLEAN_SCOPE_ADVISORY)] if start.clean else [],
+        warnings=_scoped_run_warnings(start.clean),
         session_id=session_id,
         debug=debug,
         in_test=False,
@@ -2095,10 +2071,15 @@ def list_session_artifacts(user_id: str = DEFAULT_USER_ID) -> dict[str, Any]:
 
 def _resolve_session_artifact(session: dict[str, Any], relative_path: str) -> Path:
     """Validate the relative path (400) and resolve it to an existing file (404)."""
+    invalid = f"Invalid artifact path: {relative_path}"
     if not file_tree.is_safe_relative_path(relative_path):
-        raise ValidationException(f"Invalid artifact path: {relative_path}")
+        raise ValidationException(invalid)
     artifacts_dir = session.get("artifacts_dir")
-    path = Path(artifacts_dir) / relative_path if artifacts_dir else None
+    path = (
+        file_tree.contained_path(Path(artifacts_dir), relative_path, invalid)
+        if artifacts_dir
+        else None
+    )
     if path is None or not path.is_file():
         raise NotFoundException(f"Session artifact {relative_path} not found")
     return path
@@ -2147,19 +2128,6 @@ def get_workbench_status(session_id: str) -> dict[str, Any] | None:
         "warnings": list(session.get("warnings") or []),
         "scoped_result": session.get("scoped_result"),
     }
-
-
-def _serialize_runtime_value(value: Any) -> Any:
-    """Table instances serialize to their {columns, rows} dict and a number takes its wire
-    form (REQ-3.1.3.14); a nested array / map / table recurses so a number at ANY depth is
-    serialized (table cells, nested array / map values), all else passes through."""
-    if isinstance(value, Table):
-        return _serialize_runtime_value(value.to_dict())
-    if isinstance(value, list):
-        return [_serialize_runtime_value(item) for item in value]
-    if isinstance(value, dict):
-        return {key: _serialize_runtime_value(item) for key, item in value.items()}
-    return wire_scalar(value)
 
 
 @dataclass(frozen=True)
@@ -2217,11 +2185,12 @@ def get_session_variables(
     for name, value in realized.items():
         var_type = "table" if isinstance(value, Table) else _infer_variable_type(value)
         masked = _is_masked_name(session, name)
-        entry: dict[str, Any] = {
-            "value": _mask_session_value(value, masked, registry),
-            "type": var_type,
-        }
-        element_types = None if masked else runtime_element_types(value)
+        shown = _mask_session_value(value, masked, registry)
+        entry: dict[str, Any] = {"value": shown, "type": var_type}
+        # A value masked whole, flagged or a copy of a secret, shows no element types either.
+        element_types = (
+            None if masked or shown == MASK_PLACEHOLDER else runtime_element_types(value)
+        )
         if element_types is not None:
             entry["elementTypes"] = element_types
         variables[name] = entry
@@ -2230,17 +2199,16 @@ def get_session_variables(
 
 def _mask_session_value(value: Any, masked_name: bool, registry: Any) -> Any:
     """Display masking: flagged names collapse to the placeholder; other
-    values scrub registered secret bytes (verbatim copies stay hidden). The
+    values mask registered secret bytes (verbatim copies stay hidden). The
     system ``test_variables`` reveal flag (the workbench Variable Manager panel)
     exposes the raw value instead."""
     if masking_settings.is_test_variables_revealed():
-        return _serialize_runtime_value(value)
-    serialized = _serialize_runtime_value(value)
+        return wire_values(value)
     if masked_name:
-        return structural_mask(serialized)
+        return structural_mask(value)
     if registry is None:
-        return serialized
-    return mask_structure(serialized, registry)
+        return wire_values(value)
+    return mask_wire_values(value, registry.scan_values())
 
 
 # A literal table may also be its stored {columns, rows} form.

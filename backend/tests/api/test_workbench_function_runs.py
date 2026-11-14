@@ -26,6 +26,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.services.workbench.parallel_harness import lifecycle_lines
+
 # Anchored error messages.
 SCOPED_MISSING_ID_RE = re.compile(
     r"^scoped_function_node_id is required when scope_mode is 'function'$"
@@ -84,7 +86,6 @@ def _log_node(node_id: str, message: str = "'ok'") -> dict[str, Any]:
             "displayName": node_id,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -175,7 +176,6 @@ def _build_local_function_def(
                         "displayName": "inner",
                         "expressionFields": ["message"],
                         "templateFields": [],
-                        "variableExpressionKeys": [],
                     },
                 }
             ],
@@ -2357,6 +2357,42 @@ class TestFunctionBlockSecretOutputs:
 
         assert session["status"] == "passed", session.get("error")
         assert _secret_names(registry) == expected
+
+
+def _one_log_function() -> dict[str, Any]:
+    """A Local Function whose flow is one Log Block, ``body-log``."""
+    return {
+        "name": "lifecycle_fn",
+        "description": "",
+        "tags": [],
+        "inputs": [],
+        "outputs": [],
+        "dependencies": {"functions": [], "plugins": []},
+        "workflow": {
+            "nodes": [_log_node("body-log", "'in the body'")],
+            "edges": [{"source": "start-node", "target": "body-log"}],
+        },
+    }
+
+
+class TestABodyBlockWritesItsStartAndCompletionLines:
+    """A Block in a Function body logs its start and completion (REQ-3.7.2.5)."""
+
+    @pytest.mark.asyncio
+    async def test_the_body_block_lines_sit_inside_the_function_blocks_lines(
+        self, run_session_id: str
+    ) -> None:
+        block = _function_node("fn", local_definition=_one_log_function())
+
+        session = await _run_root_flow(run_session_id, [block], {})
+
+        assert session["status"] == "passed", session.get("error")
+        assert lifecycle_lines(run_session_id) == [
+            "Executing 'fn' (function/function)",
+            "Executing 'body-log' (plugin/log)",
+            "Completed 'body-log' (<n> ms)",
+            "Completed 'fn' (<n> ms)",
+        ]
 
 
 pytestmark = pytest.mark.usefixtures("temp_storage_path")

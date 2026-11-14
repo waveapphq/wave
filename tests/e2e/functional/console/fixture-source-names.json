@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-palette-name'",
@@ -57,7 +56,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-empty-name'",
@@ -91,7 +89,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-own-name'",
@@ -123,7 +120,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "http://127.0.0.1:9450/health?who=catalog",
@@ -162,7 +158,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "http://127.0.0.1:9450/health?who=colon",
@@ -201,7 +196,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "operation": "run_sql",
@@ -238,7 +232,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "operation": "run_sql",
@@ -275,7 +268,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "operation": "parse",
@@ -309,7 +301,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "variables": {
@@ -342,7 +333,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "variables": {
@@ -375,7 +365,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -430,7 +419,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-if-branch'",
@@ -462,7 +450,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -513,7 +500,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-switch-case'",
@@ -545,7 +531,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -582,7 +567,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-try-body'",
@@ -614,7 +598,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "count",
@@ -652,7 +635,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-for-body'",
@@ -686,7 +668,6 @@
             "collection"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "collection": "hosts"
@@ -722,7 +703,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-foreach-body'",
@@ -754,7 +734,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "mode": "while-do",
@@ -796,11 +775,10 @@
           "version": "1.0.0",
           "description": "",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "counter"
+          "expressionFields": [
+            "variables.counter"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -809,9 +787,6 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableTypes": {
-            "counter": "integer"
           }
         },
         "measured": {
@@ -837,7 +812,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -867,7 +841,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'src-function-body'",
@@ -919,7 +892,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "host": "127.0.0.1",
@@ -958,7 +930,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid",
@@ -995,7 +966,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid"
@@ -1028,7 +998,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "script_type": "source",
@@ -1063,7 +1032,6 @@
             "session_id"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session_id": "sid"
@@ -1097,7 +1065,6 @@
             "ca_cert"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "https://127.0.0.1:9460",
@@ -1137,7 +1104,6 @@
             "session"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "k8s_session",
@@ -1177,7 +1143,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-names-done'",

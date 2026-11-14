@@ -10,6 +10,7 @@ import { safeStringify } from '@/lib/utils'
 import { isNullValue } from '@/lib/variable-format'
 import { PLAIN_FLOAT, sameNumber } from '@/lib/number-rule'
 import { defaultItemText, formatValue, opensNestedEditor, type ValueType } from '@/lib/variable-validation'
+import { isTableShape } from '@/lib/variable-table-model'
 import type { VariableType } from '@/lib/variable-types'
 
 const EMPTY_VALUE_TYPES: ReadonlySet<VariableType> = new Set<VariableType>(['string', 'array', 'map', 'table'])
@@ -26,9 +27,16 @@ function isTypeDefault(text: string, type: ValueType): boolean {
   return text === defaultItemText(type)
 }
 
+/** The rows of a table in either stored shape: row objects or {columns, rows}. */
+function tableRowCount(value: unknown): number {
+  return Array.isArray(value) ? value.length : (value as { rows: unknown[] }).rows.length
+}
+
 /** Whether a plain value holds what a type change or a switch into {x} would clear: anything but null and the empty default. */
-export function plainValueIsHeld(value: unknown, type: ValueType, emptyValue?: unknown): boolean {
+export function plainValueIsHeld(value: unknown, type: VariableType, emptyValue?: unknown): boolean {
   if (isNullValue(value)) return false
+  // A table holds its rows: columns with no rows hold nothing.
+  if (type === 'table') return isTableShape(value) && tableRowCount(value) > 0
   const text = formatValue(value)
   if (emptyValue !== undefined) return text !== formatValue(emptyValue)
   return !isTypeDefault(text, type)
@@ -39,8 +47,9 @@ export function expressionIsHeld(value: unknown): boolean {
   return value !== undefined && value !== null && safeStringify(value).trim() !== ''
 }
 
-/** What a type change warning counts: the items or entries of a list or map, else the one value. */
-export function clearedCount(value: unknown, type: ValueType): number {
+/** What a type change warning counts for a held value: the items or entries of a list or map, the rows of a table, else the one value. */
+export function clearedCount(value: unknown, type: VariableType): number {
+  if (type === 'table') return tableRowCount(value)
   const text = formatValue(value)
   return opensNestedEditor(text, type) ? Object.keys(JSON.parse(text) as object).length : 1
 }

@@ -14,7 +14,6 @@
 /* v8 ignore next - COV-V8-006: V8 coverage merge non-deterministically drops this import across forks pool */
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useRef,
   useState,
@@ -22,6 +21,7 @@ import {
   type InputHTMLAttributes,
   type KeyboardEvent,
 } from 'react'
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
 import { SearchIcon, XIcon, LoaderIcon } from './icon'
 
 export type SearchInputSize = 'xs' | 'sm' | 'md' | 'lg'
@@ -87,7 +87,6 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
     forwardedRef
   ) => {
     const inputRef = useRef<HTMLInputElement>(null)
-    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Track whether input has value for showing clear button
     // For controlled: use controlledValue, for uncontrolled: track in state
@@ -114,31 +113,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       }
     }
 
-    // Cleanup debounce timer on unmount
-    useEffect(() => {
-      return () => {
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current)
-        }
-      }
-    }, [])
-
-    const triggerDebouncedSearch = useCallback(
-      (searchValue: string) => {
-        if (!onSearch || !debounceMs) return
-
-        // Clear existing timer
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current)
-        }
-
-        // Set new timer
-        debounceTimerRef.current = setTimeout(() => {
-          onSearch(searchValue)
-        }, debounceMs)
-      },
-      [onSearch, debounceMs]
-    )
+    const triggerDebouncedSearch = useDebouncedCallback(onSearch, debounceMs)
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value

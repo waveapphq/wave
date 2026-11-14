@@ -64,7 +64,6 @@ async function seedEditModeTest(request: APIRequestContext, fn: SeededLibraryFun
               hasNewerVersion: true,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               editMode: true,
               upstreamLink: { functionId: fn.functionId, sourceVersion: '1.0.0' },

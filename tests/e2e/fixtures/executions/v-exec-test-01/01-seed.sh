@@ -60,7 +60,7 @@ _bulk executions "[{\"op\":\"add\",\"entity\":{
   \"workflow_snapshot\":{
     \"nodes\":[
       {\"id\":\"start-node\",\"type\":\"startNode\",\"position\":{\"x\":400,\"y\":40},\"data\":{\"label\":\"Start\"}},
-      {\"id\":\"log-hist\",\"type\":\"workflowNode\",\"position\":{\"x\":400,\"y\":160},\"data\":{\"label\":\"Log\",\"elementType\":\"log\",\"nodeType\":\"plugin\",\"category\":\"logging\",\"version\":\"1.0.0\",\"description\":\"Login Smoke Log\",\"hasNewerVersion\":false,\"expressionFields\":[],\"templateFields\":[],\"variableExpressionKeys\":[],\"config\":{\"values\":{\"level\":\"INFO\",\"message\":\"login-smoke-passed\"},\"outputBindings\":{},\"profileBindings\":[]}},\"measured\":{\"width\":120,\"height\":62}}
+      {\"id\":\"log-hist\",\"type\":\"workflowNode\",\"position\":{\"x\":400,\"y\":160},\"data\":{\"label\":\"Log\",\"elementType\":\"log\",\"nodeType\":\"plugin\",\"category\":\"logging\",\"version\":\"1.0.0\",\"description\":\"Login Smoke Log\",\"hasNewerVersion\":false,\"expressionFields\":[],\"templateFields\":[],\"config\":{\"values\":{\"level\":\"INFO\",\"message\":\"login-smoke-passed\"},\"outputBindings\":{},\"profileBindings\":[]}},\"measured\":{\"width\":120,\"height\":62}}
     ],
     \"edges\":[
       {\"id\":\"e1\",\"source\":\"start-node\",\"target\":\"log-hist\",\"type\":\"default\"}

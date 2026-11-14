@@ -1,5 +1,6 @@
 """Folder creation, rename / move and delete inside a test's Test Data folder."""
 
+import os
 import re
 from unittest.mock import patch
 
@@ -92,6 +93,11 @@ class TestCreateFolder:
 
         with pytest.raises(ValidationException, match=rf"^Invalid name: {name}$"):
             testdata_service.create_folder(test_id, name)
+
+    def test_a_dot_is_the_root_and_not_a_new_folder(self, test_id: str) -> None:
+        """The folder itself is never a folder to create."""
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            testdata_service.create_folder(test_id, ".")
 
     def test_a_folder_that_appears_while_it_is_created_is_a_conflict(self, test_id: str) -> None:
         # The pre-check is neutralized, so the create loses the race the way a
@@ -200,6 +206,22 @@ class TestRenameEntry:
         with pytest.raises(ValidationException, match=r"^Invalid test data path: \.\./x$"):
             testdata_service.rename_entry(test_id, "../x", "new.csv")
 
+    def test_the_root_cannot_be_moved(self, test_id: str) -> None:
+        """A dot names the folder itself, which is never an entry to move."""
+        store(test_id, "a.csv", b"x")
+
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            testdata_service.rename_entry(test_id, ".", "moved")
+
+        assert (testdata_root(test_id) / "a.csv").read_bytes() == b"x"
+
+    def test_nothing_is_moved_onto_the_root(self, test_id: str) -> None:
+        """A dot as the destination is the folder itself, not a free name."""
+        store(test_id, "a.csv", b"x")
+
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            testdata_service.rename_entry(test_id, "a.csv", ".")
+
     def test_an_invalid_new_name_is_refused(self, test_id: str) -> None:
         """The name rules apply to the new final segment."""
         store(test_id, "a.csv", b"x")
@@ -290,6 +312,26 @@ class TestDeleteEntry:
 
         with pytest.raises(ValidationException, match=r"^Invalid test data path: $"):
             testdata_service.delete_entry(test_id, "")
+
+    @pytest.mark.parametrize("path", [".", "./."])
+    def test_a_dot_is_the_root_and_cannot_be_deleted_either(self, test_id: str, path: str) -> None:
+        """Spelling the folder itself another way never empties it."""
+        store(test_id, "a.csv", b"x")
+
+        with pytest.raises(
+            ValidationException, match=rf"^Invalid test data path: {re.escape(path)}$"
+        ):
+            testdata_service.delete_entry(test_id, path)
+
+        assert (testdata_root(test_id) / "a.csv").read_bytes() == b"x"
+        assert os.access(testdata_root(test_id).parent, os.W_OK)
+
+    def test_a_nul_byte_is_an_invalid_path(self, test_id: str) -> None:
+        """A name no file system can hold is a refusal, not a server error."""
+        store(test_id, "a.csv", b"x")
+
+        with pytest.raises(ValidationException, match="^Invalid test data path: a\0.csv$"):
+            testdata_service.delete_entry(test_id, "a\0.csv")
 
     def test_an_unknown_test_is_not_found(self) -> None:
         """The message names the test id."""

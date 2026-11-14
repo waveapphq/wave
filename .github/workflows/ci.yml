@@ -16,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -52,12 +54,26 @@ jobs:
         working-directory: ./backend
         run: poetry run ruff check wavecore/
 
+      - name: Install SonarScanner CLI
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
+          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
+
+      - name: SonarQube scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./scripts/sonar-scan-backend.sh
+
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -88,6 +104,18 @@ jobs:
       - name: Build
         working-directory: ./frontend
         run: npm run build
+
+      - name: Install SonarScanner CLI
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
+          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
+
+      - name: SonarQube scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./scripts/sonar-scan-frontend.sh
 
   e2e-type-check:
     name: E2E Type Check

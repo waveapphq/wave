@@ -33,6 +33,13 @@ describe('For Loop parameter schema', () => {
       expect(count.requiredWhen).toEqual({ field: 'mode', values: ['count'] })
     })
 
+    // REQ-3.1.3.21: a null count is a value; the loop runs zero times.
+    it('count takes null and nothing below 0', () => {
+      const count = inputs.find((p) => p.name === 'count')!
+      expect(count.acceptsNull).toBe(true)
+      expect(count.minimum).toBe(0)
+    })
+
     it('start parameter shows and is required when mode is range', () => {
       const start = inputs.find((p) => p.name === 'start')!
       expect(start).toBeDefined()

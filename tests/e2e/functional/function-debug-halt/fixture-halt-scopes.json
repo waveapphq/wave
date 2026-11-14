@@ -22,7 +22,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'halt-before'",
@@ -54,7 +53,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -83,7 +81,6 @@
                     "version": "1.0.0",
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "scope": "function",
@@ -133,7 +130,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -162,7 +158,6 @@
                     "version": "1.0.0",
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "scope": "function",
@@ -210,7 +205,6 @@
           "version": "1.0.0",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -242,7 +236,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -271,7 +264,6 @@
                     "version": "1.0.0",
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "scope": "function",
@@ -321,7 +313,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'halt-caught'",
@@ -353,7 +344,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'halt-after'",

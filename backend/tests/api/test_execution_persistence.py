@@ -15,6 +15,7 @@ Plus runtime-state rebuild from disk after restart, orphan recovery, and
 lookup helpers.
 """
 
+import re
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -23,6 +24,7 @@ from typing import Any
 
 import pytest
 
+from wavecore.api.exceptions import ValidationException
 from wavecore.api.services import storage_paths
 from wavecore.api.services.executions import _storage as store
 from wavecore.core.table import Table
@@ -185,6 +187,19 @@ class TestPerTestLogs:
         seq = store._append_log(exec_id, run_id, {"message": "c"})
         assert seq == 2
 
+    def test_the_log_file_is_the_run_id_in_the_logs_folder(self, tmp_storage: Any) -> None:
+        exec_id = str(uuid.uuid4())
+        expected = storage_paths.get_executions_storage_path() / exec_id / "logs" / "r1.yaml"
+        assert store._log_file(exec_id, "r1") == expected
+
+    @pytest.mark.parametrize("run_id", ["../r1", "a/b", "..\\r1", "r\0"])
+    def test_a_run_id_that_is_not_one_path_segment_is_refused(
+        self, tmp_storage: Any, run_id: str
+    ) -> None:
+        message = f"Invalid UUID format for id: '{run_id}.yaml'"
+        with pytest.raises(ValidationException, match=rf"^{re.escape(message)}$"):
+            store._load_test_logs(str(uuid.uuid4()), run_id)
+
 
 class TestTailLogs:
     """Merged-console pagination walks logs.yaml (scope chronology) and
@@ -323,6 +338,22 @@ class TestSnapshots:
         store._snapshots_dir(exec_id).mkdir(parents=True)
         store._snapshot_file(exec_id, "r1").write_text("- a\n- b\n")
         assert store._load_snapshot(exec_id, "r1") is None
+
+    def test_the_snapshot_file_is_the_run_id_in_the_snapshots_folder(
+        self, tmp_storage: Any
+    ) -> None:
+        exec_id = str(uuid.uuid4())
+        expected = storage_paths.get_executions_storage_path() / exec_id / "snapshots" / "r1.yaml"
+        assert store._snapshot_file(exec_id, "r1") == expected
+
+    def test_a_run_id_that_leaves_the_snapshots_folder_is_refused(self, tmp_storage: Any) -> None:
+        exec_id = str(uuid.uuid4())
+        outside = storage_paths.get_executions_storage_path() / exec_id / "outside.yaml"
+        outside.parent.mkdir(parents=True)
+        outside.write_text("status: passed\n")
+        message = "Invalid UUID format for id: '../outside.yaml'"
+        with pytest.raises(ValidationException, match=rf"^{re.escape(message)}$"):
+            store._load_snapshot(exec_id, "../outside")
 
 
 class TestYamlSafeCoercion:
@@ -696,6 +727,56 @@ def _write_registry() -> Any:
     return registry
 
 
+def _vault_rows() -> Table:
+    table = Table(columns=[("zt_login", "string"), ("zt_code", "string")])
+    table.add_row(["zwadm", "kq4z"])
+    return table
+
+
+def _plain_rows() -> Table:
+    table = Table(columns=[("region", "string"), ("tier", "string")])
+    table.add_row(["eu-west", "gold"])
+    return table
+
+
+def _vault_secret_registry() -> Any:
+    """A secret table, map and list whose cells sit under the scan floor."""
+    from wavecore.core.secrets.registry import SecretRegistry
+
+    registry = SecretRegistry()
+    registry.register("vault_rows", _vault_rows(), "declared")
+    registry.register("vault_map", {"zm_login": "zwadm", "zm_code": "kq4z"}, "declared")
+    registry.register("vault_list", ["zwadm", "kq4z"], "declared")
+    return registry
+
+
+def _vault_variables() -> dict[str, Any]:
+    """Each secret, an unflagged copy of each, and a plain table copied the same way."""
+    return {
+        "vault_rows": _vault_rows(),
+        "copied_rows": _vault_rows(),
+        "vault_map": {"zm_login": "zwadm", "zm_code": "kq4z"},
+        "copied_map": {"zm_login": "zwadm", "zm_code": "kq4z"},
+        "vault_list": ["zwadm", "kq4z"],
+        "copied_list": ["zwadm", "kq4z"],
+        "plain_copy": _plain_rows(),
+    }
+
+
+_VAULT_STORED = {
+    "vault_rows": "********",
+    "copied_rows": "********",
+    "vault_map": "********",
+    "copied_map": "********",
+    "vault_list": "********",
+    "copied_list": "********",
+    "plain_copy": {
+        "columns": [{"name": "region", "type": "string"}, {"name": "tier", "type": "string"}],
+        "rows": [["eu-west", "gold"]],
+    },
+}
+
+
 class TestMaskOnWrite:
     """Snapshot and variables.yaml are display files, masked ON WRITE."""
 
@@ -810,25 +891,27 @@ class TestMaskOnWrite:
         loaded = store._load_variables(execution_id)
         assert loaded["password"] == "hunter2"
 
-    def test_save_variables_masks_a_table_cell_before_measuring_it(self) -> None:
+    def test_save_variables_keeps_a_table_as_columns_and_rows_with_a_secret_cell_masked(
+        self,
+    ) -> None:
         execution_id = str(uuid.uuid4())
         table = Table(columns=[("name", "string"), ("token", "string")])
         table.add_row(["payments-api", "s3cretlogin99"])
 
         store._save_variables(execution_id, {"t": table}, registry=_write_registry())
 
-        stored = store._load_variables(execution_id)["t"]
-        assert "s3cretlogin99" not in stored
-        assert "********" in stored
-        # The rule run is the mask's width, not the secret's, so the padding
-        # discloses nothing about the value it replaced.
-        assert "  --------\n" in stored
+        assert store._load_variables(execution_id)["t"] == {
+            "columns": [{"name": "name", "type": "string"}, {"name": "token", "type": "string"}],
+            "rows": [["payments-api", "********"]],
+        }
 
-    def test_save_snapshot_masks_a_table_cell_before_measuring_it(self) -> None:
+    def test_save_snapshot_keeps_a_table_as_columns_and_rows_with_a_secret_cell_masked(
+        self,
+    ) -> None:
         execution_id = str(uuid.uuid4())
         run_id = str(uuid.uuid4())
-        table = Table(columns=[("name", "string"), ("token", "string")])
-        table.add_row(["payments-api", "s3cretlogin99"])
+        table = Table(columns=[("name", "string"), ("token", "string"), ("port", "integer")])
+        table.add_row(["payments-api", "s3cretlogin99", 8080])
         snapshot = {
             "run_id": run_id,
             "test_id": "test-1",
@@ -841,19 +924,102 @@ class TestMaskOnWrite:
 
         loaded = store._load_snapshot(execution_id, run_id)
         assert loaded is not None
-        stored = loaded["variables"]["t"]
-        assert "s3cretlogin99" not in stored
-        assert "********" in stored
-        assert "  --------\n" in stored
+        assert loaded["variables"]["t"] == {
+            "columns": [
+                {"name": "name", "type": "string"},
+                {"name": "token", "type": "string"},
+                {"name": "port", "type": "integer"},
+            ],
+            "rows": [["payments-api", "********", 8080]],
+        }
 
-    def test_save_variables_table_without_registry_renders_raw(self) -> None:
+    def test_save_snapshot_keeps_every_row_of_a_table(self) -> None:
+        execution_id = str(uuid.uuid4())
+        run_id = str(uuid.uuid4())
+        table = Table(columns=[("n", "integer")])
+        for n in range(15):
+            table.add_row([n])
+        snapshot = {"run_id": run_id, "status": "passed", "variables": {"t": table}}
+
+        store._save_snapshot(execution_id, run_id, snapshot, registry=_write_registry())
+
+        loaded = store._load_snapshot(execution_id, run_id)
+        assert loaded is not None
+        assert loaded["variables"]["t"]["rows"] == [[n] for n in range(15)]
+
+    def test_save_variables_collapses_a_flagged_table(self) -> None:
+        execution_id = str(uuid.uuid4())
+        table = Table(columns=[("name", "string")])
+        table.add_row(["payments-api"])
+
+        store._save_variables(execution_id, {"login": table}, registry=_write_registry())
+
+        assert store._load_variables(execution_id)["login"] == "********"
+
+    def test_save_variables_collapses_an_unflagged_copy_of_a_secret_table_map_and_list(
+        self,
+    ) -> None:
+        execution_id = str(uuid.uuid4())
+
+        store._save_variables(execution_id, _vault_variables(), registry=_vault_secret_registry())
+
+        assert store._load_variables(execution_id) == _VAULT_STORED
+
+    def test_save_snapshot_collapses_an_unflagged_copy_of_a_secret_table_map_and_list(
+        self,
+    ) -> None:
+        execution_id = str(uuid.uuid4())
+        run_id = str(uuid.uuid4())
+        snapshot = {"run_id": run_id, "status": "passed", "variables": _vault_variables()}
+
+        store._save_snapshot(execution_id, run_id, snapshot, registry=_vault_secret_registry())
+
+        loaded = store._load_snapshot(execution_id, run_id)
+        assert loaded is not None
+        assert loaded["variables"] == _VAULT_STORED
+
+    def test_save_snapshot_names_the_variables_the_run_held_secret_and_not_their_copies(
+        self,
+    ) -> None:
+        execution_id = str(uuid.uuid4())
+        run_id = str(uuid.uuid4())
+        registry = _vault_secret_registry()
+        registry.mark_name("unfilled_secret")
+        variables = {**_vault_variables(), "unfilled_secret": None, "creds.api_key": "x"}
+        snapshot = {"run_id": run_id, "status": "passed", "variables": variables}
+
+        store._save_snapshot(execution_id, run_id, snapshot, registry=registry)
+
+        loaded = store._load_snapshot(execution_id, run_id)
+        assert loaded is not None
+        assert loaded["secret_variables"] == [
+            "unfilled_secret",
+            "vault_list",
+            "vault_map",
+            "vault_rows",
+        ]
+
+    def test_save_snapshot_without_a_registry_names_no_secret(self) -> None:
+        execution_id = str(uuid.uuid4())
+        run_id = str(uuid.uuid4())
+        snapshot = {"run_id": run_id, "status": "passed", "variables": {"password": "hunter2"}}
+
+        store._save_snapshot(execution_id, run_id, snapshot)
+
+        loaded = store._load_snapshot(execution_id, run_id)
+        assert loaded is not None
+        assert "secret_variables" not in loaded
+
+    def test_save_variables_table_without_registry_keeps_raw_cells(self) -> None:
         execution_id = str(uuid.uuid4())
         table = Table(columns=[("name", "string"), ("token", "string")])
         table.add_row(["payments-api", "s3cretlogin99"])
 
         store._save_variables(execution_id, {"t": table})
 
-        assert "s3cretlogin99" in store._load_variables(execution_id)["t"]
+        assert store._load_variables(execution_id)["t"]["rows"] == [
+            ["payments-api", "s3cretlogin99"]
+        ]
 
 
 class TestFilterAndSort:

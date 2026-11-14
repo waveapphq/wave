@@ -279,7 +279,7 @@ test.describe('V-REPORT-03: workbench session artifacts', () => {
       await expect(chip(page)).toContainText('2', { timeout: 10_000 })
 
       await page.locator('[data-testid="toolbar-close-button"]').click()
-      const closeDialog = page.getByRole('dialog').filter({ hasText: 'Active Execution State' })
+      const closeDialog = page.getByRole('dialog', { name: 'Active Execution State' })
       await expect(closeDialog).toBeVisible()
       await expect(closeDialog).toContainText('2 session artifacts will be permanently deleted.')
       await expect(closeDialog).toContainText(CALLOUT_HINT)

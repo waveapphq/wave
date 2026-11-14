@@ -45,7 +45,7 @@ const UNFINISHED = {
   float: 'Enter a valid float value',
 }
 
-/** The number box of a row that holds one (Variable Setter, entity and profile rows). */
+/** The number box of a row that holds one (entity and profile rows). */
 const rowNumberBox = (row: Locator): Locator => row.locator('[data-testid="scalar-edit-input"]')
 
 /** A profile form row by its parameter name. */
@@ -121,7 +121,7 @@ test.describe('V-NUMBER-BLOCKS-ENTRY-FUNCTIONAL: unfinished numbers are named an
 
     await test.step('a Variable Setter integer and float row name unfinished text and hold Save', async () => {
       const sheet = await openBlockSheet(page, setter)
-      const boxes = rowNumberBox(sheet)
+      const boxes = sheet.locator('[data-testid^="param-input-varset-value-"]')
       await expect(boxes).toHaveCount(2)
       const alert = sheet.locator('p[role="alert"]')
       await expectUnfinishedHeld(page, boxes.nth(0), alert, saveButton(sheet), {

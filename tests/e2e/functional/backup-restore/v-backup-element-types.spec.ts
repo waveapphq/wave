@@ -146,9 +146,10 @@ test.describe('V-BACKUP-ELEMENT-TYPES: element types survive a backup and restor
     )
     expect(restoredTest.variables.a).toEqual(originalTest.variables.a)
     const node = (test: Json, id: string) => (test.workflow.nodes as Json[]).find((entry) => entry.id === id) as Json
-    expect(node(restoredTest, SETTER).data.variableElementTypes).toEqual(
-      node(originalTest, SETTER).data.variableElementTypes,
-    )
+    expect(node(originalTest, SETTER).data.elementTypes, 'the stored Setter row keeps its element types').toEqual({
+      'variables.sm': { n: 'integer', zip: 'string' },
+    })
+    expect(node(restoredTest, SETTER).data.elementTypes).toEqual(node(originalTest, SETTER).data.elementTypes)
     expect(node(restoredTest, LITE).data.elementTypes).toEqual(node(originalTest, LITE).data.elementTypes)
 
     const restoredSuite = (await (await request.get(`${BACKEND_URL}/suites/${restoredSuiteId}`)).json()).data

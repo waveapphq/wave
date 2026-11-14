@@ -420,7 +420,7 @@ export function RegressionDetailPage(): ReactNode {
     (suiteId: string) => {
       /* v8 ignore next - COV-V8-003: regressionId always defined when this page mounts */
       const query = regressionId ? `?regressionId=${regressionId}` : ''
-      navigate(`/suites/${suiteId}${query}`)
+      void navigate(`/suites/${suiteId}${query}`)
     },
     [navigate, regressionId],
   )
@@ -432,7 +432,7 @@ export function RegressionDetailPage(): ReactNode {
     deleteRegression(regressionId)
       .then(() => {
         setDeleteDialogOpen(false)
-        navigate('/regressions')
+        void navigate('/regressions')
       })
       .catch((err: unknown) => {
         const handled = handleDeleteConflict({
@@ -670,7 +670,7 @@ export function RegressionDetailPage(): ReactNode {
       <DetailHeader
         name={regression.name}
         entityType="regression"
-        onBack={() => { navigate('/regressions') }}
+        onBack={() => { void navigate('/regressions') }}
         onRun={() => runDialog.openForRegression(regression.id, regression.name)}
         onExport={() => setExportDialogOpen(true)}
         onDelete={() => setDeleteDialogOpen(true)}
