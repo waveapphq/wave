@@ -182,19 +182,17 @@ function setterBlock(id: string, rows: Record<string, string>): WorkflowNode {
     category: 'flow',
     description: '',
     values: { variables: rows },
-    variableExpressionKeys: Object.keys(rows),
+    expressionFields: Object.keys(rows).map((row) => `variables.${row}`),
   })
 }
 
-/** A literal condition row that takes no compare-to value. */
+/** A literal condition row that takes no compare-to value, so it stores none of the value keys. */
 function nullRow(variable: string, operator: 'is_null' | 'is_not_null'): Record<string, unknown> {
   return {
     type: 'literal',
     variable,
     value_type: 'string',
     operator,
-    reference_value: null,
-    reference_is_expression: false,
   }
 }
 
@@ -641,10 +639,13 @@ async function configureSetter(page: Page, id: string, target: string, expressio
   const add = sheet.locator('[data-testid="varset-add-button"]')
   const nameInput = sheet.locator('[data-testid="varset-name-input-0"]')
   if ((await nameInput.count()) === 0) await add.click()
+  // {x} first, while the new row holds null: a named row starts on its type's value, which {x} would ask about.
+  const toggle = sheet.locator('[data-testid="varset-expression-toggle-0"]')
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
   await nameInput.fill(target)
   await add.focus()
-  await sheet.locator('[data-testid="varset-expression-toggle-0"]').click()
-  const editor = sheet.locator(`[data-testid="param-input-${target}"] .cm-content`)
+  const editor = sheet.locator('[data-testid="param-input-varset-value-0"] .cm-content')
   await editor.click()
   await page.keyboard.insertText(expression)
   await leaveExpressionEditor(editor)
@@ -730,7 +731,6 @@ function blockView(node: WorkflowNode): Record<string, unknown> {
     outputBindings: data.config?.outputBindings ?? {},
     expressionFields: [...(data.expressionFields ?? [])].sort(),
     templateFields: [...(data.templateFields ?? [])].sort(),
-    variableExpressionKeys: [...(data.variableExpressionKeys ?? [])].sort(),
   }
 }
 

@@ -11,7 +11,7 @@ import { lazy, Suspense, useRef, useState, type ReactNode, type Ref } from 'reac
 import { GripVertical, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { DraggableSheet, openOrRefocus, type SheetHandle } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle, openOrRefocus, type SheetHandle } from '@/components/shared/draggable-sheet'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import {
   RowRemovalQuestion,
@@ -182,7 +182,6 @@ export function PartsEditorSheet({
       onClose={onClose}
       sheetId="parts-editor"
       resizable
-      ariaLabel="Edit value"
       data-testid="parts-editor-sheet"
       initialWidth={560}
       initialHeight={420}
@@ -194,7 +193,7 @@ export function PartsEditorSheet({
         <>
           <div className="flex flex-1 items-center gap-2 min-w-0">
             <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <span className="text-sm font-semibold truncate">Edit value</span>
+            <SheetTitle className="text-sm font-semibold truncate">Edit value</SheetTitle>
             <span
               data-testid="parts-editor-type-badge"
               className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-600 dark:text-teal-400"

@@ -249,10 +249,30 @@ async function applySealedNodeSecrets<T extends NodeWithConfig>(
 
 /** The open test is gone from storage. That is a product state the dialog owns,
  *  not an unknown failure, so it never reaches the toast or the console. */
-function reportedAsDeletedTest(err: unknown): boolean {
+export function reportedAsDeletedTest(err: unknown): boolean {
   const { editingTestId, editingTestName } = useWorkflowStore.getState()
   if (!editingTestId) return false
   return reportTestNotFound(err, { testId: editingTestId, testName: editingTestName })
+}
+
+/** The findings of a 422 refusal in the save's envelope, used by the save and the fix; else none. */
+export function refusedFindings(err: unknown): ValidationError[] {
+  const apiErr = err as {
+    status?: number
+    details?: Array<Record<string, unknown>>
+  }
+  if (apiErr.status !== 422 || !Array.isArray(apiErr.details)) return []
+  return apiErr.details.map((d) => ({
+    path: String((d.path as string | undefined) ?? ''),
+    node_id: d.node_id as string | undefined,
+    node_label: d.node_label as string | undefined,
+    element_type: d.element_type as string | undefined,
+    code: String((d.code as string | undefined) ?? 'UNKNOWN'),
+    message: String((d.message as string | undefined) ?? 'Unknown validation error'),
+    severity: 'error' as const,
+    fix_action: d.fix_action as string | null | undefined,
+    functionPath: mapFunctionPath(d.function_path),
+  }))
 }
 
 /**
@@ -281,26 +301,9 @@ export function handleSaveError(
 ): void {
   if (reportedAsDeletedTest(err)) return
 
-  const apiErr = err as {
-    status?: number
-    code?: string
-    details?: Array<Record<string, unknown>>
-  }
-
-  if (apiErr.status === 422 && apiErr.details?.length && handlers) {
-    handlers.setValidationErrors(
-      apiErr.details.map((d) => ({
-        path: String((d.path as string | undefined) ?? ''),
-        node_id: d.node_id as string | undefined,
-        node_label: d.node_label as string | undefined,
-        element_type: d.element_type as string | undefined,
-        code: String((d.code as string | undefined) ?? 'UNKNOWN'),
-        message: String((d.message as string | undefined) ?? 'Unknown validation error'),
-        severity: 'error' as const,
-        fix_action: d.fix_action as string | null | undefined,
-        functionPath: mapFunctionPath(d.function_path),
-      })),
-    )
+  const findings = refusedFindings(err)
+  if (findings.length > 0 && handlers) {
+    handlers.setValidationErrors(findings)
     handlers.setValidationFatal(false)
     handlers.setValidationMode('save')
     handlers.setShowValidationErrorDialog(true)

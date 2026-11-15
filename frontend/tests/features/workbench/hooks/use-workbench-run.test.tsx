@@ -6,7 +6,7 @@
  * Key WAVE-specific behaviors tested:
  * - Ephemeral runs use session_id (NOT execution_id)
  * - WebSocket topic format: workbench:{session_id}
- * - Pre-flight profile validation with warnings (doesn't block execution)
+ * - Run warnings shown as toasts (they never block execution)
  * - Toast notifications for user feedback
  * - State transitions: idle → running → paused/passed/failed/stopped
  */
@@ -25,7 +25,6 @@ export interface WorkbenchRunState {
   websocketTopic: string | null
   currentBlock: { blockId: string; blockName: string } | null
   progress: { current: number; total: number; percentage: number } | null
-  warnings: Array<{ type: string; profileName: string; message: string }>
   isRunning: boolean
   error: Error | null
 }
@@ -238,7 +237,6 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       expect(result.current.websocketTopic).toBeNull()
       expect(result.current.currentBlock).toBeNull()
       expect(result.current.progress).toBeNull()
-      expect(result.current.warnings).toEqual([])
       expect(result.current.isRunning).toBe(false)
       expect(result.current.error).toBeNull()
       expect(result.current.isSessionRecoveryComplete).toBe(false)
@@ -530,42 +528,10 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
     })
   })
 
-  describe('Pre-flight Validation: Profile Warnings (REQ-3.2.1.1)', () => {
+  describe('Run Warnings', () => {
     const mockSessionId = 'session-uuid-789'
 
-    it('stores warnings and proceeds with execution', async () => {
-      mockApiPost.mockResolvedValueOnce({
-        session_id: mockSessionId,
-        status: 'running',
-        websocket_topic: `workbench:${mockSessionId}`,
-        warnings: [
-          {
-            type: 'INCOMPLETE_PROFILE',
-            profile_name: 'Database Connection',
-            message: "Profile 'Database Connection' has no value for this environment",
-          },
-        ],
-      })
-
-      const { result } = renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
-
-      await act(async () => {
-        await result.current.startRun({ testId: 'test-123', environmentId: 'env-456' })
-      })
-
-      // Execution proceeds despite warnings
-      expect(result.current.status).toBe('running')
-      expect(result.current.warnings).toHaveLength(1)
-      expect(result.current.warnings[0].profileName).toBe('Database Connection')
-
-      // Toast shown for warning
-      expect(mockToastWarning).toHaveBeenCalledWith(
-        "Profile 'Database Connection' has no value for this environment",
-        'Missing Profile Value'
-      )
-    })
-
-    it('titles SCOPED_RUN_ADVISORY warnings as "Scope Initialized"', async () => {
+    it('titles SCOPED_RUN_ADVISORY warnings as "Scope Initialized" and keeps running', async () => {
       mockApiPost.mockResolvedValueOnce({
         session_id: mockSessionId,
         status: 'running',
@@ -573,7 +539,6 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
         warnings: [
           {
             type: 'SCOPED_RUN_ADVISORY',
-            profile_name: '',
             message: 'Function scope seeded with default inputs',
           },
         ],
@@ -585,8 +550,7 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
         await result.current.startRun({ testId: 'test-123', environmentId: 'env-456' })
       })
 
-      expect(result.current.warnings).toHaveLength(1)
-      expect(result.current.warnings[0].type).toBe('SCOPED_RUN_ADVISORY')
+      expect(result.current.status).toBe('running')
       expect(mockToastWarning).toHaveBeenCalledWith(
         'Function scope seeded with default inputs',
         'Scope Initialized'
@@ -778,6 +742,41 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
         'block-skipped',
         { status: 'skipped' }
       )
+    })
+
+    it('stores the lanes a lanes_taken event reports on the block that took them', async () => {
+      const { result } = renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
+      await startRun(result)
+
+      act(() => {
+        getCapturedWsHandler()?.(
+          { type: 'lanes_taken', block_id: 'route-1', lanes: ['branch_0', 'branch_2'] },
+          createEventMetadata(mockTopic)
+        )
+      })
+
+      expect(mockUpdateBlockExecution).toHaveBeenCalledWith(expect.any(String), 'route-1', {
+        lanes: ['branch_0', 'branch_2'],
+      })
+    })
+
+    it('stores no lanes once the run was reset', async () => {
+      const { result } = renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
+      await startRun(result)
+      const handler = getCapturedWsHandler()
+      act(() => {
+        result.current.reset()
+      })
+      mockUpdateBlockExecution.mockClear()
+
+      act(() => {
+        handler?.(
+          { type: 'lanes_taken', block_id: 'route-1', lanes: ['branch_0'] },
+          createEventMetadata(mockTopic)
+        )
+      })
+
+      expect(mockUpdateBlockExecution).not.toHaveBeenCalled()
     })
 
     it('transitions to passed on execution_completed with passed status', async () => {
@@ -1029,7 +1028,7 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       })
     })
 
-    it('startDebugRun emits warnings via toast and stores them on state', async () => {
+    it('startDebugRun shows run warnings as toasts', async () => {
       const { result } = renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
       ;(crypto as { randomUUID: () => string }).randomUUID = () => mockSessionId
       mockApiPost.mockResolvedValueOnce({
@@ -1038,9 +1037,8 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
         websocket_topic: mockTopic,
         warnings: [
           {
-            type: 'INCOMPLETE_PROFILE',
-            profile_name: 'DB',
-            message: "Profile 'DB' has no value for this environment",
+            type: 'SCOPED_RUN_ADVISORY',
+            message: 'Function scope seeded with default inputs',
           },
         ],
       })
@@ -1055,10 +1053,9 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       })
 
       expect(mockToastWarning).toHaveBeenCalledWith(
-        expect.stringContaining("Profile 'DB'"),
-        'Missing Profile Value'
+        'Function scope seeded with default inputs',
+        'Scope Initialized'
       )
-      expect(result.current.warnings).toHaveLength(1)
     })
 
     it('startDebugRun handles API errors and resets to idle', async () => {
@@ -1485,7 +1482,7 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
         session_id: mockSessionId,
         status: 'running',
         websocket_topic: `workbench:${mockSessionId}`,
-        warnings: [{ type: 'INCOMPLETE_PROFILE', profile_name: 'Test', message: 'msg' }],
+        warnings: [{ type: 'SCOPED_RUN_ADVISORY', message: 'msg' }],
       })
 
       const { result } = renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
@@ -1505,7 +1502,6 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       expect(result.current.status).toBe('idle')
       expect(result.current.sessionId).toBeNull()
       expect(result.current.websocketTopic).toBeNull()
-      expect(result.current.warnings).toEqual([])
       expect(result.current.isRunning).toBe(false)
       expect(mockUnsubscribe).toHaveBeenCalled()
       // Reset must drop the paused marker so no block keeps its amber halo.
@@ -2140,6 +2136,36 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       expect(mockUpdateBlockExecution).toHaveBeenCalledWith(
         'mock-exec-id', 'block-6', { status: 'warning' }
       )
+    })
+
+    it('recovers the lanes each block took after its status', async () => {
+      const mockSessionId = 'session-with-lanes'
+      mockApiGetCurrentSession.mockResolvedValueOnce({
+        session_id: mockSessionId,
+        status: 'passed',
+        test_id: 'test-lanes',
+        websocket_topic: `workbench:${mockSessionId}`,
+        current_block: null,
+        progress: { current: 2, total: 2, percentage: 100 },
+        block_states: { 'route-1': 'running', join: 'passed' },
+        lanes_taken: { 'route-1': ['branch_0'] },
+      })
+
+      renderHook(() => useWorkbenchRun(), { wrapper: TestWrapper })
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+
+      const calls = mockUpdateBlockExecution.mock.calls
+      const statusCall = calls.findIndex(
+        (call: unknown[]) => call[1] === 'route-1' && 'status' in (call[2] as object),
+      )
+      const lanesCall = calls.findIndex(
+        (call: unknown[]) => call[1] === 'route-1' && 'lanes' in (call[2] as object),
+      )
+      expect(calls[lanesCall]).toEqual(['mock-exec-id', 'route-1', { lanes: ['branch_0'] }])
+      expect(statusCall).toBeGreaterThanOrEqual(0)
+      expect(lanesCall).toBeGreaterThan(statusCall)
     })
 
     it('handles unknown block status as pending during recovery', async () => {

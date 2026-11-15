@@ -27,7 +27,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
+from tests.api.error_reply_support import assert_error_reply
 from wavecore.api.exceptions import ConflictException, ValidationException
+
+_STALE_ETAG = "Precondition failed: resource has been modified"
 
 # Valid profile types as defined in OpenAPI spec
 VALID_PROFILE_TYPES = [
@@ -896,10 +899,9 @@ class TestDeleteProfileEndpoint:
 
             response = client.delete(f"/profiles/{profile_id}")
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert "not found" in data["error"]["message"].lower()
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Profile with ID '{profile_id}' not found"
+            )
 
     def test_delete_profile_returns_409_when_in_use(self, client: TestClient) -> None:
         """Test that DELETE /profiles/{profile_id} returns 409 when in use."""
@@ -3100,26 +3102,18 @@ class TestProfileConcurrencyControl:
 
     def test_update_with_if_match_fails_when_mismatched(self, client: TestClient) -> None:
         """Test that PUT with mismatched If-Match returns 412."""
-        profile_id = str(uuid.uuid4())
+        profile_id = client.post(
+            "/profiles", json={"name": "Concurrent DB", "type": "database", "config": {}}
+        ).json()["data"]["id"]
 
-        with patch(
-            "wavecore.api.routes.profiles.routes.profile_service.update_profile"
-        ) as mock_update:
-            exc = ConflictException("Precondition failed: resource has been modified")
-            exc.status_code = 412
-            exc.error_code = "PRECONDITION_FAILED"
-            mock_update.side_effect = exc
+        response = client.put(
+            f"/profiles/{profile_id}",
+            json={"name": "Updated Profile"},
+            headers={"If-Match": '"stale-etag"'},
+        )
 
-            response = client.put(
-                f"/profiles/{profile_id}",
-                json={"name": "Updated Profile"},
-                headers={"If-Match": '"stale-etag"'},
-            )
-
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+        assert client.get(f"/profiles/{profile_id}").json()["data"]["name"] == "Concurrent DB"
 
     def test_update_returns_new_etag_header(self, client: TestClient) -> None:
         """Test that PUT returns new ETag header after successful update."""
@@ -3164,10 +3158,18 @@ class TestProfileConcurrencyControl:
                 headers={"If-Match": '"definitely-wrong-etag"'},
             )
 
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+            assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+
+    def test_delete_with_the_current_if_match_succeeds(self, client: TestClient) -> None:
+        profile_id = client.post(
+            "/profiles", json={"name": "Current DB", "type": "database", "config": {}}
+        ).json()["data"]["id"]
+        etag = client.get(f"/profiles/{profile_id}").headers["ETag"]
+
+        response = client.delete(f"/profiles/{profile_id}", headers={"If-Match": etag})
+
+        assert response.status_code == 204, response.text
+        assert client.get(f"/profiles/{profile_id}").status_code == 404
 
     def test_delete_without_if_match_succeeds(self, client: TestClient) -> None:
         """Test that DELETE without If-Match header still works."""

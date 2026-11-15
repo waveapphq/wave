@@ -19,15 +19,10 @@
           "version": "1.0.0",
           "description": "Set a literal and a 20-digit expression",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "big"
+          "expressionFields": [
+            "variables.big"
           ],
-          "variableTypes": {
-            "n": "integer",
-            "big": "integer"
-          },
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -125,14 +120,10 @@
           "version": "1.0.0",
           "description": "Set NaN into a float",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "ratio"
+          "expressionFields": [
+            "variables.ratio"
           ],
-          "variableTypes": {
-            "ratio": "float"
-          },
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {

@@ -9,8 +9,9 @@ the topic split are unchanged.
 """
 
 import asyncio
+import logging
 import uuid
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 import pytest
@@ -76,15 +77,20 @@ async def _settle(seconds: float = 0.05) -> None:
     await asyncio.sleep(seconds)
 
 
+def _reset_log_state() -> None:
+    log_streaming_service._session_logs.clear()
+    log_streaming_service._clear_cache()
+    log_streaming_service.clear_broadcast_manager()
+
+
 @pytest.fixture(autouse=True)
-def _clean_log_state() -> Generator[None, None, None]:
-    log_streaming_service._session_logs.clear()
-    log_streaming_service._clear_cache()
-    log_streaming_service.clear_broadcast_manager()
+async def _clean_log_state() -> AsyncGenerator[None, None]:
+    """Stop the test's drainers on its own event loop, so none is left pending."""
+    _reset_log_state()
     yield
-    log_streaming_service._session_logs.clear()
-    log_streaming_service._clear_cache()
-    log_streaming_service.clear_broadcast_manager()
+    drainers = [*log_streaming_service._session_drainers.values()]
+    _reset_log_state()
+    await asyncio.gather(*drainers, return_exceptions=True)
 
 
 @pytest.fixture
@@ -93,6 +99,20 @@ def manager() -> Generator[_FakeManager, None, None]:
     log_streaming_service.set_broadcast_manager(fake)  # type: ignore[arg-type]
     yield fake
     log_streaming_service.clear_broadcast_manager()
+
+
+def _fail_first_fan_out(manager: _FakeManager, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first subscription lookup raises; every later one answers as before."""
+    calls = {"count": 0}
+    original = manager.get_log_subscription_level
+
+    def explode_once(conn_id: str, session_id: str) -> str | None:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("fan-out blew up")
+        return original(conn_id, session_id)
+
+    monkeypatch.setattr(manager, "get_log_subscription_level", explode_once)
 
 
 def _tracked_execution() -> str:
@@ -452,22 +472,14 @@ class TestFanOutSurvivesConnectionChurn:
 
         assert watcher.messages == [f"line-{index}" for index in range(4)]
 
-    async def test_a_failing_fan_out_never_kills_the_drainer(self, manager: _FakeManager) -> None:
+    async def test_a_failing_fan_out_never_kills_the_drainer(
+        self, manager: _FakeManager, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A fan-out that raises costs one line, not the rest of the run."""
         session_id = str(uuid.uuid4())
         healthy = _RecordingWebSocket()
         manager.attach("c1", session_id, healthy)
-
-        calls = {"count": 0}
-        original = manager.get_log_subscription_level
-
-        def explode_once(conn_id: str, sid: str) -> str | None:
-            calls["count"] += 1
-            if calls["count"] == 1:
-                raise RuntimeError("fan-out blew up")
-            return original(conn_id, sid)
-
-        manager.get_log_subscription_level = explode_once  # type: ignore[method-assign]
+        _fail_first_fan_out(manager, monkeypatch)
 
         for index in range(3):
             log_streaming_service.add_log(session_id, "INFO", f"line-{index}", "Plugin")
@@ -476,3 +488,35 @@ class TestFanOutSurvivesConnectionChurn:
         assert healthy.messages == ["line-1", "line-2"]
         drainer = log_streaming_service._session_drainers.get(session_id)
         assert drainer is not None and drainer.done() is False
+
+    @pytest.mark.parametrize(
+        ("session", "logged_session"),
+        [
+            ("3f2b8c1e", "3f2b8c1e"),
+            ("3f2b8c1e\nERROR forged", "base64:M2YyYjhjMWUKRVJST1IgZm9yZ2Vk"),
+        ],
+    )
+    async def test_a_failed_fan_out_logs_the_session_on_one_line(
+        self,
+        manager: _FakeManager,
+        caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+        session: str,
+        logged_session: str,
+    ) -> None:
+        """REQ-6.4.1: a plain session id is logged as it is; one with a line break as Base64."""
+        healthy = _RecordingWebSocket()
+        manager.attach("c1", session, healthy)
+        _fail_first_fan_out(manager, monkeypatch)
+
+        with caplog.at_level(logging.ERROR, logger=log_streaming_service.__name__):
+            for index in range(2):
+                log_streaming_service.add_log(session, "INFO", f"line-{index}", "Plugin")
+            await _wait_for(healthy, 1)
+
+        assert healthy.messages == ["line-1"]
+        assert [
+            record.getMessage()
+            for record in caplog.records
+            if record.name == log_streaming_service.__name__
+        ] == [f"Log broadcast failed for session {logged_session}"]

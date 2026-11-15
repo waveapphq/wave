@@ -45,6 +45,7 @@ vi.mock('@codemirror/view', () => ({
   EditorView: {
     theme: () => ({}),
     updateListener: { of: () => ({}) },
+    contentAttributes: { of: () => ({}) },
   },
   placeholder: () => ({}),
   ViewPlugin: { define: () => ({}) },

@@ -135,14 +135,14 @@ def _generate_etag(block: dict[str, Any]) -> str:
 
 
 def _check_name_unique(name: str) -> None:
-    """Raise ValueError if a block with the given name already exists."""
+    """Raise ConflictException if a block with the given name already exists."""
     for block in _list_all_blocks():
         if block.get("name") == name:
             raise ConflictException(f"Block with name '{name}' already exists")
 
 
 def _validate_plugin_exists(plugin_id: str) -> None:
-    """Raise ValueError if the plugin ID does not exist in storage."""
+    """Raise ValidationException if the plugin ID does not exist in storage."""
     # Late import to support test patching via service module
 
     try:
@@ -152,7 +152,7 @@ def _validate_plugin_exists(plugin_id: str) -> None:
 
 
 def _check_circular_dependencies(name: str, dependencies: list[str]) -> None:
-    """Raise ValueError if any dependency creates a circular reference."""
+    """Raise ValidationException if any dependency creates a circular reference."""
     all_blocks = {b["id"]: b for b in _list_all_blocks()}
     for dep_id in dependencies:
         if dep_id not in all_blocks:
@@ -265,7 +265,7 @@ def _validate_param_bindings(plugin_id: str, params: dict[str, Any]) -> list[str
 
 
 def _check_backward_compatibility(block: dict[str, Any], data: dict[str, Any]) -> None:
-    """Raise ValueError if required parameters were removed in a non-major bump."""
+    """Raise ValidationException if required parameters were removed in a non-major bump."""
     old_params = block.get("parameters", {})
     new_params = data.get("parameters", old_params)
 

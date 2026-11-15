@@ -193,7 +193,7 @@ test.describe('V-FN-BLOCK-WINDOW-FUNCTIONAL: the Function Block window', () => {
 
     await test.step('the publish starts from the source version description and records it', async () => {
       await pickBlockMenuItem(page, SHARED_ID, /^Publish$/)
-      const dialog = page.getByRole('dialog').filter({ hasText: 'Publish edit-mode draft' })
+      const dialog = page.getByRole('dialog', { name: 'Publish edit-mode draft' })
       await expect(dialog).toBeVisible({ timeout: 10_000 })
       await expect(dialog.getByTestId('publish-edit-mode-description-input')).toHaveValue(LIBRARY_DESCRIPTION)
       await dialog.getByTestId('publish-edit-mode-changelog-input').fill('Republish with a Block description')

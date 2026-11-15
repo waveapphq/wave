@@ -157,7 +157,7 @@ if [ ${#UNUSED_ALLOWLIST[@]} -gt 0 ]; then
 fi
 
 # Coverage exclusion registry: every registered COV ID is used in src/, and every ID src/ uses is registered.
-REGISTRY="$PROJECT_ROOT/frontend/coverage-exclusions.md"
+REGISTRY="$PROJECT_ROOT/tests/exclusions/frontend-coverage.md"
 # An ID's family can have more than one word, such as COV-V8-FUNC-003.
 COV_ID='COV-[A-Z0-9]+(-[A-Z][A-Z0-9]*)*-[0-9]+'
 REGISTERED_IDS=$(grep -oE "^### $COV_ID" "$REGISTRY" | sed 's/^### //' | sort -u || true)
@@ -169,7 +169,7 @@ if [ -n "$ORPHANED_IDS" ]; then
   echo ""
   echo "ERROR: coverage exclusion ID(s) registered but used nowhere in frontend/src/:"
   printf '  %s\n' $ORPHANED_IDS
-  echo "Delete their sections from frontend/coverage-exclusions.md."
+  echo "Delete their sections from tests/exclusions/frontend-coverage.md."
 fi
 
 if [ -n "$UNREGISTERED_IDS" ]; then

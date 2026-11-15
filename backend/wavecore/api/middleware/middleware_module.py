@@ -43,6 +43,7 @@ from wavecore.api.config import get_config
 from wavecore.api.exceptions import (
     WaveException,
 )
+from wavecore.core.logging.log_safe import log_safe
 
 # Constant for the generic internal error message (used in multiple places)
 _ERR_INTERNAL = "An internal server error occurred"
@@ -321,7 +322,7 @@ def _handle_wave_exception(
         Standardized JSON error response
     """
     logger.error(
-        f"WAVE exception for request {request_id}: {exc}",
+        f"WAVE exception for request {request_id}: {log_safe(exc)}",
         extra={"request_id": request_id, "endpoint": path, "error_code": exc.error_code},
         exc_info=True,
     )
@@ -355,7 +356,7 @@ def _handle_http_exception(
         Standardized JSON error response
     """
     logger.warning(
-        f"{label} for request {request_id}: {exc.detail}",
+        f"{label} for request {request_id}: {log_safe(exc.detail)}",
         extra={"request_id": request_id, "endpoint": path, "status_code": exc.status_code},
     )
     error_code = _HTTP_ERROR_CODE_MAP.get(exc.status_code, "HTTP_ERROR")
@@ -384,7 +385,7 @@ def _handle_unhandled_exception(
         Standardized JSON error response (always 500)
     """
     logger.error(
-        f"Unhandled exception for request {request_id}: {exc}",
+        f"Unhandled exception for request {request_id}: {log_safe(exc)}",
         extra={"request_id": request_id, "endpoint": path},
         exc_info=True,
     )
@@ -755,13 +756,14 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
 
         rid = correlation_id[:8]
 
-        path = str(request.url.path)
+        # The path as routed: the parsed URL would drop a tab, CR or LF from it.
+        path = str(request.scope["path"])
         if request.url.query:
             path = f"{path}?{request.url.query}"
 
         summary = format_http_request(
             method=request.method,
-            path=path,
+            path=log_safe(path),
             status=response.status_code,
             duration_ms=duration_ms,
         )

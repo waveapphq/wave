@@ -185,6 +185,84 @@ export function callTool(port: number, tool: string, args: Record<string, unknow
   return JSON.parse(stdout.trim().split('\n').pop() ?? '') as McpToolResult
 }
 
+// The SDK client for answers of several content items, printing every text item: a listing sends one per row.
+const CALL_ITEMS_PROGRAM = [
+  'import asyncio, json, sys',
+  'from mcp import types',
+  'from mcp.client import Client',
+  '',
+  'async def main():',
+  '    raw = sys.stdin.read().strip()',
+  '    info = types.Implementation(name=sys.argv[3], version="1.0.0")',
+  '    async with Client(sys.argv[1], client_info=info) as client:',
+  '        result = await client.call_tool(sys.argv[2], json.loads(raw) if raw else {})',
+  '        texts = [item.text for item in result.content if getattr(item, "type", "") == "text"]',
+  '        print(json.dumps({"isError": bool(result.is_error), "texts": texts}))',
+  '',
+  'asyncio.run(main())',
+].join('\n')
+
+export interface McpTextItems {
+  isError: boolean
+  /** Every text item of the answer, in order; a listing sends one per row and none for no match. */
+  texts: string[]
+}
+
+/** Call one MCP tool on the endpoint at `port` and keep every text item it answers. */
+export function callToolItems(
+  port: number,
+  tool: string,
+  args: Record<string, unknown> = {},
+  clientName = 'wave-e2e-tool-client',
+): McpTextItems {
+  const stdout = execFileSync(
+    'poetry',
+    ['run', 'python', '-c', CALL_ITEMS_PROGRAM, mcpEndpointUrl(port), tool, clientName],
+    { cwd: BACKEND_DIR, input: JSON.stringify(args), timeout: 90_000, encoding: 'utf-8' },
+  )
+  return JSON.parse(stdout.trim().split('\n').pop() ?? '') as McpTextItems
+}
+
+// The SDK client the one-shot calls use, printing each listed tool's description by name.
+const LIST_TOOLS_PROGRAM = [
+  'import asyncio, json, sys',
+  'from mcp import types',
+  'from mcp.client import Client',
+  '',
+  'async def main():',
+  '    info = types.Implementation(name="wave-e2e-tool-client", version="1.0.0")',
+  '    async with Client(sys.argv[1], client_info=info) as client:',
+  '        result = await client.list_tools()',
+  '        print(json.dumps({tool.name: tool.description for tool in result.tools}))',
+  '',
+  'asyncio.run(main())',
+].join('\n')
+
+/** The description of every tool the endpoint at `port` lists, by tool name. */
+export function listToolDescriptions(port: number): Record<string, string> {
+  const stdout = execFileSync('poetry', ['run', 'python', '-c', LIST_TOOLS_PROGRAM, mcpEndpointUrl(port)], {
+    cwd: BACKEND_DIR,
+    timeout: 90_000,
+    encoding: 'utf-8',
+  })
+  return JSON.parse(stdout.trim().split('\n').pop() ?? '') as Record<string, string>
+}
+
+// The YAML reader the backend reads recipes with, printing the document as JSON.
+const READ_YAML_PROGRAM =
+  'import json, sys, yaml; print(json.dumps(yaml.safe_load(sys.stdin.read()), default=str))'
+
+/** A recipe text, such as a `get_test_recipe` readback, as data. */
+export function recipeData(text: string): Record<string, any> {
+  const stdout = execFileSync('poetry', ['run', 'python', '-c', READ_YAML_PROGRAM], {
+    cwd: BACKEND_DIR,
+    input: text,
+    timeout: 60_000,
+    encoding: 'utf-8',
+  })
+  return JSON.parse(stdout.trim().split('\n').pop() ?? '') as Record<string, any>
+}
+
 // ============================================================================
 // Held client session
 // ============================================================================

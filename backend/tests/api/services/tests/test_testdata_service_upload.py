@@ -117,6 +117,15 @@ class TestBeginUploadTargetFolder:
         with pytest.raises(ValidationException, match=r"^Invalid test data path: \.\./out$"):
             testdata_service.begin_upload(test_id, "../out", "a.csv", replace=False)
 
+    def test_a_dot_as_the_folder_is_refused_and_writes_nothing(self, test_id: str) -> None:
+        """Only the empty folder names the root, so every answered path matches the listing."""
+        store(test_id, "kept.csv", b"x")
+
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            store(test_id, "./a.csv", b"y")
+
+        assert sorted(path.name for path in testdata_root(test_id).iterdir()) == ["kept.csv"]
+
     def test_a_missing_folder_is_not_found(self, test_id: str) -> None:
         """Upload never creates the target folder implicitly."""
         with pytest.raises(NotFoundException, match=r"^Folder not found: fixtures$"):

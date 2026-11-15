@@ -181,7 +181,7 @@ export const rowFor = (page: Page, name: string): Locator =>
   contentRoot(page).locator(`[aria-label="Variable ${name}"]`)
 
 export const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 /** Open a variable's inspect modal via the eye (opens in Current view mode). */
 export async function openInspector(page: Page, name: string): Promise<Locator> {

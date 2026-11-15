@@ -49,7 +49,6 @@ def _make_node(
             "description": description or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

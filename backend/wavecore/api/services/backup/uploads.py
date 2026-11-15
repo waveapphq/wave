@@ -87,7 +87,9 @@ def keep(content: bytes, filename: str) -> str:
         _sweep()
         upload_id = uuid.uuid4().hex
         path = _private_folder() / upload_id
-        path.write_bytes(content)
+        # The file name is WAVE's own; only the bytes come from the upload.
+        with open(path, "wb") as handle:
+            handle.write(content)
         _kept[upload_id] = _Kept(path=path, filename=filename, timer=_armed(upload_id, 0))
         return upload_id
 

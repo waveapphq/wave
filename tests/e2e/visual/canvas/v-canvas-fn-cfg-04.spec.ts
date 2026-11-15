@@ -397,7 +397,7 @@ test.describe('V-CANVAS-FN-CFG-04: Function Block window - inputs and outputs by
       const sheet = await openFunctionBlockSheet(page, TOKEN_NODE_ID)
       const row = paramRow(sheet, 'api_key')
       // Per FNCFG-7: pencil, masked dots, lock, expression button.
-      const masked = row.getByRole('button', { name: 'Edit protected value', exact: true })
+      const masked = row.getByRole('button', { name: 'api_key: Edit protected value', exact: true })
       await expect(masked).toBeVisible()
       await expect(masked.locator('svg.lucide-pencil')).toHaveCount(1)
       await expect(masked).toHaveText('••••••••')

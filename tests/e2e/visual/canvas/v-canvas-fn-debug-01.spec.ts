@@ -37,7 +37,6 @@ function logNode(id: string, message: string, x: number): Record<string, unknown
       version: '1.0.0',
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { message: `'${message}'`, level: 'INFO' }, outputBindings: {}, profileBindings: [] },
     },
   }
@@ -65,7 +64,6 @@ function buildSeed(): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',

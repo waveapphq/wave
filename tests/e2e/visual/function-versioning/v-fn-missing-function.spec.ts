@@ -65,7 +65,6 @@ async function seedTestWithDeletedFunction(request: APIRequestContext): Promise<
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
           },
         },

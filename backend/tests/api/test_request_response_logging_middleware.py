@@ -14,6 +14,7 @@ This test module verifies:
 - Security and privacy (access control, log integrity, encryption at rest)
 """
 
+import base64
 import logging
 import re
 from collections.abc import Callable
@@ -1813,3 +1814,52 @@ class TestFailedRequestLogging:
         assert line.group(1) == seen["request_id"][:8], "the response line must carry that id"
         assert response.headers["x-request-id"] == seen["request_id"]
         assert response.headers["x-correlation-id"] == seen["request_id"]
+
+
+_RLO = "\N{RIGHT-TO-LEFT OVERRIDE}"
+_LINE_SEPARATOR = "\N{LINE SEPARATOR}"
+
+
+def _base64_of(text: str) -> str:
+    return "base64:" + base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+class TestRequestLineValues:
+    """Test suite for the path and query in the request line (REQ-6.4.1, REQ-5.2.3.5)."""
+
+    @pytest.mark.parametrize(
+        ("url", "logged"),
+        [
+            ("/items/plain?page=1&limit=10", "/items/plain?page=1&limit=10"),
+            ("/items/a%1B[31mb", _base64_of("/items/a\x1b[31mb")),
+            ("/items/a%E2%80%AEb", _base64_of(f"/items/a{_RLO}b")),
+            ("/items/a%E2%80%A8b", _base64_of(f"/items/a{_LINE_SEPARATOR}b")),
+            ("/items/a%0D%0Ab", _base64_of("/items/a\r\nb")),
+            ("/items/a%1Bb?page=1", _base64_of("/items/a\x1bb?page=1")),
+        ],
+    )
+    def test_the_request_line_writes_the_path_and_query_log_safe(
+        self, caplog: pytest.LogCaptureFixture, url: str, logged: str
+    ) -> None:
+        """Test that a path holding a control or bidirectional character is written as base64."""
+        app = FastAPI()
+        add_request_response_logging_middleware(app)
+
+        @app.get("/items/{name}")
+        async def item_endpoint(name: str) -> dict[str, str]:
+            return {"name": name}
+
+        with (
+            patch("wavecore.api.middleware.middleware_module.time") as clock,
+            caplog.at_level(logging.INFO, logger=_MIDDLEWARE_LOGGER),
+        ):
+            clock.time.side_effect = [1.0, 1.25]
+            response = TestClient(app).get(url)
+
+        assert response.status_code == 200
+        rid = response.headers["x-request-id"][:8]
+        assert [
+            r.getMessage()
+            for r in caplog.records
+            if r.name == _MIDDLEWARE_LOGGER and r.levelno == logging.INFO
+        ] == [f"[{rid}] GET {logged} → 200 (250.00ms)"]

@@ -209,7 +209,6 @@ test.describe('V-RC-FUNCTIONAL: run-current executes the in-memory body', () => 
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               editMode: true,
               upstreamLink: { functionId: lib.functionId, sourceVersion: lib.version },

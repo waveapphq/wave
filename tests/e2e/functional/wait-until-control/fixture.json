@@ -17,7 +17,6 @@
           "description": "Before the wait chain",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-before'", "level": "INFO" },
             "outputBindings": {},
@@ -39,7 +38,6 @@
           "description": "P1 retry succeeds",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "conditions": [
@@ -78,7 +76,6 @@
           "description": "P1 poll (2 failures then 200)",
           "expressionFields": ["url"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "f'https://127.0.0.1:9449/retry?key=wu-p1-{run_key}&fail_count=2&fail_status=418'",
@@ -111,7 +108,6 @@
           "description": "P1 round marker",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p1-round'", "level": "INFO" },
             "outputBindings": {},
@@ -133,7 +129,6 @@
           "description": "P1 then",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p1-then'", "level": "INFO" },
             "outputBindings": {},
@@ -155,7 +150,6 @@
           "description": "P3 times out, scope untouched",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "conditions": [
@@ -194,7 +188,6 @@
           "description": "P3 poll (never succeeds)",
           "expressionFields": ["url"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "f'https://127.0.0.1:9449/retry?key=wu-p3-{run_key}&fail_count=999&fail_status=418'",
@@ -227,7 +220,6 @@
           "description": "P3 round marker",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p3-round'", "level": "INFO" },
             "outputBindings": {},
@@ -249,7 +241,6 @@
           "description": "P3 then",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p3-then'", "level": "INFO" },
             "outputBindings": {},
@@ -271,7 +262,6 @@
           "description": "P4 watch, condition already true",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "conditions": [
@@ -310,7 +300,6 @@
           "description": "P4 then",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p4-then'", "level": "INFO" },
             "outputBindings": {},
@@ -333,7 +322,6 @@
           "disabled": true,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "conditions": [
@@ -372,7 +360,6 @@
           "description": "P5 retry lane",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p5-retry'", "level": "INFO" },
             "outputBindings": {},
@@ -394,7 +381,6 @@
           "description": "P5 then",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-p5-then'", "level": "INFO" },
             "outputBindings": {},
@@ -416,7 +402,6 @@
           "description": "After the wait chain",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wu-after'", "level": "INFO" },
             "outputBindings": {},

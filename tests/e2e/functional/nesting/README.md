@@ -97,6 +97,12 @@ Inner kinds, in order: `if-else`, `switch-case`, `assert-split`, `for`, `for-eac
 
 - B1: the else branch and the Assert fail leg assert the same outcome as the if branch and the pass leg; the
   Switch/Case default cells record a refusal or the run and assert only that no node is left running.
+- B1 Function body (`v-nesting-signals-break-continue-<for|for-each|while>-functional.spec.ts`, the 12
+  `B1.<for|for-each|while>.function-body.<break|continue>.<nearest|outer>` cells): a Function is its own flow, so
+  its body holds no loop of the Test that calls it. Publishing the Function is refused with 422 and the one finding
+  `BREAK_OUTSIDE_LOOP` `break/continue is only valid inside a loop body`; nothing is stored or run. The Switch/Case
+  case, Wait Until retry body and Remote Execution body cells record a refusal or the run and assert only that no
+  node is left running.
 - B1 try, catch and finally (`v-nesting-signals-break-continue-<for|for-each|while>-functional.spec.ts`): the
   Try/Catch has its finally path enabled. The signal leaves the Try/Catch the way `break` leaves `try ... finally`:
   the rest of its path and the catch path never run, and the finally path (the try path for a signal in finally)

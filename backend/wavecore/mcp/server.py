@@ -21,6 +21,8 @@ from typing import Any
 import psutil
 import uvicorn
 from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
+from mcp.server.mcpserver.tools import Tool
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp_types.version import HANDSHAKE_PROTOCOL_VERSIONS
 
@@ -205,7 +207,35 @@ def _on_loop(handler: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     return adapter
 
 
-def _register_tools(server: MCPServer) -> None:
+def _undeclared_arguments_message(undeclared: list[str], declared: list[str]) -> str:
+    names = ", ".join(f"'{name}'" for name in undeclared)
+    noun = "argument" if len(undeclared) == 1 else "arguments"
+    valid = (
+        f"valid arguments: {', '.join(sorted(declared))}"
+        if declared
+        else "this tool takes no arguments"
+    )
+    return f"Unknown {noun} {names}; {valid}"
+
+
+class _DeclaredArgumentsTool(Tool):
+    """A tool that refuses an argument its input schema does not declare."""
+
+    async def run(
+        self,
+        arguments: dict[str, Any],
+        context: Context[Any, Any],
+        convert_result: bool = False,
+    ) -> Any:
+        declared = list(self.parameters.get("properties") or {})
+        undeclared = [name for name in arguments if name not in declared]
+        if undeclared:
+            message = _undeclared_arguments_message(undeclared, declared)
+            raise ToolError(f"Error executing tool {self.name}: {message}")
+        return await super().run(arguments, context, convert_result=convert_result)
+
+
+def _tools() -> list[Tool]:
     handlers = (
         discover.list_blocks,
         discover.get_block,
@@ -241,31 +271,31 @@ def _register_tools(server: MCPServer) -> None:
         testdata_tools.delete_testdata,
         secret_tools.reveal_secret,
     )
-    for handler in handlers:
-        server.add_tool(_on_loop(handler), structured_output=False)
-    server.add_tool(
-        _on_loop(_start_execution_tool), name="start_execution", structured_output=False
+    named: list[tuple[str | None, Callable[..., Any]]] = [
+        (None, _on_loop(handler)) for handler in handlers
+    ]
+    named.extend(
+        [
+            ("start_execution", _on_loop(_start_execution_tool)),
+            ("create_test_from_recipe", _on_loop(_create_test_from_recipe_tool)),
+            ("amend_test_from_recipe", _on_loop(_amend_test_from_recipe_tool)),
+            ("build_test_from_recipe", _build_test_from_recipe_tool),
+        ]
     )
-    server.add_tool(
-        _on_loop(_create_test_from_recipe_tool),
-        name="create_test_from_recipe",
-        structured_output=False,
-    )
-    server.add_tool(
-        _on_loop(_amend_test_from_recipe_tool),
-        name="amend_test_from_recipe",
-        structured_output=False,
-    )
-    server.add_tool(
-        _build_test_from_recipe_tool, name="build_test_from_recipe", structured_output=False
-    )
+    return [
+        _DeclaredArgumentsTool.from_function(fn, name=name, structured_output=False)
+        for name, fn in named
+    ]
+
+
+def _build_server() -> MCPServer:
+    return MCPServer(name="WAVE", tools=_tools())
 
 
 def build_mcp_app() -> Any:
     """The MCP endpoint ASGI app: SDK server + tools + auth/session wrapper."""
     settings = mcp_settings.get_settings()
-    server = MCPServer(name="WAVE")
-    _register_tools(server)
+    server = _build_server()
     auth_enabled = bool(settings["auth_enabled"])
     password = mcp_settings.get_unsealed_password() if auth_enabled else None
     # Host-header (DNS-rebinding) validation off: it rejects network-bind and

@@ -25,7 +25,7 @@
 import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { numberInput, saveButton } from '../../helpers/config-sheet'
-import { BACKEND_URL } from '../../helpers/config'
+import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { runToken } from '../../helpers/element-types'
 import {
   addLibraryVersion,
@@ -39,6 +39,7 @@ import {
   storedLocalDefinition,
 } from '../../helpers/fn-seed'
 import { finishRun, startRun } from '../../helpers/k8s-run'
+import { escapeRegExp } from '../../helpers/log-reader'
 import {
   deleteFunctionQuietly,
   deleteTestQuietly,
@@ -110,7 +111,7 @@ async function switchVersion(page: Page, sheet: Locator, version: string): Promi
   await trigger.click()
   const menu = page.locator('[data-testid="version-dropdown-menu"]')
   await expect(menu).toBeVisible()
-  await menu.getByRole('menuitemradio', { name: new RegExp(version.replace(/\./g, '\\.')) }).click()
+  await menu.getByRole('menuitemradio', { name: new RegExp(escapeRegExp(version)) }).click()
   await expect(trigger).toContainText(`v${version}`)
 }
 
@@ -127,6 +128,7 @@ test.describe('V-NUMBER-FUNCTIONS-INPUTS-FUNCTIONAL: Function declarations follo
     request,
   }) => {
     test.setTimeout(240_000)
+    await ensureEnvironment(request)
     const token = runToken()
     const body = {
       nodes: [logNode(BODY_LOG, 'Show N', "f'n={n}'")],

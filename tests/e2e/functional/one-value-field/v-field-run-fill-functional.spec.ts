@@ -23,8 +23,10 @@
  *    operation `read` twice, kind `Deployment`, operation `restart`) and none of the free-entry
  *    fields the steps leave out (timeout, retries, redirects, sheet, range, namespace); the
  *    workbench run passes with the same results.
- * 3. Recipe-built HTTP Request with `timeout: null`: the stored value is null and the run uses
- *    the default, `(timeout: 30s)` (a literal null on an optional setting with a default).
+ * 3. Recipe-built HTTP Request with `timeout: null`: `validate_recipe` and
+ *    `create_test_from_recipe` refuse it with `INVALID_SETTING_VALUE` "Setting 'timeout' of block
+ *    'http-client' cannot be null" at `flow[0].settings.timeout`, and nothing is stored (a setting
+ *    given null fails and names it, even with a default).
  * 4. Window-built: Blocks dropped from the palette and given only their required free-entry
  *    fields store the choice defaults written at creation and nothing for the fields left out;
  *    the run passes with the same results.
@@ -65,6 +67,7 @@ import {
   deploymentRestartLine,
   expectLeftOut,
   httpSendLine,
+  leaveStampSecond,
   restartStamp,
   RUN_FILL_BOOK,
   RUN_FILL_NOTE,
@@ -203,14 +206,6 @@ function recipeFor(name: string, workload: string): string {
     '    capture:',
     '      status_code: echo_status',
     '      body: echo_body',
-    '  - block: http-client',
-    '    label: Echo Timeout Null',
-    '    settings:',
-    `      url: "${NULL_TIMEOUT_URL}"`,
-    '      verify_ssl: false',
-    '      timeout: null',
-    '    capture:',
-    '      status_code: null_timeout_status',
     '  - block: file-io',
     '    label: Read Note',
     '    settings:',
@@ -346,6 +341,7 @@ test.describe('V-FIELD-RUN-FILL-FUNCTIONAL: the run fills what a Block leaves ou
 
     await test.step('a tracked run of the stored Test passes the same way', async () => {
       const stampBeforeTracked = await restartStamp(request, run.namespace, workloads.stored)
+      await leaveStampSecond(stampBeforeTracked)
       await request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => undefined)
       const tracked = await runTrackedTest(request, testId)
       const history = await trackedHistory(request, tracked.executionId)
@@ -377,6 +373,41 @@ test.describe('V-FIELD-RUN-FILL-FUNCTIONAL: the run fills what a Block leaves ou
     await enableMcpUntilRestart(page, MCP_PORT)
     const stampBefore = await restartStamp(request, run.namespace, workloads.recipe)
 
+    await test.step('a setting given null is refused, named, and nothing is stored', async () => {
+      const name = `zz-11541-s3-run-fill-null ${runToken()}`
+      const recipe = [
+        'test:',
+        `  name: ${name}`,
+        'flow:',
+        '  - block: http-client',
+        '    label: Echo Timeout Null',
+        '    settings:',
+        `      url: "${NULL_TIMEOUT_URL}"`,
+        '      timeout: null',
+        '',
+      ].join('\n')
+      const expected = [
+        {
+          step: 'flow[0].settings.timeout',
+          code: 'INVALID_SETTING_VALUE',
+          problem: "Setting 'timeout' of block 'http-client' cannot be null",
+          fix: 'Leave the setting out to use its default',
+        },
+      ]
+      const errorsOf = (payload: Record<string, any>): unknown[] =>
+        ((payload.findings ?? []) as Array<Record<string, unknown>>)
+          .filter((item) => item.severity === 'error')
+          .map(({ step, code, problem, fix }) => ({ step, code, problem, fix }))
+      const verdict = callTool(MCP_PORT, 'validate_recipe', { recipe })
+      expect(verdict.payload.valid, JSON.stringify(verdict.payload)).toBe(false)
+      expect(errorsOf(verdict.payload), JSON.stringify(verdict.payload)).toEqual(expected)
+      const refused = callTool(MCP_PORT, 'create_test_from_recipe', { recipe })
+      expect(refused.payload.created, JSON.stringify(refused.payload)).toBe(false)
+      expect(errorsOf(refused.payload), JSON.stringify(refused.payload)).toEqual(expected)
+      const list = await request.get(`${BACKEND_URL}/tests?search=${encodeURIComponent(name)}`)
+      expect(((await list.json()).data as Array<{ name: string }>).filter((entry) => entry.name === name)).toEqual([])
+    })
+
     let testId = ''
     await test.step('create_test_from_recipe creates the Test', async () => {
       const answer = callTool(MCP_PORT, 'create_test_from_recipe', {
@@ -404,8 +435,6 @@ test.describe('V-FIELD-RUN-FILL-FUNCTIONAL: the run fills what a Block leaves ou
       expect(rollout.data.config.values.kind).toBe('Deployment')
       expect(rollout.data.config.values.operation).toBe('restart')
       expectLeftOut(rollout, LEFT_OUT.rollout)
-      const nullTimeout = storedBlock(stored, 'Echo Timeout Null')
-      expect(nullTimeout.data.config.values, 'the literal null is stored as given').toHaveProperty('timeout', null)
     })
 
     await uploadRunFillData(request, testId)
@@ -419,11 +448,6 @@ test.describe('V-FIELD-RUN-FILL-FUNCTIONAL: the run fills what a Block leaves ou
       expect(sessionValue(vars, 'echo_status')).toBe(200)
       expect((JSON.parse(String(sessionValue(vars, 'echo_body'))) as Echo).method).toBe('GET')
       await expectFilledRun(request, vars, messages, workloads.recipe, ECHO_URL, stampBefore)
-    })
-
-    await test.step('timeout: null runs on the default 30', () => {
-      expect(sessionValue(vars, 'null_timeout_status')).toBe(200)
-      expectMessage(messages, httpSendLine('GET', NULL_TIMEOUT_URL, DEFAULT_TIMEOUT))
     })
   })
 

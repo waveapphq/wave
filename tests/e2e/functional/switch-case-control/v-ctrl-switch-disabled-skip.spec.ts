@@ -42,7 +42,6 @@ function logNode(id: string, description: string, message: string, x: number, y:
       description,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${message}'`, level: 'INFO' },
         outputBindings: {},
@@ -74,7 +73,6 @@ function buildFixture(disabled: boolean): Record<string, unknown> {
             ...(disabled ? { disabled: true } : {}),
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [

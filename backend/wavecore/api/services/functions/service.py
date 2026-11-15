@@ -21,6 +21,11 @@ from wavecore.api.exceptions import (
     ValidationException,
     WaveException,
 )
+from wavecore.api.services.block_node_checks import (
+    RemovedByFlow,
+    put_flow_wires_on_lanes,
+    removed_wires_by_flow,
+)
 from wavecore.api.services.block_schema import block_schema
 from wavecore.api.services.functions import _storage, _versioning
 from wavecore.api.services.functions.import_export import circle_path, circle_text
@@ -194,6 +199,7 @@ class SaveValidationError(Exception):
 def _validate_for_save(
     function_id: str,
     definition: Mapping[str, Any],
+    removed_retry_wires: RemovedByFlow | None = None,
 ) -> None:
     structural_errors = _storage.validate_structural(definition)
     _raise_structural(structural_errors)
@@ -209,7 +215,12 @@ def _validate_for_save(
             details=_details_payload([message]),
         )
 
-    refuse_invalid_body(function_id, definition, _library_index(summaries))
+    refuse_invalid_body(
+        function_id,
+        definition,
+        _library_index(summaries),
+        removed_retry_wires=removed_retry_wires,
+    )
 
 
 def refuse_invalid_body(
@@ -217,18 +228,40 @@ def refuse_invalid_body(
     definition: Mapping[str, Any],
     library: Mapping[str, Any] | None = None,
     *,
-    required_function_inputs: bool = True,
+    context: str = "save",
+    removed_retry_wires: RemovedByFlow | None = None,
 ) -> None:
-    """The create checks past the name: a circle of Functions, then every save error."""
+    """The create checks past the name: a circle of Functions, then every error of the flow
+    and of each Function body it holds, as a Test ``context`` checks its own."""
+    from wavecore.api.services.tests.service import nested_function_errors
+
     _refuse_circle(function_id, definition)
     registry = load_library_index() if library is None else library
+    removed = removed_retry_wires or {}
+    # Only a save refuses a Function Block that leaves a Required input empty; the run names it.
     _refuse_errors(
         _storage.validate_function_for_save(
             definition,
             function_registry=registry,
-            required_function_inputs=required_function_inputs,
-        )
+            required_function_inputs=context == "save",
+            removed_retry_wires=removed.get((), ()),
+        ),
+        nested_function_errors(
+            (definition.get("workflow") or {}).get("nodes") or [],
+            function_registry=registry,
+            context=context,
+            removed=removed,
+        ),
     )
+
+
+def _put_flow_on_lanes(workflow: Any) -> tuple[RemovedByFlow, list[dict[str, Any]]]:
+    """The lane rule on a library Function's flow and every body in it: the retry wires it
+    took out, by flow, and their repair records as a Test save answers them."""
+    from wavecore.api.services.tests.service import removed_wire_repairs
+
+    removed = put_flow_wires_on_lanes(workflow)
+    return removed_wires_by_flow(removed), removed_wire_repairs(removed)
 
 
 def _refuse_circle(function_id: str, definition: Mapping[str, Any]) -> None:
@@ -247,7 +280,11 @@ def _refuse_circle(function_id: str, definition: Mapping[str, Any]) -> None:
         )
 
 
-def _refuse_errors(issues: Iterable[_storage.ValidationIssue]) -> None:
+def _refuse_errors(
+    issues: Iterable[_storage.ValidationIssue],
+    nested: Iterable[Mapping[str, Any]] = (),
+) -> None:
+    """Refuse the save on the flow's error issues and the errors of the bodies it holds."""
     error_payload = [
         {
             "code": issue.code,
@@ -261,6 +298,10 @@ def _refuse_errors(issues: Iterable[_storage.ValidationIssue]) -> None:
         for issue in issues
         if issue.severity == "error"
     ]
+    error_payload.extend(
+        {"severity": "error", "function_id": None, "function_version": None, **error}
+        for error in nested
+    )
     if error_payload:
         raise SaveValidationError(error_payload)
 
@@ -283,19 +324,42 @@ _FUNCTION_SORT_KEYS: dict[str, Any] = {
 }
 
 
+SEARCH_FIELDS = ("name", "description", "tags")
+# Quick Insert (CANVAS-241) and the Functions page (FNLIST-6) search names only.
+DEFAULT_SEARCH_FIELDS = ("name",)
+
+
+def _searched_texts(row: Mapping[str, Any], search_in: Sequence[str]) -> list[str]:
+    texts = [str(row.get(field) or "") for field in ("name", "description") if field in search_in]
+    if "tags" in search_in:
+        texts.extend(str(tag) for tag in row.get("tags") or [])
+    return texts
+
+
+def _matches_search(row: Mapping[str, Any], needle: str, search_in: Sequence[str]) -> bool:
+    return any(needle in text.lower() for text in _searched_texts(row, search_in))
+
+
 def list_functions(
     *,
     page: int = 1,
     per_page: int = 50,
     search: str = "",
+    search_in: Sequence[str] = DEFAULT_SEARCH_FIELDS,
     tags: Sequence[str] = (),
     sort_by: str | None = None,
     sort_order: str | None = "asc",
 ) -> dict[str, Any]:
     """Return paginated FunctionSummary entries plus pagination metadata."""
+    for field in search_in:
+        if field not in SEARCH_FIELDS:
+            raise ValidationException(
+                f"Invalid search field '{field}': valid fields are {', '.join(SEARCH_FIELDS)}"
+            )
     rows = _storage.list_function_summaries()
     if search:
-        rows = [row for row in rows if search.lower() in row["name"].lower()]
+        needle = search.lower()
+        rows = [row for row in rows if _matches_search(row, needle, search_in)]
     if tags:
         wanted = {tag for tag in tags if tag}
         if wanted:
@@ -325,13 +389,16 @@ def get_function(function_id: str) -> tuple[dict[str, Any], str]:
     """The latest definition as a read shows it, with the ETag of the stored one."""
     try:
         definition, etag = _storage.load_function(function_id)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=f"Function '{function_id}' not found") from exc
     return read_definition_secrets(definition), etag
 
 
 def read_version(function_id: str, version: str) -> tuple[dict[str, Any], str]:
-    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag."""
+    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag.
+
+    An unknown Function id or version raises ``FunctionNotFoundError``.
+    """
     definition = _storage.load_version(function_id, version)
     return read_definition_secrets(definition), _storage.compute_etag(definition)
 
@@ -351,11 +418,15 @@ def draft_over_source(
     return restored
 
 
-def create_function(payload: Mapping[str, Any]) -> tuple[dict[str, Any], str]:
+def create_function(
+    payload: Mapping[str, Any], *, repairs: list[dict[str, Any]] | None = None
+) -> tuple[dict[str, Any], str]:
+    """Store a new library Function; the wires the save removed go into `repairs` when given."""
     function_id = str(uuid.uuid4())
     now = _now_iso()
     definition = _build_definition(function_id, payload, created_at=now, updated_at=now)
-    _validate_for_save(function_id, definition)
+    removed_retry_wires, removed_repairs = _put_flow_on_lanes(definition["workflow"])
+    _validate_for_save(function_id, definition, removed_retry_wires)
     version_str = definition.get("version", "1.0.0") or "1.0.0"
     metadata = {
         "description": definition.get("description", ""),
@@ -372,6 +443,8 @@ def create_function(payload: Mapping[str, Any]) -> tuple[dict[str, Any], str]:
         metadata,
         name=definition.get("name", ""),
     )
+    if repairs is not None:
+        repairs.extend(removed_repairs)
     # Return the GET-canonical shape so create-then-GET yields the same body + ETag.
     try:
         stored, etag = _storage.load_function(function_id)
@@ -391,6 +464,7 @@ def add_function_version(
     description: str,
     tags: Sequence[str],
     details: str,
+    repairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Write a new immutable library version from a client-supplied draft.
 
@@ -398,7 +472,7 @@ def add_function_version(
     version (changelog required, valid semver, source exists, target not a
     duplicate, target is an allowed bump, body passes the create checks) then
     persists via save_new_version.
-    Returns ``{function_id, version}``.
+    Returns ``{function_id, version}``; the wires the save removed go into ``repairs`` when given.
     """
     if not changelog.strip():
         msg = "Changelog is required for edit-mode publish"
@@ -415,7 +489,7 @@ def add_function_version(
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
     try:
         source_def = _storage.load_version(function_id, source_version)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=str(exc), details=_details_payload([str(exc)])) from exc
     existing = _storage.list_versions(function_id)["versions"]
     if any(entry["version"] == target_version for entry in existing):
@@ -437,6 +511,7 @@ def add_function_version(
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
 
     draft_definition = draft_over_source(draft_definition, source_def)
+    removed_retry_wires, removed_repairs = _put_flow_on_lanes(draft_definition.get("workflow"))
     _refuse_errors(_storage.declaration_issues(draft_definition))
     bumps = _versioning.compute_allowed_bumps(source_def, draft_definition)
     level = _versioning.classify_target_version(source_version, target_version)
@@ -448,7 +523,7 @@ def add_function_version(
         )
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
 
-    refuse_invalid_body(function_id, draft_definition)
+    refuse_invalid_body(function_id, draft_definition, removed_retry_wires=removed_retry_wires)
 
     metadata = {
         "description": description or "",
@@ -465,14 +540,13 @@ def add_function_version(
         metadata,
         name=source_def.get("name", ""),
     )
+    if repairs is not None:
+        repairs.extend(removed_repairs)
     return {"function_id": function_id, "version": target_version}
 
 
 def delete_function(function_id: str, *, cascade: bool = False) -> dict[str, Any]:
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
 
     dependents = _storage.scan_dependents(function_id)
     count = len(dependents["tests"]) + len(dependents["functions"])
@@ -495,19 +569,13 @@ def delete_function(function_id: str, *, cascade: bool = False) -> dict[str, Any
 
 
 def get_function_dependents(function_id: str, version: str | None = None) -> dict[str, Any]:
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
     return _storage.scan_dependents(function_id, version)
 
 
 def get_dependents_by_version(function_id: str) -> dict[str, Any]:
     """Per-version dependents in a single storage pass: {version: {tests, functions}}."""
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
     return _storage.scan_dependents_by_version(function_id)
 
 
@@ -519,7 +587,7 @@ def delete_function_version(function_id: str, version: str) -> None:
     """
     try:
         _storage.delete_version(function_id, version)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=str(exc), details=_details_payload([str(exc)])) from exc
 
 
@@ -533,15 +601,20 @@ def _collect_errors(exc: WaveException) -> list[str]:
 
 
 def batch_create_functions(items: Sequence[Any]) -> dict[str, Any]:
+    """Store each item as a new library Function; ``repairs`` holds each save's repairs by id."""
     created: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
+    repairs: dict[str, list[dict[str, Any]]] = {}
     for index, item in enumerate(items):
+        removed: list[dict[str, Any]] = []
         try:
-            definition, _etag = create_function(batch_object(item))
-            created.append(definition)
+            definition, _etag = create_function(batch_object(item), repairs=removed)
         except WaveException as exc:
             failed.append({"index": index, "errors": _collect_errors(exc)})
-    return {"created": created, "failed": failed}
+            continue
+        created.append(definition)
+        repairs[definition["id"]] = removed
+    return {"created": created, "failed": failed, "repairs": repairs}
 
 
 def batch_delete_functions(ids: Sequence[Any], *, cascade: bool = False) -> dict[str, Any]:

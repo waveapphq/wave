@@ -2,7 +2,7 @@
  * ExpressionInput - a single-line CodeMirror editor for expressions and {{ }} templates (REQ-3.1.3.15).
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { use, useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { EditorView, placeholder as placeholderExt, ViewPlugin, tooltips } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
@@ -10,6 +10,11 @@ import { completionStatus, closeCompletion } from '@codemirror/autocomplete'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  describedByOf,
+  FieldErrorContext,
+  FieldNoteContext,
+} from '@/components/shared/fields/field-error-context'
 import { useCanvasReadOnly } from '@/features/workbench/common/canvas/read-only-context'
 import { validateExpressions } from '@/features/workbench/lib/expression-validation/validation'
 import {
@@ -44,6 +49,8 @@ import type { AvailableVariable } from '@/features/workbench/lib/codemirror/type
 
 interface ExpressionInputProps {
   name: string
+  /** The field label that names the editor content; `Expression` when none is given. */
+  label?: string
   value: string
   onChange: (value: string) => void
   availableVariables: AvailableVariable[]
@@ -145,6 +152,7 @@ const autocompleteScrollFix = ViewPlugin.define(() => {
 
 export function ExpressionInput({
   name,
+  label,
   value,
   onChange,
   availableVariables,
@@ -156,6 +164,9 @@ export function ExpressionInput({
   template = false,
 }: Readonly<ExpressionInputProps>) {
   const readOnly = useCanvasReadOnly()
+  const errorId = use(FieldErrorContext)
+  const noteId = use(FieldNoteContext)
+  const describedBy = describedByOf(errorId, noteId)
   const editorRef = useRef<ReactCodeMirrorRef>(null)
   const [isFocused, setIsFocused] = useState(false)
   // Without the parser nothing is checked, so the field says so rather than
@@ -252,6 +263,17 @@ export function ExpressionInput({
     })
   }, [])
 
+  // The editor content is the control a screen reader reaches: it takes the field's name, state and lines.
+  const contentAttributes = useMemo(
+    () =>
+      EditorView.contentAttributes.of({
+        'aria-label': label?.trim() ? label : 'Expression',
+        ...(isInvalid ? { 'aria-invalid': 'true' } : {}),
+        ...(describedBy === undefined ? {} : { 'aria-describedby': describedBy }),
+      }),
+    [label, isInvalid, describedBy]
+  )
+
   // Build extensions
   const extensions = useMemo(
     () => [
@@ -266,6 +288,7 @@ export function ExpressionInput({
       autocompleteWidthSync,
       placeholderTheme,
       placeholder ? placeholderExt(placeholder) : [],
+      contentAttributes,
       // Render tooltips at body level to escape dialog overflow
       tooltips({ parent: document.body }),
       // Read-only history canvas: block edits but keep selection/copy and
@@ -291,6 +314,7 @@ export function ExpressionInput({
       template,
       completionSource,
       placeholder,
+      contentAttributes,
       onBlur,
       onOpenFullEditor,
       expressionHighlighter,

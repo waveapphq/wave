@@ -9,8 +9,9 @@ backstop - and each one announces what it cut instead of cutting silently.
 The same run also proves the secret rule: a cell is masked BEFORE the column
 widths are measured, so the padding cannot disclose how long a protected value
 is and no cap can cut a secret into a prefix the masker no longer matches. The
-second spec proves the stored execution record carries the same masked
-rendering, which is where the rendered table used to be written unmasked.
+second spec proves the stored execution record masks the same cell: it keeps
+the table as named typed columns plus rows, with the secret cell holding the
+mask.
 
 ## Pre-requisites
 
@@ -60,8 +61,9 @@ the persisted variables of the finished execution.
 - Secret: the cell renders as `********`, its column is 8 wide (the mask width,
   not the 31-character value), and the plaintext appears nowhere in the entry.
 - Stored record: `GET /executions/{id}/variables` returns the secret table as
-  rendered text, its column is again the mask width, and the plaintext appears
-  nowhere in the payload.
+  its columns (`lbl` string, `tok` string, `prt` integer) and one row
+  `secret-leg-prod`, `********`, `8080`, and the plaintext appears nowhere in
+  the payload.
 
 ## Notes
 

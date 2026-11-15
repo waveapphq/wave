@@ -203,8 +203,6 @@ def _setter_node(node_id: str, target_var: str) -> dict:
             "elementType": "variable-setter",
             "nodeType": "control",
             "version": "1.0.0",
-            "variableExpressionKeys": [],
-            "variableTypes": {target_var: "string"},
             "config": {
                 "values": {"variables": {target_var: "done"}},
                 "outputBindings": {},

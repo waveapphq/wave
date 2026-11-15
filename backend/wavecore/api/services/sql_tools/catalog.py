@@ -17,7 +17,7 @@ from wavecore.api.services.catalog_jobs import (
 from wavecore.api.services.storage_paths import get_test_testdata_path
 from wavecore.connectivity.sql._catalog import read_catalog
 from wavecore.connectivity.sql._errors import VALIDATION, SqlFailure, map_error
-from wavecore.connectivity.sql.dialects import Handle, dialect, oracle
+from wavecore.connectivity.sql.dialects import Handle, UnknownDatabaseTypeError, dialect, oracle
 from wavecore.core.secrets.masking import mask_text
 from wavecore.core.secrets.sealing import unseal_all
 from wavecore.core.variables.element_types import realize_typed_settings
@@ -102,7 +102,7 @@ def _resolved_rows(rows: dict[str, Any], resolve: Callable[[str, Any], Any]) -> 
     database_type = resolve("database_type", rows["database_type"])
     try:
         module = dialect(database_type)
-    except ValueError as error:
+    except UnknownDatabaseTypeError as error:
         raise ValidationException(str(error)) from None
     rows["database_type"] = database_type
     if database_type != "sqlite":

@@ -11,6 +11,7 @@ from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.services import variable_service
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import service as execution_service
+from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import service as function_service
 from wavecore.api.services.profiles import service as profile_service
 from wavecore.api.services.regressions import service as regression_service
@@ -119,8 +120,11 @@ def get_block(block_id: str) -> dict[str, Any]:
 
 
 def list_functions(search: str | None = None) -> list[dict[str, Any]]:
-    """Published Function contract cards: summary + latest-version typed inputs/outputs."""
-    rows = function_service.list_functions(search=search or "", per_page=_LIST_ALL)["data"]
+    """Published Function contract cards: summary + latest-version typed inputs/outputs;
+    optional name/description search."""
+    rows = function_service.list_functions(
+        search=search or "", search_in=("name", "description"), per_page=_LIST_ALL
+    )["data"]
     cards: list[dict[str, Any]] = []
     for row in rows:
         contract = function_service.resolve_version_contract(
@@ -137,7 +141,7 @@ def get_function(function_id: str, version: str | None = None) -> dict[str, Any]
     if version:
         try:
             definition, _etag = function_service.read_version(function_id, version)
-        except LookupError as exc:
+        except function_storage.FunctionNotFoundError as exc:
             raise NotFoundException(str(exc)) from exc
     else:
         definition, _etag = function_service.get_function(function_id)
@@ -243,9 +247,9 @@ def _suite_row(suite: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def list_suites() -> list[dict[str, Any]]:
-    """Suite summaries with composition ids and masked variables."""
-    rows = suite_service.list_suites(per_page=_LIST_ALL)["suites"]
+def list_suites(search: str | None = None) -> list[dict[str, Any]]:
+    """Suite summaries with composition ids and masked variables; name/description search."""
+    rows = suite_service.list_suites(search=search, per_page=_LIST_ALL)["suites"]
     return [_suite_row(suite) for suite in rows]
 
 
@@ -274,9 +278,11 @@ def get_suite(suite_ref: str) -> dict[str, Any]:
     }
 
 
-def list_regressions() -> list[dict[str, Any]]:
-    """Regression summaries; the service masks variables at the boundary."""
-    return list(regression_service.list_regressions(per_page=_LIST_ALL)["regressions"])
+def list_regressions(search: str | None = None) -> list[dict[str, Any]]:
+    """Regression summaries with masked variables; optional name/description search."""
+    return list(
+        regression_service.list_regressions(search=search, per_page=_LIST_ALL)["regressions"]
+    )
 
 
 def resolve_regression(ref: str) -> dict[str, Any]:
@@ -312,8 +318,11 @@ def list_environments() -> list[dict[str, Any]]:
 
 
 def list_profiles() -> list[dict[str, Any]]:
-    """Profile rows; the service masks credential fields at the boundary."""
-    return list(profile_service.list_profiles(per_page=_LIST_ALL)["profiles"])
+    """Profile rows, the type named profile_type as create_profile takes it; credentials masked."""
+    return [
+        {("profile_type" if key == "type" else key): value for key, value in profile.items()}
+        for profile in profile_service.list_profiles(per_page=_LIST_ALL)["profiles"]
+    ]
 
 
 def list_variables(scope: str) -> list[dict[str, Any]]:

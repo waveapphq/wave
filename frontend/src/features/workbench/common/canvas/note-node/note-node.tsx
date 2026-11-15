@@ -16,6 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatShortcut } from '@/lib/platform'
+import { controlDefault } from '@/features/workbench/lib/node-parameters'
+import { useIngressCount } from '@/features/workbench/common/canvas/workflow-node/use-node-actions'
+import { InputHandles } from '@/features/workbench/common/canvas/workflow-node/input-handles'
 import { getNoteColorPreset } from './note-color-presets'
 import {
   NoteColorPicker,
@@ -23,18 +26,22 @@ import {
   type NoteAction,
 } from './note-action-menus'
 
+// Text and color live under config.values; a Note that stores none reads as empty.
+const EMPTY_VALUES: Record<string, unknown> = {}
+
 function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
   const rawData = data
   const config = rawData.config as Record<string, unknown> | undefined
-  const text = (config?.text as string) ?? ''
-  const colorId = (config?.color as string) ?? 'slate'
-  const preset = getNoteColorPreset(colorId)
+  const values = (config?.values as Record<string, unknown> | undefined) ?? EMPTY_VALUES
+  const text = typeof values.text === 'string' ? values.text : ''
+  const preset = getNoteColorPreset(String(values.color ?? controlDefault('note', 'color')))
 
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(text)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const noteRef = useRef<HTMLDivElement>(null)
+  const textId = `note-text-${id}`
 
   const selectNode = useWorkflowStore((s) => s.selectNode)
   const updateNode = useWorkflowStore((s) => s.updateNode)
@@ -49,10 +56,15 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
 
   const updateNodeInternals = useUpdateNodeInternals()
   const hasConnections = edges.some((e) => e.source === id || e.target === id)
+  const ingressCount = useIngressCount(id)
+  // Set by the canvas while a wire is dragged near this Note, as for a Block.
+  const proximityTarget = rawData.proximityTarget === true
+  const proximityCycleDetected = rawData.proximityCycleDetected === true
+  const showAddHandle = proximityTarget && ingressCount >= 1
 
   useEffect(() => {
     updateNodeInternals(id)
-  }, [id, isEditing, updateNodeInternals])
+  }, [id, isEditing, ingressCount, showAddHandle, proximityCycleDetected, updateNodeInternals])
 
   const autoResize = useCallback(() => {
     const ta = textareaRef.current
@@ -86,13 +98,13 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
     setIsEditing(false)
     if (editText !== text) {
       const nodeData = rawData as unknown as { label: string; config?: Record<string, unknown> }
-      updateNode(id, { data: { ...nodeData, config: { ...config, text: editText } } })
+      updateNode(id, { data: { ...nodeData, config: { ...config, values: { ...values, text: editText } } } })
       commitHistory('Edit note text')
     }
     // Restore focus to the note element so canvas-level keyboard shortcuts
     // (Backspace = unlink, Delete = remove) keep working without an extra click.
     noteRef.current?.focus()
-  }, [editText, text, id, rawData, config, updateNode, commitHistory])
+  }, [editText, text, id, rawData, config, values, updateNode, commitHistory])
 
   const cancelEdit = useCallback(() => {
     setIsEditing(false)
@@ -114,11 +126,11 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
   const handleColorChange = useCallback(
     (newColor: string) => {
       const nodeData = rawData as unknown as { label: string; config?: Record<string, unknown> }
-      updateNode(id, { data: { ...nodeData, config: { ...config, color: newColor } } })
+      updateNode(id, { data: { ...nodeData, config: { ...config, values: { ...values, color: newColor } } } })
       commitHistory('Change note color')
       setColorPickerOpen(false)
     },
-    [id, rawData, config, updateNode, commitHistory],
+    [id, rawData, config, values, updateNode, commitHistory],
   )
 
   const handleAction = useCallback(
@@ -199,11 +211,12 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
           ref={noteRef}
           data-testid={`note-node-${id}`}
           aria-label="Note"
+          aria-describedby={!isEditing && text ? textId : undefined}
           className={cn(
             'relative rounded-lg flex flex-col h-full text-left',
             'min-w-[120px] min-h-[60px]',
             'transition-shadow duration-150 cursor-pointer',
-            'focus:outline-none focus-visible:outline-none',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           )}
         >
           {selected && !isEditing && (
@@ -212,11 +225,13 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
             />
           )}
 
-          <Handle
-            type="target"
-            position={Position.Top}
-            data-testid="note-handle-input"
-            className="!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0 hover:!ring-2 hover:!ring-zinc-400 transition-shadow !z-10"
+          <InputHandles
+            ingressCount={ingressCount}
+            showAddHandle={showAddHandle}
+            proximityTarget={proximityTarget}
+            proximityCycleDetected={proximityCycleDetected}
+            testIdPrefix="note-handle-input"
+            className="!z-10"
           />
           <Handle
             type="source"
@@ -251,11 +266,15 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
                   }}
                   onKeyDown={handleKeyDown}
                   onContextMenu={(e) => e.stopPropagation()}
+                  name="note-text"
+                  autoComplete="off"
+                  aria-label="Note text"
                   placeholder="Add your note here…"
                   data-testid="note-text-editor"
                 />
               ) : (
                 <p
+                  id={textId}
                   className={cn(
                     'text-sm whitespace-pre-wrap break-words leading-relaxed',
                     text ? 'text-foreground' : 'text-muted-foreground/60 italic',

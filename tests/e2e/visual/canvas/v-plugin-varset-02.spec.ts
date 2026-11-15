@@ -10,7 +10,8 @@
  * 2. All variable types: string, integer, float, boolean, array, map, table
  * 3. Expression toggle: switches value field to expression editor
  * 4. Autocomplete: shows existing vars with type labels (string, integer, etc.)
- * 5. Type locking: existing variable from autocomplete has disabled type dropdown
+ * 5. Type locking: existing variable from autocomplete has disabled type dropdown;
+ *    a name or type change that would drop a held value asks first
  * 6. Delete: rows can be removed, last row deletion leaves empty row
  * 7. Save/reopen persistence: configured variables survive modal close/reopen
  */
@@ -20,6 +21,8 @@ import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
 import { configSheet } from '../../helpers/workbench'
 import { exec } from '../../helpers/exec'
+import { answerSwitch, cellInput, cellStateMarker } from '../../helpers/value-field'
+import { answerChangeConfirm } from '../../helpers/variable-create'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -139,45 +142,24 @@ async function typeExistingVarName(page: Page, modal: Locator, index: number, va
 // Value affordance helpers
 // ---------------------------------------------------------------------------
 
-/**
- * The value cell of a row. The inline scalar bodies (scalar-edit-input,
- * scalar-edit-bool-*) share their testids across rows, so they are scoped via
- * the row's value cell - the immediate preceding sibling of the row's
- * expression toggle (name | type | VALUE | {} toggle | delete).
- */
-function valueCell(modal: Locator, index: number): Locator {
-  return modal
-    .locator(`[data-testid="varset-expression-toggle-${index}"]`)
-    .locator('xpath=preceding-sibling::*[1]')
+/** A row's inline value box: its text or number box, or its {x} code box (VARSET-7). */
+function valueInput(modal: Locator, index: number): Locator {
+  return cellInput(modal, `varset-value-${index}`)
 }
 
-/** The inline numeric input for an integer/float row. */
+/** The inline text or number box of a literal row. */
 function scalarInput(modal: Locator, index: number): Locator {
-  return valueCell(modal, index).locator('[data-testid="scalar-edit-input"]')
+  return modal.locator(`input[data-testid="param-input-varset-value-${index}"]`)
 }
 
-/** The inline boolean segment (true/false) for a boolean row. */
-function boolSegment(modal: Locator, index: number, value: 'true' | 'false'): Locator {
-  return valueCell(modal, index).locator(`[data-testid="scalar-edit-bool-${value}"]`)
+/** A boolean row's value checkbox, named by the row. */
+function boolBox(modal: Locator, rowName: string): Locator {
+  return modal.getByRole('checkbox', { name: rowName, exact: true })
 }
 
-/** A string/complex row's Edit-value button (opens the shared sheet). */
-function editValueButton(modal: Locator, index: number): Locator {
-  return modal.locator(`[data-testid="varset-edit-value-${index}"]`)
-}
-
-/** Set a string row's value through the shared "Edit value" sheet. */
-async function setStringViaSheet(page: Page, modal: Locator, index: number, value: string) {
-  await editValueButton(modal, index).click()
-  const sheet = page.locator('[data-testid="value-editor-sheet"]')
-  await expect(sheet).toBeVisible()
-  const cm = sheet.locator('.cm-content').first()
-  await cm.click()
-  await page.keyboard.press('Control+a')
-  await page.keyboard.type(value)
-  await sheet.locator('[data-testid="value-editor-save-button"]').click()
-  await sheet.locator('[data-testid="value-editor-cancel-button"]').click()
-  await expect(sheet).not.toBeVisible()
+/** A row's expand button (opens the row's Edit value sheet). */
+function expandButton(modal: Locator, index: number): Locator {
+  return modal.locator(`[data-testid="param-expand-varset-value-${index}"]`)
 }
 
 // ---------------------------------------------------------------------------
@@ -215,10 +197,9 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     const typeSelect = modal.locator('[data-testid="varset-type-select-1"]')
     await expect(typeSelect).toContainText('String')
 
-    // String value edits through the shared "Edit value" sheet.
-    await setStringViaSheet(page, modal, 1, 'hello world')
-    // The row's Edit-value preview reflects the saved string.
-    await expect(editValueButton(modal, 1)).toContainText('hello world')
+    // The string value is typed inline in the row's value box.
+    await scalarInput(modal, 1).fill('hello world')
+    await expect(scalarInput(modal, 1)).toHaveValue('hello world')
 
     await closeModal(page, modal)
   })
@@ -233,16 +214,18 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await loadTestWorkflow(page)
     const modal = await selectNodeAndOpenConfig(page)
 
-    // --- Row 0: Integer (inline scalar edit body, exact text) ---
+    // --- Row 0: Integer (inline number box, exact text) ---
     await typeName(page, modal, 0, 'my_int')
     await selectType(page, modal, 0, 'Integer')
+    // Row 0 holds the seeded text, so the type change asks first.
+    await answerChangeConfirm(page, 'Change type')
 
     const intInput = scalarInput(modal, 0)
     await expect(intInput).toBeVisible()
     await intInput.fill('42')
     await expect(intInput).toHaveValue('42')
 
-    // --- Row 1: Float (inline scalar edit body, exact text) ---
+    // --- Row 1: Float (inline number box, exact text) ---
     await modal.locator('[data-testid="varset-add-button"]').click()
     await typeName(page, modal, 1, 'my_float')
     await selectType(page, modal, 1, 'Float')
@@ -252,18 +235,17 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await floatInput.fill('3.14')
     await expect(floatInput).toHaveValue('3.14')
 
-    // --- Row 2: Boolean (inline true/false segmented control) ---
+    // --- Row 2: Boolean (inline checkbox) ---
     await modal.locator('[data-testid="varset-add-button"]').click()
     await typeName(page, modal, 2, 'my_bool')
     await selectType(page, modal, 2, 'Boolean')
 
     // Default is false after type change.
-    await expect(boolSegment(modal, 2, 'false')).toHaveAttribute('aria-pressed', 'true')
+    await expect(boolBox(modal, 'my_bool')).not.toBeChecked()
 
     // Change to true.
-    await boolSegment(modal, 2, 'true').click()
-    await expect(boolSegment(modal, 2, 'true')).toHaveAttribute('aria-pressed', 'true')
-    await expect(boolSegment(modal, 2, 'false')).toHaveAttribute('aria-pressed', 'false')
+    await boolBox(modal, 'my_bool').click()
+    await expect(boolBox(modal, 'my_bool')).toBeChecked()
 
     await closeModal(page, modal)
   })
@@ -283,13 +265,14 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     // --- Row 0: Array ---
     await typeName(page, modal, 0, 'my_array')
     await selectType(page, modal, 0, 'Array')
+    await answerChangeConfirm(page, 'Change type')
 
-    // The complex value affordance is the Edit-value button with a shape summary.
-    const arrayEditBtn = editValueButton(modal, 0)
+    // The value shows inline as one line; its expand button opens the editor.
+    await expect(scalarInput(modal, 0)).toHaveValue('[]') // empty array
+    const arrayEditBtn = expandButton(modal, 0)
     await expect(arrayEditBtn).toBeVisible()
-    await expect(arrayEditBtn).toContainText('0 items') // empty array
 
-    // It opens the shared "Edit value" sheet, NOT the legacy array-editor-modal.
+    // It opens the "Edit value" sheet, NOT the legacy array-editor-modal.
     await arrayEditBtn.click()
     await expect(sheet).toBeVisible()
     await expect(sheet.locator('[data-testid="value-editor-type-badge"]')).toContainText('array')
@@ -302,9 +285,9 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await typeName(page, modal, 1, 'my_map')
     await selectType(page, modal, 1, 'Map')
 
-    const mapEditBtn = editValueButton(modal, 1)
+    await expect(scalarInput(modal, 1)).toHaveValue('{}') // empty map
+    const mapEditBtn = expandButton(modal, 1)
     await expect(mapEditBtn).toBeVisible()
-    await expect(mapEditBtn).toContainText('0 pairs') // empty map
 
     await mapEditBtn.click()
     await expect(sheet).toBeVisible()
@@ -318,9 +301,9 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await typeName(page, modal, 2, 'my_table')
     await selectType(page, modal, 2, 'Table')
 
-    const tableEditBtn = editValueButton(modal, 2)
+    await expect(scalarInput(modal, 2)).toHaveValue('[]') // empty table
+    const tableEditBtn = expandButton(modal, 2)
     await expect(tableEditBtn).toBeVisible()
-    await expect(tableEditBtn).toContainText('0 rows x 0 col') // empty table
 
     // The table edits in the sheet.
     await tableEditBtn.click()
@@ -346,28 +329,31 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     // Type a name first (required for expression toggle)
     await typeName(page, modal, 0, 'computed_val')
 
-    // The default (string) row's value affordance is the Edit-value button.
-    const editBtn = editValueButton(modal, 0)
-    await expect(editBtn).toBeVisible()
+    // The default (string) row's value is the inline text box.
+    const textBox = scalarInput(modal, 0)
+    await expect(textBox).toBeVisible()
 
-    // Toggle expression mode
+    // Toggle expression mode; the row holds the seeded text, so the switch asks first.
     const exprToggle = modal.locator('[data-testid="varset-expression-toggle-0"]')
     await exprToggle.click()
+    await answerSwitch(page, 'Clear')
 
-    // Edit button is replaced by the inline expression field (CodeMirror).
-    await expect(editBtn).not.toBeVisible()
-    const exprField = modal.locator('[data-testid="param-input-computed_val"]')
-    await expect(exprField).toBeVisible()
+    // The text box is replaced by the inline expression field (CodeMirror).
+    await expect(textBox).toHaveCount(0)
+    const exprField = valueInput(modal, 0)
+    await expect(exprField.locator('.cm-content')).toBeVisible()
 
     // Type an expression into the CodeMirror editor
     const cmContent = exprField.locator('.cm-content')
     await cmContent.click()
     await page.keyboard.type('len("hello")')
+    await expect(cmContent).toHaveText('len("hello")')
 
-    // Toggle back to literal mode - the Edit button returns.
+    // Toggle back to literal mode - the switch asks, then the text box returns.
     await exprToggle.click()
-    await expect(editBtn).toBeVisible()
-    await expect(exprField).not.toBeVisible()
+    await answerSwitch(page, 'Clear')
+    await expect(textBox).toBeVisible()
+    await expect(exprField.locator('.cm-content')).toHaveCount(0)
 
     await closeModal(page, modal)
   })
@@ -436,8 +422,10 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await loadTestWorkflow(page)
     const modal = await selectNodeAndOpenConfig(page)
 
-    // Type an existing suite variable name - handleNameChange locks the type
+    // Type an existing suite variable name - handleNameChange locks the type.
+    // Row 0 holds the seeded text, which the integer would drop, so it asks first.
     await typeExistingVarName(page, modal, 0, 'suite_timeout')
+    await answerChangeConfirm(page, 'Change type')
 
     // Name should be filled
     const nameInput = modal.locator('[data-testid="varset-name-input-0"]')
@@ -511,9 +499,9 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await loadTestWorkflow(page)
     const modal = await selectNodeAndOpenConfig(page)
 
-    // --- Configure row 0: string variable (via the shared sheet) ---
+    // --- Configure row 0: string variable (inline text box) ---
     await typeName(page, modal, 0, 'persist_str')
-    await setStringViaSheet(page, modal, 0, 'persisted value')
+    await scalarInput(modal, 0).fill('persisted value')
 
     // --- Configure row 1: integer variable (inline scalar) ---
     await modal.locator('[data-testid="varset-add-button"]').click()
@@ -521,11 +509,11 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await selectType(page, modal, 1, 'Integer')
     await scalarInput(modal, 1).fill('99')
 
-    // --- Configure row 2: boolean variable (inline segmented) ---
+    // --- Configure row 2: boolean variable (inline checkbox) ---
     await modal.locator('[data-testid="varset-add-button"]').click()
     await typeName(page, modal, 2, 'persist_bool')
     await selectType(page, modal, 2, 'Boolean')
-    await boolSegment(modal, 2, 'true').click()
+    await boolBox(modal, 'persist_bool').click()
 
     // --- Configure row 3: expression variable ---
     await modal.locator('[data-testid="varset-add-button"]').click()
@@ -533,9 +521,9 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     // Toggle expression mode
     await modal.locator('[data-testid="varset-expression-toggle-3"]').click()
     // Type expression into CodeMirror
-    const exprField = modal.locator('[data-testid="param-input-persist_expr"]')
-    await expect(exprField).toBeVisible()
+    const exprField = valueInput(modal, 3)
     const cmContent = exprField.locator('.cm-content')
+    await expect(cmContent).toBeVisible()
     await cmContent.click()
     await page.keyboard.type('42 + 1')
 
@@ -545,11 +533,11 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     // --- Reopen modal ---
     const modal2 = await selectNodeAndOpenConfig(page)
 
-    // Verify row 0: string (Edit-value preview reflects the saved value)
+    // Verify row 0: string (the inline box shows the saved value)
     await expect(modal2.locator('[data-testid="varset-name-input-0"]')).toHaveValue(
       'persist_str'
     )
-    await expect(editValueButton(modal2, 0)).toContainText('persisted value')
+    await expect(scalarInput(modal2, 0)).toHaveValue('persisted value')
 
     // Verify row 1: integer (exact text preserved)
     await expect(modal2.locator('[data-testid="varset-name-input-1"]')).toHaveValue(
@@ -565,16 +553,15 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     )
     const type2 = modal2.locator('[data-testid="varset-type-select-2"]')
     await expect(type2).toContainText('Boolean')
-    await expect(boolSegment(modal2, 2, 'true')).toHaveAttribute('aria-pressed', 'true')
+    await expect(boolBox(modal2, 'persist_bool')).toBeChecked()
 
     // Verify row 3: expression (should still be in expression mode)
     await expect(modal2.locator('[data-testid="varset-name-input-3"]')).toHaveValue(
       'persist_expr'
     )
-    // Expression mode: the inline expression field is visible (no Edit button).
-    await expect(editValueButton(modal2, 3)).not.toBeVisible()
-    const exprField2 = modal2.locator('[data-testid="param-input-persist_expr"]')
-    await expect(exprField2).toBeVisible()
+    // Expression mode: the inline expression field holds the saved expression (no text box).
+    await expect(scalarInput(modal2, 3)).toHaveCount(0)
+    await expect(valueInput(modal2, 3).locator('.cm-content')).toHaveText('42 + 1')
 
     await closeModal(page, modal2)
   })
@@ -637,13 +624,13 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     const nameInput = modal.locator('[data-testid="varset-name-input-0"]')
     await expect(nameInput).toHaveValue('test_name')
 
-    // Value should start empty (VARSET-9) - the string Edit-value button shows
-    // the "Edit…" placeholder for an empty value.
-    await expect(editValueButton(modal, 0)).toContainText('Edit…')
+    // Value should start on the type default (VARSET-9): empty text, not the variable's value.
+    await expect(scalarInput(modal, 0)).toHaveValue('')
+    await expect(cellStateMarker(modal, 'varset-value-0')).toHaveText('<empty string>')
 
-    // Enter a new value through the shared sheet.
-    await setStringViaSheet(page, modal, 0, 'new test name')
-    await expect(editValueButton(modal, 0)).toContainText('new test name')
+    // Enter a new value in the inline box.
+    await scalarInput(modal, 0).fill('new test name')
+    await expect(scalarInput(modal, 0)).toHaveValue('new test name')
 
     await closeModal(page, modal)
   })
@@ -658,17 +645,19 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     await loadTestWorkflow(page)
     const modal = await selectNodeAndOpenConfig(page)
 
-    // Type an existing regression variable name - handleNameChange locks the type
+    // Type an existing regression variable name - handleNameChange locks the type.
+    // Row 0 holds the seeded text, which a boolean would drop, so it asks first.
     await typeExistingVarName(page, modal, 0, 'reg_debug')
+    await answerChangeConfirm(page, 'Change type')
 
     // Type should be locked to Boolean
     const typeSelect = modal.locator('[data-testid="varset-type-select-0"]')
     await expect(typeSelect).toHaveAttribute('aria-disabled', 'true')
     await expect(typeSelect).toContainText('Boolean')
 
-    // Boolean value renders as the inline true/false segmented control.
-    await expect(boolSegment(modal, 0, 'true')).toBeVisible()
-    await expect(boolSegment(modal, 0, 'false')).toBeVisible()
+    // Boolean value renders as the inline checkbox, on its default false.
+    await expect(boolBox(modal, 'reg_debug')).toBeVisible()
+    await expect(boolBox(modal, 'reg_debug')).not.toBeChecked()
 
     await closeModal(page, modal)
   })

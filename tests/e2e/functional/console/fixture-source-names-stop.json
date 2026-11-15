@@ -22,7 +22,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -52,7 +51,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "'src-stop-body-started'",
@@ -84,7 +82,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "duration": 60000
@@ -143,7 +140,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'src-stop-never-runs'",

@@ -8,7 +8,7 @@
 import type { ColumnDef } from '@tanstack/react-table'
 /* v8 ignore next - COV-V8-006: V8 coverage merge non-deterministically drops this import across forks pool */
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn, secureRandom } from '@/lib/utils'
+import { cn, secureRandomInt } from '@/lib/utils'
 import type { DataTableColumnMeta } from './types'
 
 interface DataTableSkeletonProps<TData> {
@@ -34,7 +34,7 @@ export function DataTableSkeleton<TData>({
           {columns.map((col, colIndex) => {
             const meta = col.meta as DataTableColumnMeta | undefined
             /* v8 ignore next - COV-V8-003: V8 tracks ?? fallback as branch */
-            const width = meta?.skeletonWidth ?? `w-[${Math.floor(60 + secureRandom() * 30)}%]`
+            const width = meta?.skeletonWidth ?? `w-[${60 + secureRandomInt(30)}%]`
             const height = meta?.skeletonHeight ?? 'h-4'
 
             return (

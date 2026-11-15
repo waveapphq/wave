@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.api.services.workbench._common import DEFAULT_USER_ID
@@ -123,7 +123,7 @@ class TestSetVariableOverrideServiceTemplateGates:
         _seed_session(session_id, variables=LazyVariables({}))
 
         with pytest.raises(
-            ValueError,
+            ValidationException,
             match=(
                 r"^Override request must provide exactly one of "
                 r"'value', 'expression', or 'template'$"
@@ -143,7 +143,7 @@ class TestSetVariableOverrideServiceTemplateGates:
         _seed_session(session_id, variables=LazyVariables({}))
 
         with pytest.raises(
-            ValueError,
+            ValidationException,
             match=(
                 r"^Override request must provide exactly one of "
                 r"'value', 'expression', or 'template'$"

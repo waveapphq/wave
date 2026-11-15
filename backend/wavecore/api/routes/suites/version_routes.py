@@ -11,14 +11,14 @@ Endpoints:
 - DELETE /suites/{suite_id}/versions/{version}: Delete specific version
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Header, Request, Response
 from fastapi import status as status_module
-from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import read_json_object, validate_uuid
+from wavecore.api.exceptions import NotFoundException
+from wavecore.api.routes.shared import read_json_object, refuse_stale_etag, validate_uuid
+from wavecore.api.services.suites import service as suite_service
 from wavecore.api.services.suites import version_service as _suite_version_svc
 
 # Create router for suite version endpoints
@@ -28,8 +28,8 @@ router = APIRouter(tags=["Suites"])
 _CACHE_CONTROL_60 = "max-age=60"
 
 
-@router.get("/suites/{suite_id}/versions", response_model=None)
-async def list_suite_versions(suite_id: str) -> dict[str, Any] | JSONResponse:
+@router.get("/suites/{suite_id}/versions")
+async def list_suite_versions(suite_id: str) -> dict[str, Any]:
     """List all versions for a suite.
 
     Args:
@@ -38,33 +38,14 @@ async def list_suite_versions(suite_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         List of version strings
     """
-    try:
-        validate_uuid(suite_id, "suite_id")
+    validate_uuid(suite_id, "suite_id")
 
-        versions = _suite_version_svc.list_suite_versions(suite_id)
+    versions = _suite_version_svc.list_suite_versions(suite_id)
 
-        if versions is None:
-            return JSONResponse(
-                status_code=status_module.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Suite with ID '{suite_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if versions is None:
+        raise NotFoundException(f"Suite with ID '{suite_id}' not found")
 
-        return {"success": True, "data": versions}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status_module.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": versions}
 
 
 @router.post("/suites/{suite_id}/versions", status_code=status_module.HTTP_201_CREATED)
@@ -123,6 +104,7 @@ async def update_suite_version(
     suite_id: str,
     version: str,
     request: Request,
+    if_match: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
     """Update specific suite version metadata.
 
@@ -130,11 +112,13 @@ async def update_suite_version(
         suite_id: Suite UUID
         version: Semantic version string
         request: HTTP request with update data
+        if_match: ETag for optimistic concurrency control
 
     Returns:
         Updated suite version
     """
     validate_uuid(suite_id, "suite_id")
+    refuse_stale_etag(if_match, suite_service.get_suite, suite_id)
 
     body = await read_json_object(request)
 

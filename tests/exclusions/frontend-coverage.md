@@ -2,6 +2,8 @@
 
 This document maintains an authoritative registry of all approved coverage exclusions in the frontend codebase. Each exclusion has a unique identifier that is referenced in the source code.
 
+This registry is one of the exclusion lists in [README.md](README.md), which holds the rules for all of them.
+
 **POLICY**: Modifications to this document require explicit authorization. Adding new exclusions or modifying existing ones without approval is strictly forbidden.
 
 ## Correlation Rules
@@ -494,11 +496,6 @@ The `default: return 'unknown'` case in `inferNodeType()` switch statement. Hand
 **File**: `src/features/workbench/live/use-load-test.ts`
 **Root cause**: Ternary in `.map()` callback fixing variable types from output bindings. The type-mismatch branch is only reached when a variable exists with wrong type, which requires specific node+binding+schema setup.
 
-### COV-BRANCH-123: Variable Management Node Name OR Chain
-
-**File**: `src/features/workbench/live/use-variable-management.ts`
-**Root cause**: `node.data.label || ''` fallback. Test nodes always have `label`, so the fallback isn't reached.
-
 ### COV-BRANCH-145: handleEdgeClick Multi-Select Block
 
 **File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-interactions.ts`
@@ -605,7 +602,7 @@ Container-level callbacks `onClose` and `onOpenChange` for ConfirmationDialog an
 ### COV-RADIX-012: VariableSetterEditor Popover onOpenChange
 
 **File**: `src/features/workbench/common/variables/variable-setter-editor/variable-row.tsx`
-**Line**: 391 (`onOpenChange` callback on Popover)
+**Line**: 127 (`onOpenChange` callback on Popover)
 **Root cause**: The Radix Popover's `onOpenChange` callback fires when Radix detects a dismissal event (click outside, focus loss within popover content). In jsdom, Radix's Popover does not fire dismissal events because they rely on browser-level focus and pointer event handling that jsdom does not fully implement. The autocomplete open/close state is managed via explicit `onFocus` and `onBlur` handlers on the input, which work correctly in tests.
 
 ---
@@ -1084,11 +1081,6 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 **Line**: 712 (`'id' in entry.child ? entry.child.id : \`item-${entry.rawIndex}\``)
 **Root cause**: Same as COV-BRANCH-102. V8 tracks JSX ternary branches separately. All non-operator items always have `id` enforced by TypeScript types. The false branch is a defensive React key fallback.
 
-### COV-BRANCH-105: AssertionItemRow Object Stringify Ternary
-
-**File**: `src/features/workbench/common/config/assertion-builder/assertion-item-row.tsx`
-**Root cause**: `typeof item.reference_value === 'object' ? JSON.stringify(...) : String(...)` ternary. V8 tracks the object branch separately but test data always uses primitive reference values.
-
 ### COV-BRANCH-109: OutputHandles Label OR Chain Fallback
 
 **File**: `src/features/workbench/common/canvas/workflow-node/output-handles.tsx`
@@ -1242,25 +1234,10 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 **File**: `src/features/tests/container/container.tsx`
 **Root cause**: `mode={pendingOpenTestId ? 'switch' : 'create'}` ternary on `SwitchTestConfirmDialog`. V8 tracks both ternary branches. Default state has `pendingOpenTestId` as null.
 
-### COV-BRANCH-178: computePassFailStyle Function Block
-
-**File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-edges.ts`
-**Root cause**: Entire `computePassFailStyle` function (v8 ignore start/stop). Execution styling helpers are only called when `blockStates` has execution data, which requires a live execution run not present in unit tests.
-
 ### COV-BRANCH-179: computePassThroughNodes Note Element Check
 
 **File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-edges.ts`
 **Root cause**: `if ((node.data as Record<string, unknown>)?.elementType === 'note')` check inside `computePassThroughNodes`. V8 tracks the optional chaining `?.` and the equality comparison as branches.
-
-### COV-BRANCH-181: computeBranchStyle Function Block
-
-**File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-edges.ts`
-**Root cause**: Entire `computeBranchStyle` function (v8 ignore start/stop). Execution styling helpers are only called when `blockStates` has execution data, which requires a live execution run not present in unit tests.
-
-### COV-BRANCH-183: computeTryCatchStyle Function Block
-
-**File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-edges.ts`
-**Root cause**: Entire `computeTryCatchStyle` function (v8 ignore start/stop). Same rationale as COV-BRANCH-181 - execution styling only applies during live runs.
 
 ### COV-BRANCH-184: computeGeneralExecutionStyle SourceHandle Guard
 

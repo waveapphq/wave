@@ -51,7 +51,7 @@ const rowFor = (page: Page, name: string): Locator =>
   content(page).locator(`[aria-label="Variable ${name}"]`)
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 async function getActiveSessionId(page: Page): Promise<string> {
   const resp = await page.request.get(

@@ -10,7 +10,8 @@
  * Pass Criteria:
  * 1. The `capped` Time limit box refuses letters; 19 digits typed stay as all 19 digits (never `1e+21`) and a
  *    20th digit is dropped.
- * 2. The box refuses a minus key (`-5` leaves `5`); while it shows `0` the sheet's Save is held; with `060` it is not.
+ * 2. The box takes a leading minus as every integer field does; while it shows `-5` or `0` the box says
+ *    `Time Limit must be at least 1` and the sheet's Save is held; with `060` it is not.
  * 3. `060` is saved as typed (the stored branch holds `time_limit` `060`) and the reopened box shows `060`.
  * 4. The run stops `capped` at 60 ms: the console holds the ERROR `Branch 'capped' exceeded its time limit of
  *    60 ms`, both Delays end stopped, the exit lane never runs and the Parallel Block fails.
@@ -38,7 +39,9 @@ function loadFixture(): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture-parallel.json'), 'utf-8'))
 }
 
-const limitBox = (sheet: Locator): Locator => sheet.locator('[data-testid="parallel-branch-limit-branch_1"]')
+const limitBox = (sheet: Locator): Locator => sheet.locator('[data-testid="param-input-parallel-branch-limit-branch_1"]')
+const limitError = (sheet: Locator): Locator => sheet.locator('[data-testid="param-error-parallel-branch-limit-branch_1"]')
+const BELOW_ONE = 'Time Limit must be at least 1'
 const sheetSave = (sheet: Locator): Locator => sheet.getByRole('button', { name: 'Save', exact: true })
 
 test.describe('V-NUMBER-PARALLEL: a branch Time limit by the one number rule', () => {
@@ -49,7 +52,7 @@ test.describe('V-NUMBER-PARALLEL: a branch Time limit by the one number rule', (
     test.setTimeout(180_000)
     const testId = await importValidateAndNavigate(page, loadFixture())
     try {
-      await test.step('1-2. letters and a minus never enter, 19 digits stay whole, 0 holds Save', async () => {
+      await test.step('1-2. letters never enter, 19 digits stay whole, a limit below 1 holds Save', async () => {
         const sheet = await openBlockSheet(page, PARALLEL)
         const box = limitBox(sheet)
         await expect(box).toHaveValue('')
@@ -57,9 +60,12 @@ test.describe('V-NUMBER-PARALLEL: a branch Time limit by the one number rule', (
         await expectTypedAs(box, NINETEEN, NINETEEN)
         await typeAtEnd(box, '0')
         await expect(box, 'a 20th digit is dropped').toHaveValue(NINETEEN)
-        await expectTypedAs(box, '-5', '5')
+        await expectTypedAs(box, '-5', '-5')
+        await expect(limitError(sheet)).toHaveText(BELOW_ONE)
+        await expect(sheetSave(sheet), 'the section is held while the box shows -5').toBeDisabled()
         await typeKeys(box, '0')
         await expect(box).toHaveValue('0')
+        await expect(limitError(sheet)).toHaveText(BELOW_ONE)
         await expect(sheetSave(sheet), 'the section is held while the box shows 0').toBeDisabled()
         await typeKeys(box, '060')
         await expect(box).toHaveValue('060')

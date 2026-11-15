@@ -13,9 +13,11 @@ import pytest
 
 from tests.api.services.workbench.parallel_harness import (  # noqa: F401
     branch,
+    completion_durations,
     delay_node,
     edge,
     engine_registries,
+    lifecycle_lines,
     log_messages,
     log_node,
     parallel_node,
@@ -338,3 +340,62 @@ class TestParallelBranchNaming:
         assert session["status"] == "passed", session.get("status")
         assert "Branch 'Branch 1' started" in messages, messages
         assert "Branch 'Branch 2' started" in messages, messages
+
+
+class TestALaneBlockWritesItsStartAndCompletionLines:
+    """A Block in a lane logs its start and its completion with its duration (REQ-3.7.2.5)."""
+
+    async def test_each_lane_block_logs_both_lines_inside_the_sections_lines(self) -> None:
+        session_id = "par-lifecycle-lines"
+        nodes = [
+            parallel_node("par-1", [branch("branch_1"), branch("branch_2")]),
+            delay_node("br-a", 60, "Slow A"),
+            log_node("br-b", "Log B", "'B'"),
+            log_node("after", "After", "'AFTER'"),
+        ]
+        edges = [
+            edge("start-node", "par-1"),
+            edge("par-1", "br-a", "branch_1"),
+            edge("par-1", "br-b", "branch_2"),
+            edge("par-1", "after", "then"),
+        ]
+
+        session = await run_graph(session_id, nodes, edges, {})
+
+        assert session["status"] == "passed", session.get("status")
+        lines = lifecycle_lines(session_id)
+        assert lines[:1] == ["Executing 'Parallel' (control/parallel)"], lines
+        assert sorted(lines[1:5]) == [
+            "Completed 'Log B' (<n> ms)",
+            "Completed 'Slow A' (<n> ms)",
+            "Executing 'Log B' (plugin/log)",
+            "Executing 'Slow A' (control/delay)",
+        ], lines
+        assert lines[5:] == [
+            "Completed 'Parallel' (<n> ms)",
+            "Executing 'After' (plugin/log)",
+            "Completed 'After' (<n> ms)",
+        ], lines
+        assert lines.index("Executing 'Slow A' (control/delay)") < lines.index(
+            "Completed 'Slow A' (<n> ms)"
+        ), lines
+
+    async def test_the_completion_line_carries_the_time_the_block_ran(self) -> None:
+        session_id = "par-lifecycle-duration"
+        nodes = [
+            parallel_node("par-1", [branch("branch_1"), branch("branch_2")]),
+            delay_node("br-a", 60, "Slow A"),
+            log_node("br-b", "Log B", "'B'"),
+        ]
+        edges = [
+            edge("start-node", "par-1"),
+            edge("par-1", "br-a", "branch_1"),
+            edge("par-1", "br-b", "branch_2"),
+        ]
+
+        session = await run_graph(session_id, nodes, edges, {})
+
+        assert session["status"] == "passed", session.get("status")
+        [lane_ms] = completion_durations(session_id, "Slow A")
+        [section_ms] = completion_durations(session_id, "Parallel")
+        assert 60 <= lane_ms <= section_ms, (lane_ms, section_ms)

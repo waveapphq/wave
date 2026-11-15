@@ -12,7 +12,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tests.api.workbench.conftest import make_test_record, seed_tracked_execution
+from wavecore.api.exceptions import ValidationException
 from wavecore.api.services import artifact_service
 from wavecore.api.services.executions import _storage as exec_storage
 from wavecore.api.services.storage_paths import get_artifacts_storage_path
@@ -297,3 +300,34 @@ class TestSessionArtifactServiceHelpers:
 
     def test_sweep_is_noop_when_sessions_area_missing(self) -> None:
         artifact_service.sweep_session_artifacts()
+
+
+class TestSessionIdThatLeavesTheSessionsArea:
+    """A session ID that is not one plain name is refused before any folder is touched."""
+
+    _CLIMBING_ID = "../escape"
+    _REFUSAL = r"^Invalid UUID format for id: '\.\./escape'$"
+
+    def test_the_session_dir_of_a_climbing_id_is_refused(self) -> None:
+        with pytest.raises(ValidationException, match=self._REFUSAL):
+            artifact_service.session_artifacts_dir(self._CLIMBING_ID)
+
+    def test_a_move_to_a_climbing_id_is_refused_and_keeps_the_source(self) -> None:
+        previous_id = str(uuid.uuid4())
+        source = _sessions_root() / previous_id
+        source.mkdir(parents=True)
+        (source / "carry.txt").write_text("carried")
+
+        with pytest.raises(ValidationException, match=self._REFUSAL):
+            artifact_service.move_session_artifacts(previous_id, self._CLIMBING_ID)
+
+        assert (source / "carry.txt").read_text() == "carried"
+        assert not (get_artifacts_storage_path() / "escape").exists()
+
+    def test_a_run_with_a_climbing_session_id_creates_no_folder(
+        self, workbench_run_mocks: dict[str, Any]
+    ) -> None:
+        with pytest.raises(ValidationException, match=self._REFUSAL):
+            _start_run(workbench_run_mocks, str(uuid.uuid4()), session_id=self._CLIMBING_ID)
+
+        assert not (get_artifacts_storage_path() / "escape").exists()

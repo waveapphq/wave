@@ -43,7 +43,7 @@ export function ReportViewerPage(): ReactNode {
   const logEntries = useMemo(() => (report ? buildReportLogEntries(report.logs) : []), [report])
 
   const handleBack = useCallback(() => {
-    navigate('/reports')
+    void navigate('/reports')
   }, [navigate])
 
   const phase = generationPhase(status)

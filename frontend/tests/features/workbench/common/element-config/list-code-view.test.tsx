@@ -82,7 +82,7 @@ async function pickView(user: User, view: 'Visual' | 'Code') {
 async function openCode(user: User, parameter: Parameter) {
   await user.click(screen.getByTestId(`param-expand-${parameter.name}`))
   await pickView(user, 'Code')
-  return screen.findByTestId('code-body') as Promise<HTMLTextAreaElement>
+  return (await screen.findByTestId('code-body')) as HTMLTextAreaElement
 }
 
 const listBody = () => screen.getByTestId('array-edit-body')

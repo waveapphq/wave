@@ -12,8 +12,9 @@
  * 1. A Test whose literal row does not fit its variable's type is refused at Save naming the variable: ` 30 `,
  *    `abc` and `1.5` for the integer `n` with `Value for variable 'n' is not a valid integer`, `1e5` for the
  *    float `ratio` with `Value for variable 'ratio' is not a valid float`.
- * 2. A stored literal row ` 30 ` opens in the Variable Setter window with `Must be a valid integer` under it
- *    and the window's Save held.
+ * 2. A stored literal row ` 30 ` that does not fit the integer `n` is dropped when the Variable Setter window
+ *    opens: the box is empty with `Value is required` under it and the window's Save is held; `-` typed shows
+ *    `Enter a valid integer value` and still holds Save; `30` typed clears the message and Save is on.
  * 3. The fixture imports with zero validation errors; its run sets `n` to 30 and `big` to the exact
  *    `12345678901234567890` (the console prints `n=30 big=12345678901234567890 next=12345678901234567891`).
  * 4. The NaN Expression fails its Block with `Block 'Set NaN' failed: Variable 'ratio': cannot convert nan to float`,
@@ -32,7 +33,7 @@ import {
 } from '../../helpers/fixture-import'
 import { expectNodeStatus, finishRunAnyVerdict, startRun } from '../../helpers/k8s-run'
 import { getLogEntries } from '../../helpers/log-reader'
-import { messagesOf, refusalOf } from '../../helpers/number-entry'
+import { messagesOf, refusalOf, typeKeys } from '../../helpers/number-entry'
 import { openBlockSheet } from '../../helpers/workbench'
 import { runToken } from '../../helpers/element-types'
 
@@ -46,13 +47,12 @@ function loadFixture(): Fixture {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture-setter.json'), 'utf-8')) as Fixture
 }
 
-/** The fixture with the first Setter holding one literal row `name` = `value` of `type`. */
-function withLiteralRow(name: string, type: string, value: string): Fixture {
+/** The fixture with the first Setter holding one literal row `name` = `value`, typed by its declared variable. */
+function withLiteralRow(name: string, value: string): Fixture {
   const fixture = loadFixture()
   fixture.name = `zz-11541-s9-setter-row-${runToken()}`
   const setter = fixture.workflow.nodes.find((node) => node.id === SET_VALUES)!
-  setter.data.variableExpressionKeys = []
-  setter.data.variableTypes = { [name]: type }
+  setter.data.expressionFields = []
   setter.data.config.values.variables = { [name]: value }
   return fixture
 }
@@ -72,24 +72,32 @@ test.describe('V-NUMBER-SETTER: Variable Setter rows and the one number rule', (
     for (const [name, type, value, message] of cases) {
       await test.step(`1. ${JSON.stringify(value)} for the ${type} ${name} is refused at Save`, async () => {
         const refusal = await refusalOf(
-          await request.post(`${BACKEND_URL}/tests`, { data: withLiteralRow(name, type, value) }),
+          await request.post(`${BACKEND_URL}/tests`, { data: withLiteralRow(name, value) }),
           `POST /tests with the row ${name} = ${JSON.stringify(value)}`,
         )
         expect(messagesOf(refusal, 'INVALID_VARIABLE_VALUE')).toEqual([message])
       })
     }
 
-    const stored = await importExpectingErrors(page, withLiteralRow('n', 'integer', ' 30 '), { context: 'load' })
+    const stored = await importExpectingErrors(page, withLiteralRow('n', ' 30 '), { context: 'load' })
     try {
-      await test.step('2. the stored row " 30 " shows its message in the window and holds Save', async () => {
+      await test.step('2. the stored row " 30 " is dropped at open, and the box names what it holds and holds Save', async () => {
         const sheet = await openBlockSheet(page, SET_VALUES)
         const nameBox = sheet.locator('[data-testid="varset-name-input-0"]')
         await expect(nameBox).toHaveValue('n')
-        await expect(sheet.locator('[data-testid="scalar-edit-input"]').first()).toHaveValue(' 30 ')
-        await nameBox.focus()
-        await nameBox.blur()
-        await expect(sheet.locator('p[role="alert"]')).toHaveText(['Must be a valid integer'])
-        await expect(sheet.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
+        const box = sheet.locator('[data-testid="param-input-varset-value-0"]')
+        const message = sheet.locator('[data-testid="param-error-varset-value-0"]')
+        const save = sheet.getByRole('button', { name: 'Save', exact: true })
+        // A stored literal that does not fit the declared type is dropped when the window opens.
+        await expect(box).toHaveValue('')
+        await expect(sheet.locator('p[role="alert"]')).toHaveText(['Value is required'])
+        await expect(save).toBeDisabled()
+        await typeKeys(box, '-')
+        await expect(message).toHaveText('Enter a valid integer value')
+        await expect(save).toBeDisabled()
+        await typeKeys(box, '30')
+        await expect(message).toHaveCount(0)
+        await expect(save).toBeEnabled()
       })
     } finally {
       await request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => undefined)

@@ -208,15 +208,17 @@ export function ValidationErrorDialog({
   const content = isLoadNonFatal ? LOAD_NON_FATAL_CONTENT : MODE_CONTENT[mode]
   const IconComponent = content.IconComponent
   const showFixColumn = isLoadNonFatal
-  // Auto-fixable issues carry a BE fix_action; content issues carry none.
-  const fixableCount = errors.filter((e) => e.fix_action != null).length
+  // Auto-fixable issues carry a BE fix_action; content issues carry none. A row names
+  // its fix only while Fix All is offered, so the headline, the Fix column and Fix All agree.
+  const fixOffered = Boolean(onFixAll)
+  const fixableCount = fixOffered ? errors.filter((e) => e.fix_action != null).length : 0
   const headlineCount = isLoadNonFatal && fixableCount > 0 ? fixableCount : errors.length
   const trailing = isLoadNonFatal
     ? loadTrailingText(errors.length, fixableCount)
     : content.trailing
   // Invariant: a "Fix All" button is shown only when at least one row has a
   // real fix - never when every Fix cell is "-".
-  const showFixAll = Boolean(onFixAll) && (!isLoadNonFatal || fixableCount > 0)
+  const showFixAll = fixOffered && (!isLoadNonFatal || fixableCount > 0)
 
   return (
     <AlertDialog open={isOpen}>
@@ -275,7 +277,9 @@ export function ValidationErrorDialog({
                     />
                   </td>
                   {showFixColumn && (
-                    <td className="p-2 text-tertiary align-top">{error.fix_action ?? '-'}</td>
+                    <td className="p-2 text-tertiary align-top">
+                      {fixOffered ? (error.fix_action ?? '-') : '-'}
+                    </td>
                   )}
                 </tr>
               ))}

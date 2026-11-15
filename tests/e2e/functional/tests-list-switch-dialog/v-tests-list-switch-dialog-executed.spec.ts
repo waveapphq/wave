@@ -44,7 +44,6 @@ function buildLogFixture(description: string, message: string) {
             hasNewerVersion: false,
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: `'${message}'`, level: 'INFO' },
               outputBindings: {},

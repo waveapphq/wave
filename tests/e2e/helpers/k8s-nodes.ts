@@ -767,7 +767,6 @@ export function tryCatchNode(opts: TryCatchNodeOptions): WorkflowNode {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: {
           enable_catch: opts.enableCatch ?? true,
@@ -823,7 +822,6 @@ export function parallelNode(opts: ParallelNodeOptions): WorkflowNode {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values, outputBindings: {}, profileBindings: [] },
     },
     measured: { ...NODE_DIMS },
@@ -840,8 +838,6 @@ export type ControlNodeOptions = {
   values: Record<string, unknown>
   outputBindings?: Record<string, string>
   expressionFields?: string[]
-  /** Variable Setter rows whose values are Python expressions. */
-  variableExpressionKeys?: string[]
   disabled?: boolean
   position?: NodePosition
 }
@@ -858,7 +854,6 @@ export function controlNode(opts: ControlNodeOptions): WorkflowNode {
     hasNewerVersion: false,
     expressionFields: opts.expressionFields ?? [],
     templateFields: [],
-    variableExpressionKeys: opts.variableExpressionKeys ?? [],
     config: {
       values: opts.values,
       outputBindings: opts.outputBindings ?? {},

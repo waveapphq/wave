@@ -222,12 +222,12 @@ describe('ProfileFormModal', () => {
   describe('Modal Structure (PROFILE-28 to PROFILE-30)', () => {
     it('renders nothing when closed', () => {
       renderProfileFormModal({ open: false })
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: 'Create Profile' })).not.toBeInTheDocument()
     })
 
     it('renders dialog when open', () => {
       renderProfileFormModal({ open: true })
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: 'Create Profile' })).toBeInTheDocument()
     })
 
     it('shows "Create Profile" title in create mode', () => {
@@ -277,20 +277,20 @@ describe('ProfileFormModal', () => {
 
     it('shows required indicator on Name field', () => {
       renderProfileFormModal()
-      const form = screen.getByRole('dialog')
+      const form = screen.getByRole('dialog', { name: 'Create Profile' })
       const nameLabel = within(form).getByText('Name', { exact: false, selector: 'label' })
       expect(nameLabel.textContent).toContain('*')
     })
 
     it('marks the Type label with the shared RequiredMark in create mode', () => {
       renderProfileFormModal({ mode: 'create' })
-      const typeLabel = within(screen.getByRole('dialog')).getByText('Type', { selector: 'label' })
+      const typeLabel = within(screen.getByRole('dialog', { name: 'Create Profile' })).getByText('Type', { selector: 'label' })
       expectRequiredMark(typeLabel)
     })
 
     it('leaves the Type label unmarked in edit mode, where the type is locked', () => {
       renderProfileFormModal({ mode: 'edit', profile: mockProfile })
-      const typeLabel = within(screen.getByRole('dialog')).getByText('Type', { selector: 'label' })
+      const typeLabel = within(screen.getByRole('dialog', { name: 'Edit Profile' })).getByText('Type', { selector: 'label' })
       expectNoRequiredMark(typeLabel)
     })
 
@@ -1293,7 +1293,7 @@ describe('ProfileFormModal', () => {
       fireEvent.click(within(rowFor('host')).getByTestId('param-edit-value-param-1'))
 
       const sheet = screen.getByTestId('value-editor-sheet')
-      expect(screen.getByRole('dialog')).toContainElement(sheet)
+      expect(screen.getByRole('dialog', { name: 'Edit Profile' })).toContainElement(sheet)
       expect(rowFor('host')).not.toContainElement(sheet)
     })
   })
@@ -1497,14 +1497,14 @@ describe('ProfileFormModal', () => {
     it('has aria-labelledby on dialog', () => {
       renderProfileFormModal()
 
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       expect(dialog).toHaveAttribute('aria-labelledby')
     })
 
     it('has aria-busy when loading', () => {
       renderProfileFormModal({ loading: true })
 
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       expect(dialog).toHaveAttribute('aria-busy', 'true')
     })
 

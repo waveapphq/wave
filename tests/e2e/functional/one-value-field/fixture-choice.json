@@ -71,7 +71,6 @@
           "version": "1.0.0",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "localDefinition": {
             "name": "Choice_Fn",
             "workflow": { "nodes": [], "edges": [] },

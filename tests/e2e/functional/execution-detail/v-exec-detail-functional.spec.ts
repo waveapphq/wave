@@ -176,7 +176,7 @@ test.describe('Execution Detail functional flow', () => {
 
     // Re-run opens the RunDialog prepopulated with the entity name and env.
     await page.getByRole('button', { name: /re-run/i }).click()
-    const dialog = page.getByRole('dialog')
+    const dialog = page.getByRole('dialog', { name: /^Run (Test|Suite|Regression)$/ })
     await expect(dialog, 'RunDialog opens on Re-run').toBeVisible()
     await expect(dialog.getByRole('button', { name: /cancel/i }), 'Cancel button present').toBeVisible()
     await dialog.getByRole('button', { name: /cancel/i }).click()

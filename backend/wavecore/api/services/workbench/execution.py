@@ -19,15 +19,22 @@ from wavecore.api.services.workbench._common import (
     WorkbenchStatus,
     _add_execution_log,
     _complete_step_over,
+    _elapsed_ms,
     _notify_terminal,
     _push_variable_changes,
     _settle_interrupted_blocks,
     _settle_running_blocks,
     _workbench_sessions,
+    log_block_completion,
+    log_block_start,
     logger,
     run_debug_block,
 )
-from wavecore.api.services.workbench.block_status import skip_rest
+from wavecore.api.services.workbench.block_status import (
+    forget_lanes,
+    skip_rest,
+    take_wired_lane,
+)
 from wavecore.api.services.workbench.for_each import _execute_for_each_body
 from wavecore.api.services.workbench.for_loop import _execute_for_loop_body, _LoopParams
 from wavecore.api.services.workbench.graph import (
@@ -819,6 +826,7 @@ async def _route_after_node(
             keep_parent_signal=True,
         )
     else:
+        await take_wired_lane(session, session_id, node_id, signals["branch"], adj)
         _enqueue_branch_successors(node_id, adj, signals["branch"], executed, exec_queue)
 
     return block_status
@@ -832,8 +840,8 @@ async def _start_block_execution(
     nf: dict[str, Any],
     current: int,
     total_blocks: int,
-) -> None:
-    """Set up session state and broadcast block start event."""
+) -> float:
+    """Set up session state, broadcast the block start event and return the run's start clock."""
     session["current_block"] = {"block_id": node_id, "block_name": block_name}
     session["progress"] = {
         "current": current,
@@ -841,6 +849,7 @@ async def _start_block_execution(
         "percentage": (current / total_blocks * 100) if total_blocks > 0 else 0,
     }
     session["block_states"][node_id] = "running"
+    forget_lanes(session, node_id)
 
     await _broadcast_event(
         session_id,
@@ -852,13 +861,7 @@ async def _start_block_execution(
             "progress": session["progress"],
         },
     )
-    _add_execution_log(
-        session_id,
-        "DEBUG",
-        f"Executing '{block_name}' ({nf['node_type']}/{nf['element_type']})",
-        "SYSTEM",
-        block_id=node_id,
-    )
+    return log_block_start(session_id, node_id, block_name, nf)
 
 
 async def _complete_block_execution(
@@ -866,23 +869,23 @@ async def _complete_block_execution(
     session: dict[str, Any],
     node_id: str,
     block_name: str,
-    block_status: str,
+    attempt: BlockAttempt,
     current: int,
     total_blocks: int,
 ) -> None:
     """Update session state and broadcast block completion event."""
     session["progress"]["current"] = current
     session["progress"]["percentage"] = (current / total_blocks * 100) if total_blocks > 0 else 100
-    session["block_states"][node_id] = block_status
+    session["block_states"][node_id] = attempt.status
 
-    _add_execution_log(session_id, "DEBUG", f"Completed '{block_name}'", "SYSTEM", block_id=node_id)
+    log_block_completion(session_id, node_id, block_name, attempt.duration_ms)
     await _broadcast_event(
         session_id,
         {
             "type": "block_status_changed",
             "block_id": node_id,
             "block_name": block_name,
-            "status": block_status,
+            "status": attempt.status,
             "progress": session["progress"],
         },
     )
@@ -972,7 +975,7 @@ class _MainStep(NodeStep):
         """Start the block, run it and route its successors into the attempt's queue."""
         nf, session_id, node_id = self.nf, self.session_id, self.node_id
         block_name = nf["block_name"]
-        await _start_block_execution(
+        started = await _start_block_execution(
             session_id, self.session, node_id, block_name, nf, self.current, self.total_blocks
         )
         profile_bindings = nf["node_data"].get("config", {}).get("profileBindings", [])
@@ -980,7 +983,7 @@ class _MainStep(NodeStep):
             _inject_profile_variables(
                 profile_bindings, self.variables, self.environment_id or "", session_id, block_name
             )
-        return await _run_and_route_node(
+        status = await _run_and_route_node(
             nf=nf,
             variables=self.variables,
             session_id=session_id,
@@ -994,6 +997,8 @@ class _MainStep(NodeStep):
             exec_queue=attempt.queue,
             environment_id=self.environment_id or "",
         )
+        attempt.duration_ms = _elapsed_ms(started)
+        return status
 
 
 async def _process_workflow_node(
@@ -1045,7 +1050,7 @@ async def _process_workflow_node(
         raise attempt.error
 
     await _complete_block_execution(
-        session_id, session, node_id, nf["block_name"], attempt.status, current + 1, total_blocks
+        session_id, session, node_id, nf["block_name"], attempt, current + 1, total_blocks
     )
     await asyncio.sleep(0)
     return current + 1

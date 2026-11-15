@@ -25,6 +25,7 @@
 import { generateKeyPairSync } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, CA_CERT_PEM, HTTP_TARGET_HOST, PROXY_PORT } from '../../helpers/config'
+import { escapeRegExp } from '../../helpers/log-reader'
 import { resetNetworkSettings } from '../../helpers/network-settings'
 
 // ============================================================================
@@ -184,7 +185,7 @@ const proxyTrigger = (page: Page) =>
 const leaveDialog = (page: Page) => page.getByTestId('leave-unsaved-dialog')
 
 function urlOf(path: string): RegExp {
-  return new RegExp(`${path.replace(/\//g, '\\/')}$`)
+  return new RegExp(`${escapeRegExp(path)}$`)
 }
 
 function headerActions(page: Page, target: NetworkPage) {

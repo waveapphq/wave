@@ -16,15 +16,20 @@ from wavecore.api.services.workbench._common import (
     _add_execution_log,
     _broadcast_event,
     _complete_step_over,
+    _elapsed_ms,
     _push_single_variable_change,
     _push_variable_changes,
+    log_block_completion,
+    log_block_start,
     run_debug_block,
 )
 from wavecore.api.services.workbench.block_source import node_source
 from wavecore.api.services.workbench.block_status import (
+    forget_lanes,
     leave_by_then,
     skip_lane_never_run,
     skip_rest,
+    take_lane,
 )
 from wavecore.api.services.workbench.node_helpers import _execute_node, _extract_node_fields
 from wavecore.api.services.workbench.plugins import (
@@ -262,7 +267,9 @@ async def _run_body_node(
     block_name = nf["block_name"]
 
     session["block_states"][path_node_id] = "running"
+    forget_lanes(session, path_node_id)
     await _broadcast_block_status(session_id, path_node_id, block_name, "running")
+    started = log_block_start(session_id, path_node_id, block_name, nf)
 
     profile_bindings = nf["node_data"].get("config", {}).get("profileBindings", [])
     if profile_bindings:
@@ -311,6 +318,7 @@ async def _run_body_node(
         )
 
     session["block_states"][path_node_id] = final_status
+    log_block_completion(session_id, path_node_id, block_name, _elapsed_ms(started))
     await _broadcast_block_status(session_id, path_node_id, block_name, final_status)
     await asyncio.sleep(0)
     return raw_result, final_status
@@ -450,49 +458,53 @@ async def _execute_body_chain_iteration(
 
     ``failures`` receives the failing node's error.
     """
-    for body_node_id in body_chain:
-        executed.discard(body_node_id)
+    ran_earlier = executed.intersection(body_chain)
+    executed.difference_update(body_chain)
     walk = _ChainWalk(body_chain, node_map, session, session_id, executed, adj)
-    for body_node_id in body_chain:
-        await asyncio.sleep(0.001)
-        if session.get("status") == WorkbenchStatus.STOPPED.value:
-            return "stopped"
+    try:
+        for body_node_id in body_chain:
+            await asyncio.sleep(0.001)
+            if session.get("status") == WorkbenchStatus.STOPPED.value:
+                return "stopped"
 
-        # Pre-execution: check for signals from prior nested dispatch
-        sig = await _drain_session_signal(walk, body_node_id, 0)
-        if sig:
-            return sig
-        if body_node_id in executed:
-            continue
+            # Pre-execution: check for signals from prior nested dispatch
+            sig = await _drain_session_signal(walk, body_node_id, 0)
+            if sig:
+                return sig
+            if body_node_id in executed:
+                continue
 
-        executed.add(body_node_id)
-        raw_result, error = await _execute_body_node(
-            body_node_id,
-            node_map,
-            variables,
-            session,
-            session_id,
-            environment_id,
-            log_prefix=log_prefix,
-            adj=adj,
-            executed=executed,
-        )
+            executed.add(body_node_id)
+            raw_result, error = await _execute_body_node(
+                body_node_id,
+                node_map,
+                variables,
+                session,
+                session_id,
+                environment_id,
+                log_prefix=log_prefix,
+                adj=adj,
+                executed=executed,
+            )
 
-        if error is not None:
-            return await _fail_body_chain(walk, body_node_id, error, failures)
-        _complete_step_over(session, body_node_id)
+            if error is not None:
+                return await _fail_body_chain(walk, body_node_id, error, failures)
+            _complete_step_over(session, body_node_id)
 
-        # Check for break/continue (from direct signals or nested dispatch)
-        signal = await _check_break_continue(raw_result, walk, body_node_id)
-        if signal:
-            return signal
+            # Check for break/continue (from direct signals or nested dispatch)
+            signal = await _check_break_continue(raw_result, walk, body_node_id)
+            if signal:
+                return signal
 
-        # Post-execution: check for session-level signals from nested dispatch
-        sig = await _drain_session_signal(walk, body_node_id, 1)
-        if sig:
-            return sig
+            # Post-execution: check for session-level signals from nested dispatch
+            sig = await _drain_session_signal(walk, body_node_id, 1)
+            if sig:
+                return sig
 
-    return "ok"
+        return "ok"
+    finally:
+        # A Block cut off before it starts again keeps the result of the round it ran in.
+        executed.update(ran_earlier)
 
 
 async def _execute_for_loop_body(
@@ -586,6 +598,7 @@ async def _run_iteration_loop(
         if not body_chain:
             continue
 
+        await take_lane(session, session_id, node_id, "body")
         result = await _execute_body_chain_iteration(
             body_chain,
             node_map,

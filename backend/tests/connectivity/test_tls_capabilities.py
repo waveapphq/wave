@@ -171,7 +171,10 @@ class TestCapabilitiesPayload:
             assert set(row) == {"openssl", "iana", "min_version", "max_version"}
 
     def test_payload_is_stable_across_calls(self) -> None:
-        assert tls_capabilities.capabilities() == tls_capabilities.capabilities()
+        first = tls_capabilities.capabilities()
+        second = tls_capabilities.capabilities()
+
+        assert second == first
 
 
 class TestCipherSuiteDefaults:

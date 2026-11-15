@@ -50,7 +50,7 @@ test.describe('V-LIB-FN-01: empty Functions Library modal', () => {
 
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
 
-    const modal = page.getByRole('region', { name: 'Functions Library' })
+    const modal = page.getByRole('dialog', { name: 'Functions Library' })
     await expect(modal).toBeVisible()
     await expect(modal.getByText(EMPTY_COPY, { exact: true })).toBeVisible()
   })
@@ -61,7 +61,7 @@ test.describe('V-LIB-FN-01: empty Functions Library modal', () => {
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
 
-    const modal = page.getByRole('region', { name: 'Functions Library' })
+    const modal = page.getByRole('dialog', { name: 'Functions Library' })
     await expect(modal).toBeVisible()
     await modal.getByRole('button', { name: 'Close' }).click()
     await expect(modal).toBeHidden()
@@ -73,7 +73,7 @@ test.describe('V-LIB-FN-01: empty Functions Library modal', () => {
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
 
-    const modal = page.getByRole('region', { name: 'Functions Library' })
+    const modal = page.getByRole('dialog', { name: 'Functions Library' })
     await expect(modal).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(modal).toBeHidden()

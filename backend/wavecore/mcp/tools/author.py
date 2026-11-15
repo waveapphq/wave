@@ -38,8 +38,8 @@ NAME_CONFLICT_FIX = (
 )
 
 TARGET_NOT_EXPRESSIBLE_PROBLEM = (
-    "The target test uses connectivity the recipe format cannot express; "
-    "amending it through a recipe would drop that wiring."
+    "The target test holds wiring or settings the recipe format cannot express; "
+    "amending it through a recipe would drop them."
 )
 TARGET_NOT_EXPRESSIBLE_FIX = (
     "Edit this test directly in the workbench. Recipe amendment is available "
@@ -315,61 +315,38 @@ def get_test_recipe(test_ref: str) -> dict[str, Any]:
     }
 
 
-_SIZE_KEYS = ("width", "height")
-
-
-def _harvest_layout(
-    target: dict[str, Any],
-) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
-    """Stored positions and hand-set sizes of the target's recipe-built nodes, keyed by recipeKey.
-
-    A width equal to the one the compiler would generate is the compiler's, so it is
-    left out and regenerated for the node's current name.
-    """
-    from wavecore.core.layout.dimensions import fit_node_width
-    from wavecore.core.layout.engine import ingress_counts
-
-    workflow = target.get("workflow") or {}
-    ingress = ingress_counts(workflow.get("edges") or [])
-    positions: dict[str, dict[str, float]] = {}
-    sizes: dict[str, dict[str, float]] = {}
-    for node in workflow.get("nodes") or []:
+def _key_anchors(
+    target: dict[str, Any], test_data: dict[str, Any], step_map: dict[str, str]
+) -> dict[str, str]:
+    """New node id -> stored node id for each step the recipe names with a `key` of its own."""
+    stored: dict[str, str] = {}
+    for node in (target.get("workflow") or {}).get("nodes") or []:
         key = (node.get("data") or {}).get("recipeKey")
-        if key is None:
+        if key is not None:
+            stored.setdefault(str(key), str(node["id"]))
+    anchors: dict[str, str] = {}
+    for node in test_data["workflow"]["nodes"]:
+        key = str(node["data"]["recipeKey"])
+        if key == step_map.get(node["id"]):
             continue
-        position = node.get("position")
-        if isinstance(position, dict):
-            positions[str(key)] = position
-        size = {axis: node[axis] for axis in _SIZE_KEYS if isinstance(node.get(axis), int | float)}
-        if size.get("width") == fit_node_width(node, ingress.get(str(node.get("id")), 0)):
-            del size["width"]
-        if size:
-            sizes[str(key)] = size
-    return positions, sizes
+        # A stored node anchors one step only, so two steps never share a place.
+        old_id = stored.pop(key, None)
+        if old_id is not None:
+            anchors[node["id"]] = old_id
+    return anchors
 
 
-def _apply_pinned_layout(target: dict[str, Any], test_data: dict[str, Any]) -> None:
-    """Keep untouched (incl. human-dragged and hand-resized) node geometry across an amend."""
-    from wavecore.core.layout.engine import layout_workflow
+def _apply_pinned_layout(
+    target: dict[str, Any], test_data: dict[str, Any], step_map: dict[str, str]
+) -> None:
+    """Keep untouched (incl. human-dragged and hand-resized) block geometry across an amend."""
+    from wavecore.core.layout.revision import carry_geometry
 
-    old_positions, old_sizes = _harvest_layout(target)
-    new_nodes = test_data["workflow"]["nodes"]
-    new_edges = test_data["workflow"]["edges"]
-    for node in new_nodes:
-        key = str((node.get("data") or {}).get("recipeKey"))
-        if key in old_sizes:
-            node.update(old_sizes[key])
-    pinned = {
-        str(node["id"]): old_positions[str((node.get("data") or {}).get("recipeKey"))]
-        for node in new_nodes
-        if str((node.get("data") or {}).get("recipeKey")) in old_positions
-    }
-    if not pinned:
-        return
-    positions = layout_workflow(new_nodes, new_edges, pinned)
-    for node in new_nodes:
-        if node["id"] in positions:
-            node["position"] = positions[node["id"]]
+    carry_geometry(
+        target.get("workflow") or {},
+        test_data["workflow"],
+        _key_anchors(target, test_data, step_map),
+    )
 
 
 def _stale_version_finding(recipe: str, target: dict[str, Any]) -> dict[str, Any] | None:
@@ -423,7 +400,7 @@ def amend_test_from_recipe(test_ref: str, recipe: str) -> dict[str, Any]:
         findings.append(conflict)
         return {"amended": False, "findings": findings}
 
-    _apply_pinned_layout(target, test_data)
+    _apply_pinned_layout(target, test_data, result["step_map"])
     warnings = [item for item in findings if item["severity"] == "warning"]
     try:
         updated = test_service.update_test(target_id, test_data, etag=None)

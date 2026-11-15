@@ -97,6 +97,7 @@ def test_dispatch_child_terminal_signals_waiting_event_and_persists_snapshot(
             return_value={
                 "test_id": f"t-{run_id}",
                 "block_states": {"b1": "passed"},
+                "lanes_taken": {"b1": ["pass"]},
                 "variables": {"x": 1},
             },
         ),
@@ -114,6 +115,7 @@ def test_dispatch_child_terminal_signals_waiting_event_and_persists_snapshot(
     assert snap is not None
     assert snap["status"] == "passed"
     assert snap["workflow"] == {"nodes": [], "edges": []}
+    assert snap["lanes_taken"] == {"b1": ["pass"]}
 
 
 def test_filter_plain_variables_drops_namespace_objects() -> None:
@@ -160,10 +162,11 @@ def test_stop_active_child_ignores_missing_sessions(tmp_storage: Any) -> None:
     _sequential._child_sessions["c1"] = {"parent_id": exec_id, "run_id": "r1"}
     _sequential._child_sessions["c2"] = {"parent_id": exec_id, "run_id": "r2"}
 
+    from wavecore.api.exceptions import NotFoundException
     from wavecore.api.services.workbench import service as workbench_service
 
     def _raiser(sid: str) -> None:
-        raise LookupError(sid)
+        raise NotFoundException(f"Workbench session '{sid}' not found")
 
     with patch.object(workbench_service, "stop_workbench_run", side_effect=_raiser):
         _sequential.stop_active_child(exec_id)  # must not raise
@@ -212,6 +215,7 @@ def test_a_stopped_child_unwind_notice_stores_what_it_bound_since(tmp_storage: A
         "test_id": None,
         "status": "stopped",
         "block_states": {"b1": "stopped"},
+        "lanes_taken": {},
         "variables": {"x": 1, "out": "tail"},
     }
 

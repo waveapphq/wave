@@ -591,7 +591,7 @@ describe('Function Block window - secret input (FNCFG-7, REQ-3.1.2.9, REQ-3.1.3.
   it('masks a stored sealed literal: dots and the lock, no expand, never the stored text', () => {
     openWindow(localBlock({ inputs: [SECRET_INPUT], values: { api_key: SEALED_API_KEY } }))
     const row = inputRow('api_key')
-    expect(within(row).getByRole('button', { name: 'Edit protected value' })).toHaveTextContent(/^•{8}$/)
+    expect(within(row).getByRole('button', { name: 'api_key: Edit protected value' })).toHaveTextContent(/^•{8}$/)
     expect(within(row).getByLabelText(CREDENTIAL_LITERAL_TOOLTIP)).toBeInTheDocument()
     expect(within(row).queryByTestId('param-expand-api_key')).toBeNull()
     expect(shownTexts(row).join('\n')).not.toContain(SEALED_API_KEY)
@@ -623,7 +623,7 @@ describe('Function Block window - a secret literal read back as the mask (FNCFG-
     openWindow(localBlock({ inputs: [SECRET_INPUT], values: { api_key: READ_BACK_MASK } }))
     const row = inputRow('api_key')
     expect(expressionToggle(row)).toHaveAttribute('aria-pressed', 'false')
-    expect(within(row).getByRole('button', { name: 'Edit protected value' })).toHaveTextContent(/^•{8}$/)
+    expect(within(row).getByRole('button', { name: 'api_key: Edit protected value' })).toHaveTextContent(/^•{8}$/)
     expect(within(row).getByLabelText(CREDENTIAL_LITERAL_TOOLTIP)).toBeInTheDocument()
     expect(shownTexts(row).join('\n')).not.toContain(READ_BACK_MASK)
   })
@@ -957,10 +957,10 @@ describe('Function Block window - sheet shell and header', () => {
     expect(screen.getByRole('heading', { name: 'Function - Edit Config' })).toBeInTheDocument()
   })
 
-  it('renders as a non-blocking sheet with no dialog shell', () => {
+  it('renders as a non-blocking sheet with no dialog shell around it', () => {
     openWindow(localBlock())
-    expect(sheet()).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(sheet()).toHaveAttribute('aria-modal', 'false')
+    expect(screen.getAllByRole('dialog')).toEqual([sheet()])
   })
 
   it('closes a clean window directly from the header X', async () => {
@@ -1026,7 +1026,7 @@ describe('Function Block window - unsaved-changes question', () => {
   it('saves the edited values from the question', async () => {
     const user = await openChanged()
     await user.click(within(sheet()).getByRole('button', { name: /^cancel$/i }))
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog', { name: 'Unsaved changes' })
     await user.click(within(dialog).getByRole('button', { name: /^save$/i }))
     expect(storedData().description).toBe('edited')
     expect(isOpen()).toBe(false)
@@ -1078,7 +1078,7 @@ describe('Function Block window - read-only window', () => {
     await user.click(within(screen.getByTestId('element-config-sheet-drag-handle')).getByRole('button', { name: /^close$/i }))
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
     expect(isOpen()).toBe(true)
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog', { name: 'Unsaved changes' })
     expect(within(dialog).queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument()
     const close = within(dialog).getByTestId('unsaved-close')
     expect(close).toHaveTextContent(/^Close$/)

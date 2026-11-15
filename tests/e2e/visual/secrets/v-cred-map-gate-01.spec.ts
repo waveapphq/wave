@@ -74,8 +74,14 @@ function loadFixture(): Record<string, unknown> {
 const paramRow = (sheet: Locator, name: string): Locator =>
   sheet.locator(`[data-testid="param-row-${name}"]`)
 
+const SECRET_FIELD = 'secret_data'
+const CONFIG_FIELD = 'data'
+// Both rows carry the label Data.
+const DATA_LABEL = 'Data'
+
+// The masked control is named after its field label (`<label>: Edit protected value`).
 const protectedValue = (row: Locator): Locator =>
-  row.locator('button[aria-label="Edit protected value"]')
+  row.getByRole('button', { name: `${DATA_LABEL}: Edit protected value`, exact: true })
 
 // The one value field draws a map as one line, and its expand opens the map editor (FIELD-1).
 const mapField = (row: Locator): Locator => row.locator('[data-slot="input-group"] input')
@@ -151,7 +157,7 @@ async function persistedSecretData(page: Page, id: string): Promise<Record<strin
 /** Consent to the clear-and-retype and return the editor it opens. */
 async function confirmClearAndEdit(page: Page, row: Locator): Promise<Locator> {
   await protectedValue(row).click()
-  const confirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  const confirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
   await expect(confirm).toBeVisible()
   await confirm.getByRole('button', { name: /Delete & Edit/i }).click()
   const editor = mapEditor(page)
@@ -211,7 +217,7 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
     page,
   }) => {
     const secretSheet = await openConfig(page, SECRET_NODE)
-    await expectProtectedMap(paramRow(secretSheet, 'secret_data'), [
+    await expectProtectedMap(paramRow(secretSheet, SECRET_FIELD), [
       ...STORED_KEYS,
       ...STORED_VALUES,
     ])
@@ -220,7 +226,7 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
     for (const value of STORED_VALUES) await expect(secretSheet).not.toContainText(value)
     await closeConfig(page)
 
-    const configSheetRow = paramRow(await openConfig(page, CONFIG_NODE), 'data')
+    const configSheetRow = paramRow(await openConfig(page, CONFIG_NODE), CONFIG_FIELD)
     await expect(protectedValue(configSheetRow)).toHaveCount(0)
     await expect(mapField(configSheetRow)).toHaveValue(CONFIG_LINE)
   })
@@ -229,9 +235,9 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
     const before = await persistedSecretData(page, testId)
     expect(Object.keys(before).sort()).toEqual(STORED_KEYS)
 
-    const row = paramRow(await openConfig(page, SECRET_NODE), 'secret_data')
+    const row = paramRow(await openConfig(page, SECRET_NODE), SECRET_FIELD)
     await protectedValue(row).click()
-    const confirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    const confirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
     await expect(confirm).toBeVisible()
     await confirm.getByRole('button', { name: 'Cancel' }).click()
     await expect(confirm).toBeHidden()
@@ -246,7 +252,7 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
   test('MG-c: Delete & Edit clears the stored map and opens an empty key/value editor', async ({
     page,
   }) => {
-    const row = paramRow(await openConfig(page, SECRET_NODE), 'secret_data')
+    const row = paramRow(await openConfig(page, SECRET_NODE), SECRET_FIELD)
     const editor = await confirmClearAndEdit(page, row)
 
     await expect(editor.locator('[data-testid="map-edit-body"]')).toBeVisible()
@@ -268,12 +274,12 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
   }) => {
     test.setTimeout(90_000)
     const sheet = await openConfig(page, SECRET_NODE)
-    await clearAndTypeSecretData(page, paramRow(sheet, 'secret_data'))
+    await clearAndTypeSecretData(page, paramRow(sheet, SECRET_FIELD))
     await applyConfigAndSave(page)
 
     // Reopened WITHOUT a page reload: the save re-sync masks the field write-only.
     const reopened = await openConfig(page, SECRET_NODE)
-    await expectProtectedMap(paramRow(reopened, 'secret_data'), [TYPED_KEY, TYPED_VALUE])
+    await expectProtectedMap(paramRow(reopened, SECRET_FIELD), [TYPED_KEY, TYPED_VALUE])
 
     const persisted = await persistedSecretData(page, testId)
     expect(Object.keys(persisted), 'the typed key is the only one stored').toEqual([TYPED_KEY])
@@ -290,17 +296,17 @@ test.describe('V-CRED-MAP-GATE-01: K8s Apply Secret Data map credential', () => 
   }) => {
     test.setTimeout(120_000)
     const sheet = await openConfig(page, SECRET_NODE)
-    await clearAndTypeSecretData(page, paramRow(sheet, 'secret_data'))
+    await clearAndTypeSecretData(page, paramRow(sheet, SECRET_FIELD))
     await applyConfigAndSave(page)
 
     await reopenTest(page, testId)
 
     const secretSheet = await openConfig(page, SECRET_NODE)
-    await expectProtectedMap(paramRow(secretSheet, 'secret_data'), [TYPED_KEY, TYPED_VALUE])
+    await expectProtectedMap(paramRow(secretSheet, SECRET_FIELD), [TYPED_KEY, TYPED_VALUE])
     await closeConfig(page)
 
     // The same save left the non-credential map alone, keys and values included.
-    const dataRow = paramRow(await openConfig(page, CONFIG_NODE), 'data')
+    const dataRow = paramRow(await openConfig(page, CONFIG_NODE), CONFIG_FIELD)
     await expect(protectedValue(dataRow)).toHaveCount(0)
     await expect(mapField(dataRow)).toHaveValue(CONFIG_LINE)
 

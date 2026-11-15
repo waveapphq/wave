@@ -16,21 +16,8 @@
           "version": "1.0.0",
           "description": "Set All Types",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": ["expr_v"],
-          "variableTemplateKeys": ["tmpl_v"],
-          "variableTypes": {
-            "str_v": "string",
-            "int_v": "integer",
-            "float_v": "float",
-            "bool_v": "boolean",
-            "arr_v": "array",
-            "map_v": "map",
-            "tbl_v": "table",
-            "expr_v": "integer",
-            "tmpl_v": "string"
-          },
+          "expressionFields": ["variables.expr_v"],
+          "templateFields": ["variables.tmpl_v"],
           "config": {
             "values": {
               "variables": {

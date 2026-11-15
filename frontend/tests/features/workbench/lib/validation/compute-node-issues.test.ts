@@ -11,6 +11,7 @@ import {
   computeNodeIssues,
   type NodeIssue,
 } from '@/features/workbench/lib/validation/compute-node-issues'
+import { MASK_PLACEHOLDER } from '@/lib/secret-envelope'
 
 interface NodeFixture {
   id: string
@@ -24,6 +25,7 @@ interface NodeFixture {
     config?: { values?: Record<string, unknown>; outputBindings?: Record<string, string>; profileBindings?: unknown }
     disabled?: boolean
     expressionFields?: string[]
+    templateFields?: string[]
   }
 }
 
@@ -2113,6 +2115,23 @@ describe('numeric parameter bounds', () => {
     })
   })
 
+  // A Template is written source, as an {x} is: the number rule never reads it (REQ-3.1.3.14).
+  describe('a Template', () => {
+    it('is never read with the number rule', () => {
+      expect(issuesFor({ count: '{{ ping_count }}' }, { templateFields: ['count'] })).toEqual([])
+    })
+
+    it('is never range-checked', () => {
+      expect(issuesFor({ count: '5000' }, { templateFields: ['count'] })).toEqual([])
+    })
+
+    it('still checks the same text held as a literal', () => {
+      expect(issuesFor({ count: '{{ ping_count }}' })).toEqual([
+        { code: 'NUMBER_VALUE', severity: 'error', paramName: 'count', message: 'Count: Enter a valid integer value' },
+      ])
+    })
+  })
+
   // A literal the number rule refuses is named before any range (REQ-3.1.3.14).
   describe('a literal the number rule refuses', () => {
     it('flags text that is no whole number and names the row', () => {
@@ -2590,6 +2609,10 @@ describe('Blocks inside a Function flow (REQ-3.1.2.4)', () => {
     }
   }
 
+  function bodySetter(variables: Record<string, unknown>, id = 'inner-setter'): AnyNode {
+    return controlNode(id, 'variable-setter', { variables })
+  }
+
   function bodyLog(message: string, id = 'inner-log'): AnyNode {
     const node = logNode({ message })
     node.id = id
@@ -2672,6 +2695,33 @@ describe('Blocks inside a Function flow (REQ-3.1.2.4)', () => {
       expect(issuesAt([fn], 'fn-1')).toEqual([DESCENDANT_ALERT])
     })
 
+    // REQ-3.4.3.8: inside a Function the Setter never writes a declared input; the canvas uses the save text.
+    it('refuses a body Setter row that names one of the Function inputs, and only that one', () => {
+      const fn = functionBlock('fn-1', {
+        inputs: [input('x', 'string')],
+        outputs: [output('result', 'string')],
+        variables: [{ name: 'count', type: 'integer', value: 0 }],
+        body: [bodySetter({ x: 'a', result: 'b', count: 1 })],
+      })
+
+      expect(withCode(issuesAt([fn], 'inner-setter'), 'INPUT_WRITE_FORBIDDEN')).toEqual([
+        {
+          code: 'INPUT_WRITE_FORBIDDEN',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Writes to declared input 'x'; inputs are read-only",
+        },
+      ])
+      expect(issuesAt([fn], 'fn-1')).toEqual([DESCENDANT_ALERT])
+    })
+
+    it('lets a Setter row in a Test write a Test variable named x', () => {
+      const setter = bodySetter({ x: 'a' }, 'test-setter')
+      const testVariables: VarFixture[] = [{ id: 'v1', name: 'x', type: 'string', value: '' }]
+
+      expect(withCode(issuesAt([setter], 'test-setter', testVariables), 'INPUT_WRITE_FORBIDDEN')).toEqual([])
+    })
+
     it.each(['regression', 'suite', 'system'])(
       'refuses a body Block expression that reads the external %s scope',
       (scope) => {
@@ -2705,6 +2755,610 @@ describe('Blocks inside a Function flow (REQ-3.1.2.4)', () => {
           message: "Reads variable 'region' from external scope 'system'; only the Function's own scope is visible",
         },
       ])
+    })
+  })
+})
+
+/** A control (or table parser) Block holding `values`, with its own data keys on top. */
+function controlNode(
+  id: string,
+  elementType: string,
+  values: Record<string, unknown>,
+  data: Record<string, unknown> = {},
+): AnyNode {
+  return {
+    id,
+    type: 'workflowNode',
+    position: { x: 0, y: 0 },
+    data: { elementType, nodeType: 'control', version: '1.0.0', label: id, config: { values }, ...data },
+  }
+}
+
+function messagesAt(nodes: AnyNode[], id: string, variables: VarFixture[] = []): string[] {
+  return issuesAt(nodes, id, variables).map((issue) => issue.message)
+}
+
+/** Issues of one code, the code given as text (codes the canvas has not raised before included). */
+function withCodeName(issues: NodeIssue[], code: string): NodeIssue[] {
+  return issues.filter((issue) => (issue.code as string) === code)
+}
+
+const CONDITION_VARIABLES: VarFixture[] = [
+  { id: 'v1', name: 'status', type: 'string', value: '' },
+  { id: 'v2', name: 'count', type: 'integer', value: 0 },
+  { id: 'v3', name: 'ratio', type: 'float', value: 0 },
+  { id: 'v4', name: 'done', type: 'boolean', value: false },
+]
+
+/** A literal condition row; a field left out is not stored (an unset compare value has no key). */
+function conditionRow(fields: Record<string, unknown> = {}): Record<string, unknown> {
+  return { id: 'r0', type: 'literal', variable: 'status', value_type: 'string', operator: 'equals', ...fields }
+}
+
+const READY = conditionRow({ reference_value: 'ready' })
+
+function assertNode(assertions: unknown[], data: Record<string, unknown> = {}): AnyNode {
+  return controlNode('assert-1', 'assert', { assertions, mode: 'split' }, data)
+}
+
+function lanes(...limits: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return limits.map((extra, index) => ({ id: `lane_${index}`, name: `Lane ${index}`, ...extra }))
+}
+
+// REQ-3.5.0.3, REQ-3.5.1.5: the canvas badge names the same finding as the Save dialog, in its words.
+describe('control Block rules on the canvas, worded as the save check', () => {
+  describe('condition lists', () => {
+    it.each<[string, Record<string, unknown>, string]>([
+      ['assert', { assertions: [], mode: 'split' }, 'assertions'],
+      ['while', { mode: 'while-do', conditions: [] }, 'conditions'],
+      ['wait-until', { conditions: [], timeout: 5000 }, 'conditions'],
+    ])('flags an empty %s list once, through the required check', (elementType, values, field) => {
+      expect(issuesAt([controlNode('c-1', elementType, values)], 'c-1')).toEqual([
+        {
+          code: 'REQUIRED_PARAM_EMPTY',
+          severity: 'error',
+          paramName: field,
+          message: `Required parameter '${field}' is empty`,
+        },
+      ])
+    })
+
+    it('names a row with no variable key as missing', () => {
+      const row = conditionRow({ reference_value: 'ready' })
+      delete row.variable
+
+      expect(messagesAt([assertNode([row])], 'assert-1', CONDITION_VARIABLES)).toEqual([
+        "Required parameter 'assertions.0.variable' is missing",
+      ])
+    })
+
+    it('names a row with a blank variable as empty', () => {
+      expect(messagesAt([assertNode([conditionRow({ variable: '', reference_value: 'ready' })])], 'assert-1')).toEqual([
+        "Required parameter 'assertions.0.variable' is empty",
+      ])
+    })
+
+    it('names a binary operator with no compare value as missing', () => {
+      expect(messagesAt([assertNode([conditionRow()])], 'assert-1', CONDITION_VARIABLES)).toEqual([
+        "Required parameter 'assertions.0.reference_value' is missing",
+      ])
+    })
+
+    it.each<[string, Record<string, unknown>]>([
+      ['a blank {x} value', { reference_value: '  ', reference_is_expression: true }],
+      ['a blank Template', { reference_value: '', reference_is_template: true }],
+      ['empty text on a number compare', { variable: 'count', value_type: 'integer', reference_value: '' }],
+    ])('names %s under a binary operator as empty', (_case, fields) => {
+      expect(messagesAt([assertNode([conditionRow(fields)])], 'assert-1', CONDITION_VARIABLES)).toEqual([
+        "Required parameter 'assertions.0.reference_value' is empty",
+      ])
+    })
+
+    // Empty text typed on purpose is a value and compares with empty text (FIELD-4, FIELD-15).
+    it.each(['', '   '])('raises nothing for literal text on a text compare, empty text included (%j)', (text) => {
+      const node = assertNode([conditionRow({ reference_value: text })])
+
+      expect(computeNodeIssues([node] as unknown as AnyNodes, CONDITION_VARIABLES).has('assert-1')).toBe(false)
+    })
+
+    // One finding per part, as Save gives it; the place keeps each issue apart in the badge list.
+    it('gives each control finding the save check code and its place', () => {
+      const fresh = assertNode([
+        conditionRow({ variable: '' }),
+        { type: 'operator', value: 'and' },
+        conditionRow({ id: 'r1', variable: 'count', value_type: 'integer', reference_value: 'abc' }),
+      ])
+      const ifElse = controlNode('if-1', 'if-else', {
+        branches: [
+          { id: 'b0', type: 'if', label: '', conditions: [] },
+          { id: 'b9', type: 'else', label: '' },
+        ],
+      })
+      const parallel = controlNode(
+        'par-1',
+        'parallel',
+        { branches: [{ id: 'lane_0', name: 'Lane 0', time_limit: '' }] },
+        { expressionFields: ['branches.0.time_limit'] },
+      )
+      const lanesBelow = controlNode('par-2', 'parallel', { branches: lanes({}, { time_limit: 0 }) })
+      const loop = controlNode('for-1', 'for', { mode: 'count', count: 3, step: 0 })
+      const nodes = [fresh, ifElse, parallel, lanesBelow, loop]
+
+      expect(issuesAt(nodes, 'assert-1', CONDITION_VARIABLES)).toEqual([
+        {
+          code: 'REQUIRED_PARAM_EMPTY',
+          severity: 'error',
+          paramName: 'assertions.0.variable',
+          message: "Required parameter 'assertions.0.variable' is empty",
+        },
+        {
+          code: 'REQUIRED_PARAM_MISSING',
+          severity: 'error',
+          paramName: 'assertions.0.reference_value',
+          message: "Required parameter 'assertions.0.reference_value' is missing",
+        },
+        {
+          code: 'INVALID_COMPARE_VALUE',
+          severity: 'error',
+          paramName: 'assertions.2.reference_value',
+          message: "The value compared with 'count' is not a valid integer",
+        },
+      ])
+      expect(issuesAt(nodes, 'if-1')).toEqual([
+        {
+          code: 'REQUIRED_PARAM_EMPTY',
+          severity: 'error',
+          paramName: 'branches.0.conditions',
+          message: 'if branch must have conditions',
+        },
+      ])
+      expect(issuesAt(nodes, 'par-1')).toEqual([
+        {
+          code: 'INVALID_CONTROL_STRUCTURE',
+          severity: 'error',
+          paramName: 'branches',
+          message: 'Parallel requires at least 2 branches',
+        },
+        {
+          code: 'REQUIRED_PARAM_EMPTY',
+          severity: 'error',
+          paramName: 'branches.0.time_limit',
+          message: "Required parameter 'branches.0.time_limit' is empty",
+        },
+      ])
+      expect(issuesAt(nodes, 'par-2')).toEqual([
+        {
+          code: 'INVALID_SETTING_VALUE',
+          severity: 'error',
+          paramName: 'branches.1.time_limit',
+          message: 'Time Limit must be at least 1',
+        },
+      ])
+      expect(issuesAt(nodes, 'for-1')).toEqual([
+        { code: 'INVALID_SETTING_VALUE', severity: 'error', paramName: 'step', message: 'Step must not be zero' },
+      ])
+    })
+
+    it.each<[string, string]>([
+      ['integer', "The value compared with 'count' is not a valid integer"],
+      ['float', "The value compared with 'ratio' is not a valid float"],
+    ])('names a literal %s compare value the number rule refuses', (valueType, message) => {
+      const variable = valueType === 'integer' ? 'count' : 'ratio'
+      const row = conditionRow({ variable, value_type: valueType, operator: 'greater_than', reference_value: 'abc' })
+
+      expect(messagesAt([assertNode([row])], 'assert-1', CONDITION_VARIABLES)).toEqual([message])
+    })
+
+    it('names a filter compare value the number rule refuses as the cell', () => {
+      const row = conditionRow({ variable: '_cell', value_type: 'integer', reference_value: 'abc' })
+      const csv = controlNode(
+        'csv-1',
+        'csv-parser',
+        {
+          operation: 'parse',
+          csv_content: 'qty\n1\n',
+          filters: [{ id: 'f0', column: { mode: 'name', value: 'qty' }, asType: 'integer', conditions: [row] }],
+        },
+        { nodeType: 'plugin' },
+      )
+
+      expect(messagesAt([csv], 'csv-1')).toEqual(['The value compared with the cell is not a valid integer'])
+    })
+
+    it('names a blank While expression row as empty', () => {
+      const node = controlNode('while-1', 'while', { mode: 'while-do', conditions: [{ id: 'e0', type: 'expression', expression: ' ' }] })
+
+      expect(messagesAt([node], 'while-1')).toEqual(["Required parameter 'conditions.0.expression' is empty"])
+    })
+
+    it('names an empty Wait Until group as empty', () => {
+      const node = controlNode('wait-1', 'wait-until', {
+        conditions: [READY, { type: 'operator', value: 'and' }, { id: 'g0', type: 'group', items: [] }],
+        timeout: 5000,
+      })
+
+      expect(messagesAt([node], 'wait-1', CONDITION_VARIABLES)).toEqual(["Required parameter 'conditions.2.items' is empty"])
+    })
+
+    // REQ-3.5.1.5: a stored list that does not alternate gets one badge at its first break, as Save gives it.
+    it('names condition items side by side and a stray and / or with the save check code and text', () => {
+      const sideBySide = assertNode([READY, conditionRow({ id: 'r1', reference_value: 'done' })])
+      const strayMarker = controlNode('wait-1', 'wait-until', {
+        conditions: [READY, { type: 'operator', value: 'and' }],
+        timeout: 5000,
+      })
+      const nodes = [sideBySide, strayMarker]
+
+      expect(issuesAt(nodes, 'assert-1', CONDITION_VARIABLES)).toEqual([
+        {
+          code: 'INVALID_CONDITION',
+          severity: 'error',
+          paramName: 'assertions.1',
+          message: "Condition items in 'assertions' must be joined by 'and' or 'or'",
+        },
+      ])
+      expect(issuesAt(nodes, 'wait-1', CONDITION_VARIABLES)).toEqual([
+        {
+          code: 'INVALID_CONDITION',
+          severity: 'error',
+          paramName: 'conditions.1',
+          message: "'and' and 'or' go between two conditions",
+        },
+      ])
+    })
+
+    it('names an If row, an If with no row and an Else If with no row', () => {
+      const rowInIf = controlNode('if-1', 'if-else', {
+        branches: [
+          { id: 'b0', type: 'if', label: '', conditions: [conditionRow({ reference_value: '', reference_is_expression: true })] },
+          { id: 'b9', type: 'else', label: '' },
+        ],
+      })
+      const bare = controlNode('if-2', 'if-else', {
+        branches: [
+          { id: 'b0', type: 'if', label: '', conditions: [] },
+          { id: 'b1', type: 'else_if', label: '', conditions: [] },
+          { id: 'b9', type: 'else', label: '' },
+        ],
+      })
+
+      expect(messagesAt([rowInIf], 'if-1', CONDITION_VARIABLES)).toEqual([
+        "Required parameter 'branches.0.conditions.0.reference_value' is empty",
+      ])
+      expect(messagesAt([bare], 'if-2')).toEqual([
+        'if branch must have conditions',
+        'else_if branch must have conditions',
+      ])
+    })
+
+    it('names a Switch case with no row', () => {
+      const node = controlNode('switch-1', 'switch-case', {
+        branches: [
+          { id: 'c0', type: 'case', label: '', conditions: [], break: true },
+          { id: 'd0', type: 'default', label: '' },
+        ],
+      })
+
+      expect(messagesAt([node], 'switch-1')).toEqual(['case branch must have conditions'])
+    })
+
+    it('raises every control rule as an error and never an "are incomplete" text', () => {
+      const nodes = [
+        assertNode([conditionRow({ variable: '' })]),
+        controlNode('switch-1', 'switch-case', { branches: [{ id: 'c0', type: 'case', label: '', conditions: [], break: true }] }),
+      ]
+      const issues = [...issuesAt(nodes, 'assert-1'), ...issuesAt(nodes, 'switch-1')]
+
+      // The fresh row gives its variable and its compare value finding, the case one.
+      expect(issues).toHaveLength(3)
+      expect(issues.every((issue) => issue.severity === 'error')).toBe(true)
+      expect(issues.filter((issue) => issue.message.endsWith('are incomplete'))).toEqual([])
+    })
+
+    it('raises nothing for a complete list', () => {
+      expect(computeNodeIssues([assertNode([READY])] as unknown as AnyNodes, CONDITION_VARIABLES).has('assert-1')).toBe(false)
+    })
+
+    it('raises nothing for a disabled Block', () => {
+      expect(computeNodeIssues([assertNode([conditionRow({ variable: '' })], { disabled: true })] as unknown as AnyNodes, []).size).toBe(0)
+    })
+  })
+
+  describe('Parallel lanes and the section limit', () => {
+    it('names a section with one lane', () => {
+      expect(messagesAt([controlNode('par-1', 'parallel', { branches: lanes({}), join: 'all' })], 'par-1')).toEqual([
+        'Parallel requires at least 2 branches',
+      ])
+    })
+
+    // Save gives both findings at branches for an empty lane list: the required rule and the two-lane rule.
+    it('names a section with no lanes through the required check and the two-lane rule', () => {
+      expect(messagesAt([controlNode('par-1', 'parallel', { branches: [], join: 'all' })], 'par-1')).toEqual([
+        "Required parameter 'branches' is empty",
+        'Parallel requires at least 2 branches',
+      ])
+    })
+
+    it('names a blank {x} lane limit', () => {
+      const node = controlNode('par-1', 'parallel', { branches: lanes({ time_limit: '' }, {}) }, {
+        expressionFields: ['branches.0.time_limit'],
+      })
+
+      expect(messagesAt([node], 'par-1')).toEqual(["Required parameter 'branches.0.time_limit' is empty"])
+    })
+
+    it('names a literal lane limit below 1 with the lane bound text', () => {
+      expect(messagesAt([controlNode('par-1', 'parallel', { branches: lanes({}, { time_limit: 0 }) })], 'par-1')).toEqual([
+        'Time Limit must be at least 1',
+      ])
+    })
+
+    it('names a section time limit below 1 through the declared minimum', () => {
+      expect(issuesAt([controlNode('par-1', 'parallel', { branches: lanes({}, {}), time_limit: 0 })], 'par-1')).toEqual([
+        {
+          code: 'NUMBER_RANGE',
+          severity: 'error',
+          paramName: 'time_limit',
+          message: 'Section Time Limit must be at least 1',
+        },
+      ])
+    })
+
+    it('raises nothing for two lanes with no limit or a limit of at least 1', () => {
+      const node = controlNode('par-1', 'parallel', { branches: lanes({ time_limit: 1 }, { time_limit: null }), join: 'first' })
+
+      expect(computeNodeIssues([node] as unknown as AnyNodes, []).has('par-1')).toBe(false)
+    })
+  })
+
+  describe('For and While', () => {
+    it('takes an explicit null For count as a value, not a missing one', () => {
+      const node = controlNode('for-1', 'for', { mode: 'count', count: null, step: 1 })
+
+      expect(computeNodeIssues([node] as unknown as AnyNodes, []).has('for-1')).toBe(false)
+    })
+
+    it('still names a For count that is not set', () => {
+      expect(issuesAt([controlNode('for-1', 'for', { mode: 'count', step: 1 })], 'for-1')).toEqual([
+        {
+          code: 'REQUIRED_PARAM_MISSING',
+          severity: 'error',
+          paramName: 'count',
+          message: "Required parameter 'count' is missing",
+        },
+      ])
+    })
+
+    it('names a For step of 0', () => {
+      expect(messagesAt([controlNode('for-1', 'for', { mode: 'count', count: 3, step: 0 })], 'for-1')).toEqual([
+        'Step must not be zero',
+      ])
+    })
+
+    it.each<[string, Record<string, unknown>, string, string]>([
+      ['for', { mode: 'count', count: -1, step: 1 }, 'count', 'Count must be at least 0'],
+      ['while', { mode: 'while-do', conditions: [READY], max_iterations: 0 }, 'max_iterations', 'Max Iterations must be at least 1'],
+    ])('names a %s floor through the declared minimum', (elementType, values, field, message) => {
+      expect(issuesAt([controlNode('loop-1', elementType, values)], 'loop-1', CONDITION_VARIABLES)).toEqual([
+        { code: 'NUMBER_RANGE', severity: 'error', paramName: field, message },
+      ])
+    })
+  })
+
+  describe('Variable Setter rows', () => {
+    const DESCENDANT: NodeIssue = {
+      code: 'CONTAINS_INVALID_DESCENDANT',
+      severity: 'error',
+      message: 'This Function contains a block with validation issues',
+    }
+    const SEALED = 'wave:enc:v1:c2VhbGVk'
+
+    function setter(variables: Record<string, unknown>, data: Record<string, unknown> = {}, id = 'set-1'): AnyNode {
+      return controlNode(id, 'variable-setter', { variables }, data)
+    }
+
+    const typed = (name: string, type: VarFixture['type']): VarFixture => ({ id: `v-${name}`, name, type, value: null })
+
+    it('names an undeclared variable a {x} row reads, on the variables field', () => {
+      const node = setter({ next_try: 'attempt + 1' }, { expressionFields: ['variables.next_try'] })
+
+      expect(issuesAt([node], 'set-1', [typed('next_try', 'integer')])).toEqual([
+        {
+          code: 'UNRESOLVED_VARIABLE_REFERENCE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Variable 'attempt' is not defined",
+        },
+      ])
+    })
+
+    it('names an undeclared variable a {x} list entry reads, on the variables field', () => {
+      const node = setter({ hosts: ['fallback.local', 'primary_host'] }, { expressionFields: ['variables.hosts.1'] })
+
+      expect(issuesAt([node], 'set-1', [typed('hosts', 'array')])).toEqual([
+        {
+          code: 'UNRESOLVED_VARIABLE_REFERENCE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Variable 'primary_host' is not defined",
+        },
+      ])
+    })
+
+    it('flags a Setter literal that no longer fits its retyped variable with the save check text', () => {
+      const ready = setter({ ready: 'yes' })
+      const retries = setter({ retries: 'abc' }, {}, 'set-2')
+      const fn = functionBlock('fn-1', {
+        outputs: [output('done', 'boolean')],
+        body: [setter({ done: 'yes' }, {}, 'inner-setter')],
+      })
+      const testVariables = [typed('ready', 'boolean'), typed('retries', 'integer')]
+
+      expect(issuesAt([ready, retries], 'set-1', testVariables)).toEqual([
+        {
+          code: 'INVALID_SETTING_TYPE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Setting 'variables.ready' of block 'variable-setter' expects boolean, got string",
+        },
+      ])
+      expect(issuesAt([ready, retries], 'set-2', testVariables)).toEqual([
+        {
+          code: 'INVALID_VARIABLE_VALUE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Value for variable 'retries' is not a valid integer",
+        },
+      ])
+      expect(issuesAt([fn], 'inner-setter')).toEqual([
+        {
+          code: 'INVALID_SETTING_TYPE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Setting 'variables.done' of block 'variable-setter' expects boolean, got string",
+        },
+      ])
+      expect(issuesAt([fn], 'fn-1')).toEqual([DESCENDANT])
+    })
+
+    it.each<[string, VarFixture['type'], unknown, string, string]>([
+      ['a number on a string variable', 'string', 5, 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects string, got integer"],
+      ['text on an array variable', 'array', 'a,b', 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects array, got string"],
+      ['a list on a map variable', 'map', ['a'], 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects map, got array"],
+      ['a map on an array variable', 'array', { region: 'eu' }, 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects array, got map"],
+      ['text on a float variable', 'float', 'abc', 'INVALID_VARIABLE_VALUE', "Value for variable 'target' is not a valid float"],
+      ['20 digits on an integer variable', 'integer', '12345678901234567890', 'INVALID_VARIABLE_VALUE', "Value for variable 'target' allows at most 19 digits, got 20"],
+      ['a number on a table variable', 'table', 5, 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects table, got integer"],
+      // A Setter row never names a file: the run refuses text on a table variable, and so does Save.
+      ['text on a table variable', 'table', 'people.csv', 'INVALID_SETTING_TYPE', "Setting 'variables.target' of block 'variable-setter' expects table, got string"],
+    ])('flags %s with the save check text', (_case, type, value, code, message) => {
+      expect(issuesAt([setter({ target: value })], 'set-1', [typed('target', type)])).toEqual([
+        { code, severity: 'error', paramName: 'variables', message },
+      ])
+    })
+
+    it.each<[string, unknown]>([
+      ['as its rows', [{ id: 1, name: 'a' }]],
+      ['with its column types', { columns: [{ name: 'id', type: 'integer' }], rows: [[1]] }],
+    ])('raises no type fit issue for a table stored %s on a table variable', (_case, value) => {
+      const issues = issuesAt([setter({ rows: value })], 'set-1', [typed('rows', 'table')])
+
+      expect(withCodeName(issues, 'INVALID_SETTING_TYPE')).toEqual([])
+    })
+
+    it('flags a Template row on a variable that is not text with the save check text', () => {
+      const node = setter({ retries: 'try {{ attempt }}' }, { templateFields: ['variables.retries'] })
+      const testVariables = [typed('retries', 'integer'), typed('attempt', 'integer')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([
+        {
+          code: 'TEMPLATE_NOT_STRING',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Row 'retries' sets an integer variable; a template builds text, so it needs a string variable",
+        },
+      ])
+    })
+
+    it('flags a Template entry on an entry type that is not text with the save check text', () => {
+      const node = setter(
+        { limits: { max: '{{ top }}', min: '1' } },
+        {
+          templateFields: ['variables.limits.max'],
+          elementTypes: { 'variables.limits': { max: 'float', min: 'float' } },
+        },
+      )
+      const testVariables = [typed('limits', 'map'), typed('top', 'float')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([
+        {
+          code: 'TEMPLATE_NOT_STRING',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Entry 'max' of row 'limits' is float; a template builds text, so it needs element type string",
+        },
+      ])
+    })
+
+    it('raises no Template issue for a Template row on a text variable', () => {
+      const node = setter({ greeting: 'Hi {{ who }}' }, { templateFields: ['variables.greeting'] })
+      const testVariables = [typed('greeting', 'string'), typed('who', 'string')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([])
+    })
+
+    it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
+      ['an {x} row', { ready: 'other_flag' }, { expressionFields: ['variables.ready'] }],
+      ['a Template row', { retries: 'try {{ other_flag }}' }, { templateFields: ['variables.retries'] }],
+      ['a literal that still fits', { ready: true, retries: '3' }, {}],
+      ['a null row', { ready: null, retries: null }, {}],
+      ['a sealed secret', { ready: SEALED, retries: SEALED }, {}],
+      ['the mask placeholder', { ready: MASK_PLACEHOLDER, retries: MASK_PLACEHOLDER }, {}],
+    ])('raises no type fit issue for %s', (_case, variables, data) => {
+      const testVariables = [typed('ready', 'boolean'), typed('retries', 'integer'), typed('other_flag', 'boolean')]
+      const issues = issuesAt([setter(variables, data)], 'set-1', testVariables)
+
+      expect(withCodeName(issues, 'INVALID_SETTING_TYPE')).toEqual([])
+      expect(withCodeName(issues, 'INVALID_VARIABLE_VALUE')).toEqual([])
+    })
+
+    it('names a decimal on a text variable as a float, as the save check does', () => {
+      expect(issuesAt([setter({ target: 2.5 })], 'set-1', [typed('target', 'string')])).toEqual([
+        {
+          code: 'INVALID_SETTING_TYPE',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Setting 'variables.target' of block 'variable-setter' expects string, got float",
+        },
+      ])
+    })
+
+    it.each<[VarFixture['type'], string]>([
+      ['boolean', "Row 'target' sets a boolean variable; a template builds text, so it needs a string variable"],
+      ['float', "Row 'target' sets a float variable; a template builds text, so it needs a string variable"],
+      ['map', "Row 'target' sets a map variable; a template builds text, so it needs a string variable"],
+      ['table', "Row 'target' sets a table variable; a template builds text, so it needs a string variable"],
+    ])('flags a Template row on a %s variable with the save check text', (type, message) => {
+      const node = setter({ target: 'run {{ run_id }}' }, { templateFields: ['variables.target'] })
+      const testVariables = [typed('target', type), typed('run_id', 'string')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([
+        { code: 'TEMPLATE_NOT_STRING', severity: 'error', paramName: 'variables', message },
+      ])
+    })
+
+    it('flags a Template list entry by its index on an entry type that is not text', () => {
+      const node = setter(
+        { ports: ['80', '{{ extra_port }}'] },
+        { templateFields: ['variables.ports.1'], elementTypes: { 'variables.ports': ['integer', 'integer'] } },
+      )
+      const testVariables = [typed('ports', 'array'), typed('extra_port', 'string')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([
+        {
+          code: 'TEMPLATE_NOT_STRING',
+          severity: 'error',
+          paramName: 'variables',
+          message: "Entry '1' of row 'ports' is integer; a template builds text, so it needs element type string",
+        },
+      ])
+    })
+
+    it.each<[string, Record<string, unknown>]>([
+      ['no entry types stored for the Block', {}],
+      ['no entry types stored for the row', { elementTypes: { 'variables.other': ['integer'] } }],
+      ['a text entry type', { elementTypes: { 'variables.ports': ['integer', 'string'] } }],
+    ])('raises no Template issue for a Template entry with %s', (_case, data) => {
+      const node = setter({ ports: ['80', '{{ extra_port }}'] }, { templateFields: ['variables.ports.1'], ...data })
+      const testVariables = [typed('ports', 'array'), typed('other', 'array'), typed('extra_port', 'string')]
+
+      expect(withCodeName(issuesAt([node], 'set-1', testVariables), 'TEMPLATE_NOT_STRING')).toEqual([])
+    })
+
+    it('raises no Template issue for a Template row whose variable is not declared', () => {
+      const node = setter({ fresh: 'run {{ run_id }}' }, { templateFields: ['variables.fresh'] })
+
+      expect(withCodeName(issuesAt([node], 'set-1', [typed('run_id', 'string')]), 'TEMPLATE_NOT_STRING')).toEqual([])
     })
   })
 })

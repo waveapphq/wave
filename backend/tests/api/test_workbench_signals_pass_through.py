@@ -119,10 +119,14 @@ class TestExtractWaitUntilSignals:
 
         assert signals["wait_fail_scope"] is True
 
-    def test_the_wait_mode_rides_the_shared_mode_key(self) -> None:
-        signals = _extract_engine_signals({"__wait_until": True, "__mode": "watch"})
+    def test_the_wait_mode_rides_its_own_key(self) -> None:
+        result: dict[str, Any] = {"__wait_until": True, "__wait_mode": "watch"}
 
-        assert signals["while_mode"] == "watch"
+        signals = _extract_engine_signals(result)
+
+        assert signals["wait_mode"] == "watch"
+        assert signals["while_mode"] is None
+        assert "__wait_mode" not in result
 
     def test_every_wait_key_is_removed_from_the_result(self) -> None:
         result: dict[str, Any] = {
@@ -132,7 +136,7 @@ class TestExtractWaitUntilSignals:
             "__check_interval": 10,
             "__wait_message": "gave up",
             "__wait_fail_scope": False,
-            "__mode": "retry",
+            "__wait_mode": "retry",
             "kept": 1,
         }
 

@@ -64,8 +64,7 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 120,
@@ -117,8 +116,7 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 160,
@@ -232,8 +230,7 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 160,
@@ -309,8 +306,7 @@
               "index": "w_index"
             },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 160,
@@ -332,7 +328,9 @@
           "version": "1.0.0",
           "description": "Step i",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": [
+            "variables.i"
+          ],
           "templateFields": [],
           "config": {
             "values": {
@@ -342,12 +340,6 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": [
-            "i"
-          ],
-          "variableTypes": {
-            "i": "integer"
           }
         },
         "measured": {
@@ -393,8 +385,7 @@
             },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 160,

@@ -4,7 +4,7 @@
  * Contract:
  * - Idle: persistent slim status bar shows only the kebab on the right.
  * - No on-canvas color picker outside edit mode.
- * - Notes have NO flow handles (no input handle, no output handle).
+ * - A Note has an output handle and one input handle per incoming wire (one when unwired).
  * - No cog (Notes have no per-instance configuration modal).
  * - No L/S badge (Notes are not Functions).
  * - The card border is dashed (idle), matching the preset.
@@ -36,7 +36,10 @@ const mockStore = {
   copy: vi.fn(),
   cut: vi.fn(),
   unlinkNode: vi.fn(),
-  edges: [] as Array<{ id: string; source: string; target: string }>,
+  edges: [] as Array<{ id: string; source: string; target: string; targetHandle?: string }>,
+  nodes: [] as unknown[],
+  variables: [] as unknown[],
+  drillPath: [] as unknown[],
 }
 
 vi.mock('@/features/workbench/stores/workflow-store', () => ({
@@ -70,7 +73,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'My note', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'My note', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -86,13 +89,94 @@ describe('NoteNode - idle state', () => {
     expect(screen.getByTestId('note-handle-output')).toBeInTheDocument()
   })
 
+  it('draws one input handle for each wire that comes in, as a Block at a join does', async () => {
+    mockStore.edges = [
+      { id: 'e1', source: 'log-1', target: 'note-join' },
+      { id: 'e2', source: 'if-1', target: 'note-join', targetHandle: 'ingress_1' },
+      { id: 'e3', source: 'note-join', target: 'log-2' },
+    ]
+    const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
+    render(
+      <NoteNode
+        id="note-join"
+        type="noteNode"
+        data={{ label: 'Note', config: { values: { text: 'Join here', color: 'yellow' } } }}
+        selected={false}
+        positionAbsoluteX={0}
+        positionAbsoluteY={0}
+        dragging={false}
+        isConnectable
+        zIndex={0}
+        deletable
+        draggable
+        selectable
+      />,
+    )
+    const first = screen.getByTestId('note-handle-input')
+    const second = screen.getByTestId('note-handle-input-ingress_1')
+    expect(first).not.toHaveAttribute('id')
+    expect(first).toHaveStyle({ left: `${(1 / 3) * 100}%` })
+    expect(second).toHaveAttribute('id', 'ingress_1')
+    expect(second).toHaveStyle({ left: `${(2 / 3) * 100}%` })
+    expect(screen.getByTestId('note-handle-output')).toBeInTheDocument()
+    mockStore.edges = []
+  })
+
+  it('offers a "+" input for a second wire dragged near it, as a Block does', async () => {
+    mockStore.edges = [{ id: 'e1', source: 'log-1', target: 'note-join' }]
+    const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
+    render(
+      <NoteNode
+        id="note-join"
+        type="noteNode"
+        data={{ label: 'Note', config: { values: { text: 'Join here' } }, proximityTarget: true }}
+        selected={false}
+        positionAbsoluteX={0}
+        positionAbsoluteY={0}
+        dragging={false}
+        isConnectable
+        zIndex={0}
+        deletable
+        draggable
+        selectable
+      />,
+    )
+    expect(screen.getByTestId('note-handle-input')).toHaveStyle({ left: `${(1 / 3) * 100}%` })
+    const add = screen.getByTestId('note-handle-input-add')
+    expect(add).toHaveAttribute('id', 'ingress_1')
+    expect(add).toHaveStyle({ left: `${(2 / 3) * 100}%` })
+    mockStore.edges = []
+  })
+
+  it('marks a wire that would close a cycle on its input, as a Block does', async () => {
+    const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
+    render(
+      <NoteNode
+        id="note-cycle"
+        type="noteNode"
+        data={{ label: 'Note', config: { values: { text: 'Loop back' } }, proximityCycleDetected: true }}
+        selected={false}
+        positionAbsoluteX={0}
+        positionAbsoluteY={0}
+        dragging={false}
+        isConnectable
+        zIndex={0}
+        deletable
+        draggable
+        selectable
+      />,
+    )
+    expect(screen.getByTestId('note-handle-input-cycle')).toBeInTheDocument()
+    expect(screen.queryByTestId('note-handle-input')).not.toBeInTheDocument()
+  })
+
   it('persistent status bar shows ONLY the kebab when idle', async () => {
     const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
     render(
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'My note', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'My note', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -120,7 +204,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'My note', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'My note', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -141,7 +225,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'My note', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'My note', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -162,7 +246,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'Probe gateway', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'Probe gateway', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -184,7 +268,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-1"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'My note', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'My note', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -223,6 +307,69 @@ describe('NoteNode - idle state', () => {
     expect(screen.getByTestId('note-text-display')).toHaveTextContent('Add your note here…')
   })
 
+  // A Note that stores no color shows the default its field list declares (REQ-3.5.0.3).
+  it('a Note with no stored color shows the Note field list default color', async () => {
+    const { CONTROL_INPUTS } = await import('@/features/workbench/lib/node-parameters')
+    const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
+    const listDefault = CONTROL_INPUTS['note'].find((p) => p.name === 'color')?.defaultValue
+    const noteWith = (values: Record<string, unknown>) => (
+      <NoteNode
+        id="note-color"
+        type="noteNode"
+        data={{ label: 'Note', config: { values } }}
+        selected={false}
+        positionAbsoluteX={0}
+        positionAbsoluteY={0}
+        dragging={false}
+        isConnectable
+        zIndex={0}
+        deletable
+        draggable
+        selectable
+      />
+    )
+
+    expect(listDefault).toBe('slate')
+    const unset = render(noteWith({ text: 'Probe gateway' }))
+    const unsetMarkup = unset.container.innerHTML
+    unset.unmount()
+    const stored = render(noteWith({ text: 'Probe gateway', color: listDefault }))
+    expect(stored.container.innerHTML).toBe(unsetMarkup)
+    stored.unmount()
+    const blue = render(noteWith({ text: 'Probe gateway', color: 'blue' }))
+
+    expect(blue.container.innerHTML).not.toBe(unsetMarkup)
+  })
+
+  // A stored Test can hold a color the Save refuses, such as a hand-edited file; the canvas still draws it.
+  it('a Note whose stored color is not one of the five shows the Note field list default color', async () => {
+    const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
+    const noteWith = (color: string) => (
+      <NoteNode
+        id="note-color"
+        type="noteNode"
+        data={{ label: 'Note', config: { values: { text: 'Probe gateway', color } } }}
+        selected={false}
+        positionAbsoluteX={0}
+        positionAbsoluteY={0}
+        dragging={false}
+        isConnectable
+        zIndex={0}
+        deletable
+        draggable
+        selectable
+      />
+    )
+
+    const slate = render(noteWith('slate'))
+    const slateMarkup = slate.container.innerHTML
+    slate.unmount()
+    const purple = render(noteWith('purple'))
+
+    expect(purple.container.innerHTML).toBe(slateMarkup)
+    expect(purple.container.querySelector('.bg-slate-100.border-slate-300')).not.toBeNull()
+  })
+
   it('Enter on the focused note triggers a click (selection)', async () => {
     mockStore.selectNode.mockClear()
     const { NoteNode } = await import('@/features/workbench/common/canvas/note-node/note-node')
@@ -230,7 +377,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-key"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'k', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'k', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -254,7 +401,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-space"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'k', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'k', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -278,7 +425,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-other-key"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'k', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'k', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -303,7 +450,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-child-key"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'k', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'k', color: 'yellow' } } }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -326,7 +473,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-busy"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'busy', color: 'amber' }, isExecuting: true }}
+        data={{ label: 'Note', config: { values: { text: 'busy', color: 'yellow' } }, isExecuting: true }}
         selected={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
@@ -356,7 +503,7 @@ describe('NoteNode - idle state', () => {
       <NoteNode
         id="note-connected"
         type="noteNode"
-        data={{ label: 'Note', config: { text: 'wired', color: 'amber' } }}
+        data={{ label: 'Note', config: { values: { text: 'wired', color: 'yellow' } } }}
         selected={true}
         positionAbsoluteX={0}
         positionAbsoluteY={0}

@@ -122,7 +122,7 @@ test.describe('V-SHEET-03: config sheet lifecycle', () => {
     await dirtySheet(page, 'Dirty Log')
 
     await page.locator('[data-testid="toolbar-close-button"]').click()
-    const closeDialog = page.getByRole('dialog').filter({ hasText: 'Unsaved Changes' })
+    const closeDialog = page.getByRole('dialog', { name: 'Unsaved Changes' })
     await expect(closeDialog).toBeVisible({ timeout: 5_000 })
 
     // Stay: dismiss the prompt; the sheet and its edits survive.

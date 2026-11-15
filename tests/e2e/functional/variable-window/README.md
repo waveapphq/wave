@@ -113,7 +113,7 @@ is built through the UI; those of tests 3 and 4 through `POST /tests`.
 - Picking Map on the saved `tedit` asks `Change variable type?` with
   `Changing type to map will clear 1 existing table entry. This cannot be undone.`; Cancel keeps
   the table.
-- The Variable Setter row reads `1 rows x 2 col`, the saved node holds the table with its
+- The Variable Setter row's value field writes the table out on one line, the saved node holds the table with its
   column types, and the run logs `SETTER zip=02134 n=8 types=string,integer` and passes.
 - Each entity editor row reads `1 rows x 2 col` after the sheet Save, stores its table with the
   column types, reopens it with no

@@ -1,174 +1,198 @@
-/** ParallelBranchEditor - the BRANCHES section of the Parallel config sheet. */
+/** ParallelBranchEditor - the BRANCHES section of the Parallel config sheet (REQ-3.1.1.3, REQ-3.2.3.7, PARALLEL-3). */
 
-import { use, useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { FieldErrorContext } from '@/components/shared/fields/field-error-context'
+import { cn } from '@/lib/utils'
+import type { AvailableVariable } from '@/features/workbench/lib/codemirror/type-inference'
 import {
-  acceptsNumericInput,
-  compareNumbers,
-  MAX_INTEGER_DIGITS,
-  numberValueProblem,
-  plainNumberText,
-  sameNumber,
-  wireNumber,
-} from '@/lib/number-rule'
+  indexedRowModes,
+  rekeyIndexedFlags,
+  type FieldModes,
+  type IndexedRowChange,
+} from '@/features/workbench/lib/node-parameters/field-modes'
+import { FieldCellView, useFieldCell } from '../element-config/parameters/field-cell'
+import type { Parameter } from '../element-config/parameters/parameter-table-types'
 import { BranchCard } from './branch-card'
 import { nextBranchId, withBranchMoved, withoutBranch } from './branch-list-ops'
 
-export interface ParallelBranch {
+/** A lane as the Block stores it: the limit in the number wire form or {x} text, no key while unset (REQ-3.1.3.14). */
+export interface ParallelLane {
   id: string
   name: string
-  /** Milliseconds in the number wire form: a JS number when exact, else its digit text (REQ-3.1.3.14). */
-  timeLimit?: number | string
+  time_limit?: number | string
 }
 
 export interface ParallelBranchEditorProps {
-  branches: ParallelBranch[]
-  onBranchesChange: (branches: ParallelBranch[]) => void
-  onValidChange: (valid: boolean) => void
+  branches: ParallelLane[]
+  /** The lanes, with the Block {x} list re-keyed in the same change. */
+  onBranchesChange: (branches: ParallelLane[], flags: string[]) => void
+  expressionFields: string[]
+  onExpressionFieldsChange: (fields: string[]) => void
+  availableVariables: AvailableVariable[]
+  /** Window lines keyed `branches.<index>.time_limit`. */
+  messages: Record<string, string>
 }
 
 const MINIMUM_BRANCHES = 2
 const DELETE_BLOCKED = 'A parallel section needs at least two branches'
+const LANES_FIELD = 'branches'
+const LIMIT_KEY = 'time_limit'
+// The name fills the free space up to the If/Else name width (PARALLEL-3).
+const NAME_COLUMN = 'min-w-0 flex-1 max-w-[201px]'
+// The time limit box is the Setter value box's width at 880 px (PARALLEL-3, FIELD-16).
+const LIMIT_BOX_COLUMN = 'w-[357px] shrink-0'
+// That box plus its expand and {x} columns, each 32 px after an 8 px gap (FIELD-1).
+const LIMIT_CELL_COLUMN = 'w-[437px] shrink-0'
 
-function seedBranches(): ParallelBranch[] {
+function seedBranches(): ParallelLane[] {
   return [
     { id: 'branch_1', name: '' },
     { id: 'branch_2', name: '' },
   ]
 }
 
-type BranchLimit = number | string | undefined
-
-function isLegalLimit(limit: BranchLimit): boolean {
-  if (limit === undefined) return true
-  return numberValueProblem(limit, 'integer') === null && compareNumbers(limit, 0) > 0
+/** A lane time limit is the one field: whole milliseconds, at least 1. */
+function laneLimitParameter(laneId: string): Parameter {
+  return { name: `parallel-branch-limit-${laneId}`, label: 'Time Limit', type: 'integer', required: false, minimum: 1 }
 }
 
-function limitText(limit: BranchLimit): string {
-  return limit === undefined ? '' : plainNumberText(limit)
+function withLimit(lane: ParallelLane, limit: unknown): ParallelLane {
+  const { time_limit: _dropped, ...rest } = lane
+  // An integer field gives the number wire form or {x} text.
+  return limit === undefined ? rest : { ...rest, time_limit: limit as ParallelLane['time_limit'] }
 }
 
-/** The box already shows this limit: the same text, or the same exact number. */
-function showsLimit(text: string, limit: BranchLimit): boolean {
-  if (text === limitText(limit)) return true
-  return isWholeNumber(text) && limit !== undefined && isWholeNumber(limit) && sameNumber(text, limit)
+interface LaneCardProps {
+  lane: ParallelLane
+  index: number
+  laneCount: number
+  modes: FieldModes
+  availableVariables: AvailableVariable[]
+  fieldError: string | undefined
+  onRename: (name: string) => void
+  onLimitChange: (limit: unknown) => void
+  onMove: (direction: 'up' | 'down') => void
+  onDelete: () => void
 }
 
-function isWholeNumber(value: number | string): boolean {
-  return numberValueProblem(value, 'integer') === null
-}
-
-// A limit is at least 1 ms, so the box takes no minus key.
-const LIMIT_RULE = { negative: false } as const
-
-interface TimeLimitInputProps {
-  branchId: string
-  limit: BranchLimit
-  ariaLabel: string
-  onChange: (limit: BranchLimit) => void
-}
-
-// The shared number rule in the branch's own box: exact digits in the wire form; unfinished text holds the section.
-function TimeLimitInput({ branchId, limit, ariaLabel, onChange }: Readonly<TimeLimitInputProps>) {
-  const errorId = use(FieldErrorContext)
-  const [text, setText] = useState(() => limitText(limit))
-  const [shownLimit, setShownLimit] = useState(limit)
-  if (!Object.is(shownLimit, limit)) {
-    setShownLimit(limit)
-    if (!showsLimit(text, limit)) setText(limitText(limit))
-  }
-  const handleChange = (next: string) => {
-    if (!acceptsNumericInput(next, 'integer', LIMIT_RULE)) return
-    setText(next)
-    onChange(next === '' ? undefined : wireNumber(next, 'integer'))
-  }
+function LaneCard({
+  lane,
+  index,
+  laneCount,
+  modes,
+  availableVariables,
+  fieldError,
+  onRename,
+  onLimitChange,
+  onMove,
+  onDelete,
+}: Readonly<LaneCardProps>) {
+  const limitCell = useFieldCell({
+    mode: 'input',
+    parameter: laneLimitParameter(lane.id),
+    value: lane.time_limit,
+    onChange: onLimitChange,
+    modes,
+    availableVariables,
+    fieldError,
+    toggleTestId: `parallel-branch-limit-toggle-${lane.id}`,
+  })
+  const noun = `branch ${lane.name || index + 1}`
   return (
-    <Input
-      type="text"
-      inputMode="numeric"
-      maxLength={MAX_INTEGER_DIGITS + 1}
-      data-testid={`parallel-branch-limit-${branchId}`}
-      name={`time-limit-${branchId}`}
-      autoComplete="off"
-      aria-label={ariaLabel}
-      aria-describedby={errorId}
-      value={text}
-      onChange={(event) => handleChange(event.target.value)}
-      placeholder="No limit"
-      wrapperClassName="w-36"
-      className="h-7 text-sm"
-    />
+    <BranchCard
+      branchId={lane.id}
+      testIdPrefix="parallel-branch"
+      noun={noun}
+      collapsible={false}
+      badge={
+        <Badge
+          data-testid={`parallel-branch-badge-${lane.id}`}
+          className="bg-violet-500 text-white border-transparent"
+        >
+          BRANCH
+        </Badge>
+      }
+      label={lane.name}
+      labelPlaceholder={`Branch ${index + 1}`}
+      labelColumnClassName={NAME_COLUMN}
+      onLabelChange={onRename}
+      headerExtra={
+        // Every lane's box is named Time Limit, so the group names the lane it belongs to.
+        <div
+          data-testid={`parallel-branch-limit-cell-${lane.id}`}
+          role="group"
+          aria-label={`Time limit for ${noun}`}
+          className={LIMIT_CELL_COLUMN}
+        >
+          <FieldCellView state={limitCell} />
+        </div>
+      }
+      headerGrows={limitCell.hasMessage}
+      canMove
+      canMoveUp={index > 0}
+      canMoveDown={index < laneCount - 1}
+      onMove={onMove}
+      canDelete
+      deleteDisabled={laneCount <= MINIMUM_BRANCHES}
+      deleteDisabledReason={DELETE_BLOCKED}
+      onDelete={onDelete}
+    >
+      {null}
+    </BranchCard>
   )
 }
 
 export function ParallelBranchEditor({
   branches: externalBranches,
   onBranchesChange,
-  onValidChange,
+  expressionFields,
+  onExpressionFieldsChange,
+  availableVariables,
+  messages,
 }: Readonly<ParallelBranchEditorProps>) {
   const branches = externalBranches.length > 0 ? externalBranches : seedBranches()
+  // One {x} switch writes its flag, then its value: the value write carries the flag written before it.
+  const written = useRef<{ base: string[]; flags: string[] } | null>(null)
 
   // A fresh Parallel starts with two lanes; push that seed up so Save persists it.
   useEffect(() => {
-    if (externalBranches.length === 0) onBranchesChange(seedBranches())
+    if (externalBranches.length === 0) onBranchesChange(seedBranches(), expressionFields)
   }, []) // Only run on mount
 
-  useEffect(() => {
-    onValidChange(branches.every((branch) => isLegalLimit(branch.timeLimit)))
-  }, [branches, onValidChange])
+  const latestFlags = () => (written.current?.base === expressionFields ? written.current.flags : expressionFields)
 
-  const updateBranch = useCallback(
-    (id: string, update: Partial<ParallelBranch>) => {
-      onBranchesChange(branches.map((b) => (b.id === id ? { ...b, ...update } : b)))
-    },
-    [branches, onBranchesChange],
-  )
+  const writeFlags = (flags: string[]) => {
+    written.current = { base: expressionFields, flags }
+    onExpressionFieldsChange(flags)
+  }
 
-  const changeLimit = useCallback(
-    (id: string, limit: BranchLimit) => {
-      onBranchesChange(
-        branches.map((b) => {
-          if (b.id !== id) return b
-          if (limit === undefined) {
-            const { timeLimit: _dropped, ...rest } = b
-            return rest
-          }
-          return { ...b, timeLimit: limit }
-        }),
-      )
-    },
-    [branches, onBranchesChange],
-  )
+  const writeLanes = (next: ParallelLane[], change?: IndexedRowChange) => {
+    const flags = latestFlags()
+    onBranchesChange(next, change ? rekeyIndexedFlags(flags, LANES_FIELD, LIMIT_KEY, change) : flags)
+  }
 
-  const addBranch = useCallback(() => {
-    onBranchesChange([...branches, { id: nextBranchId(branches, 1), name: '' }])
-  }, [branches, onBranchesChange])
+  const updateLane = (index: number, update: (lane: ParallelLane) => ParallelLane) =>
+    writeLanes(branches.map((lane, at) => (at === index ? update(lane) : lane)))
 
-  const deleteBranch = useCallback(
-    (id: string) => onBranchesChange(withoutBranch(branches, id)),
-    [branches, onBranchesChange],
-  )
+  const addBranch = () =>
+    writeLanes([...branches, { id: nextBranchId(branches, 1), name: '' }], { kind: 'add', at: branches.length })
 
-  const moveBranch = useCallback(
-    (id: string, direction: 'up' | 'down') =>
-      onBranchesChange(withBranchMoved(branches, id, direction)),
-    [branches, onBranchesChange],
-  )
+  const moveBranch = (index: number, direction: 'up' | 'down') => {
+    const to = direction === 'up' ? index - 1 : index + 1
+    writeLanes(withBranchMoved(branches, branches[index].id, direction), { kind: 'move', from: index, to })
+  }
 
-  const atMinimum = branches.length <= MINIMUM_BRANCHES
+  const deleteBranch = (index: number) =>
+    writeLanes(withoutBranch(branches, branches[index].id), { kind: 'delete', at: index })
 
   return (
     <div className="space-y-2 pt-3" data-testid="parallel-branch-editor">
       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
         Branches
       </h3>
-      {/* Mirrors the row's flex layout, so each label sits over its own field:
-          an invisible badge holds the badge column, and the trailing spacer
-          matches the reorder pair plus the delete button. */}
+      {/* Mirrors the row: badge, name, box, expand, {x}, then the reorder pair and delete. */}
       <div
         data-testid="parallel-branch-columns"
         className="flex items-center gap-2 px-[13px] text-xs text-muted-foreground"
@@ -176,49 +200,30 @@ export function ParallelBranchEditor({
         <Badge aria-hidden="true" className="invisible">
           BRANCH
         </Badge>
-        <span className="flex-1">Name</span>
-        <span className="w-36 shrink-0">Time limit (ms)</span>
+        <span className={NAME_COLUMN}>Name</span>
+        <span className={cn(LIMIT_BOX_COLUMN, 'whitespace-nowrap')}>Time limit (ms)</span>
+        <span className="w-8 shrink-0" aria-hidden="true" />
+        <span className="w-8 shrink-0" aria-hidden="true" />
         <span className="w-16 shrink-0" aria-hidden="true" />
       </div>
 
-      {branches.map((branch, idx) => (
-        <BranchCard
-          key={branch.id}
-          branchId={branch.id}
-          testIdPrefix="parallel-branch"
-          noun={`branch ${branch.name || idx + 1}`}
-          collapsible={false}
-          badge={
-            <Badge
-              data-testid={`parallel-branch-badge-${branch.id}`}
-              className="bg-violet-500 text-white border-transparent"
-            >
-              BRANCH
-            </Badge>
-          }
-          label={branch.name}
-          labelPlaceholder={`Branch ${idx + 1}`}
-          labelStretch
-          onLabelChange={(name) => updateBranch(branch.id, { name })}
-          headerExtra={
-            <TimeLimitInput
-              branchId={branch.id}
-              limit={branch.timeLimit}
-              onChange={(limit) => changeLimit(branch.id, limit)}
-              ariaLabel={`Time limit for branch ${branch.name || idx + 1}`}
-            />
-          }
-          canMove
-          canMoveUp={idx > 0}
-          canMoveDown={idx < branches.length - 1}
-          onMove={(direction) => moveBranch(branch.id, direction)}
-          canDelete
-          deleteDisabled={atMinimum}
-          deleteDisabledReason={DELETE_BLOCKED}
-          onDelete={() => deleteBranch(branch.id)}
-        >
-          {null}
-        </BranchCard>
+      {branches.map((lane, index) => (
+        <LaneCard
+          key={lane.id}
+          lane={lane}
+          index={index}
+          laneCount={branches.length}
+          modes={indexedRowModes(LANES_FIELD, LIMIT_KEY, index, {
+            expressionFields,
+            onExpressionFieldsChange: writeFlags,
+          })}
+          availableVariables={availableVariables}
+          fieldError={messages[`${LANES_FIELD}.${index}.${LIMIT_KEY}`]}
+          onRename={(name) => updateLane(index, (current) => ({ ...current, name }))}
+          onLimitChange={(limit) => updateLane(index, (current) => withLimit(current, limit))}
+          onMove={(direction) => moveBranch(index, direction)}
+          onDelete={() => deleteBranch(index)}
+        />
       ))}
 
       <div className="flex gap-2 pt-1">

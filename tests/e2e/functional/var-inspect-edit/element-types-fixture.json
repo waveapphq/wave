@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"EDIT n={m['n'] + 1} zip={m['zip'] + '-x'}\"",

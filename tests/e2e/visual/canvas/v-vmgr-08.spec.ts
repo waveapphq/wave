@@ -52,7 +52,7 @@ const content = (page: Page): Locator =>
 const rowFor = (page: Page, name: string): Locator =>
   content(page).locator(`[aria-label="Variable ${name}"]`)
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 async function importAndOpen(page: Page): Promise<void> {
   await page.request.delete(`http://localhost:${BACKEND_PORT}/workbench/session/`).catch(() => {})

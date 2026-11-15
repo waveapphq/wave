@@ -13,7 +13,9 @@ This test module verifies:
 - Integration with logging for error audit trails
 """
 
+import base64
 import importlib.util
+import logging
 import warnings
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -1302,3 +1304,58 @@ class TestExceptionsModuleImport:
             spec.loader.exec_module(fresh)
 
         assert [str(warning.message) for warning in caught] == []
+
+
+_MIDDLEWARE_LOGGER = "wavecore.api.middleware"
+_RLO = "\N{RIGHT-TO-LEFT OVERRIDE}"
+_LINE_SEPARATOR = "\N{LINE SEPARATOR}"
+_FORGED_MESSAGE = "Environment with ID 'e2e\n12:00:00.000 ERROR [deadbeef] FORGED' not found"
+
+
+def _base64_of(text: str) -> str:
+    return "base64:" + base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+class TestErrorLogLineValues:
+    """A request value inside an error keeps the handler's log entry on one line (REQ-6.4.1)."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("exc", "label", "logged"),
+        [
+            (NotFoundException("Resource not found"), "WAVE exception", "Resource not found"),
+            (NotFoundException(_FORGED_MESSAGE), "WAVE exception", _base64_of(_FORGED_MESSAGE)),
+            (HTTPException(403, detail="a\x1bb"), "HTTP exception", _base64_of("a\x1bb")),
+            (
+                StarletteHTTPException(405, detail=f"a{_RLO}b"),
+                "Starlette HTTP exception",
+                _base64_of(f"a{_RLO}b"),
+            ),
+            (
+                RuntimeError(f"a{_LINE_SEPARATOR}b"),
+                "Unhandled exception",
+                _base64_of(f"a{_LINE_SEPARATOR}b"),
+            ),
+        ],
+    )
+    async def test_the_error_line_writes_the_message_log_safe(
+        self, caplog: pytest.LogCaptureFixture, exc: Exception, label: str, logged: str
+    ) -> None:
+        """Test that an error message holding a control character is written as base64."""
+        from starlette.requests import Request
+        from starlette.responses import Response
+
+        request = Request(
+            {"type": "http", "method": "GET", "path": "/test", "query_string": b"", "headers": []}
+        )
+
+        async def call_next_raises(req: Request) -> Response:
+            raise exc
+
+        with caplog.at_level(logging.WARNING, logger=_MIDDLEWARE_LOGGER):
+            response = await error_handler_middleware(request, call_next_raises)
+
+        request_id = response.headers["x-request-id"]
+        assert [r.getMessage() for r in caplog.records if r.name == _MIDDLEWARE_LOGGER] == [
+            f"{label} for request {request_id}: {logged}"
+        ]

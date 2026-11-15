@@ -76,7 +76,6 @@ def _node(
             "displayName": node_id,
             "expressionFields": expression_fields,
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

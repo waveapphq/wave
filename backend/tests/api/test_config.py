@@ -213,11 +213,10 @@ class TestEnvironmentVariableIntegration:
         assert isinstance(
             config.security.cors_origins, list
         ), "cors_origins must be coerced to list"
-        assert len(config.security.cors_origins) == 2, "must have 2 origins"
-        assert "http://localhost:3000" in config.security.cors_origins, "must contain first origin"
-        assert (
-            "https://app.example.com" in config.security.cors_origins
-        ), "must contain second origin"
+        assert config.security.cors_origins == [
+            "http://localhost:3000",
+            "https://app.example.com",
+        ], "must hold both origins in order"
 
     def test_environment_variable_invalid_type_raises_error(self) -> None:
         """Test that invalid type coercion raises validation error."""

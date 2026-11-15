@@ -264,7 +264,7 @@ test.describe('V-SHEET-03: reopen raises + pulses (one shared affordance)', () =
     await expect(row).toBeVisible()
     await row.hover()
     await row.locator('[data-testid^="expand-button-"]').click()
-    const watcher = page.locator('section[aria-label="Inspect variable greeting"]')
+    const watcher = page.getByRole('dialog', { name: 'greeting', exact: true, includeHidden: true })
     await expect(watcher).toBeVisible()
 
     // Move the watcher off the panel row so the re-open control is reachable.

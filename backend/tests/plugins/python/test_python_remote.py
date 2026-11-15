@@ -294,7 +294,6 @@ def _node(
             "displayName": node_id,
             "expressionFields": list(expressions or []),
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

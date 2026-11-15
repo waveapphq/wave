@@ -12,7 +12,8 @@ import logging
 import time
 from typing import Any
 
-from wavecore.controls.base import ControlBase
+from wavecore.controls.assertion_evaluator import condition_join_problems
+from wavecore.controls.base import ControlBase, raise_first_problem
 from wavecore.core.number_rule import is_integer_value
 from wavecore.models.controls.parameters import ControlParameter
 from wavecore.models.enums import ControlId
@@ -257,8 +258,8 @@ class WaitUntilControl(ControlBase):
             raise ValueError("parameters key is required in context")
 
         params = context["parameters"]
-        mode = params.get("mode", "retry")
-        check_interval = params.get("check_interval", 1000)
+        mode = params["mode"]
+        check_interval = params["check_interval"]
 
         logger = context.get("logger")
         if logger:
@@ -270,8 +271,8 @@ class WaitUntilControl(ControlBase):
             "__wait_timeout": params.get("timeout"),
             "__check_interval": check_interval,
             "__wait_message": params.get("message"),
-            "__wait_fail_scope": params.get("fail_current_scope", False),
-            "__mode": mode,
+            "__wait_fail_scope": params["fail_current_scope"],
+            "__wait_mode": mode,
         }
 
     async def validate(self, params: dict[str, Any]) -> None:
@@ -283,6 +284,7 @@ class WaitUntilControl(ControlBase):
             raise ValueError("conditions must be a list")
         if not conditions:
             raise ValueError("at least one condition is required")
+        raise_first_problem(condition_join_problems(conditions, "conditions"))
 
         if "timeout" not in params:
             raise ValueError("timeout parameter is required")
@@ -292,6 +294,3 @@ class WaitUntilControl(ControlBase):
         check_interval = params.get("check_interval")
         if check_interval is not None and not _is_positive_integer(check_interval):
             raise ValueError("check_interval must be a positive integer")
-
-        if "mode" in params and params["mode"] not in ("retry", "watch"):
-            raise ValueError("mode must be 'retry' or 'watch'")

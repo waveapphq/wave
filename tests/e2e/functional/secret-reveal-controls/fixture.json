@@ -38,11 +38,8 @@
           "version": "1.0.0",
           "description": "Copy Secret to Watched Var",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.token_copy"],
           "templateFields": [],
-          "variableExpressionKeys": ["token_copy"],
-          "variableTemplateKeys": [],
-          "variableTypes": { "token_copy": "string" },
           "config": {
             "values": {
               "variables": { "token_copy": "api_token" }

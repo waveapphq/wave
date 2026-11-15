@@ -24,41 +24,53 @@ const SAVE: SaveData = {
   profileBindings: [{ profileId: 'p1', profileName: 'Prod', profileType: 'http', alias: 'api' }],
   expressionFields: ['url'],
   templateFields: ['body'],
-  variableExpressionKeys: ['a'],
-  variableTemplateKeys: ['b'],
-  variableSecretKeys: ['c'],
+  secretFields: ['variables.c'],
+  newTargetTypes: { fresh: 'integer' },
   outputSecretFields: ['status'],
   unmaskedSecretFields: ['password'],
   secretMasking: 'reveal',
-  variableTypes: { a: 'string' },
-  variableElementTypes: { m: { n: 'integer' } },
   elementTypes: { driver_options: { timeout: 'integer' } },
-}
+} as SaveData
 
 describe('savedBlockFields', () => {
+  // The Setter secret mark sits under config beside outputSecretFields; no Setter key and no picked target type reach the node.
   it('splits a save into the node data fields and the whole config', () => {
-    expect(savedBlockFields(SAVE)).toEqual({
+    const fields = savedBlockFields(SAVE)
+
+    expect(fields).toEqual({
       data: {
         description: 'calls the api',
         version: '1.1.0',
         expressionFields: ['url'],
         templateFields: ['body'],
-        variableExpressionKeys: ['a'],
-        variableTemplateKeys: ['b'],
-        variableTypes: { a: 'string' },
-        variableElementTypes: { m: { n: 'integer' } },
         elementTypes: { driver_options: { timeout: 'integer' } },
       },
       config: {
         values: { url: 'https://example.test' },
         outputBindings: { status: 'code' },
         profileBindings: [{ profileId: 'p1', profileName: 'Prod', profileType: 'http', alias: 'api' }],
-        variableSecretKeys: ['c'],
+        secretFields: ['variables.c'],
         outputSecretFields: ['status'],
         unmasked_secret_fields: ['password'],
         secret_masking: 'reveal',
       },
     })
+    expect(Object.keys(fields.data).sort()).toEqual([
+      'description',
+      'elementTypes',
+      'expressionFields',
+      'templateFields',
+      'version',
+    ])
+    expect(Object.keys(fields.config).sort()).toEqual([
+      'outputBindings',
+      'outputSecretFields',
+      'profileBindings',
+      'secretFields',
+      'secret_masking',
+      'unmasked_secret_fields',
+      'values',
+    ])
   })
 })
 
@@ -82,10 +94,20 @@ interface NameSiteWalker {
 
 const walker = savedBlockFieldsModule as unknown as NameSiteWalker
 
+/** The shared lists a rename may write on the node data and under config. */
+const SHARED_DATA_LISTS = new Set(['expressionFields', 'templateFields', 'elementTypes'])
+const SHARED_CONFIG_LISTS = new Set(['secretFields'])
+
+/** Keys `after` holds that `before` did not, apart from the shared lists. */
+function addedKeys(before: object, after: object, shared: ReadonlySet<string>): string[] {
+  return Object.keys(after).filter((key) => !Object.hasOwn(before, key) && !shared.has(key))
+}
+
 function block(data: Record<string, unknown>): SavedBlock {
   return { id: 'block-1', type: 'workflowNode', position: { x: 0, y: 0 }, data: { label: 'Block', ...data } }
 }
 
+/** A literal condition row; an operator that takes no value stores no compare value keys. */
 function literalRow(variable: string, extra: Record<string, unknown> = {}) {
   return {
     id: `row-${variable}`,
@@ -93,8 +115,6 @@ function literalRow(variable: string, extra: Record<string, unknown> = {}) {
     variable,
     value_type: 'boolean',
     operator: 'is_true',
-    reference_value: null,
-    reference_is_expression: false,
     ...extra,
   }
 }
@@ -161,13 +181,37 @@ const LIST_ENTRY = block({
   config: { values: { arguments: [{ value: '--verbose' }, { value: 'target_host' }] } },
 })
 const REFERENCE_SETTING = check('for-each', { collection: 'items' })
+// Setter rows carry the shared dotted flags; a row's own type lives on its declared variable.
 const SETTER = block({
   nodeType: 'control',
   elementType: 'variable-setter',
-  variableExpressionKeys: ['next_try'],
-  variableTemplateKeys: ['welcome'],
-  variableTypes: { next_try: 'integer', welcome: 'string', plain: 'string' },
+  expressionFields: ['variables.next_try'],
+  templateFields: ['variables.welcome'],
   config: { values: { variables: { next_try: 'attempt + 1', welcome: 'Hi {{ who }}', plain: 'attempt' } } },
+})
+const TEMPLATE_COMPARE_TO = check('assert', {
+  assertions: [
+    literalRow('greeting', {
+      value_type: 'string',
+      operator: 'equals',
+      reference_value: 'Hi {{ who }}',
+      reference_is_template: true,
+    }),
+  ],
+})
+const SETTER_ENTRIES = block({
+  nodeType: 'control',
+  elementType: 'variable-setter',
+  expressionFields: ['variables.hosts.1', 'variables.headers.X-Id'],
+  elementTypes: { 'variables.hosts': ['string', 'string'], 'variables.headers': { 'X-Id': 'string', Accept: 'string' } },
+  config: {
+    values: {
+      variables: {
+        hosts: ['fallback.local', 'primary_host'],
+        headers: { 'X-Id': 'request_id', Accept: 'application/json' },
+      },
+    },
+  },
 })
 const CALL_BINDING = block({
   elementType: 'function',
@@ -197,6 +241,8 @@ describe('saved block name sites - the names a block reads (VMGR-105)', () => {
     ['an expression condition row', EXPRESSION_ROW, ['total', 'threshold']],
     ['a nested condition group', NESTED_GROUP, ['inner_flag', 'other_flag']],
     ['Variable Setter expression and template rows', SETTER, ['attempt', 'who']],
+    ['Variable Setter list and map entries in {x}', SETTER_ENTRIES, ['primary_host', 'request_id']],
+    ['a Template compare-to', TEMPLATE_COMPARE_TO, ['greeting', 'who']],
     ['a Function Block input field', CALL_BINDING, ['chosen_level']],
   ])('reads the names of %s', (_site, savedBlock, names) => {
     expect(walker.blockReads(savedBlock)).toEqual(new Set(names))
@@ -296,6 +342,8 @@ describe('saved block name sites - the rewrite visitor renames every site', () =
     ['a nested condition group', NESTED_GROUP, 'inner_flag', 'first_flag', (b) => (rows(b, 'assertions')[0].items as Values[]).map((item) => item.variable), ['first_flag', undefined, 'other_flag']],
     ['a Variable Setter expression row', SETTER, 'attempt', 'tries', (b) => values(b).variables, { next_try: 'tries + 1', welcome: 'Hi {{ who }}', plain: 'attempt' }],
     ['a Variable Setter template row', SETTER, 'who', 'guest', (b) => (values(b).variables as Values).welcome, 'Hi {{ guest }}'],
+    ['a Variable Setter list entry in {x}', SETTER_ENTRIES, 'primary_host', 'main_host', (b) => (values(b).variables as Values).hosts, ['fallback.local', 'main_host']],
+    ['a Template compare-to', TEMPLATE_COMPARE_TO, 'who', 'guest', (b) => rows(b, 'assertions')[0].reference_value, 'Hi {{ guest }}'],
     ['a Function Block input field', CALL_BINDING, 'chosen_level', 'picked_level', (b) => values(b), { level: 'picked_level.upper()' }],
     ['a Function Block output binding', CALL_BINDING, 'call_result', 'answer', (b) => (b.data.config as Values).outputBindings, { result: 'answer' }],
     ['an output binding', OUTPUT_BINDING, 'code_var', 'http_code', (b) => (b.data.config as Values).outputBindings, { status: 'http_code' }],
@@ -303,7 +351,7 @@ describe('saved block name sites - the rewrite visitor renames every site', () =
     expect(read(walker.rewriteBlockNames(savedBlock, renameTo(from, to)))).toEqual(expected)
   })
 
-  it('renames a Variable Setter target across its value map, kind keys and types', () => {
+  it('renames a Variable Setter target across its value map and its row flags', () => {
     const renamed = walker.rewriteBlockNames(SETTER, renameTo('next_try', 'retry_count'))
 
     expect(values(renamed).variables).toEqual({
@@ -311,8 +359,45 @@ describe('saved block name sites - the rewrite visitor renames every site', () =
       welcome: 'Hi {{ who }}',
       plain: 'attempt',
     })
-    expect(renamed.data.variableExpressionKeys).toEqual(['retry_count'])
-    expect(renamed.data.variableTypes).toEqual({ retry_count: 'integer', welcome: 'string', plain: 'string' })
+    expect(renamed.data.expressionFields).toEqual(['variables.retry_count'])
+    expect(renamed.data.templateFields).toEqual(['variables.welcome'])
+    expect(addedKeys(SETTER.data, renamed.data, SHARED_DATA_LISTS)).toEqual([])
+  })
+
+  it('renames a Variable Setter target across its entry flags and entry types', () => {
+    const renamed = walker.rewriteBlockNames(SETTER_ENTRIES, renameTo('headers', 'request_headers'))
+
+    expect(values(renamed).variables).toEqual({
+      hosts: ['fallback.local', 'primary_host'],
+      request_headers: { 'X-Id': 'request_id', Accept: 'application/json' },
+    })
+    expect(renamed.data.expressionFields).toEqual(['variables.hosts.1', 'variables.request_headers.X-Id'])
+    expect(renamed.data.elementTypes).toEqual({
+      'variables.hosts': ['string', 'string'],
+      'variables.request_headers': { 'X-Id': 'string', Accept: 'string' },
+    })
+  })
+
+  it('leaves the flags of a Setter row whose name only starts with the renamed one', () => {
+    const similar = block({
+      nodeType: 'control',
+      elementType: 'variable-setter',
+      expressionFields: ['variables.item', 'variables.items.0'],
+      templateFields: ['variables.items_note'],
+      elementTypes: { 'variables.items': ['string'] },
+      config: {
+        values: { variables: { item: 'picked', items: ['seed'], items_note: 'n {{ picked }}' } },
+        secretFields: ['variables.items_note'],
+      },
+    })
+
+    const renamed = walker.rewriteBlockNames(similar, renameTo('item', 'entry'))
+
+    expect(Object.keys(values(renamed).variables as Values)).toEqual(['entry', 'items', 'items_note'])
+    expect(renamed.data.expressionFields).toEqual(['variables.entry', 'variables.items.0'])
+    expect(renamed.data.templateFields).toEqual(['variables.items_note'])
+    expect(renamed.data.elementTypes).toEqual({ 'variables.items': ['string'] })
+    expect((renamed.data.config as Values).secretFields).toEqual(['variables.items_note'])
   })
 
   it('leaves a name inside a string literal as it is', () => {
@@ -438,6 +523,24 @@ describe('saved block name sites - CSV / Excel filter rows', () => {
     expect(walker.blockReads(FILTER_ROWS)).toEqual(new Set(['min_amount', 'max_amount', 'skipped_amount']))
   })
 
+  it('reads a Template compare-to of a filter row, never the cell itself', () => {
+    const templated = block({
+      elementType: 'csv-parser',
+      config: {
+        values: {
+          filters: [
+            filterBlock(
+              [literalRow('_cell', { value_type: 'string', operator: 'starts_with', reference_value: '{{ prefix }}-{{ _cell }}', reference_is_template: true })],
+              'string',
+            ),
+          ],
+        },
+      },
+    })
+
+    expect(walker.blockReads(templated)).toEqual(new Set(['prefix']))
+  })
+
   it('reads a filter row of an Excel block the same way', () => {
     const excel = block({
       elementType: 'excel-parser',
@@ -453,7 +556,9 @@ describe('saved block name sites - CSV / Excel filter rows', () => {
       config: {
         values: {
           sorts: [{ id: 's1', column: { mode: 'name', value: 'sort_col' }, direction: 'desc' }],
-          filters: [filterBlock([literalRow('_cell', { operator: 'equals', reference_value: 'plain_word' })])],
+          filters: [
+            filterBlock([literalRow('_cell', { value_type: 'string', operator: 'equals', reference_value: 'plain_word' })], 'string'),
+          ],
         },
       },
     })
@@ -494,22 +599,19 @@ describe('saved block name sites - CSV / Excel filter rows', () => {
   })
 
   it('never renames the cell of a filter row, even for a variable named _cell', () => {
-    const shared = block({
-      nodeType: 'control',
-      elementType: 'assert',
-      config: {
-        values: {
-          assertions: [literalRow('_cell')],
-          filters: [filterBlock([{ id: 'e', type: 'expression', expression: '_cell > _cell_floor' }])],
-        },
-      },
+    const assertBlock = check('assert', { assertions: [literalRow('_cell')] })
+    const csv = block({
+      elementType: 'csv-parser',
+      config: { values: { filters: [filterBlock([{ id: 'e', type: 'expression', expression: '_cell > _cell_floor' }])] } },
     })
+    const rename = renameTo('_cell', 'cell_value')
 
-    const renamed = walker.rewriteBlockNames(shared, renameTo('_cell', 'cell_value'))
+    const renamedAssert = walker.rewriteBlockNames(assertBlock, rename)
+    const renamedCsv = walker.rewriteBlockNames(csv, rename)
 
-    const values = (renamed.data.config as { values: Values }).values
+    const values = (renamedAssert.data.config as { values: Values }).values
     expect((values.assertions as Values[])[0].variable).toBe('cell_value')
-    expect(conditionsOf(renamed, 0)[0].expression).toBe('_cell > _cell_floor')
+    expect(conditionsOf(renamedCsv, 0)[0].expression).toBe('_cell > _cell_floor')
   })
 
   it('leaves a literal compare-to value of a filter row as it is', () => {
@@ -620,12 +722,27 @@ describe('saved block name sites - sites without text and the rewrite of writes'
   })
 
   it('skips a branch or a condition item that is not an object', () => {
-    const odd = check('if-else', {
-      assertions: [null, literalRow('kept_flag')],
-      branches: ['bad', { id: 'b', type: 'if', conditions: [literalRow('branch_flag')] }],
+    const oddItems = check('assert', { assertions: [null, literalRow('kept_flag')] })
+    const oddBranches = check('if-else', {
+      branches: ['bad', { id: 'b', type: 'if', label: '', conditions: [null, literalRow('branch_flag')] }],
     })
 
-    expect(walker.blockReads(odd)).toEqual(new Set(['kept_flag', 'branch_flag']))
+    expect(walker.blockReads(oddItems)).toEqual(new Set(['kept_flag']))
+    expect(walker.blockReads(oddBranches)).toEqual(new Set(['branch_flag']))
+  })
+
+  it('reads nothing from a condition group that holds no item list, and still reads and renames the row beside it', () => {
+    const and = { type: 'operator', value: 'and' }
+    const oddGroups = check('assert', {
+      assertions: [{ id: 'g1', type: 'group' }, and, { id: 'g2', type: 'group', items: 'broken' }, and, literalRow('kept_flag')],
+    })
+
+    expect(walker.blockReads(oddGroups)).toEqual(new Set(['kept_flag']))
+    expect(walker.rewriteBlockNames(oddGroups, renameTo('kept_flag', 'next_flag')).data.config).toEqual({
+      values: {
+        assertions: [{ id: 'g1', type: 'group' }, and, { id: 'g2', type: 'group', items: 'broken' }, and, literalRow('next_flag', { id: 'row-kept_flag' })],
+      },
+    })
   })
 
   it('writes only the output binding targets that name a variable', () => {
@@ -637,21 +754,18 @@ describe('saved block name sites - sites without text and the rewrite of writes'
     expect(walker.blockWrites(bindings)).toEqual(new Set(['code_var']))
   })
 
-  it('renames a Variable Setter target across its secret keys and element types', () => {
+  it('renames a Variable Setter target across its secret mark and element types', () => {
     const secretSetter = block({
       nodeType: 'control',
       elementType: 'variable-setter',
-      variableExpressionKeys: [],
-      variableTemplateKeys: [],
-      variableTypes: { items: 'array' },
-      variableElementTypes: { items: { element: 'integer' } },
-      config: { values: { variables: { items: [1, 2] } }, variableSecretKeys: ['items'] },
+      elementTypes: { 'variables.items': ['integer', 'integer'] },
+      config: { values: { variables: { items: [1, 2] } }, secretFields: ['variables.items'] },
     })
 
     const renamed = walker.rewriteBlockNames(secretSetter, renameTo('items', 'values_list'))
 
-    expect((renamed.data.config as Values).variableSecretKeys).toEqual(['values_list'])
-    expect(renamed.data.variableElementTypes).toEqual({ values_list: { element: 'integer' } })
+    expect((renamed.data.config as Values).secretFields).toEqual(['variables.values_list'])
+    expect(renamed.data.elementTypes).toEqual({ 'variables.values_list': ['integer', 'integer'] })
     expect(((renamed.data.config as Values).values as Values).variables).toEqual({ values_list: [1, 2] })
   })
 
@@ -665,7 +779,7 @@ describe('saved block name sites - sites without text and the rewrite of writes'
     expect(walker.blockWrites(noValues)).toEqual(new Set())
   })
 
-  it('renames a Variable Setter target that declares no types', () => {
+  it('renames a Variable Setter target that holds no flags, writing none of the old Setter keys', () => {
     const untyped = block({
       nodeType: 'control',
       elementType: 'variable-setter',
@@ -674,9 +788,8 @@ describe('saved block name sites - sites without text and the rewrite of writes'
 
     const renamed = walker.rewriteBlockNames(untyped, renameTo('tries', 'attempts'))
 
-    expect(renamed.data).toEqual(
-      expect.objectContaining({ variableExpressionKeys: [], variableTemplateKeys: [], variableTypes: {} }),
-    )
+    expect(addedKeys(untyped.data, renamed.data, SHARED_DATA_LISTS)).toEqual([])
+    expect(addedKeys(untyped.data.config as Values, renamed.data.config as Values, SHARED_CONFIG_LISTS)).toEqual([])
     expect(((renamed.data.config as Values).values as Values).variables).toEqual({ attempts: 1 })
   })
 

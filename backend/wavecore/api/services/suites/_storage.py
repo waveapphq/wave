@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, PreconditionRequiredException
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.shared import stored_variable_values
 from wavecore.api.services.storage_paths import entity_dir, get_suites_storage_path, is_entity_id
@@ -96,6 +96,12 @@ def _list_all_suites() -> list[dict[str, Any]]:
                 if suite:
                     suites.append(suite)
     return suites
+
+
+def _refuse_taken_name(name: Any, own_id: str | None = None) -> None:
+    """Raise ConflictException when a suite other than ``own_id`` already has the name."""
+    if any(s.get("name") == name and s.get("id") != own_id for s in _list_all_suites()):
+        raise ConflictException(f"Suite with name '{name}' already exists")
 
 
 def _generate_etag(suite: dict[str, Any]) -> str:
@@ -245,13 +251,10 @@ def _validate_suite_update(
     if etag:
         current_etag = _generate_etag(suite)
         if etag != current_etag:
-            raise ConflictException("Precondition failed: resource has been modified")
+            raise PreconditionRequiredException("Precondition failed: resource has been modified")
 
     if "name" in data:
-        new_name = data["name"]
-        for existing in _list_all_suites():
-            if existing.get("name") == new_name and existing.get("id") != suite_id:
-                raise ConflictException(f"Suite with name '{new_name}' already exists")
+        _refuse_taken_name(data["name"], suite_id)
 
 
 def _apply_suite_field_updates(suite: dict[str, Any], data: dict[str, Any]) -> None:

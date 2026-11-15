@@ -17,7 +17,6 @@
           "description": "Before the wait",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wufs-before'", "level": "INFO" },
             "outputBindings": {},
@@ -39,7 +38,6 @@
           "description": "Times out and fails the scope",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "conditions": [
@@ -78,7 +76,6 @@
           "description": "Poll that never succeeds",
           "expressionFields": ["url"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "f'https://127.0.0.1:9449/retry?key=wu-fs-{run_key}&fail_count=999&fail_status=418'",
@@ -111,7 +108,6 @@
           "description": "Round marker",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wufs-round'", "level": "INFO" },
             "outputBindings": {},
@@ -133,7 +129,6 @@
           "description": "Then lane",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wufs-then'", "level": "INFO" },
             "outputBindings": {},
@@ -155,7 +150,6 @@
           "description": "After the wait",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'wufs-after'", "level": "INFO" },
             "outputBindings": {},

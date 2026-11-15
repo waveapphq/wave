@@ -3,9 +3,9 @@
  *
  * Custom inline editor for building assertion conditions.
  * Supports literal comparisons, boolean expressions, and nested AND/OR groups.
+ * Controlled: it draws the list it is given and hands every change up.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Group } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -17,7 +17,7 @@ import type {
   OperatorItem,
   AssertionBuilderProps,
 } from './types'
-import { nextId } from './types'
+import { newLiteralRow, nextId } from './types'
 import {
   appendWithOperator,
   addToGroup,
@@ -25,154 +25,59 @@ import {
   removeGroupById,
   updateAtPath,
   moveAtPath,
-  areAssertionsComplete,
 } from './tree-helpers'
 import { AddAssertionButton } from './add-assertion-button'
 import { AssertionItemRow } from './assertion-item-row'
 
-// Re-export types for backward compatibility
-export type {
-  LiteralAssertion,
-  ExpressionAssertion,
-  OperatorItem,
-  AssertionGroup,
-  AssertionItem,
-  AssertionBuilderProps,
-} from './types'
+type AssertionContent = LiteralAssertion | ExpressionAssertion | AssertionGroup
+
+/** Each item with its raw index and its count among the rows or the AND / OR items, for the test ids. */
+function indexedItems(items: AssertionItem[]) {
+  let assertionIdx = 0
+  let operatorIdx = 0
+  return items.map((item, rawIndex) => {
+    if (item.type === 'operator') {
+      operatorIdx++
+      return { item, rawIndex, assertionIndex: -1, operatorIndex: operatorIdx }
+    }
+    const idx = assertionIdx++
+    return { item, rawIndex, assertionIndex: idx, operatorIndex: -1 }
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function AssertionBuilder({
-  assertions: propAssertions,
+  assertions,
   availableVariables,
   onAssertionsChange,
-  onValidChange,
 }: Readonly<AssertionBuilderProps>) {
-  // Internal state mirrors props for controlled editing
-  const [items, setItems] = useState<AssertionItem[]>(propAssertions)
-
-  // Sync internal state when props change from outside
-  const prevPropsRef = useRef(propAssertions)
-  useEffect(() => {
-    if (prevPropsRef.current !== propAssertions) {
-      setItems(propAssertions)
-      prevPropsRef.current = propAssertions
-    }
-  }, [propAssertions])
-
-  // Track validity - every row must be complete, not merely present
-  useEffect(() => {
-    onValidChange?.(areAssertionsComplete(items))
-  }, [items, onValidChange])
-
-  // Propagate changes: update internal state AND notify parent
-  const propagate = useCallback(
-    (updated: AssertionItem[]) => {
-      setItems(updated)
-      prevPropsRef.current = updated
-      onAssertionsChange(updated)
-    },
-    [onAssertionsChange],
-  )
-
   // --- Operations ---
 
-  const handleAddLiteral = useCallback(
-    (parentId?: string) => {
-      const newItem: LiteralAssertion = {
-        id: nextId('lit'),
-        type: 'literal',
-        variable: '',
-        value_type: 'string',
-        operator: 'equals',
-        reference_value: '',
-        reference_is_expression: false,
-      }
-      if (parentId) {
-        propagate(addToGroup(items, parentId, newItem))
-      } else {
-        propagate(appendWithOperator(items, newItem))
-      }
-    },
-    [items, propagate],
-  )
+  const add = (item: AssertionContent, parentId?: string) =>
+    onAssertionsChange(parentId ? addToGroup(assertions, parentId, item) : appendWithOperator(assertions, item))
 
-  const handleAddExpression = useCallback(
-    (parentId?: string) => {
-      const newItem: ExpressionAssertion = {
-        id: nextId('expr'),
-        type: 'expression',
-        expression: '',
-      }
-      if (parentId) {
-        propagate(addToGroup(items, parentId, newItem))
-      } else {
-        propagate(appendWithOperator(items, newItem))
-      }
-    },
-    [items, propagate],
-  )
+  const handleAddLiteral = (parentId?: string) => add(newLiteralRow(), parentId)
 
-  const handleAddGroup = useCallback(
-    (parentId?: string) => {
-      const newGroup: AssertionGroup = {
-        id: nextId('group'),
-        type: 'group',
-        items: [],
-      }
-      if (parentId) {
-        propagate(addToGroup(items, parentId, newGroup))
-      } else {
-        propagate(appendWithOperator(items, newGroup))
-      }
-    },
-    [items, propagate],
-  )
+  const handleAddExpression = (parentId?: string) =>
+    add({ id: nextId('expr'), type: 'expression', expression: '' }, parentId)
 
-  const handleDelete = useCallback(
-    (path: number[]) => {
-      propagate(removeAtPath(items, path))
-    },
-    [items, propagate],
-  )
+  const handleAddGroup = (parentId?: string) => add({ id: nextId('group'), type: 'group', items: [] }, parentId)
 
-  const handleUpdate = useCallback(
-    (path: number[], updated: AssertionItem) => {
-      propagate(updateAtPath(items, path, updated))
-    },
-    [items, propagate],
-  )
+  const handleDelete = (path: number[]) => onAssertionsChange(removeAtPath(assertions, path))
 
-  const handleMove = useCallback(
-    (path: number[], direction: 'up' | 'down') => {
-      propagate(moveAtPath(items, path, direction))
-    },
-    [items, propagate],
-  )
+  const handleUpdate = (path: number[], updated: AssertionItem) =>
+    onAssertionsChange(updateAtPath(assertions, path, updated))
 
-  const handleDeleteGroup = useCallback(
-    (groupId: string) => {
-      propagate(removeGroupById(items, groupId))
-    },
-    [items, propagate],
-  )
+  const handleMove = (path: number[], direction: 'up' | 'down') =>
+    onAssertionsChange(moveAtPath(assertions, path, direction))
 
-  // Compute assertion indices (non-operator items only) and operator indices for test-ids
-  const renderItems = useMemo(() => {
-    let assertionIdx = 0
-    let operatorIdx = 0
-    return items.map((item, rawIndex) => {
-      if (item.type === 'operator') {
-        operatorIdx++
-        return { item, rawIndex, assertionIndex: -1, operatorIndex: operatorIdx }
-      }
-      const idx = assertionIdx++
-      return { item, rawIndex, assertionIndex: idx, operatorIndex: -1 }
-    })
-  }, [items])
+  const handleDeleteGroup = (groupId: string) => onAssertionsChange(removeGroupById(assertions, groupId))
 
+  // Assertion indices (non-operator items only) and operator indices for the test ids
+  const renderItems = indexedItems(assertions)
   const assertionCount = renderItems.filter((r) => r.assertionIndex >= 0).length
 
   return (

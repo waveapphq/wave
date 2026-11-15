@@ -10,11 +10,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  AssertionBuilder,
-  type AssertionItem,
-} from './assertion-builder'
-import { areAssertionsComplete } from './assertion-builder/tree-helpers'
+import { AssertionBuilder } from './assertion-builder/builder'
+import type { AssertionItem } from './assertion-builder/types'
 import { BranchCard, incompleteBranchReason } from './branch-card'
 import { withBranchMoved, withoutBranch } from './branch-list-ops'
 
@@ -35,7 +32,6 @@ export interface ConditionBranchEditorProps {
   branches: ConditionBranch[]
   availableVariables: Array<{ name: string; type: string }>
   onBranchesChange: (branches: ConditionBranch[]) => void
-  onValidChange: (valid: boolean) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +65,6 @@ export function ConditionBranchEditor({
   branches: externalBranches,
   availableVariables,
   onBranchesChange,
-  onValidChange,
 }: Readonly<ConditionBranchEditorProps>) {
   const nextIdRef = useRef(0)
 
@@ -99,15 +94,6 @@ export function ConditionBranchEditor({
       onBranchesChange(defaults)
     }
   }, []) // Only run on mount
-
-  // Validate: every if/else_if branch must have at least one non-operator assertion
-  useEffect(() => {
-    const valid = branches.every((branch) => {
-      if (branch.type === 'else') return true
-      return areAssertionsComplete(branch.conditions ?? [])
-    })
-    onValidChange(valid)
-  }, [branches, onValidChange])
 
   const updateBranch = useCallback(
     (id: string, update: Partial<ConditionBranch>) => {

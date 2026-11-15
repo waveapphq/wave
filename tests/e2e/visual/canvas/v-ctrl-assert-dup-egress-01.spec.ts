@@ -45,13 +45,10 @@ function buildSeed(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 mode: 'split',
-                assertions: [
-                  { id: 'a1', kind: 'literal', expected: 'true', actual: 'true', comparator: 'equals' },
-                ],
+                assertions: [{ id: 'a1', type: 'expression', expression: '1 == 1' }],
                 fail_current_scope: false,
               },
               outputBindings: {},
@@ -70,7 +67,6 @@ function buildSeed(name: string): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { message: "'l1'", level: 'INFO' }, profileBindings: [], outputBindings: {} },
           },
         },
@@ -85,7 +81,6 @@ function buildSeed(name: string): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { message: "'l2'", level: 'INFO' }, profileBindings: [], outputBindings: {} },
           },
         },

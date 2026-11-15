@@ -40,7 +40,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { x: 'foo' }, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -62,8 +61,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: [],
                       templateFields: [],
-                      variableExpressionKeys: [],
-                      variableTypes: { note: 'string' },
                       // A Variable Setter needs a row to save; the test retargets it at the input.
                       config: { values: { variables: { note: 'hi' } }, outputBindings: {}, profileBindings: [] },
                     },

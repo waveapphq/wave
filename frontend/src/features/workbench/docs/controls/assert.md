@@ -15,7 +15,7 @@ versions:
 The Assert control validates one or more assertions against workflow variables and produces a pass/fail result.
 
 **Assertion Types:**
-- **Literal**: Compare a variable against a value using typed operators (equals, contains, matches regex, etc.)
+- **Literal**: Compare a variable against a value using typed operators (equals, contains, matches regex, etc.). The value is typed as is, written as an expression, or, for text, written as a template whose `{{ }}` parts are filled in when the assertion is checked
 - **Expression**: Evaluate a Python boolean expression directly
 
 **Operating Modes:**

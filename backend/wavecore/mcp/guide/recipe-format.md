@@ -39,7 +39,8 @@ test:
   version: 1.2.0                # set by a readback; see 'Amending an existing test'
 variables: {}                   # optional; name -> declaration
 functions: []                   # optional; inline local functions
-flow: []                        # required; ordered list of steps
+flow: []                        # required; ordered list of steps, empty only beside notes
+notes: []                       # optional; Notes beside the flow, with no connection
 ```
 
 ## Variables
@@ -187,8 +188,17 @@ mapping with exactly one step keyword.
 
 ### Blocks (plugins and controls)
 
-Any catalog block runs with the uniform `- block: <id>` form. Get ids and
-setting schemas from `list_blocks` / `get_block`.
+A plugin block runs with the uniform `- block: <id>` form. Get ids and
+setting schemas from `list_blocks` / `get_block`. A control is written with its
+own step keyword (see Constructs and Leaf shorthand steps); Delay and Halt also
+take `- block:`, and any other control written that way is refused
+(`USE_STEP_KEYWORD`). Remote Execution, which `list_blocks` also lists, is
+written as its own `remote:` construct, and `- block: remote-execution` is
+refused the same way. A control's settings take the same value forms as a
+block's. `description` (at most 64 characters) and `disabled: true` (the block
+is skipped when the test runs) sit beside `label` on every step except a note
+step, which takes only `label` and `key`, and inside the mapping on a
+construct.
 
 ```yaml
 - block: http-client
@@ -209,7 +219,11 @@ Setting value forms:
 
 - Plain YAML literal: used as-is and type-checked against the block schema.
 - Template string: any string containing `{{ expression }}` markers.
+  `{template: "..."}` writes a template with no markers.
 - Expression: `{expr: "..."}` - a Python-style expression over variables.
+- `{literal: ...}`: the value exactly as written, never read. Use it for text
+  that must keep its `{{ }}` (a Go template, a Helm value) and for a map whose
+  only key is `expr`, `template` or `literal`.
 
 Inside a map setting each entry may itself be `{expr: ...}` (a Shell Script
 input variable, an HTTP header). A map setting holds text, except one whose
@@ -218,11 +232,14 @@ parameter `get_block` marks `typed_values: true` (the SQL block's
 variable's element, and an `element_types` key beside `settings`, keyed by
 setting name, declares an entry's type
 (`element_types: {driver_options: {cached_statements: integer}}`). A `set:` step
-takes the same `element_types` key, keyed by variable name, for a map or list it
-writes literally. Inside a list-of-rows setting each row field
+takes the same `element_types` key, keyed by variable name, for a map or list row
+it writes literally. Inside a list-of-rows setting each row field
 may be `{expr: ...}` (a Shell Script argument row `{value: {expr: ...}}`, an
-HTTP part). Templates apply to a whole string setting; inside an entry or row
-use `{expr: ...}`.
+HTTP part). Templates apply to a whole text setting, a `set:` row and its
+entries, and a text compare-to value; inside the entries and rows of any other
+setting use `{expr: ...}`, and a string there is plain text even when it holds
+`{{ }}`. Value modes stop at that first level: `{expr: ...}` or a template
+deeper inside is refused (`VALUE_FORM_TOO_DEEP`).
 
 A free-entry setting left out takes its default when the Block runs; a readback
 lists only the settings the Block holds. A choice-list or true / false setting
@@ -343,10 +360,16 @@ the first sort in the list wins, later ones break its ties. A filter is
 `{id, column, asType, conditions}`: `asType` (`string`, `integer`, `float` or
 `boolean`) is the type each cell of the column is read as, and `conditions` are
 condition items of the check blocks that test the cell as the variable `_cell`,
-with `value_type` equal to `asType` and `{type: operator, value: and}` (or `or`)
+with `reference_is_expression: true` for an expression compare-to value and
+`reference_is_template: true` for a template one, with `value_type` equal to
+`asType` and `{type: operator, value: and}` (or `or`)
 between two items. A literal item takes the operators the Conditions table lists
-for its type and reads a null cell as holding nothing. A row is kept when every
-filter keeps it. A `column` is `{mode: name, value: <header>}` or
+for its `asType` and reads a null cell as holding nothing; any other operator is
+refused before anything is stored, with the text the run gives for it
+(`Unknown filter operator: '<op>'`). An item on an operator
+that takes no value is stored with no `reference_value` and no flag, whatever it
+is written with. A row is kept when every filter keeps it. A `column` is
+`{mode: name, value: <header>}` or
 `{mode: index, value: "<position counted from 0>"}`. Each `id` is any text unique
 within its list.
 
@@ -369,12 +392,28 @@ within its list.
 
 ### Conditions
 
-Two interchangeable forms wherever a condition is expected:
+A condition list is what `that`, `conditions` and `when` hold. Each item is one of:
 
 ```yaml
-when: "home_status == 200"                                            # expression string
-when: {variable: transport, operator: equals, value: TCP, value_type: string}  # comparison
+- "home_status == 200"                                                # expression string
+- {variable: transport, operator: equals, value: TCP, value_type: string}  # comparison
+- or                                                                  # 'and' (the default) or 'or'
+- group:                                                              # parentheses: a list of its own
+    - "retries > 3"
+    - {variable: mode, operator: equals, value: fast}
 ```
+
+Two conditions side by side are joined with `and`; write `or` between them to
+join them with `or`. `and` binds tighter than `or`, so `[a, or, b, c]` reads
+`a or (b and c)`. `and` and `or` stand only between two conditions. A `when` or
+`conditions` that holds one condition may drop the list.
+
+A comparison's `value` takes the value forms of a block setting:
+`{expr: "limit + 1"}` is worked out each time the condition is checked; a
+template (`"{{ prefix }}-1"` or `{template: "..."}`) builds text, so it is
+refused wherever the value compared is not text, such as a number or a
+`length_equals` count (`TEMPLATE_NOT_STRING`); `{literal: "..."}`
+keeps text that holds `{{ }}` as written.
 
 Comparison operators by `value_type` (the runtime rejects any other combination):
 
@@ -403,28 +442,40 @@ An expression string is plain Python and outside this rule, so give the names it
 reads a start value.
 
 A comparison with no `value_type` takes the variable's declared type when it has
-no `value` (inside a function, its own inputs, outputs and variables), and the
-type of its `value` otherwise. A name declared nowhere gets no type, and then only
-`is_null` and `is_not_null` work.
+no `value` or its `value` is `{expr: ...}` (inside a function, its own inputs,
+outputs and variables), and the type of its `value` otherwise (a template is
+text). A name declared nowhere gets no type, and then only `is_null` and
+`is_not_null` work.
 
 ### Constructs
 
+A construct writes some choice settings through its shape: `count` or `range`
+picks the For mode, `retry` selects Wait Until's Retry mode, `catch` and
+`finally` turn on Try's sections, and `on_pass` / `on_fail` select Assert's split
+mode. Every other setting is a key of the construct and takes the value forms of
+a block setting.
+
 ```yaml
 - if:
-    when: "home_status == 200"
+    if_label: Healthy              # optional; each branch's label, shown on its handle
+    when: "home_status == 200"     # one condition, or a list (see Conditions)
     then: [ ... steps ... ]
     elif:
-      - when: "home_status == 503"
+      - label: Throttled
+        when: ["home_status == 503", or, "home_status == 429"]
         then: [ ... ]
+    else_label: Down               # needs an 'else' list
     else: [ ... ]
 
 - switch:
     cases:                       # evaluated top-down; each case guards itself
-      - when: "health_status == 200"
+      - label: Healthy
+        when: "health_status == 200"
         steps: [ ... ]
       - when: {variable: transport, operator: equals, value: TCP, value_type: string}
         break: false             # fall through: the NEXT case's own condition is tested
         steps: [ ... ]
+    default_label: Anything else    # optional; needs a 'default' list
     default: [ ... ]             # runs when no case matched, and when a case
                                  # above falls through into it (it has no
                                  # condition to refuse with); omit -> nothing
@@ -432,11 +483,12 @@ type of its `value` otherwise. A name declared nowhere gets no type, and then on
     # break defaults to true (stop after this case). The flow always resumes at
     # the next sibling step, whether a case ran, several ran, or none did.
 
-- for: {count: 3, body: [ ... ]}       # a null count runs zero times
+- for: {count: 6, step: 2, body: [ ... ]}   # index 0, 2, 4; a null count runs zero times; step defaults to 1
 - for: {range: {start: 0, end: 10, step: 2}, body: [ ... ]}   # a null start, end or step fails
 
 - for_each:
     collection: {expr: "items"}          # a null collection runs zero times
+    collection_type: array             # optional; array, map or table; left out, the type of the variable it names
     capture: {item: current, index: i}   # item is a typed envelope {type, value}
     body: [ ... ]
     # Read the item's raw value as current['value'] - in expressions
@@ -444,7 +496,7 @@ type of its `value` otherwise. A name declared nowhere gets no type, and then on
     # and assertions alike. The index is a plain zero-based integer.
 
 - while:
-    label: retry_loop            # optional; break/continue can target it
+    label: retry_loop            # optional on every loop; break/continue {loop: retry_loop} targets it
     conditions: "i < 10"
     body: [ ... ]
 
@@ -457,15 +509,17 @@ type of its `value` otherwise. A name declared nowhere gets no type, and then on
 - parallel:
     branches:                    # at least two; each is a lane that runs concurrently
       - {name: ingest, steps: [ ... ], time_limit: 30000}   # name and time_limit optional
-      - {name: probe, steps: [ ... ]}
+      - {name: probe, steps: [ ... ], time_limit: {expr: "probe_budget_ms"}}
     join: all                    # optional; 'all' (default) or 'first' to finish
-    time_limit: 60000            # optional; milliseconds bounding the whole section
+    time_limit: 60000            # optional; milliseconds bounding the whole section, or {expr: ...}
 
 - assert:
     that:
       - "health_status == 200"
       - {variable: body, operator: contains, value: ok, value_type: string}
     fail_current_scope: true     # REQUIRED to gate a run; see 'Rules worth knowing'
+    mode: split                  # optional; left out: split with on_pass / on_fail, else single
+    capture: {passed: health_ok}
     on_pass: [ ... ]             # presence of on_pass/on_fail -> split mode
     on_fail: [ ... ]
 
@@ -498,16 +552,59 @@ null. In range mode a null `start`, `end` or `step` fails the block and names it
 Conditions, so a `wait_until` whose comparison is false on null keeps waiting
 until its timeout, and one that tests `is_null` passes on its first check.
 
+`break` and `continue` reach the innermost loop, or with `{loop: <label>}` the
+nearest enclosing loop of that label; a loop with no label goes by its block
+name (`For Loop`, `For Each`, `While Loop`).
+
 ### Leaf shorthand steps
 
 ```yaml
-- set: {counter: 0, greeting: {expr: "'hi ' + user"}}   # set declared variables
+- set: {counter: 0, greeting: {expr: "'hi ' + user"}, banner: "run {{ run_id }}"}   # set declared variables
 - delay: 500                                            # milliseconds; or {duration: 500}
 - halt: {scope: test, status: failed, message: gave up}
 - break: {}                                             # innermost loop; or {loop: <label>}
 - continue: {}
-- note: {text: Reviewed by QA, color: yellow}           # free-floating canvas annotation, never wired
+- note: {text: Reviewed by QA, color: yellow}           # stands in the flow; or `- note: <text>`
 ```
+
+A `set:` row takes the value forms of a block setting: a plain value,
+`{expr: ...}`, a template (a `string` variable only, else `TEMPLATE_NOT_STRING`)
+or `{literal: ...}`. Each entry of a list or map row may itself be `{expr: ...}`
+or, as text, a template; a value form deeper than that first-level entry is
+refused (`VALUE_FORM_TOO_DEEP`). `secret_rows: [name, ...]` beside `set:` marks
+rows Secret, as the Setter's Secret column does: a plain value is sealed at rest,
+an `{expr: ...}` or template row is kept as written, and the variable is masked
+once the row writes it, so an expression or template row that reads a secret
+gives no `SECRET_DERIVED_VALUE` warning. A secret row holds a plain value,
+`{expr: ...}` or a template, never `{expr: ...}` or template entries
+(`INVALID_SECRET_ROW`); a name the step does not set is
+refused (`UNKNOWN_SECRET_ROW`). A secret row written `null` holds no value, and
+the authoring result lists it for a person to fill in. A note's text is stored as
+written; it takes no expression.
+
+A `note` step stands in the flow at its place, wired in and out like a `delay`,
+so it can hold the place of a block not added yet. When the run reaches it, it
+passes the flow straight on, with no outputs and no side effects. A Note with no
+connection at all is an annotation only, and the run never reaches it: write it
+in `notes:` beside `flow:`, at the top of the recipe for the test's canvas or in
+a Function entry for that Function's canvas. Each item of `notes:` is a note
+step, with `label` and `key` beside it as in the flow; any other item is refused
+(`INVALID_CONSTRUCT`).
+
+```yaml
+flow:
+  - block: log
+    settings: {message: start}
+  - note: Add the login check here     # a placeholder the run passes through
+notes:
+  - note: {text: Owned by the payments team, color: blue}
+```
+
+A readback writes each Note where it is: in the flow at its place, or in the
+`notes:` of its canvas. A test whose canvas holds only Notes reads back as
+`flow: []` beside its `notes:`; `flow` may be empty only when `notes:` holds a
+Note, else it is refused (`EMPTY_FLOW`). A Note that is connected but never
+reached from the start is reported in `inexpressible`, like any unreachable block.
 
 ## Functions
 
@@ -542,6 +639,9 @@ flow:
     settings: {host: "myhost.local"}
     capture: {result: outcome}
 ```
+
+A Function entry takes `notes:` beside its `flow:` for the Notes on the
+Function's canvas that nothing connects to, as the test does.
 
 Inside a function body the scope is flat bare names: inputs are read-only,
 outputs are written by capturing into the output's name. Outer test variables
@@ -614,10 +714,16 @@ publishing.
   warning; they will fail at runtime.
 - Expressions are checked for syntax and safety at validation time; undefined
   variable references are reported by the platform validation stage.
-- A block setting given null fails at run time and names the setting, so a
-  secret nobody filled in stops its block before it sends anything. A `for`
-  `count` and a `for_each` `collection` are the exception: on null they run
-  zero times.
+- A setting written `null` is refused before anything is stored: leave it out
+  to use its default (`INVALID_SETTING_VALUE` when it has one,
+  `REQUIRED_PARAM_MISSING` when it is required and has none). A data field that
+  takes null, such as a Log message, keeps it, and so does a Function input that
+  is optional with no default; a secret written `null` is owed for a person to
+  fill in.
+- A block setting that gets null at run, from an expression or a variable that
+  holds null, fails at run time and names the setting, and so does a secret
+  nobody filled in, before its block sends anything. A `for` `count` and a
+  `for_each` `collection` are the exception: on null they run zero times.
 - A null map value or list row reaches the Block as null; each Block's setting
   description says what it does with one (use it, skip it, or fail naming the
   setting and the entry).
@@ -642,7 +748,9 @@ publishing.
   between checks, so they are what makes the condition become true; omit `retry`
   when something else in the run will satisfy it.
 - A key the format does not define is rejected rather than ignored, so a typo
-  like `captur:` never silently discards what you meant to write.
+  like `captur:` never silently discards what you meant to write. A key in the
+  wrong place is refused the same way: a construct's `label` and `capture` go
+  inside its mapping, not beside the keyword.
 - A variable's literal value must match its declared type (`null` fits every
   type), and a capture target must be a valid variable name.
 - A number past 19 digits for an integer, or past 28 significant digits for a
@@ -657,11 +765,20 @@ Edit that recipe and hand it to `amend_test_from_recipe` to replace the test's
 workflow, bumping its version and preserving the positions of blocks you did not
 move. Secret values are never included in a readback - re-provide them (inline,
 `value_from_file`, or declare-empty) in the amended recipe. A secret setting written
-as an expression names a variable, not a value, so it reads back as written. A
-block or Function step may carry `key: <name>`, a name of your own for it: an
-amendment keeps a Block's place on the canvas when its step keeps the same `key`,
-even after steps before it are added or removed. A step with no `key` is matched
-by its place in the flow.
+as an expression names a variable, not a value, so it reads back as written.
+Every step and construct may carry `key: <name>`, a name of your own for it: an
+amendment keeps a Block's place on the canvas when its step keeps the same `key`.
+A step with no `key` is recognized by what it is - its block, name and settings,
+in the same section of the same construct - so adding, removing or moving other
+steps never costs it its place. A block you add or move is placed in the flow, and
+when it, or a block that grew, needs the room, the blocks below it move down just
+enough to make room, so no two blocks overlap.
+
+A secret `set:` row holding a plain value reads back as `null` under
+`secret_rows`: give its value again, or keep `null` for a person to fill in. One
+written `{expr: ...}` or as a template reads back as written. A block's reveal
+choices for its secret fields are not part of a recipe; an amend sets them back
+to the system setting.
 
 A readback carries `test.version`. Because an amendment applies the whole recipe,
 one built on a readback that has since been superseded - by a person editing in
@@ -670,8 +787,10 @@ Amendment is refused in that case (`STALE_RECIPE_VERSION`): read the test back
 again and re-apply your changes. Keep the `version` line as the readback wrote it;
 a recipe written by hand simply omits it.
 
-A test whose wiring the recipe format cannot express (hand-built cross-branch
-edges, cycles, unstructured joins) reports `expressible: false` with a named
-`inexpressible` list; amendment is refused for it (`TARGET_NOT_RECIPE_EXPRESSIBLE`)
-so that hand-built connectivity is never silently dropped. Edit such a test in
-the workbench.
+A test that holds something the recipe format cannot express - hand-built
+wiring (cross-branch edges, cycles, unstructured joins) or a stored setting with
+no recipe form - reports `expressible: false` with a named `inexpressible` list;
+amendment is refused for it (`TARGET_NOT_RECIPE_EXPRESSIBLE`) so that nothing is
+silently dropped. Edit such a test in the workbench. Everything a person sets in
+a block's window has a recipe form, condition lists, branch labels and Setter
+rows included.

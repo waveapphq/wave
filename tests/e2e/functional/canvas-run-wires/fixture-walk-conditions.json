@@ -1,0 +1,462 @@
+{
+  "name": "Run Wires Walk Conditions",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "data": {
+          "label": "Route by health",
+          "recipeKey": "flow[0]",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "if",
+                  "label": "Healthy",
+                  "conditions": [
+                    {
+                      "id": "cond-1",
+                      "type": "literal",
+                      "variable": "status",
+                      "operator": "equals",
+                      "value_type": "string",
+                      "reference_value": "ready"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "or"
+                    },
+                    {
+                      "id": "cond-2",
+                      "type": "literal",
+                      "variable": "status",
+                      "operator": "equals",
+                      "value_type": "string",
+                      "reference_value": "expected_status",
+                      "reference_is_expression": true
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "else_if",
+                  "label": "Same zone",
+                  "conditions": [
+                    {
+                      "id": "cond-3",
+                      "type": "literal",
+                      "variable": "zone",
+                      "operator": "equals",
+                      "value_type": "string",
+                      "reference_value": "{{ region }}-1",
+                      "reference_is_template": true
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "cond-4",
+                      "type": "expression",
+                      "expression": "len(errors) == 0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_2",
+                  "type": "else",
+                  "label": "Fallback"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 224,
+        "position": {
+          "x": -112,
+          "y": 140
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "data": {
+          "label": "Pick path",
+          "recipeKey": "flow[1]",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "Fast",
+                  "conditions": [
+                    {
+                      "id": "cond-5",
+                      "type": "literal",
+                      "variable": "latency_ms",
+                      "operator": "less_than",
+                      "value_type": "integer",
+                      "reference_value": 200
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "cond-6",
+                      "type": "literal",
+                      "variable": "latency_ms",
+                      "operator": "less_than",
+                      "value_type": "integer",
+                      "reference_value": "max_latency",
+                      "reference_is_expression": true
+                    }
+                  ],
+                  "break": true
+                },
+                {
+                  "id": "branch_1",
+                  "type": "case",
+                  "label": "Home zone",
+                  "conditions": [
+                    {
+                      "id": "cond-7",
+                      "type": "literal",
+                      "variable": "zone",
+                      "operator": "equals",
+                      "value_type": "string",
+                      "reference_value": "{{ region }}-1",
+                      "reference_is_template": true
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "cond-8",
+                      "type": "expression",
+                      "expression": "attempt == 0"
+                    }
+                  ],
+                  "break": true
+                },
+                {
+                  "id": "branch_2",
+                  "type": "default",
+                  "label": "Other"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 288,
+        "position": {
+          "x": -144,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-3",
+        "type": "workflowNode",
+        "data": {
+          "label": "Check service",
+          "recipeKey": "flow[2]",
+          "elementType": "assert",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "mode": "single",
+              "assertions": [
+                {
+                  "id": "cond-9",
+                  "type": "literal",
+                  "variable": "status",
+                  "operator": "equals",
+                  "value_type": "string",
+                  "reference_value": "ready"
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "id": "cond-10",
+                  "type": "literal",
+                  "variable": "latency_ms",
+                  "operator": "less_than",
+                  "value_type": "integer",
+                  "reference_value": "max_latency",
+                  "reference_is_expression": true
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "id": "cond-11",
+                  "type": "literal",
+                  "variable": "zone",
+                  "operator": "equals",
+                  "value_type": "string",
+                  "reference_value": "{{ region }}-1",
+                  "reference_is_template": true
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "id": "cond-12",
+                  "type": "expression",
+                  "expression": "len(errors) == 0"
+                }
+              ],
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 188,
+        "position": {
+          "x": -94,
+          "y": 420
+        }
+      },
+      {
+        "id": "node-4",
+        "type": "workflowNode",
+        "data": {
+          "label": "Poll until ready",
+          "recipeKey": "flow[3]",
+          "elementType": "while",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "max_iterations": 3,
+              "timeout": 30,
+              "conditions": [
+                {
+                  "id": "cond-13",
+                  "type": "literal",
+                  "variable": "attempt",
+                  "operator": "less_than",
+                  "value_type": "integer",
+                  "reference_value": 3
+                },
+                {
+                  "type": "operator",
+                  "value": "and"
+                },
+                {
+                  "id": "cond-14",
+                  "type": "expression",
+                  "expression": "status != 'ready'"
+                }
+              ],
+              "mode": "while-do"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 218,
+        "position": {
+          "x": -109,
+          "y": 560
+        }
+      },
+      {
+        "id": "node-5",
+        "type": "workflowNode",
+        "data": {
+          "label": "Say attempt",
+          "recipeKey": "flow[3].while.body[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "Still waiting",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 168,
+        "position": {
+          "x": -244,
+          "y": 700
+        }
+      },
+      {
+        "id": "node-6",
+        "type": "workflowNode",
+        "data": {
+          "label": "Wait for service",
+          "recipeKey": "flow[4]",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "timeout": 10000,
+              "check_interval": 1000,
+              "message": "Service never became ready",
+              "mode": "watch",
+              "conditions": [
+                {
+                  "id": "cond-15",
+                  "type": "literal",
+                  "variable": "zone",
+                  "operator": "equals",
+                  "value_type": "string",
+                  "reference_value": "{{ region }}-1",
+                  "reference_is_template": true
+                },
+                {
+                  "type": "operator",
+                  "value": "or"
+                },
+                {
+                  "id": "cond-16",
+                  "type": "literal",
+                  "variable": "status",
+                  "operator": "equals",
+                  "value_type": "string",
+                  "reference_value": "expected_status",
+                  "reference_is_expression": true
+                }
+              ],
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 218,
+        "position": {
+          "x": -109,
+          "y": 840
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-node-node-1",
+        "source": "start-node",
+        "target": "node-1"
+      },
+      {
+        "id": "edge-node-1-branch_0-node-2",
+        "source": "node-1",
+        "target": "node-2",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "edge-node-1-branch_1-node-2-ingress_1",
+        "source": "node-1",
+        "target": "node-2",
+        "sourceHandle": "branch_1",
+        "targetHandle": "ingress_1"
+      },
+      {
+        "id": "edge-node-1-branch_2-node-2-ingress_2",
+        "source": "node-1",
+        "target": "node-2",
+        "sourceHandle": "branch_2",
+        "targetHandle": "ingress_2"
+      },
+      {
+        "id": "edge-node-2-then-node-3",
+        "source": "node-2",
+        "target": "node-3",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "edge-node-3-node-4",
+        "source": "node-3",
+        "target": "node-4"
+      },
+      {
+        "id": "edge-node-4-body-node-5",
+        "source": "node-4",
+        "target": "node-5",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "edge-node-4-then-node-6",
+        "source": "node-4",
+        "target": "node-6",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "status": {
+      "type": "string",
+      "value": "ready"
+    },
+    "expected_status": {
+      "type": "string",
+      "value": "ready"
+    },
+    "zone": {
+      "type": "string",
+      "value": "eu-west-1"
+    },
+    "region": {
+      "type": "string",
+      "value": "eu-west"
+    },
+    "latency_ms": {
+      "type": "integer",
+      "value": 120
+    },
+    "max_latency": {
+      "type": "integer",
+      "value": 500
+    },
+    "attempt": {
+      "type": "integer",
+      "value": 0
+    },
+    "errors": {
+      "type": "array",
+      "value": [],
+      "elementTypes": []
+    }
+  },
+  "metadata": {
+    "tags": []
+  }
+}

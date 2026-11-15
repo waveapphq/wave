@@ -43,6 +43,8 @@ import {
   _resetConnectionMonitor,
   useConnectionMonitor,
 } from '../../src/services/connection-monitor'
+import { createClientContext } from '@/services/websocket-client/client-context'
+import { handleMessage } from '@/services/websocket-client/message-handler'
 
 // Mock WebSocket globally
 class MockWebSocket {
@@ -1409,6 +1411,37 @@ describe('WebSocket Client - REQ-5.2.1.4', () => {
 
       await rejectAssertion
     })
+
+    it('leaves a subscription waiting when the confirmed topic names an object prototype member', async () => {
+      const errorHandler = vi.fn()
+      client.onError(errorHandler)
+      const subscribePromise = client.subscribeAsync('execution:abc123', vi.fn(), undefined, 1000)
+      const rejectAssertion = expect(subscribePromise).rejects.toThrow(
+        /^Subscription confirmation timeout for topic: execution:abc123$/
+      )
+
+      for (const topic of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+        expect(() => mockWebSocketInstance!.simulateMessage({ type: 'subscribed', topic })).not.toThrow()
+      }
+      await vi.advanceTimersByTimeAsync(1001)
+
+      await rejectAssertion
+      expect(errorHandler).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Subscription confirmation lookup', () => {
+    it('never calls a pending confirmation that is not a function', () => {
+      const ctx = createClientContext({
+        url: 'wss://api.example.com/ws',
+        heartbeat: { enabled: false, interval: 0, timeout: 0 },
+      })
+      ctx.pendingSubscriptionConfirmations.set('execution:abc123', 'not a function' as unknown as () => void)
+
+      expect(() =>
+        handleMessage(ctx, JSON.stringify({ type: 'subscribed', topic: 'execution:abc123' }))
+      ).not.toThrow()
+    })
   })
 
   describe('Event Dispatch', () => {
@@ -1913,6 +1946,21 @@ describe('WebSocket Client - REQ-5.2.1.4', () => {
       expect(handler).not.toHaveBeenCalled()
       expect(errorHandler).not.toHaveBeenCalled() // Unknown types are silently ignored
     })
+
+    it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+      'ignores the message type %s like any unknown type',
+      (type) => {
+        const handler = vi.fn()
+        const errorHandler = vi.fn()
+        client.subscribe('execution:abc123', handler)
+        client.onError(errorHandler)
+
+        expect(() => mockWebSocketInstance!.simulateMessage({ type, topic: 'execution:abc123' })).not.toThrow()
+
+        expect(handler).not.toHaveBeenCalled()
+        expect(errorHandler).not.toHaveBeenCalled()
+      }
+    )
   })
 
   describe('Heartbeat Protocol', () => {

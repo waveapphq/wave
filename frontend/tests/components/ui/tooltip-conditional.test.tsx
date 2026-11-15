@@ -6,7 +6,7 @@
  * not-shown-on-touch are fixed here and are not per-site options.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const viewportHook = vi.hoisted(() => ({ useViewport: vi.fn() }))
@@ -40,11 +40,26 @@ function renderTooltip(props: Partial<React.ComponentProps<typeof ConditionalToo
   )
 }
 
-/** Radix opens on keyboard focus without waiting out the hover delay. */
-function revealByFocus(): void {
-  act(() => {
-    fireEvent.focus(trigger())
+const nativeMatches = Element.prototype.matches
+let matchesSpy: MockInstance<Element['matches']> | undefined
+
+/** Answer `:focus-visible` as the browser would: true after Tab, false for focus handed back by code after a click. */
+function focusVisibleWhen(visible: (el: Element) => boolean): void {
+  matchesSpy = vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) {
+    return selector === ':focus-visible' ? visible(this) : nativeMatches.call(this, selector)
   })
+}
+
+function focus(target: HTMLElement): void {
+  act(() => {
+    fireEvent.focus(target)
+  })
+}
+
+/** Keyboard focus opens the hint without waiting out the hover delay. */
+function revealByFocus(): void {
+  focusVisibleWhen(() => true)
+  focus(trigger())
 }
 
 function hover(): void {
@@ -64,6 +79,11 @@ function setTouchPoints(value: number): void {
 
 beforeEach(() => {
   vi.mocked(useViewport).mockClear()
+})
+
+afterEach(() => {
+  matchesSpy?.mockRestore()
+  matchesSpy = undefined
 })
 
 describe('ConditionalTooltip - empty content passthrough', () => {
@@ -131,6 +151,63 @@ describe('ConditionalTooltip - reveal', () => {
     revealByFocus()
 
     expect(document.querySelector('[data-slot="tooltip-arrow"]')).toBeInTheDocument()
+  })
+})
+
+describe('ConditionalTooltip - focus from the keyboard only (SHELL-7b)', () => {
+  it('shows no hint when code hands focus back to the trigger after a mouse action', () => {
+    renderTooltip()
+    focusVisibleWhen(() => false)
+
+    focus(trigger())
+
+    expect(popup()).toBeNull()
+  })
+
+  it('reports no open request for focus handed back by code', () => {
+    const onOpenChange = vi.fn()
+    renderTooltip({ onOpenChange })
+    focusVisibleWhen(() => false)
+
+    focus(trigger())
+
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('reads keyboard focus off the focused control inside a wrapper trigger', () => {
+    render(
+      <ConditionalTooltip content="Held on">
+        <div data-testid="row">
+          <button data-testid="box" type="button">
+            box
+          </button>
+        </div>
+      </ConditionalTooltip>,
+    )
+    const box = screen.getByTestId('box')
+    focusVisibleWhen((el) => el === box)
+
+    focus(box)
+
+    expect(popup()).toHaveTextContent('Held on')
+  })
+
+  it('still opens on hover after focus came back without the hint', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      renderTooltip()
+      focusVisibleWhen(() => false)
+      focus(trigger())
+
+      hover()
+      act(() => {
+        vi.advanceTimersByTime(ENABLED_TOOLTIP_DELAY_MS + 1)
+      })
+
+      expect(popup()).toHaveTextContent('Configure')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

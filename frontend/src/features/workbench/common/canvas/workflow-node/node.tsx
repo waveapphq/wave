@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useState } from 'react'
 import { NodeResizer, useUpdateNodeInternals } from '@xyflow/react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { dataFlag } from '@/components/shared/file-row'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -27,6 +28,7 @@ import { useNodeActions } from './use-node-actions'
 import { useBlockExecutionStatus, useBlockResultSkipped, type ExecutionStatus } from '@/features/workbench/stores/execution-store'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { isInRemoteBody, runsOnExecutionHost } from '@/features/workbench/lib/remote-body-membership'
+import { controlDefault } from '@/features/workbench/lib/node-parameters'
 import type { RemoteLocus } from './remote-locus-badge'
 import { useMaskingSettingsStore } from '@/stores/masking-settings-store'
 import { type SecretMaskingSetting } from '@/features/workbench/lib/node-parameters/secret-reveal'
@@ -80,7 +82,7 @@ function detectNodeModes(
   config?: { values?: unknown },
 ) {
   const configValues = configValuesOf(config)
-  const isSplitMode = elementType === 'assert' && (configValues?.mode ?? 'split') === 'split'
+  const isSplitMode = elementType === 'assert' && (configValues?.mode ?? controlDefault('assert', 'mode')) === 'split'
   const ifElseBranches = elementType === 'if-else'
     ? (configValues?.branches as Array<{id: string, type: string, label?: string}> | undefined) ?? []
     : []
@@ -101,7 +103,7 @@ function detectNodeModes(
   const parallelBranches = (
     Array.isArray(rawParallelBranches) ? rawParallelBranches : []
   ) as Array<{ id: string; name?: string }>
-  const isWaitRetry = elementType === 'wait-until' && (configValues?.mode ?? 'retry') === 'retry'
+  const isWaitRetry = elementType === 'wait-until' && (configValues?.mode ?? controlDefault('wait-until', 'mode')) === 'retry'
   return { isSplitMode, ifElseBranches, isIfElseMode, isTryCatch, tryCatchEnableCatch, tryCatchEnableFinally, isForLoop, isRemoteExecution, switchBranches, parallelBranches, isWaitRetry }
 }
 
@@ -415,18 +417,19 @@ export const WorkflowNode = memo(function WorkflowNode({
 
   const handleToggleDescriptionExpanded = useToggleDescriptionExpanded(id)
   const [descriptionOverflows, setDescriptionOverflows] = useState(false)
+  const descriptionId = `node-description-${id}`
 
   const nodeBody = (
     <div
       data-testid={`workflow-node-${id}`}
       data-nodetype={nodeType}
-      data-selected={selected ? 'true' : undefined}
-      data-dragging={dragging ? 'true' : undefined}
+      data-selected={dataFlag(selected)}
+      data-dragging={dataFlag(dragging)}
       data-execution-status={executionStatus}
-      data-disabled={disabled ? 'true' : undefined}
-      data-skipped={skipped ? 'true' : undefined}
-      data-paused={isPaused ? 'true' : undefined}
-      data-mirror-active={isMirrorActive ? 'true' : undefined}
+      data-disabled={dataFlag(disabled)}
+      data-skipped={dataFlag(skipped)}
+      data-paused={dataFlag(isPaused)}
+      data-mirror-active={dataFlag(isMirrorActive)}
       style={{ WebkitTouchCallout: 'none', width: `${wrapperWidth}px`, minWidth: wrapperWidth }}
       className={computeOuterClasses({ selected, dragging, executionStatus, executionBorderClass, executionBgClass, isPaused, isDisabled: !!disabled, isMirrorActive })}
     >
@@ -450,6 +453,7 @@ export const WorkflowNode = memo(function WorkflowNode({
           data-testid={`workflow-node-body-${id}`}
           aria-pressed={selected}
           aria-label={`${label} block`}
+          aria-describedby={description ? descriptionId : undefined}
           onClick={handleClick}
           onContextMenu={menuHidden ? undefined : () => { if (!selected) selectNode(id) }}
           className={cn(
@@ -477,6 +481,7 @@ export const WorkflowNode = memo(function WorkflowNode({
 
           {description && description.length > 0 && (
             <NodeDescriptionRow
+              id={descriptionId}
               description={description}
               expanded={!!descriptionExpanded}
               onOverflowChange={setDescriptionOverflows}

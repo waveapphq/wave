@@ -20,7 +20,7 @@ import { GripVertical, X } from 'lucide-react'
 import type { Extension } from '@codemirror/state'
 
 import { Button } from '@/components/ui/button'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { ScalarBody } from '@/components/shared/variable-bodies/scalar-body'
 import { ArrayBody } from '@/components/shared/variable-bodies/array-body'
 import { MapBody } from '@/components/shared/variable-bodies/map-body'
@@ -35,6 +35,7 @@ import {
   formatComplexMetric,
   formatScalarMetric,
   getTypeBadgeClass,
+  isMaskedWhole,
   isNullValue,
   isSummaryEnvelope,
   METRIC_TYPE_MISMATCH,
@@ -166,6 +167,8 @@ interface InspectResolution {
   showEmptyState: boolean
   /** The displayed value (or source) is a whole null. */
   wholeNull: boolean
+  /** The displayed runtime value is one the server masked whole (REQ-3.1.3.5). */
+  maskedWhole: boolean
   mismatch: boolean
   scalarDisplayedValue: unknown
   complexDisplayedValue: unknown
@@ -184,7 +187,7 @@ interface InspectResolution {
 function resolveMetric(r: InspectResolution): string | null {
   // A source (expression / template) and an empty state carry no metric - only a
   // real displayed value gets one ("N chars" for strings).
-  if (r.showingSource || r.showEmptyState || r.wholeNull) return null
+  if (r.showingSource || r.showEmptyState || r.wholeNull || r.maskedWhole) return null
   if (r.mismatch) return METRIC_TYPE_MISMATCH
   if (r.complexType === null) {
     return formatScalarMetric(r.scalarDisplayedValue, r.variable.type)
@@ -226,6 +229,10 @@ function complexFetchOrCodeBody(
 function resolveBody(r: InspectResolution): { node: ReactNode; tableGrid: boolean } {
   if (r.showEmptyState) {
     return { node: <BodyEmptyLine label="Not evaluated yet." />, tableGrid: false }
+  }
+  // Every view of a value masked whole is the mask; the typed bodies would read it as data.
+  if (r.maskedWhole) {
+    return { node: <SecretMaskedBody holdsValue />, tableGrid: false }
   }
   const complexEarlyBody = complexFetchOrCodeBody(r)
   if (complexEarlyBody) return complexEarlyBody
@@ -467,8 +474,9 @@ function computeResolution(
     isExpression && !showingSource && !inInitial && !hasRuntimeValue
   const guardedValue =
     complexType === null ? scalarDisplayedValue : complexDisplayedValue
-  const mismatch =
-    showRuntime && !showingSource && !valueMatchesType(guardedValue, variable.type)
+  const runtimeShown = showRuntime && !showingSource
+  const maskedWhole = runtimeShown && isMaskedWhole(guardedValue, variable.type)
+  const mismatch = runtimeShown && !maskedWhole && !valueMatchesType(guardedValue, variable.type)
   const wholeNull = showingSource
     ? isNullValue(sourceValue)
     : !fullValueUnread && isNullValue(guardedValue)
@@ -481,6 +489,7 @@ function computeResolution(
     showingSource,
     showEmptyState,
     wholeNull,
+    maskedWhole,
     mismatch,
     scalarDisplayedValue,
     complexDisplayedValue,
@@ -640,8 +649,8 @@ function InspectFooterMetric({ metric, mismatch }: Readonly<InspectFooterMetricP
   )
 }
 
-// A locked secret's read view is the bare placeholder - no keys, no shape, no
-// counts - and never feeds the masked-read string into the typed bodies.
+// A locked secret's read view, and a value masked whole, is the bare placeholder -
+// no keys, no shape, no counts - and never feeds the mask into the typed bodies.
 function SecretMaskedBody({ holdsValue }: Readonly<{ holdsValue: boolean }>) {
   return (
     <div
@@ -743,12 +752,12 @@ function InspectModalHeader({
       <div className="flex flex-1 items-center gap-2 min-w-0">
         <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <ConditionalTooltip content={variable.name} wide>
-          <h2
+          <SheetTitle
             data-testid="inspect-variable-name"
             className="font-mono text-sm font-semibold truncate max-w-[35rem]"
           >
             {variable.name}
-          </h2>
+          </SheetTitle>
         </ConditionalTooltip>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -1070,7 +1079,6 @@ export function VariableInspectModal({
       persistGeometry
       responsiveSize
       resizable
-      ariaLabel={`Inspect variable ${variable.name}`}
       data-testid={`variable-inspect-modal-${variable.id}`}
       initialOffset={{ x: offset, y: offset }}
       initialWidth={size.width}

@@ -7,9 +7,31 @@ Requirements implemented:
 
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.models.controls.metadata import SEMVER_PATTERN, ControlMetadata
+
+
+def raise_first_problem(problems: Sequence[FieldFinding]) -> None:
+    """Raise the first structure problem's message as the run's ValueError (REQ-3.5.0.3)."""
+    if problems:
+        raise ValueError(problems[0].message)
+
+
+def duplicate_branch_id(
+    branch: Mapping[str, Any], index: int, seen: set[Any]
+) -> list[FieldFinding]:
+    """A branch, case or lane whose id an earlier one already holds (REQ-3.5.0.3)."""
+    branch_id = branch.get("id")
+    if branch_id is None:
+        return []
+    if branch_id in seen:
+        message = f"duplicate branch id: {branch_id!r}"
+        return [FieldFinding("INVALID_CONTROL_STRUCTURE", message, None, f"branches.{index}.id")]
+    seen.add(branch_id)
+    return []
 
 
 class ControlBase(ABC):
@@ -71,6 +93,16 @@ class ControlBase(ABC):
             ValueError: If parameters are invalid
         """
         ...
+
+    def structure_problems(
+        self, values: Mapping[str, Any], sources: Collection[str] = ()
+    ) -> list[FieldFinding]:
+        """The control's structure rules over its values; a place in ``sources`` is skipped.
+
+        The save check and ``validate()`` both read these, so save and run say the same text
+        (REQ-3.5.0.3).
+        """
+        return []
 
     async def initialize(self, context: dict[str, Any]) -> None:  # noqa: B027
         """

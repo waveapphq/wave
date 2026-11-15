@@ -10,8 +10,9 @@
  *    optional, described "Optional. Milliseconds." - and neither branches nor
  *    join is a row
  * 2. BRANCHES carries a Name / Time limit (ms) column header over single-line
- *    rows: violet BRANCH badge, name field, limit field, reorder pair, delete -
- *    and no chevron and no body, because a branch row has no content
+ *    rows: violet BRANCH badge, name field, limit field with its {x}, reorder
+ *    pair, delete - and no chevron and no body, because a branch row has no
+ *    content; an unset limit shows an empty box with no hint
  * 3. At the two-branch minimum both deletes are visually disabled and explain
  *    why on hover
  * 4. "+ Branch" adds a third row, unlocks the deletes, hints "Branch 3", and on
@@ -54,7 +55,6 @@ function logNode(id: string, message: string, x: number, y: number): Record<stri
       description: id,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${message}'`, level: 'INFO' },
         outputBindings: {},
@@ -85,7 +85,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Parallel under test',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -250,21 +249,23 @@ test.describe('V-PARALLEL-01: Parallel configuration sheet', () => {
       )
     })
 
-    await test.step('Header order: badge, name, limit, up, down, delete', async () => {
+    await test.step('Header order: badge, name, limit, {x}, up, down, delete', async () => {
       const header = sheet.locator('[data-testid="parallel-branch-header-branch_1"]')
+      const parts = [
+        'parallel-branch-badge-branch_1',
+        'parallel-branch-label-branch_1',
+        'param-input-parallel-branch-limit-branch_1',
+        'parallel-branch-limit-toggle-branch_1',
+        'parallel-branch-move-up-branch_1',
+        'parallel-branch-move-down-branch_1',
+        'parallel-branch-delete-branch_1',
+      ]
       const order = await header.evaluate((el) =>
         Array.from(el.querySelectorAll('[data-testid]'))
           .map((n) => n.getAttribute('data-testid'))
           .filter((id): id is string => !!id),
       )
-      expect(order, `header children: ${JSON.stringify(order)}`).toEqual([
-        'parallel-branch-badge-branch_1',
-        'parallel-branch-label-branch_1',
-        'parallel-branch-limit-branch_1',
-        'parallel-branch-move-up-branch_1',
-        'parallel-branch-move-down-branch_1',
-        'parallel-branch-delete-branch_1',
-      ])
+      expect(order.filter((id) => parts.includes(id)), `header children: ${JSON.stringify(order)}`).toEqual(parts)
     })
 
     await test.step('No chevron and no body - a branch row holds nothing', async () => {
@@ -272,11 +273,10 @@ test.describe('V-PARALLEL-01: Parallel configuration sheet', () => {
       await expect(sheet.locator('[data-testid^="parallel-branch-body-"]')).toHaveCount(0)
     })
 
-    await test.step('An unset limit shows the No limit hint', async () => {
-      await expect(
-        sheet.locator('[data-testid="parallel-branch-limit-branch_1"]'),
-      ).toHaveAttribute('placeholder', 'No limit')
-      await expect(sheet.locator('[data-testid="parallel-branch-limit-branch_1"]')).toHaveValue('')
+    await test.step('An unset limit shows an empty box with no hint', async () => {
+      const limit = sheet.locator('[data-testid="param-input-parallel-branch-limit-branch_1"]')
+      await expect(limit).toHaveValue('')
+      expect(await limit.getAttribute('placeholder'), 'an unset limit hints nothing').toBeFalsy()
     })
 
     await test.step('Reorder is pinned at the ends of a two-row list', async () => {
@@ -398,7 +398,7 @@ test.describe('V-PARALLEL-01: Parallel configuration sheet', () => {
     const sheet = await openConfig(page)
 
     await sheet.locator('[data-testid="parallel-branch-label-branch_2"]').fill('drain')
-    await sheet.locator('[data-testid="parallel-branch-limit-branch_1"]').fill('30000')
+    await sheet.locator('[data-testid="param-input-parallel-branch-limit-branch_1"]').fill('30000')
     await sheet.locator('label[for="join-mode-first"]').click()
     await expect(sheet.locator('#join-mode-first')).toHaveAttribute('data-state', 'checked')
 
@@ -415,7 +415,7 @@ test.describe('V-PARALLEL-01: Parallel configuration sheet', () => {
 
     await test.step('Reopening the sheet shows what was saved', async () => {
       const reopened = await openConfig(page)
-      await expect(reopened.locator('[data-testid="parallel-branch-limit-branch_1"]')).toHaveValue(
+      await expect(reopened.locator('[data-testid="param-input-parallel-branch-limit-branch_1"]')).toHaveValue(
         '30000',
       )
       await expect(reopened.locator('[data-testid="parallel-branch-label-branch_2"]')).toHaveValue(

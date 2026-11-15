@@ -760,7 +760,7 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    expect(screen.getByRole('button', { name: 'Edit protected value' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data: Edit protected value' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit Map' })).not.toBeInTheDocument()
     expect(screen.queryByText(/entries/)).not.toBeInTheDocument()
     expect(screen.queryByText(/tls\./)).not.toBeInTheDocument()
@@ -771,14 +771,14 @@ describe('MapInput - stored map credential', () => {
     const { row } = renderLiteralRow(secretMapParam, { 'tls.crt': 'PEM', 'tls.key': 'KEY' })
 
     expect(elementsShowing(row(), '{"tls.crt": "PEM", "tls.key": "KEY"}')).not.toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Edit protected value' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit protected value$/ })).not.toBeInTheDocument()
   })
 
   it('leaves a stored EMPTY secret map on the one-line field (nothing to protect)', () => {
     const { row } = renderLiteralRow(secretMapParam, {})
 
     expect(elementsShowing(row(), '{}')).not.toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Edit protected value' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit protected value$/ })).not.toBeInTheDocument()
   })
 
   it('never masks a map on a parameter that is not a credential', () => {
@@ -787,7 +787,7 @@ describe('MapInput - stored map credential', () => {
     expect(
       elementsShowing(row(), `{"tls.crt": "${SEALED_A}", "tls.key": "${SEALED_B}"}`),
     ).not.toHaveLength(0)
-    expect(screen.queryByRole('button', { name: 'Edit protected value' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit protected value$/ })).not.toBeInTheDocument()
   })
 
   it('opens the shared "Edit Protected Value?" dialog on the masked affordance', () => {
@@ -799,7 +799,7 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
 
     expect(screen.getByText('Edit Protected Value?')).toBeInTheDocument()
     expect(screen.queryByTestId('value-editor-sheet')).not.toBeInTheDocument()
@@ -815,7 +815,7 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
 
     expect(onChange).toHaveBeenCalledWith({})
@@ -836,7 +836,7 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
 
     expect(onExpressionFieldsChange).toHaveBeenCalledWith(['headers.X-Trace'])
@@ -862,7 +862,7 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
 
     expect(screen.getByTestId('value-editor-sheet')).toHaveAttribute(
@@ -881,12 +881,12 @@ describe('MapInput - stored map credential', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.queryByTestId('value-editor-sheet')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Edit protected value' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data: Edit protected value' })).toBeInTheDocument()
   })
 
   it.each([
@@ -894,20 +894,20 @@ describe('MapInput - stored map credential', () => {
     ['Escape', () => fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })],
   ])('puts the keyboard focus back on the masked control after %s', async (_label, dismiss) => {
     render(<StoredMapRow />)
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
 
     dismiss()
 
     expect(screen.queryByText('Edit Protected Value?')).not.toBeInTheDocument()
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Edit protected value' })).toHaveFocus(),
+      expect(screen.getByRole('button', { name: 'Data: Edit protected value' })).toHaveFocus(),
     )
   })
 
   it('puts the keyboard focus on the map control that took the masked one\'s place after "Delete & Edit"', async () => {
     render(<StoredMapRow />)
     screen.getByRole('textbox', { name: 'Name' }).focus()
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
 
@@ -986,6 +986,94 @@ describe('ArrayInput', () => {
     expect(screen.getByTestId('value-editor-sheet')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('sheet-close'))
     expect(screen.queryByTestId('value-editor-sheet')).not.toBeInTheDocument()
+  })
+})
+
+// ============================================================================
+// ArrayInput / TableInput - a list or table credential (REQ-3.1.3.18)
+// ============================================================================
+
+const SEALED_LIST = 'wave:enc:v1:c2VhbGVkLWxpc3Q='
+
+describe.each<[string, Parameter, unknown[], string]>([
+  ['list', { name: 'hosts', label: 'Hosts', type: 'array', required: false, secret: true }, ['web-1', 'web-2'], 'array'],
+  ['table', { name: 'rows', label: 'Rows', type: 'table', required: false, secret: true }, [{ id: 1 }], 'table'],
+])('a %s credential', (_kind, parameter, typedValue, sheetType) => {
+  const lock = (row: HTMLElement) => row.querySelector('svg.lucide-lock')
+  const masked = () => screen.getByRole('button', { name: `${parameter.label}: Edit protected value` })
+
+  it('shows the lock and its expand while it holds a value typed this session', () => {
+    const { row } = renderLiteralRow(parameter, typedValue)
+
+    expect(lock(row())).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /Edit protected value$/ })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId(`param-expand-${parameter.name}`))
+
+    const sheet = screen.getByTestId('value-editor-sheet')
+    expect(sheet).toHaveAttribute('data-type', sheetType)
+    expect(sheet).toHaveAttribute('data-value', JSON.stringify(typedValue))
+  })
+
+  it('masks a stored value: the lock and the masked control, no expand, no stored text', () => {
+    const { row } = renderLiteralRow(parameter, SEALED_LIST)
+
+    expect(lock(row())).not.toBeNull()
+    expect(masked()).toBeInTheDocument()
+    expect(screen.queryByTestId(`param-expand-${parameter.name}`)).not.toBeInTheDocument()
+    expect(within(row()).queryByText(/wave:enc:v1:/)).not.toBeInTheDocument()
+  })
+
+  it('empties a stored value on Delete & Edit and opens its sheet on the empty value', () => {
+    const { onChange } = renderLiteralRow(parameter, SEALED_LIST)
+
+    fireEvent.click(masked())
+    expect(screen.getByText('Edit Protected Value?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
+
+    expect(onChange).toHaveBeenCalledWith([])
+    const sheet = screen.getByTestId('value-editor-sheet')
+    expect(sheet).toHaveAttribute('data-type', sheetType)
+    expect(sheet).toHaveAttribute('data-value', '[]')
+  })
+
+  it('leaves the stored value as it is on Cancel', () => {
+    const { onChange } = renderLiteralRow(parameter, SEALED_LIST)
+
+    fireEvent.click(masked())
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('value-editor-sheet')).not.toBeInTheDocument()
+  })
+})
+
+describe('ArrayInput - Delete & Edit on a stored list credential', () => {
+  const secretListParam: Parameter = { name: 'hosts', label: 'Hosts', type: 'array', required: false, secret: true }
+
+  function clearStoredList(parameter: Parameter) {
+    const view = renderLiteralRow(parameter, SEALED_LIST, { expressionFields: ['hosts.1', 'url', 'hosts_extra.0'] })
+    fireEvent.click(screen.getByRole('button', { name: 'Hosts: Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
+    return view
+  }
+
+  it("drops the list's entry {x} marks and keeps every other field's", () => {
+    const { onExpressionFieldsChange } = clearStoredList(secretListParam)
+
+    expect(onExpressionFieldsChange).toHaveBeenCalledWith(['url', 'hosts_extra.0'])
+  })
+
+  it('drops the entry types of a typed list', () => {
+    const { onElementTypesChange } = clearStoredList({ ...secretListParam, typedValues: true })
+
+    expect(onElementTypesChange).toHaveBeenCalledWith(undefined)
+  })
+
+  it('writes no entry types for a text-only list', () => {
+    const { onElementTypesChange } = clearStoredList(secretListParam)
+
+    expect(onElementTypesChange).not.toHaveBeenCalled()
   })
 })
 
@@ -1087,6 +1175,90 @@ describe('StringInput (unified)', () => {
     expect(screen.getByTestId('value-editor-sheet')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('sheet-close'))
     expect(screen.queryByTestId('value-editor-sheet')).not.toBeInTheDocument()
+  })
+})
+
+// ============================================================================
+// StringInput - a string field held as Template draws the Template face of the
+// one field: the source box, only its {{ }} parts in the expression color
+// (REQ-3.1.1.5, REQ-3.1.3.15)
+// ============================================================================
+
+const URL_PARAM = makeParameter({ name: 'url', label: 'URL' })
+const URL_TEMPLATE = '{{ base_url }}/health'
+const URL_VARIABLES = [{ name: 'base_url', type: 'string' }]
+
+/** A string field that keeps its value and its Template mark, as the Block window does. */
+function TemplateFieldHost({ initialTemplateFields }: Readonly<{ initialTemplateFields: string[] }>) {
+  const [value, setValue] = useState<unknown>(URL_TEMPLATE)
+  const [templateFields, setTemplateFields] = useState(initialTemplateFields)
+  return (
+    <div data-testid="template-host">
+      <StringInput
+        parameter={URL_PARAM}
+        effectiveValue={value}
+        onChange={setValue}
+        availableVariables={URL_VARIABLES}
+        templateFields={templateFields}
+        onTemplateFieldsChange={setTemplateFields}
+      />
+    </div>
+  )
+}
+
+/** The editor content of the source box inside `container`, or null when the field draws none. */
+function sourceContent(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>('.cm-content')
+}
+
+/** The text of every outermost part the source box draws in the expression color. */
+function expressionParts(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll<HTMLElement>('.cm-expression'))
+    .filter((mark) => mark.parentElement?.closest('.cm-expression') == null)
+    .map((mark) => mark.textContent ?? '')
+}
+
+describe('StringInput - the Template face', () => {
+  const host = () => screen.getByTestId('template-host')
+
+  it('draws a Template in the source box with only its {{ }} parts in the expression color', async () => {
+    render(<TemplateFieldHost initialTemplateFields={['url']} />)
+    expect(sourceContent(host())).toHaveTextContent(/^\{\{ base_url \}\}\/health$/)
+    await waitFor(() => expect(expressionParts(host())).toEqual(['{{ base_url }}']))
+    expect(within(host()).queryByDisplayValue(URL_TEMPLATE)).not.toBeInTheDocument()
+  })
+
+  it('opens the Edit value sheet on Template from its expand, not the expression editor', () => {
+    render(<TemplateFieldHost initialTemplateFields={['url']} />)
+    expect(sourceContent(host())).not.toBeNull()
+    fireEvent.click(screen.getByTestId('param-expand-url'))
+    expect(screen.getByTestId('value-editor-sheet')).toHaveAttribute('data-is-template', 'true')
+    expect(screen.queryByText('Edit URL')).not.toBeInTheDocument()
+  })
+
+  it('draws the literal face once the sheet saves the field back as Literal', () => {
+    render(<TemplateFieldHost initialTemplateFields={['url']} />)
+    expect(sourceContent(host())).not.toBeNull()
+    fireEvent.click(screen.getByTestId('param-expand-url'))
+    fireEvent.click(screen.getByTestId('sheet-save'))
+    expect(sourceContent(host())).toBeNull()
+    expect(within(host()).getByRole('textbox', { name: 'URL' })).toHaveValue('SAVED')
+  })
+
+  it('keeps the literal face for the same text when the field is not a Template', () => {
+    render(<TemplateFieldHost initialTemplateFields={[]} />)
+    expect(sourceContent(host())).toBeNull()
+    expect(within(host()).getByRole('textbox', { name: 'URL' })).toHaveValue(URL_TEMPLATE)
+  })
+
+  it('draws the Template face on a plugin row held as Template, with no null button on a field that takes null', () => {
+    const { row } = renderLiteralRow({ ...URL_PARAM, acceptsNull: true }, URL_TEMPLATE, {
+      templateFields: ['url'],
+      availableVariables: URL_VARIABLES,
+    })
+    expect(sourceContent(row())).toHaveTextContent(/^\{\{ base_url \}\}\/health$/)
+    expect(within(row()).queryByDisplayValue(URL_TEMPLATE)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('param-null-url')).not.toBeInTheDocument()
   })
 })
 
@@ -1836,7 +2008,7 @@ describe('MapInput - typed values (REQ-3.1.3.19)', () => {
         onElementTypesChange={onElementTypesChange}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Edit protected value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Data: Edit protected value' }))
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
     expect(onElementTypesChange).toHaveBeenCalledWith(undefined)
   })

@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 
@@ -51,7 +52,6 @@ def _log_node(node_id: str, label: str, message: str = "'ok'") -> dict[str, Any]
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -157,10 +157,10 @@ class TestEngineContinue:
         assert session["status"] == "passed"
 
     @pytest.mark.asyncio
-    async def test_continue_raises_lookup_error_when_session_missing(self) -> None:
-        """``continue_session`` raises LookupError with exact message."""
+    async def test_continue_raises_not_found_when_session_missing(self) -> None:
+        """``continue_session`` raises NotFoundException with exact message."""
         missing = "missing-session-id"
-        with pytest.raises(LookupError) as exc_info:
+        with pytest.raises(NotFoundException) as exc_info:
             workbench_service.continue_session(session_id=missing)
         assert f"Workbench session '{missing}' not found" in str(exc_info.value)
 

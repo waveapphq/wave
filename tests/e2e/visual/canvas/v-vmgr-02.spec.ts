@@ -139,7 +139,7 @@ test.describe('V-VMGR-02: Variable Manager action cluster + tooltips', () => {
     ).toBeVisible({ timeout: 2000 })
 
     await itemsExpand.click()
-    const itemsModal = page.locator('section[aria-label="Inspect variable items"]')
+    const itemsModal = page.getByRole('dialog', { name: 'items', exact: true, includeHidden: true })
     await expect(itemsModal).toBeVisible()
     await page.locator('button[aria-label="Close inspector for items"]').click()
     await expect(itemsModal).toHaveCount(0)

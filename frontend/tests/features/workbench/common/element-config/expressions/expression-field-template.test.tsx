@@ -67,3 +67,30 @@ describe('ExpressionField - the full editor title', () => {
     expect(modal).toHaveProperty('title', undefined)
   })
 })
+
+describe("ExpressionField - the inline editor's accessible name (REQ-3.1.1.5)", () => {
+  it.each([
+    ['an expression', false],
+    ['a template', true],
+  ])('names the inline editor of %s after the field display name', (_kind, template) => {
+    render(
+      <ExpressionField
+        name="assert-value-0"
+        displayName="Value"
+        value="limit"
+        onChange={() => undefined}
+        availableVariables={[]}
+        template={template}
+      />,
+    )
+    expect(seen.input.at(-1)).toMatchObject({ name: 'assert-value-0', label: 'Value' })
+  })
+
+  it('hands no label to the inline editor of a field with no display name, so it is named Expression', () => {
+    render(
+      <ExpressionField name="assert-value-0" value="limit" onChange={() => undefined} availableVariables={[]} />,
+    )
+    expect(seen.input.at(-1)).toMatchObject({ name: 'assert-value-0' })
+    expect(seen.input.at(-1)?.label).toBeUndefined()
+  })
+})

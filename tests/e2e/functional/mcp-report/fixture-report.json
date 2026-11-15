@@ -1,0 +1,108 @@
+{
+  "name": "zz-mcp-get_run_report-3",
+  "description": "Run report content: a plain and a secret variable, three Logs and a Delay that holds the run",
+  "variables": {
+    "zz_mode": {
+      "type": "string",
+      "value": "report"
+    },
+    "zz_token": {
+      "type": "string",
+      "value": "zz-mcp-run-report-secret-6612",
+      "secret": true
+    }
+  },
+  "metadata": {
+    "tags": []
+  },
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "Say mode",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'mode=' + zz_mode", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 260 },
+        "data": {
+          "label": "Say token",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'token=' + zz_token", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "node-3",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 370 },
+        "data": {
+          "label": "Hold",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": { "duration": 15000 },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "node-4",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 480 },
+        "data": {
+          "label": "Say done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "expressionFields": ["message"],
+          "templateFields": [],
+          "config": {
+            "values": { "message": "'done=' + zz_mode", "level": "INFO" },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "edge-start-node-node-1", "source": "start-node", "target": "node-1" },
+      { "id": "edge-node-1-node-2", "source": "node-1", "target": "node-2" },
+      { "id": "edge-node-2-node-3", "source": "node-2", "target": "node-3" },
+      { "id": "edge-node-3-node-4", "source": "node-3", "target": "node-4" }
+    ]
+  }
+}

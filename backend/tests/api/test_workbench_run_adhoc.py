@@ -41,7 +41,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ValidationException
+from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.services.workbench import _common as _wb_common
 
 _MUTUALLY_EXCLUSIVE_RE = r"^start_node_id and single_node_id are mutually exclusive$"
@@ -373,7 +373,7 @@ class TestWorkbenchRunAdhocNodeNotFound:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError("block not found in workflow")
+            mock_run.side_effect = NotFoundException("block not found in workflow")
 
             response = client.post(
                 "/workbench/run",
@@ -397,7 +397,7 @@ class TestWorkbenchRunAdhocNodeNotFound:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError("block not found in workflow")
+            mock_run.side_effect = NotFoundException("block not found in workflow")
 
             response = client.post(
                 "/workbench/run",
@@ -436,7 +436,6 @@ def _log_node(node_id: str, label: str = "Log", message: str = "'ok'") -> dict[s
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -455,7 +454,6 @@ def _control_node(node_id: str, element_type: str, label: str = "") -> dict[str,
             "displayName": label or element_type,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -591,7 +589,7 @@ class TestStartWorkbenchRunNodeNotFound:
     def environment_id(self) -> str:
         return str(uuid.uuid4())
 
-    def test_unknown_start_node_id_raises_lookup_error_with_exact_message(
+    def test_unknown_start_node_id_raises_not_found_with_exact_message(
         self, test_id: str, environment_id: str
     ) -> None:
         from wavecore.api.services.workbench import service as workbench_service
@@ -614,7 +612,7 @@ class TestStartWorkbenchRunNodeNotFound:
             mock_get_env.return_value = environment
             mock_validate.return_value = {"fatal": False, "errors": [], "warnings": []}
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=test_id,
                     environment_id=environment_id,
@@ -623,7 +621,7 @@ class TestStartWorkbenchRunNodeNotFound:
 
             assert re.match(_NODE_NOT_FOUND_RE, str(exc_info.value))
 
-    def test_unknown_single_node_id_raises_lookup_error_with_exact_message(
+    def test_unknown_single_node_id_raises_not_found_with_exact_message(
         self, test_id: str, environment_id: str
     ) -> None:
         from wavecore.api.services.workbench import service as workbench_service
@@ -646,7 +644,7 @@ class TestStartWorkbenchRunNodeNotFound:
             mock_get_env.return_value = environment
             mock_validate.return_value = {"fatal": False, "errors": [], "warnings": []}
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=test_id,
                     environment_id=environment_id,
@@ -1054,6 +1052,39 @@ class TestAdHocInheritsPreviousSessionState:
                 "v": 42
             }, "ad-hoc must inherit variables from the previous terminal session"
             assert result["block_states"] == {"node-prev": "passed"}
+
+    def test_adhoc_keeps_the_lanes_the_previous_run_took(
+        self, test_id: str, environment_id: str
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
+
+        previous_id = self._seed_previous_session(
+            user_id=workbench_service.DEFAULT_USER_ID,
+            test_id=test_id,
+            status="passed",
+            variables={},
+            block_states={"node-prev": "passed"},
+        )
+        _wb_common._workbench_sessions[previous_id]["lanes_taken"] = {"node-prev": ["branch_0"]}
+
+        nodes = [_log_node("node-a"), _log_node("node-prev")]
+        edges = [{"source": "start-node", "target": "node-a"}]
+        test_record = _make_test_record(test_id, nodes, edges)
+        environment = {"id": environment_id, "name": "Env"}
+
+        get_test_p, get_env_p, validate_p, exec_p = self._common_patches(test_record, environment)
+        with get_test_p, get_env_p, validate_p, exec_p:
+            result = workbench_service.start_workbench_run(
+                test_id=test_id,
+                environment_id=environment_id,
+                target=workbench_service.RunTarget(single_node_id="node-a"),
+            )
+
+        session = _wb_common._workbench_sessions[result["session_id"]]
+        assert session["lanes_taken"] == {"node-prev": ["branch_0"]}
+        assert session["lanes_taken"]["node-prev"] is not (
+            _wb_common._workbench_sessions[previous_id]["lanes_taken"]["node-prev"]
+        )
 
     def test_adhoc_inherits_live_ssh_session_registry(
         self, test_id: str, environment_id: str

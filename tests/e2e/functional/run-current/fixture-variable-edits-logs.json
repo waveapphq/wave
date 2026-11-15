@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'top port={lport}'", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["port"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": { "values": { "port": "lport" }, "outputBindings": {}, "profileBindings": [] },
           "localDefinition": {
             "name": "Port Function",
@@ -65,7 +63,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": { "message": "f'inner port={port}'", "level": "INFO" },
                       "outputBindings": {},
@@ -95,7 +92,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'url=' + url", "level": "INFO" },
             "outputBindings": {},
@@ -118,7 +114,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "f'retries={retries}'", "level": "INFO" },
             "outputBindings": {},
@@ -141,9 +136,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTemplateKeys": [],
-          "variableTypes": { "count": "integer" },
           "config": {
             "values": { "variables": { "count": 0 } },
             "outputBindings": {},
@@ -166,7 +158,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'tpl=' + tpl", "level": "INFO" },
             "outputBindings": {},

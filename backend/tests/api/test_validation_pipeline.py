@@ -1627,6 +1627,14 @@ def _invalid_amend_data(name: str) -> dict[str, Any]:
     }
 
 
+def _read_by_conditions() -> dict[str, Any]:
+    """The names the rejoin fixtures' branch conditions read, declared on the Test."""
+    return {
+        "true": {"type": "boolean", "value": True},
+        "false": {"type": "boolean", "value": False},
+    }
+
+
 def _if_rejoin_data(name: str) -> dict[str, Any]:
     """If/Else whose two branch tails rejoin on default + ingress_1 handles."""
     if_node = _make_workflow_node(
@@ -1682,7 +1690,7 @@ def _if_rejoin_data(name: str) -> dict[str, Any]:
                 },
             ],
         },
-        "variables": {"my_var": {"type": "string", "value": ""}},
+        "variables": {"my_var": {"type": "string", "value": ""}, **_read_by_conditions()},
     }
 
 
@@ -1771,7 +1779,7 @@ def _switch_rejoin_data(name: str) -> dict[str, Any]:
                 },
             ],
         },
-        "variables": {"my_var": {"type": "string", "value": ""}},
+        "variables": {"my_var": {"type": "string", "value": ""}, **_read_by_conditions()},
     }
 
 
@@ -1873,7 +1881,7 @@ def _assert_split_rejoin_data(name: str) -> dict[str, Any]:
                 },
             ],
         },
-        "variables": {"my_var": {"type": "string", "value": ""}},
+        "variables": {"my_var": {"type": "string", "value": ""}, **_read_by_conditions()},
     }
 
 
@@ -1968,7 +1976,7 @@ def _combined_rejoin_data(name: str) -> dict[str, Any]:
                 },
             ],
         },
-        "variables": {"my_var": {"type": "string", "value": ""}},
+        "variables": {"my_var": {"type": "string", "value": ""}, **_read_by_conditions()},
     }
 
 
@@ -2727,7 +2735,7 @@ def _setter_node(
     template_keys: list[str] | None = None,
     label: str = "Variable Setter",
 ) -> dict[str, Any]:
-    """A Variable Setter whose entries are expressions or templates."""
+    """A Variable Setter whose rows are expressions or templates."""
     node = _make_workflow_node(
         node_id,
         "variable-setter",
@@ -2735,8 +2743,8 @@ def _setter_node(
         label,
         config={"values": {"variables": values}},
     )
-    node["data"]["variableExpressionKeys"] = expression_keys or []
-    node["data"]["variableTemplateKeys"] = template_keys or []
+    node["data"]["expressionFields"] = [f"variables.{key}" for key in expression_keys or []]
+    node["data"]["templateFields"] = [f"variables.{key}" for key in template_keys or []]
     return node
 
 
@@ -2793,7 +2801,7 @@ class TestReadOnlyFieldsAreRefusedAtSave:
         )
         residual = test_service._validate_for_persist(test)
         assert [e["code"] for e in residual] == ["EXPRESSION_CHANGES_DATA"]
-        assert residual[0]["message"].endswith("Block: Variable Setter. Field: out.")
+        assert residual[0]["message"].endswith("Block: Variable Setter. Field: variables.out.")
 
     def test_setter_template_entry_that_changes_a_variable_is_refused(self) -> None:
         test = _test_with(
@@ -2915,14 +2923,14 @@ class TestReadOnlySaveWalkerShapes:
         node = _make_workflow_node("n1", "log", "plugin", "Log", config={"values": {}})
         node["data"]["config"] = {}
         node["data"]["templateFields"] = ["message"]
-        assert node_read_only_violations(node["data"]) == []
+        assert node_read_only_violations(node) == []
 
     def test_a_setter_with_no_variables_map_is_skipped(self) -> None:
         from wavecore.api.services.block_node_checks import node_read_only_violations
 
         node = _setter_node("n1", {}, template_keys=["out"])
         node["data"]["config"]["values"] = {"variables": None}
-        assert node_read_only_violations(node["data"]) == []
+        assert node_read_only_violations(node) == []
 
     @pytest.mark.parametrize(
         "var_info",
@@ -3052,7 +3060,7 @@ class TestReferenceParametersAreRefusedAtSave:
             config={"values": {"table": "orders.add_col(['x'], 'flag', 'string')"}},
         )
         assert reference_settings(node["data"]) == set()
-        assert node_read_only_violations(node["data"]) == []
+        assert node_read_only_violations(node) == []
 
 
 class TestShellExecIsAKnownBlock:
@@ -3388,7 +3396,6 @@ class TestNumbersFollowTheOneRuleAtSave:
 
     def test_a_literal_setter_row_is_held_to_its_target_type(self) -> None:
         test = _one_block_test("variable-setter", "control", "Set", {"variables": {"n": "1e3"}})
-        test["workflow"]["nodes"][0]["data"]["variableTypes"] = {"n": "integer"}
         test["variables"] = {"n": {"type": "integer", "value": "1"}}
 
         assert [
@@ -3423,3 +3430,266 @@ class TestNumbersFollowTheOneRuleAtSave:
                 "The value compared with 'n' allows at most 19 digits, got 20",
             )
         ]
+
+
+# ---------------------------------------------------------------------------
+# Control findings follow the context: a required part is a warning on load
+# ---------------------------------------------------------------------------
+
+
+def _if_else_node(branches: list[dict[str, Any]]) -> dict[str, Any]:
+    return _make_workflow_node(
+        "node-if", "if-else", "control", "Route", config={"values": {"branches": branches}}
+    )
+
+
+def _stored_control_test(nodes: list[dict[str, Any]]) -> dict[str, Any]:
+    """A Test running ``nodes`` one after another, with the integer ``n`` declared."""
+    ids = ["start-node", *(node["id"] for node in nodes)]
+    return {
+        "id": str(uuid.uuid4()),
+        "name": f"Control Findings {uuid.uuid4().hex[:8]}",
+        "version": "1.0.0",
+        "workflow": {
+            "nodes": nodes,
+            "edges": [
+                {"source": source, "target": target}
+                for source, target in zip(ids, ids[1:], strict=False)
+            ],
+        },
+        "variables": {"n": {"type": "integer", "value": 1}},
+    }
+
+
+def _store(test: dict[str, Any]) -> str:
+    """Write ``test`` to storage past the save check, as an older stored Test sits there."""
+    import copy
+
+    test_service._save_test(copy.deepcopy(test))
+    return str(test["id"])
+
+
+def _incomplete_condition_test() -> dict[str, Any]:
+    """An If/Else whose ``if`` has no condition and whose ``else_if`` row has no variable."""
+    no_variable = {
+        "id": "c1",
+        "type": "literal",
+        "value_type": "integer",
+        "operator": "equals",
+        "reference_value": "1",
+    }
+    return _stored_control_test(
+        [
+            _if_else_node(
+                [
+                    {"id": "b1", "type": "if", "label": "", "conditions": []},
+                    {"id": "b2", "type": "else_if", "label": "", "conditions": [no_variable]},
+                    {"id": "b3", "type": "else", "label": ""},
+                ]
+            )
+        ]
+    )
+
+
+_REQUIRED_PARTS = [
+    (
+        "nodes[0].data.config.values.branches.0.conditions",
+        "REQUIRED_PARAM_EMPTY",
+        "if branch must have conditions",
+    ),
+    (
+        "nodes[0].data.config.values.branches.1.conditions.0.variable",
+        "REQUIRED_PARAM_MISSING",
+        "Required parameter 'branches.1.conditions.0.variable' is missing",
+    ),
+]
+
+
+def _for_node(values: dict[str, Any]) -> dict[str, Any]:
+    return _make_workflow_node("node-for", "for", "control", "Loop", config={"values": values})
+
+
+def _structure_test() -> dict[str, Any]:
+    """An If/Else that opens with ``else_if`` and a For counting in steps of zero."""
+    checked = {
+        "id": "c1",
+        "type": "literal",
+        "variable": "n",
+        "value_type": "integer",
+        "operator": "equals",
+        "reference_value": "1",
+    }
+    return _stored_control_test(
+        [
+            _if_else_node(
+                [
+                    {"id": "b1", "type": "else_if", "label": "", "conditions": [checked]},
+                    {"id": "b2", "type": "else", "label": ""},
+                ]
+            ),
+            _for_node({"mode": "count", "count": 3, "step": 0}),
+        ]
+    )
+
+
+_STRUCTURE_PROBLEMS = [
+    (
+        "nodes[0].data.config.values.branches.0.type",
+        "INVALID_CONTROL_STRUCTURE",
+        "first branch must be type 'if'",
+        None,
+    ),
+    ("nodes[1].data.config.values.step", "INVALID_SETTING_VALUE", "step must not be zero", None),
+]
+
+_RUN_ENVIRONMENT_ID = "10000000-0000-0000-0000-000000000353"
+
+
+def _found(entries: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return sorted((e["path"], e["code"], e["message"]) for e in entries)
+
+
+class TestControlFindingsByContext:
+    """REQ-3.5.0.3: a missing or empty condition part of a control is a warning when a Test is
+    opened and an error on save, import and run; a structure problem is an error everywhere."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture
+    def run_client(self) -> Any:
+        from wavecore.api.app import app
+        from wavecore.api.services.workbench import _common as workbench_common
+
+        workbench_common._clear_sessions_sync()
+        with TestClient(app) as test_client:
+            yield test_client
+        workbench_common._clear_sessions_sync()
+
+    def setup_method(self) -> None:
+        _reset_storage_and_registry()
+
+    def test_required_condition_parts_are_warnings_on_load(self, client: TestClient) -> None:
+        test = _incomplete_condition_test()
+        test_id = _store(test)
+
+        response = client.post(f"/tests/{test_id}/validate?context=load")
+
+        assert response.status_code == 200, response.text
+        result = response.json()["data"]
+        assert result["fatal"] is False
+        assert result["errors"] == []
+        assert _found(result["warnings"]) == _REQUIRED_PARTS
+        saved = test_service._validate_test_data(test, context="save")
+        assert _found(saved["errors"]) == _REQUIRED_PARTS
+        assert saved["warnings"] == []
+
+    def test_required_condition_parts_are_errors_on_run(self, client: TestClient) -> None:
+        test_id = _store(_incomplete_condition_test())
+
+        response = client.post(f"/tests/{test_id}/validate?context=run")
+
+        assert response.status_code == 422, response.text
+        result = response.json()["error"]["details"][0]
+        assert _found(result["errors"]) == _REQUIRED_PARTS
+        assert result["warnings"] == []
+
+    @pytest.mark.parametrize(
+        ("values", "code", "said"),
+        [
+            pytest.param({"join": "all"}, "REQUIRED_PARAM_MISSING", "missing", id="missing"),
+            pytest.param(
+                {"branches": [], "join": "all"}, "REQUIRED_PARAM_EMPTY", "empty", id="empty"
+            ),
+        ],
+    )
+    def test_a_parallel_with_no_lanes_warns_of_its_lanes_on_load_and_still_needs_two(
+        self, values: dict[str, Any], code: str, said: str
+    ) -> None:
+        parallel = _make_workflow_node(
+            "node-par", "parallel", "control", "Fan Out", config={"values": values}
+        )
+        test = _stored_control_test([parallel])
+        place = "nodes[0].data.config.values.branches"
+        required = (place, code, f"Required parameter 'branches' is {said}")
+        two_lanes = (place, "INVALID_CONTROL_STRUCTURE", "Parallel requires at least 2 branches")
+
+        loaded = test_service._validate_test_data(test, context="load")
+        saved = test_service._validate_test_data(test, context="save")
+
+        assert _found(loaded["warnings"]) == [required]
+        assert _found(loaded["errors"]) == [two_lanes]
+        assert _found(saved["errors"]) == sorted([required, two_lanes])
+        assert saved["warnings"] == []
+
+    @pytest.mark.parametrize("context", ["load", "import", "run", "save"])
+    def test_structure_problems_are_errors_in_every_context(self, context: str) -> None:
+        result = test_service._validate_test_data(_structure_test(), context=context)
+
+        assert (
+            sorted((e["path"], e["code"], e["message"], e["fix_action"]) for e in result["errors"])
+            == _STRUCTURE_PROBLEMS
+        )
+        assert result["warnings"] == []
+
+    def test_a_run_with_a_control_finding_is_refused(self, run_client: TestClient) -> None:
+        _store_run_environment()
+        test = _stored_control_test(
+            [
+                _if_else_node(
+                    [
+                        {"id": "b1", "type": "if", "label": "", "conditions": []},
+                        {"id": "b2", "type": "else", "label": ""},
+                    ]
+                ),
+                _for_node({"mode": "count", "count": 3, "step": 0}),
+            ]
+        )
+        test_id = _store(test)
+
+        response = run_client.post(
+            "/workbench/run", json={"test_id": test_id, "environment_id": _RUN_ENVIRONMENT_ID}
+        )
+
+        assert response.status_code == 400, response.text
+        assert response.json()["error"]["message"] == (
+            "Cannot run test: validation errors: if branch must have conditions; "
+            "step must not be zero"
+        )
+
+    def test_a_run_start_refuses_a_written_null_with_the_save_text(
+        self, run_client: TestClient
+    ) -> None:
+        """A written null is refused before the run with the save's text (REQ-3.1.3.21)."""
+        _store_run_environment()
+        loop = _for_node({"mode": "count", "count": 3, "step": None})
+        test_id = _store(_stored_control_test([loop]))
+        saved = test_service._validate_test_data(_stored_control_test([loop]), context="save")
+
+        response = run_client.post(
+            "/workbench/run", json={"test_id": test_id, "environment_id": _RUN_ENVIRONMENT_ID}
+        )
+
+        said = "Setting 'step' of block 'for' cannot be null"
+        assert [(e["code"], e["message"]) for e in saved["errors"]] == [
+            ("INVALID_SETTING_VALUE", said)
+        ]
+        assert response.status_code == 400, response.text
+        assert response.json()["error"]["message"] == f"Cannot run test: validation errors: {said}"
+
+
+def _store_run_environment() -> None:
+    from wavecore.api.services.environments import service as environment_service
+
+    environment = {
+        "id": _RUN_ENVIRONMENT_ID,
+        "name": "Control Findings Environment",
+        "tags": [],
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+    }
+    environment_service._save_environment(environment)
+    environment_service._environments.setdefault(_RUN_ENVIRONMENT_ID, environment)

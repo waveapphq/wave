@@ -13,10 +13,11 @@ import {
   pickOperator,
   setReference,
   setReferenceExpression,
+  sheetLiteralRow,
 } from '../../helpers/condition-builder'
 import { getNodeStatuses } from '../../helpers/k8s-run'
 import { chainEdges, controlNode, markerNode, stackNodes, type WorkflowNode } from '../../helpers/k8s-nodes'
-import { literalCondition, type CheckValueType } from '../../helpers/nesting-graph'
+import type { CheckValueType } from '../../helpers/nesting-graph'
 import {
   canvasNodeIds,
   dropBelow,
@@ -129,7 +130,7 @@ export function cellAssert(cell: CheckCell): WorkflowNode {
     category: 'flow',
     description: cell.id,
     values: {
-      assertions: [literalCondition(`${cell.id}-row`, cell.variable, cell.valueType, cell.operator, cell.reference)],
+      assertions: [sheetLiteralRow(`${cell.id}-row`, cell.variable, cell.valueType, cell.operator, cell.reference)],
       mode: 'single',
       fail_current_scope: false,
     },

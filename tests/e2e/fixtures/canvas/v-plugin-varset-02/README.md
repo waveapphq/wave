@@ -9,10 +9,10 @@ Backend seeding required - creates a test with a Variable Setter workflow node a
 ## Seeded Data
 
 - **Test**: "Variable Setter Functional Test" with workflow: Start -> VarSetter -> End
-- **Variables** (7 total across 3 scopes):
+- **Variables** (8 total across 3 scopes):
   - Regression: `reg_env` (string), `reg_debug` (boolean)
   - Suite: `suite_timeout` (integer), `suite_retries` (integer)
-  - Test: `test_name` (string), `test_count` (integer), `test_ratio` (float)
+  - Test: `test_name` (string), `test_count` (integer), `test_ratio` (float), `init_var` (string)
 
 ## Steps
 
@@ -26,8 +26,8 @@ Backend seeding required - creates a test with a Variable Setter workflow node a
 - **Add variables**: New variable rows accept name, type, value
 - **All types**: string, integer, float, boolean, array, map, table
 - **Expression mode**: Per-variable expression toggle
-- **Autocomplete**: Shows existing variables with scope labels
-- **Shadowing**: Amber warning for suite/regression-scoped variables
-- **Type locking**: Existing variable type is locked (grayed out)
+- **Autocomplete**: Shows existing variables with type labels
+- **No shadowing**: A name that matches a suite or regression variable draws no warning (VARSET-4)
+- **Type locking**: Existing variable type is locked (grayed out); a name or type change that would drop a held value asks `Change variable type?` first
 - **Persistence**: Variables survive save/reopen cycle
 - **Delete**: Rows can be removed

@@ -89,7 +89,6 @@ export function TestDataNameDialog({
           value={name}
           onChange={handleChange}
           maxLength={NAME_MAX_LENGTH}
-          autoFocus
           aria-invalid={showMessage}
           aria-describedby={showMessage ? messageId : undefined}
           className="font-mono"

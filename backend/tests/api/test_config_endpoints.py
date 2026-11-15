@@ -14,6 +14,7 @@ Test Coverage:
 - Caching: Configuration caching with invalidation
 """
 
+import logging
 import re
 from unittest.mock import patch
 
@@ -388,3 +389,29 @@ class TestConfigurationErrorHandling:
             assert data["success"] is False
             assert data["error"]["code"] == "INTERNAL_ERROR"
             assert "request_id" in data["meta"]
+
+    @pytest.mark.parametrize(
+        ("path", "logged_key"),
+        [
+            ("/config/test.key", "test.key"),
+            ("/config/test.key%0DERROR%20forged", "base64:dGVzdC5rZXkNRVJST1IgZm9yZ2Vk"),
+        ],
+    )
+    def test_get_config_value_internal_error_logs_the_key_on_one_line(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture, path: str, logged_key: str
+    ) -> None:
+        """REQ-6.4.1: a plain key is logged as sent; one with a carriage return as Base64."""
+        with (
+            patch("wavecore.api.routes.config.config_service.get_config_value") as mock_get,
+            caplog.at_level(logging.ERROR, logger="wavecore.api.routes.config"),
+        ):
+            mock_get.side_effect = RuntimeError("Internal service failure")
+
+            response = client.get(path)
+
+        assert response.status_code == 500
+        assert [
+            record.getMessage()
+            for record in caplog.records
+            if record.name == "wavecore.api.routes.config"
+        ] == [f"Internal error retrieving config value {logged_key}: Internal service failure"]

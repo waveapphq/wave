@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'gate'",
@@ -57,7 +56,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"CUR n={m['n'] + 1} f={m['f'] * 2} zip={m['zip'] + '-x'} big={m['big'] + 1}\"",

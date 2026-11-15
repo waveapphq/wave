@@ -25,6 +25,7 @@ from cryptography.x509.oid import NameOID
 from fastapi.testclient import TestClient
 from httpx import Response
 
+from tests.api.error_reply_support import assert_error_reply
 from tests.plugins.http.tls_material import Credential, make_credential
 from wavecore.api.config import get_config
 from wavecore.connectivity import trust_store
@@ -620,8 +621,11 @@ class TestParseBodyChecks:
             files={"other": ("root.pem", chain.root.cert_pem.encode(), "application/x-pem-file")},
         )
 
-        assert response.status_code == 400, response.text
-        assert response.json()["error"] == {
-            "message": "Validation error for 'file': Field required",
-            "code": "VALIDATION_ERROR",
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Validation error for 'file': Field required"
+        )
+        assert response.json()["error"]["details"] == {
+            "validation_errors": [
+                {"field": "body -> file", "reason": "Field required", "type": "missing"}
+            ]
         }

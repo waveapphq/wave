@@ -13,7 +13,9 @@
  *  2. Direct leak paths: Log of {{ secret }} and of an output variable
  *     holding a response credential header (Set-Cookie) masked in console,
  *     WS stream, and report content
- *  3. Verbatim copy into a plain variable stays masked (pushed value + text)
+ *  3. Verbatim copy into a plain variable stays masked (pushed value + text);
+ *     a Setter writing the secret string and a map into the secret map
+ *     pushes each as the bare ******** (every checked name has a push)
  *  4. Byte-transform escape: a sliced secret IS visible (deliberate hatch)
  *  5. Per-node secret_masking="reveal": that node's lines show the real value;
  *     every other node's lines stay masked
@@ -168,26 +170,25 @@ test.describe('V-SECRET-MASKING-FUNCTIONAL', () => {
         expect(json, `WS payload leaked a map leaf: ${json}`).not.toContain(MAP_LEAF_PASS)
       }
 
-      // variable_changed payloads: flagged + verbatim-copy scalars push the
-      // bare placeholder; the flagged map pushes a count-0 summary
-      // (no keys, no true entry count).
+      // variable_changed payloads: the flagged scalar, the verbatim copy and the
+      // flagged map each push the bare placeholder (no keys, no shape, no count).
+      // varset-copy writes leaked_copy and varset-secrets writes api_token and a
+      // map into cred_map, both after the subscription, so each name has a push.
       const varEvents = events.filter((e) => e.type === 'variable_changed')
       const changedFor = (name: string) =>
         varEvents.filter((e) => (e as { path?: string }).path === name)
-      for (const name of ['api_token', 'leaked_copy']) {
-        for (const evt of changedFor(name)) {
+      for (const name of ['api_token', 'leaked_copy', 'cred_map']) {
+        const pushed = changedFor(name)
+        expect(
+          pushed.length,
+          `a Block writes ${name} after the subscription, so its push must be checked. Variable events: ${JSON.stringify(varEvents)}`,
+        ).toBeGreaterThan(0)
+        for (const evt of pushed) {
           expect(
             (evt as { value?: unknown }).value,
-            `variable_changed for ${name} must be masked`,
+            `variable_changed for ${name} must push the bare mask, got ${JSON.stringify(evt)}`,
           ).toBe(MASK)
         }
-      }
-      const mapPushes = changedFor('cred_map')
-      for (const evt of mapPushes) {
-        expect(
-          (evt as { value?: { count?: number } }).value?.count,
-          `flagged map push must carry count 0, got ${JSON.stringify(evt)}`,
-        ).toBe(0)
       }
       await collector.close()
     })

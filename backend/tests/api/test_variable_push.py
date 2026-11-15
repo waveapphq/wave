@@ -1038,8 +1038,46 @@ class TestVariablePushSecretMasking:
             ),
         )
 
-        # Full opacity: no true measurement of a flagged map may leak
-        assert payload["value"] == {"count": 0, "rows": 0, "cols": 0, "changed": True}
+        # Full opacity: the bare placeholder, never a measurement of the map
+        assert payload["value"] == "********"
+        assert payload["var_type"] == "map"
+
+    @pytest.mark.parametrize(
+        ("copy", "var_type"),
+        [
+            ({"zm_login": "zwadm", "zm_code": "kq4z"}, "map"),
+            (["zwadm", "kq4z"], "array"),
+            ("table", "table"),
+        ],
+        ids=["map", "list", "table"],
+    )
+    async def test_an_unflagged_copy_of_a_secret_container_pushes_the_bare_placeholder(
+        self, copy: Any, var_type: str
+    ) -> None:
+        import uuid
+
+        from wavecore.core.secrets.registry import SecretRegistry
+        from wavecore.core.table import Table
+
+        def vault_rows() -> Table:
+            table = Table(columns=[("zt_login", "string"), ("zt_code", "string")])
+            table.add_row(["zwadm", "kq4z"])
+            return table
+
+        registry = SecretRegistry()
+        registry.register("vault_rows", vault_rows(), "declared")
+        registry.register("vault_map", {"zm_login": "zwadm", "zm_code": "kq4z"}, "declared")
+        registry.register("vault_list", ["zwadm", "kq4z"], "declared")
+        session = _push_session(str(uuid.uuid4()), registry=registry)
+        value = vault_rows() if copy == "table" else copy
+
+        payload = await _capture_push(
+            session,
+            lambda common, sid: common._push_single_variable_change(sid, "copied", value),
+        )
+
+        assert payload["value"] == "********"
+        assert payload["var_type"] == var_type
 
     async def test_verbatim_copy_in_string_is_scrubbed(self) -> None:
         import uuid

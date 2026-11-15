@@ -21,15 +21,15 @@ Endpoints:
 - POST /workflows/validate: Validate workflow structure
 """
 
-import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Header, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.routes.shared import (
     read_json_object,
+    refuse_stale_etag,
     validate_uuid,
 )
 from wavecore.api.services import workflow_service
@@ -42,7 +42,11 @@ router = APIRouter(tags=["Tests"])
 
 # Reusable string constants
 _CACHE_CONTROL_60 = "max-age=60"
-_ERR_PRECONDITION = "Precondition failed"
+
+
+def missing_test(test_id: str) -> NotFoundException:
+    """The 404 every Test route answers for an ID no Test has."""
+    return NotFoundException(f"Test with ID '{test_id}' not found")
 
 
 def _format_save_validation_message(errors: list[dict[str, Any]]) -> str:
@@ -51,7 +55,7 @@ def _format_save_validation_message(errors: list[dict[str, Any]]) -> str:
 
 
 def _save_validation_response(error: SaveValidationError) -> JSONResponse:
-    """Build the standard 422 response for the unified write-path pipeline."""
+    """The 422 for a refused save; its findings list stays an array the web app reads."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
@@ -65,28 +69,7 @@ def _save_validation_response(error: SaveValidationError) -> JSONResponse:
     )
 
 
-def _conflict_response(error: ConflictException) -> JSONResponse:
-    """409 for a conflicting save; 412 when the If-Match ETag no longer matches."""
-    message = error.message
-    if _ERR_PRECONDITION in message:
-        status_code = status.HTTP_412_PRECONDITION_FAILED
-    else:
-        status_code = status.HTTP_409_CONFLICT
-    return JSONResponse(
-        status_code=status_code,
-        content={"success": False, "error": {"message": message, "code": "CONFLICT"}},
-    )
-
-
-def _bad_request_response(error: Exception) -> JSONResponse:
-    """400 for a request the save refuses before it runs."""
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={"success": False, "error": {"message": str(error), "code": "VALIDATION_ERROR"}},
-    )
-
-
-def validate_test_name(name: str) -> None:
+def validate_test_name(name: Any) -> None:
     """Validate test name length.
 
     No character restrictions - all characters allowed.
@@ -95,25 +78,10 @@ def validate_test_name(name: str) -> None:
         name: Test name to validate
 
     Raises:
-        ValueError: If name is empty or too long
+        ValidationException: If name is not text, empty or too long
     """
-    if not name or len(name) > 255:
-        raise ValueError("Test name must be between 1 and 255 characters")
-
-
-def _generate_etag(test: dict[str, Any]) -> str:
-    """Generate ETag for a test.
-
-    Args:
-        test: Test data
-
-    Returns:
-        ETag string (quoted hex hash)
-    """
-    import hashlib
-
-    content = f"{test.get('id')}{test.get('version')}{test.get('updated_at')}"
-    return f'"{hashlib.sha256(content.encode()).hexdigest()}"'
+    if not isinstance(name, str) or not name or len(name) > 255:
+        raise ValidationException("Test name must be between 1 and 255 characters")
 
 
 # =============================================================================
@@ -172,7 +140,7 @@ async def list_tests(
         str | None, Query(description="Sort by field (name, status, lastRun)")
     ] = None,
     sort_order: Annotated[str | None, Query(description="Sort order (asc, desc)")] = "asc",
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """List all tests with filtering and pagination.
 
     Supports page-based pagination and filtering by suite_ids, tags, status, and text search.
@@ -196,18 +164,8 @@ async def list_tests(
     suite_id_list: list[str] | None = None
     if suite_ids:
         suite_id_list = [s.strip() for s in suite_ids.split(",") if s.strip()]
-        # Validate each UUID
         for sid in suite_id_list:
-            try:
-                validate_uuid(sid, "suite_id")
-            except (ValueError, ValidationException) as e:
-                return JSONResponse(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={
-                        "success": False,
-                        "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-                    },
-                )
+            validate_uuid(sid, "suite_id")
 
     # Parse comma-separated status values into list
     status_list: list[str] | None = None
@@ -256,60 +214,30 @@ async def create_test(request: Request, response: Response) -> dict[str, Any] | 
     Returns:
         Created test with metadata
     """
+    body = await read_json_object(request)
+
+    # Validate required fields
+    if "name" not in body:
+        raise ValidationException("Field 'name' is required")
+
+    # Validate field values
+    validate_test_name(body["name"])
+
+    # Create test (service layer runs the unified write-path pipeline)
     try:
-        body = await read_json_object(request)
-
-        # Validate required fields
-        if "name" not in body:
-            raise ValueError("Field 'name' is required")
-
-        # Validate field values
-        validate_test_name(body["name"])
-
-        # Create test (service layer runs the unified write-path pipeline)
         test = test_service.create_test(body)
-        repairs = test.pop("repairs", [])
-
-        # Set cache invalidation header
-        response.headers["X-Cache-Invalidated"] = "tests_list"
-
-        return {"success": True, "data": test, "repairs": repairs}
-
     except SaveValidationError as e:
         return _save_validation_response(e)
-    except ConflictException as e:
-        return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={
-                "success": False,
-                "error": {"message": e.message, "code": "CONFLICT"},
-            },
-        )
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
-    except Exception:
-        correlation_id = str(uuid.uuid4())
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "success": False,
-                "error": {
-                    "message": "Internal server error",
-                    "code": "INTERNAL_ERROR",
-                    "correlation_id": correlation_id,
-                },
-            },
-        )
+    repairs = test.pop("repairs", [])
+
+    # Set cache invalidation header
+    response.headers["X-Cache-Invalidated"] = "tests_list"
+
+    return {"success": True, "data": test, "repairs": repairs}
 
 
 @router.get("/tests/{test_id}", response_model=None)
-async def get_test(test_id: str, response: Response) -> dict[str, Any] | JSONResponse:
+async def get_test(test_id: str, response: Response) -> dict[str, Any]:
     """Get test by ID.
 
     Args:
@@ -319,36 +247,17 @@ async def get_test(test_id: str, response: Response) -> dict[str, Any] | JSONRes
     Returns:
         Test details with metadata
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        test = test_service.get_test(test_id)
+    test = test_service.get_test(test_id)
 
-        if test is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if test is None:
+        raise missing_test(test_id)
 
-        # Set ETag header for concurrency control
-        response.headers["ETag"] = _generate_etag(test)
+    # Set ETag header for concurrency control
+    response.headers["ETag"] = test_service._generate_etag(test)
 
-        return {"success": True, "data": test}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": test}
 
 
 @router.put("/tests/{test_id}", response_model=None)
@@ -369,42 +278,28 @@ async def update_test(
     Returns:
         Updated test
     """
+    validate_uuid(test_id, "test_id")
+
+    body = await read_json_object(request)
+
+    # Validate name if being updated
+    if "name" in body:
+        validate_test_name(body["name"])
+
     try:
-        validate_uuid(test_id, "test_id")
-
-        body = await read_json_object(request)
-
-        # Validate name if being updated
-        if "name" in body:
-            validate_test_name(body["name"])
-
         result = test_service.update_test(test_id, body, etag=if_match)
-
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        repairs = result.pop("repairs", [])
-
-        # Set new ETag
-        response.headers["ETag"] = _generate_etag(result)
-
-        return {"success": True, "data": result, "repairs": repairs}
-
     except SaveValidationError as e:
         return _save_validation_response(e)
-    except ConflictException as e:
-        return _conflict_response(e)
-    except (ValueError, ValidationException) as e:
-        return _bad_request_response(e)
+
+    if result is None:
+        raise missing_test(test_id)
+
+    repairs = result.pop("repairs", [])
+
+    # Set new ETag
+    response.headers["ETag"] = test_service._generate_etag(result)
+
+    return {"success": True, "data": result, "repairs": repairs}
 
 
 @router.patch("/tests/{test_id}/metadata", response_model=None)
@@ -413,7 +308,7 @@ async def update_test_metadata(
     request: Request,
     response: Response,
     if_match: Annotated[str | None, Header()] = None,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Update test metadata only (name, description, tags).
 
     Does NOT update workflow or increment version.
@@ -427,38 +322,23 @@ async def update_test_metadata(
     Returns:
         Updated test
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        body = await read_json_object(request)
+    body = await read_json_object(request)
 
-        # Validate name if being updated
-        if "name" in body:
-            validate_test_name(body["name"])
+    # Validate name if being updated
+    if "name" in body:
+        validate_test_name(body["name"])
 
-        result = test_service.update_test_metadata(test_id, body, etag=if_match)
+    result = test_service.update_test_metadata(test_id, body, etag=if_match)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise missing_test(test_id)
 
-        # Set new ETag
-        response.headers["ETag"] = _generate_etag(result)
+    # Set new ETag
+    response.headers["ETag"] = test_service._generate_etag(result)
 
-        return {"success": True, "data": result}
-
-    except ConflictException as e:
-        return _conflict_response(e)
-    except (ValueError, ValidationException) as e:
-        return _bad_request_response(e)
+    return {"success": True, "data": result}
 
 
 @router.delete("/tests/{test_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -477,46 +357,13 @@ async def delete_test(
     Returns:
         Empty response with 204 status code
     """
-    try:
-        # Check ETag if provided
-        if if_match:
-            test = test_service.get_test(test_id)
-            if test:
-                current_etag = _generate_etag(test)
-                if if_match != current_etag:
-                    raise ValueError("Precondition failed: resource has been modified")
+    validate_uuid(test_id, "test_id")
+    refuse_stale_etag(if_match, test_service.get_test, test_id, test_service._generate_etag)
 
-        deleted = test_service.delete_test(test_id)
+    if not test_service.delete_test(test_id):
+        raise missing_test(test_id)
 
-        if not deleted:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if _ERR_PRECONDITION in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # =============================================================================
@@ -525,7 +372,7 @@ async def delete_test(
 
 
 @router.get("/tests/{test_id}/workflow", response_model=None)
-async def get_test_workflow(test_id: str) -> dict[str, Any] | JSONResponse:
+async def get_test_workflow(test_id: str) -> dict[str, Any]:
     """Get test workflow graph.
 
     Args:
@@ -534,37 +381,18 @@ async def get_test_workflow(test_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Workflow graph (nodes and edges)
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        workflow = test_service.get_test_workflow(test_id)
+    workflow = test_service.get_test_workflow(test_id)
 
-        if workflow is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if workflow is None:
+        raise missing_test(test_id)
 
-        return {"success": True, "data": workflow}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": workflow}
 
 
 @router.get("/tests/{test_id}/variables", response_model=None)
-async def get_test_variables(test_id: str) -> dict[str, Any] | JSONResponse:
+async def get_test_variables(test_id: str) -> dict[str, Any]:
     """Get test variables.
 
     Args:
@@ -573,37 +401,18 @@ async def get_test_variables(test_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Variable declarations with masked secrets
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        variables = test_service.get_test_variables(test_id)
+    variables = test_service.get_test_variables(test_id)
 
-        if variables is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if variables is None:
+        raise missing_test(test_id)
 
-        return {"success": True, "data": variables}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": variables}
 
 
 @router.patch("/tests/{test_id}/variables", response_model=None)
-async def update_test_variables(test_id: str, request: Request) -> dict[str, Any] | JSONResponse:
+async def update_test_variables(test_id: str, request: Request) -> dict[str, Any]:
     """Update test variables.
 
     Args:
@@ -613,52 +422,35 @@ async def update_test_variables(test_id: str, request: Request) -> dict[str, Any
     Returns:
         Updated variable declarations
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        body = await read_json_object(request)
+    body = await read_json_object(request)
 
-        # Validate required field
-        if "variables" not in body:
-            raise ValueError("Field 'variables' is required")
+    # Validate required field
+    if "variables" not in body:
+        raise ValidationException("Field 'variables' is required")
 
-        variables = body["variables"]
-        merge = body.get("merge", False)
+    variables = body["variables"]
+    if not isinstance(variables, dict):
+        raise ValidationException("Field 'variables' must be an object")
+    merge = body.get("merge", False)
 
-        result = test_service.update_test_variables(test_id, variables, merge=merge)
+    result = test_service.update_test_variables(test_id, variables, merge=merge)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise missing_test(test_id)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}
 
 
 def _unsaved_parts(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """The workflow and the variables, when given, of an unsaved test body."""
     workflow = body.get("workflow")
     if not isinstance(workflow, dict):
-        raise ValueError("Field 'workflow' must be an object")
+        raise ValidationException("Field 'workflow' must be an object")
     variables = body.get("variables")
     if variables is not None and not isinstance(variables, dict):
-        raise ValueError("Field 'variables' must be an object")
+        raise ValidationException("Field 'variables' must be an object")
     return workflow, variables
 
 
@@ -687,59 +479,38 @@ async def validate_test(
     Returns:
         Validation result with fatal flag, errors, and warnings
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        if context not in ("load", "import", "run"):
-            raise ValueError(
-                f"Invalid validation context: '{context}' (must be load, import, or run)"
-            )
+    if context not in ("load", "import", "run"):
+        raise ValidationException(
+            f"Invalid validation context: '{context}' (must be load, import, or run)"
+        )
 
-        if unsaved is None:
-            result = test_service.validate_test(test_id, context=context)
-        else:
-            workflow, variables = _unsaved_parts(unsaved)
-            result = test_service.validate_unsaved_test(
-                test_id, workflow, variables, context=context
-            )
+    if unsaved is None:
+        result = test_service.validate_test(test_id, context=context)
+    else:
+        workflow, variables = _unsaved_parts(unsaved)
+        result = test_service.validate_unsaved_test(test_id, workflow, variables, context=context)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise missing_test(test_id)
 
-        # 422 when validation found errors, 200 when clean
-        if result.get("fatal") or result.get("errors"):
-            error_count = len(result.get("errors", []))
-            return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test has {error_count} validation error(s)",
-                        "code": "VALIDATION_ERRORS",
-                        "details": [result],
-                    },
-                },
-            )
-
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
+    # 422 when validation found errors, 200 when clean; the web app reads the result as an array
+    if result.get("fatal") or result.get("errors"):
+        error_count = len(result.get("errors", []))
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
+                "error": {
+                    "message": f"Test has {error_count} validation error(s)",
+                    "code": "VALIDATION_ERRORS",
+                    "details": [result],
+                },
             },
         )
+
+    return {"success": True, "data": result}
 
 
 @router.post("/tests/{test_id}/fix", response_model=None)
@@ -755,41 +526,25 @@ async def fix_test(test_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Fixed test data
     """
+    validate_uuid(test_id, "test_id")
+
     try:
-        validate_uuid(test_id, "test_id")
-
         fix_result = test_service.fix_test(test_id)
+    except SaveValidationError as e:
+        return _save_validation_response(e)
 
-        if fix_result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if fix_result is None:
+        raise missing_test(test_id)
 
-        return {
-            "success": True,
-            "data": fix_result["test"],
-            "warnings": fix_result.get("warnings", []),
-        }
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {
+        "success": True,
+        "data": fix_result["test"],
+        "warnings": fix_result.get("warnings", []),
+    }
 
 
 @router.post("/tests/{test_id}/clone", status_code=status.HTTP_201_CREATED, response_model=None)
-async def clone_test(test_id: str, request: Request) -> dict[str, Any] | JSONResponse:
+async def clone_test(test_id: str, request: Request) -> dict[str, Any]:
     """Clone test with a new name.
 
     Args:
@@ -799,59 +554,41 @@ async def clone_test(test_id: str, request: Request) -> dict[str, Any] | JSONRes
     Returns:
         Cloned test
     """
+    validate_uuid(test_id, "test_id")
+
+    # Handle empty body or missing fields
     try:
-        validate_uuid(test_id, "test_id")
+        body = await read_json_object(request)
+    except ValidationException:
+        body = {}
 
-        # Handle empty body or missing fields
-        try:
-            body = await read_json_object(request)
-        except ValidationException:
-            body = {}
+    if "new_name" in body:
+        new_name = body["new_name"]
+        validate_test_name(new_name)
+    else:
+        # Get original test name and append " (Copy)"
+        original = test_service.get_test(test_id)
+        if original:
+            new_name = f"{original.get('name', 'Test')} (Copy)"
+        else:
+            new_name = "Test (Copy)"
 
-        # Auto-generate name if not provided
-        new_name = body.get("new_name")
-        if not new_name:
-            # Get original test name and append " (Copy)"
-            original = test_service.get_test(test_id)
-            if original:
-                new_name = f"{original.get('name', 'Test')} (Copy)"
-            else:
-                new_name = "Test (Copy)"
+    new_version = body.get("new_version")
 
-        new_version = body.get("new_version")
+    # Validate new_version if provided
+    if new_version:
+        validate_semantic_version(new_version)
 
-        # Validate new_version if provided
-        if new_version:
-            validate_semantic_version(new_version)
+    result = test_service.clone_test(test_id, new_name, new_version)
 
-        result = test_service.clone_test(test_id, new_name, new_version)
+    if result is None:
+        raise missing_test(test_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}
 
 
 @router.get("/tests/{test_id}/dependency-graph", response_model=None)
-async def get_test_dependency_graph(test_id: str) -> dict[str, Any] | JSONResponse:
+async def get_test_dependency_graph(test_id: str) -> dict[str, Any]:
     """Get test dependency graph.
 
     Reveals all block references with version constraints.
@@ -862,37 +599,18 @@ async def get_test_dependency_graph(test_id: str) -> dict[str, Any] | JSONRespon
     Returns:
         Dependency graph with nodes and edges
     """
-    try:
-        validate_uuid(test_id, "test_id")
+    validate_uuid(test_id, "test_id")
 
-        result = test_service.get_test_dependency_graph(test_id)
+    result = test_service.get_test_dependency_graph(test_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Test with ID '{test_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise missing_test(test_id)
 
-        return {"success": True, "data": result, "nodes": result["nodes"], "edges": result["edges"]}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": result, "nodes": result["nodes"], "edges": result["edges"]}
 
 
 @router.post("/workflows/validate", response_model=None)
-async def validate_workflow(request: Request) -> dict[str, Any] | JSONResponse:
+async def validate_workflow(request: Request) -> dict[str, Any]:
     """Validate workflow structure independently of test context.
 
     Supports cycle detection, reachability analysis, termination verification,
@@ -904,24 +622,14 @@ async def validate_workflow(request: Request) -> dict[str, Any] | JSONResponse:
     Returns:
         Validation result with errors and warnings
     """
-    try:
-        body = await read_json_object(request)
+    body = await read_json_object(request)
 
-        # Validate required fields
-        if "nodes" not in body:
-            raise ValueError("Field 'nodes' is required")
-        if "edges" not in body:
-            raise ValueError("Field 'edges' is required")
+    # Validate required fields
+    if "nodes" not in body:
+        raise ValidationException("Field 'nodes' is required")
+    if "edges" not in body:
+        raise ValidationException("Field 'edges' is required")
 
-        result = workflow_service.validate_workflow(body)
+    result = workflow_service.validate_workflow(body)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}

@@ -21,11 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTemplateKeys": [],
-          "variableTypes": {
-            "widget_id": "integer"
-          },
           "config": {
             "values": {
               "variables": {
@@ -56,18 +51,12 @@
           "version": "1.0.0",
           "description": "Reference In Values",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "doubled"
+          "expressionFields": [
+            "variables.doubled"
           ],
-          "variableTemplateKeys": [
-            "caption"
+          "templateFields": [
+            "variables.caption"
           ],
-          "variableTypes": {
-            "doubled": "integer",
-            "caption": "string"
-          },
           "config": {
             "values": {
               "variables": {

@@ -12,8 +12,10 @@ export interface LiteralAssertion {
   variable: string
   value_type: string
   operator: string
-  reference_value: unknown
-  reference_is_expression: boolean
+  /** Absent while not set; an operator that takes no value keeps none of the three compare keys. */
+  reference_value?: unknown
+  reference_is_expression?: boolean
+  reference_is_template?: boolean
 }
 
 export interface ExpressionAssertion {
@@ -54,7 +56,6 @@ export interface AssertionBuilderProps {
   assertions: AssertionItem[]
   availableVariables: Array<{ name: string; type: string }>
   onAssertionsChange: (assertions: AssertionItem[]) => void
-  onValidChange?: (valid: boolean) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -153,12 +154,37 @@ export function getOperatorsForType(valueType: string): Array<{ value: string; l
   return OPERATORS_BY_TYPE[valueType] ?? DEFAULT_OPERATORS
 }
 
+const COMPARE_TO_KEYS = ['reference_value', 'reference_is_expression', 'reference_is_template'] as const
+
+/** The row with no compare value and no mode flag: what a change that loses the value leaves. */
+export function withoutCompareValue(row: LiteralAssertion): LiteralAssertion {
+  const next = { ...row }
+  for (const key of COMPARE_TO_KEYS) delete next[key]
+  return next
+}
+
+/** The one new-row seed: no variable, the type's first operator, no compare value (REQ-3.5.1.5). */
+export function newLiteralRow(valueType = 'string'): LiteralAssertion {
+  return {
+    id: nextId('lit'),
+    type: 'literal',
+    variable: '',
+    value_type: valueType,
+    operator: getOperatorsForType(valueType)[0].value,
+  }
+}
+
+/** An operator that takes no value keeps no compare value and no mode flag (REQ-3.5.1.5). */
+export function dropUnusedCompareTo(row: LiteralAssertion): LiteralAssertion {
+  if (!UNARY_OPERATORS.has(row.operator)) return row
+  return COMPARE_TO_KEYS.some((key) => Object.hasOwn(row, key)) ? withoutCompareValue(row) : row
+}
+
 /** The row with a new operator; one that takes no compare-to value keeps none (REQ-3.1.3.25). */
 export function withOperator(item: LiteralAssertion, operator: string): LiteralAssertion {
-  if (UNARY_OPERATORS.has(operator)) return { ...item, operator, reference_value: null }
-  // Leaving an operator that takes none, the row starts from the empty value a new row has.
-  if (UNARY_OPERATORS.has(item.operator)) return { ...item, operator, reference_value: '' }
-  return { ...item, operator }
+  // Leaving an operator that takes none, the compare value starts not set, as on a new row.
+  if (UNARY_OPERATORS.has(item.operator)) return { ...withoutCompareValue(item), operator }
+  return dropUnusedCompareTo({ ...item, operator })
 }
 
 /** The row read as another value type: it keeps an operator the type offers, else takes the type's first. */

@@ -10,8 +10,8 @@
  * 3. After the Block and Test saves the stored password is sealed (never the typed text), the reopened field is
  *    masked and the line is gone.
  * 4. After `Delete & Edit` on the masked password the keyboard focus is in the field's new text box.
- * 5. After `Delete & Edit` on a stored map credential (K8s Apply Secret Data) the keyboard focus is in the
- *    field's new box.
+ * 5. After `Delete & Edit` on a stored map credential (K8s Apply Secret Data) the emptied map's Edit value sheet
+ *    opens with the keyboard focus inside it; Escape closes it and the keyboard focus is in the field's new box.
  * 6. A secret Function input typed in a library Function view says `Secret value stays visible until you save the
  *    Function.`, linked to its box the same way.
  *
@@ -106,13 +106,13 @@ test.describe('V-ENTRY-BEHAVIOR-SECRETS-FUNCTIONAL: the unsaved-secret line and 
       expect(stored === SECRET_MASK || stored.startsWith(SECRET_ENVELOPE), `stored as ${stored}`).toBe(true)
 
       const reopened = await openBlockSheet(page, SSH)
-      await expect(maskedControl(reopened, 'password')).toBeVisible()
+      await expect(maskedControl(reopened, 'password', 'Password')).toBeVisible()
       await expect(reopened.getByText(SECRET_LINE_TEST), 'the line is gone once saved').toHaveCount(0)
     })
 
     await test.step("Delete & Edit puts the focus in the field's new box", async () => {
       const reopened = page.locator('[data-testid="element-config-sheet"]')
-      await deleteAndEdit(page, maskedControl(reopened, 'password'))
+      await deleteAndEdit(page, maskedControl(reopened, 'password', 'Password'))
       await expect(rowTextBox(reopened, 'password'), 'the new box has the focus').toBeFocused()
       await expect(rowTextBox(reopened, 'password')).toHaveValue('')
     })
@@ -124,9 +124,18 @@ test.describe('V-ENTRY-BEHAVIOR-SECRETS-FUNCTIONAL: the unsaved-secret line and 
     })
     const win = await openBlockSheet(page, K8S)
     const row = paramRow(win, 'secret_data')
-    await expect(maskedControl(win, 'secret_data'), 'the stored map is masked').toBeVisible()
-    await deleteAndEdit(page, maskedControl(win, 'secret_data'))
-    await expect(maskedControl(win, 'secret_data')).toHaveCount(0)
+    await expect(maskedControl(win, 'secret_data', 'Data'), 'the stored map is masked').toBeVisible()
+    await deleteAndEdit(page, maskedControl(win, 'secret_data', 'Data'))
+    await expect(maskedControl(win, 'secret_data', 'Data')).toHaveCount(0)
+    const sheet = page.getByTestId('value-editor-sheet')
+    await expect(sheet, 'the emptied map opens its Edit value sheet').toHaveCount(1)
+    await expect
+      .poll(() => sheet.evaluate((el) => el.contains(el.ownerDocument.activeElement)), {
+        message: 'the focus is inside the sheet',
+      })
+      .toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(sheet).toHaveCount(0)
     await expect
       .poll(() => focusedTextBoxInside(row), { message: 'the focus is in the box that replaced the masked map' })
       .toBe(true)

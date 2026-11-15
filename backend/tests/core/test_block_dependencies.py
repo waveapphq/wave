@@ -15,6 +15,10 @@ Note: Uses BlockDependency from wavecore.models for dependency declarations.
 The dependency resolution engine (wavecore.core.dependencies) uses this model.
 """
 
+import operator
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -1120,6 +1124,55 @@ class TestSemanticVersionEdgeCases:
 
         assert alpha < beta
         assert beta > alpha
+
+    def test_every_ordering_operator_follows_the_version_order(self) -> None:
+        from wavecore.core.dependencies import SemanticVersion
+
+        lower = SemanticVersion.parse("1.2.3")
+        higher = SemanticVersion.parse("1.10.0")
+
+        assert (lower < higher, lower <= higher, lower > higher, lower >= higher) == (
+            True,
+            True,
+            False,
+            False,
+        )
+        assert (higher < lower, higher <= lower, higher > lower, higher >= lower) == (
+            False,
+            False,
+            True,
+            True,
+        )
+
+    def test_versions_that_differ_only_in_build_are_equal_in_every_order(self) -> None:
+        from wavecore.core.dependencies import SemanticVersion
+
+        first = SemanticVersion.parse("1.0.0-rc.1+build.1")
+        second = SemanticVersion.parse("1.0.0-rc.1+build.2")
+
+        assert (first < second, first <= second, first > second, first >= second) == (
+            False,
+            True,
+            False,
+            True,
+        )
+
+    @pytest.mark.parametrize(
+        ("compare", "symbol"),
+        [(operator.lt, "<"), (operator.le, "<="), (operator.gt, ">"), (operator.ge, ">=")],
+    )
+    def test_ordering_against_a_non_semver_is_refused(
+        self, compare: Callable[[Any, Any], bool], symbol: str
+    ) -> None:
+        from wavecore.core.dependencies import SemanticVersion
+
+        version = SemanticVersion.parse("1.0.0")
+
+        with pytest.raises(
+            TypeError,
+            match=rf"^'{symbol}' not supported between instances of 'SemanticVersion' and 'int'$",
+        ):
+            compare(version, 1)
 
     def test_equality_with_non_semver(self):
         """Test equality comparison with non-SemanticVersion object."""

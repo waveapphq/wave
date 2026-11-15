@@ -7,12 +7,27 @@ result dict shape, defaults, and graceful behavior without a logger.
 """
 
 import asyncio
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+from tests.core.run_fill_support import run_fill
 from wavecore.controls.flow import HaltControl
 from wavecore.models.enums import ControlId
+
+SCOPE_NOT_ALLOWED = (
+    r"^Parameter 'scope' must be one of: test, suite, regression, function; "
+    r"Actual value was '{given}'\.$"
+)
+STATUS_NOT_ALLOWED = (
+    r"^Parameter 'status' must be one of: passed, failed, skipped; Actual value was '{given}'\.$"
+)
+
+
+def _run_fill(stored: dict[str, Any]) -> dict[str, Any]:
+    return run_fill(HaltControl(), stored)
+
 
 # =============================================================================
 # Metadata Tests
@@ -121,25 +136,15 @@ class TestHaltControlValidation:
         control = HaltControl()
         asyncio.run(control.validate({"scope": "function"}))
 
-    def test_validate_rejects_invalid_scope(self) -> None:
-        """Verify validation fails for invalid scope value."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'scope' must be one of: test, suite, regression, function; Actual "
-            r"value was '.*'\.$",
-        ):
-            asyncio.run(control.validate({"scope": "invalid"}))
+    def test_the_run_fill_refuses_an_invalid_scope(self) -> None:
+        """A scope outside the declared list stops the Block before validate() runs."""
+        with pytest.raises(ValueError, match=SCOPE_NOT_ALLOWED.format(given="invalid")):
+            _run_fill({"scope": "invalid"})
 
-    def test_validate_rejects_empty_string_scope(self) -> None:
-        """Verify validation fails for empty string scope."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'scope' must be one of: test, suite, regression, function; Actual "
-            r"value was '.*'\.$",
-        ):
-            asyncio.run(control.validate({"scope": ""}))
+    def test_the_run_fill_refuses_an_empty_string_scope(self) -> None:
+        """An empty scope is outside the declared list."""
+        with pytest.raises(ValueError, match=SCOPE_NOT_ALLOWED.format(given="")):
+            _run_fill({"scope": ""})
 
     def test_validate_accepts_status_passed(self) -> None:
         """Verify validation passes for status=passed."""
@@ -156,25 +161,15 @@ class TestHaltControlValidation:
         control = HaltControl()
         asyncio.run(control.validate({"status": "skipped"}))
 
-    def test_validate_rejects_invalid_status(self) -> None:
-        """Verify validation fails for invalid status value."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'status' must be one of: passed, failed, skipped; Actual value was "
-            r"'.*'\.$",
-        ):
-            asyncio.run(control.validate({"status": "error"}))
+    def test_the_run_fill_refuses_an_invalid_status(self) -> None:
+        """A status outside the declared list stops the Block before validate() runs."""
+        with pytest.raises(ValueError, match=STATUS_NOT_ALLOWED.format(given="error")):
+            _run_fill({"status": "error"})
 
-    def test_validate_rejects_empty_string_status(self) -> None:
-        """Verify validation fails for empty string status."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'status' must be one of: passed, failed, skipped; Actual value was "
-            r"'.*'\.$",
-        ):
-            asyncio.run(control.validate({"status": ""}))
+    def test_the_run_fill_refuses_an_empty_string_status(self) -> None:
+        """An empty status is outside the declared list."""
+        with pytest.raises(ValueError, match=STATUS_NOT_ALLOWED.format(given="")):
+            _run_fill({"status": ""})
 
     def test_validate_accepts_defaults_when_params_omitted(self) -> None:
         """Verify validation passes when all params omitted (defaults apply)."""
@@ -188,25 +183,15 @@ class TestHaltControlValidation:
             control.validate({"scope": "suite", "status": "skipped", "message": "not applicable"})
         )
 
-    def test_validate_rejects_scope_with_case_mismatch(self) -> None:
-        """Verify validation rejects uppercase scope values."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'scope' must be one of: test, suite, regression, function; Actual "
-            r"value was '.*'\.$",
-        ):
-            asyncio.run(control.validate({"scope": "Test"}))
+    def test_the_run_fill_refuses_a_scope_with_case_mismatch(self) -> None:
+        """The scope list is matched case for case."""
+        with pytest.raises(ValueError, match=SCOPE_NOT_ALLOWED.format(given="Test")):
+            _run_fill({"scope": "Test"})
 
-    def test_validate_rejects_status_with_case_mismatch(self) -> None:
-        """Verify validation rejects uppercase status values."""
-        control = HaltControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'status' must be one of: passed, failed, skipped; Actual value was "
-            r"'.*'\.$",
-        ):
-            asyncio.run(control.validate({"status": "Failed"}))
+    def test_the_run_fill_refuses_a_status_with_case_mismatch(self) -> None:
+        """The status list is matched case for case."""
+        with pytest.raises(ValueError, match=STATUS_NOT_ALLOWED.format(given="Failed")):
+            _run_fill({"status": "Failed"})
 
 
 # =============================================================================
@@ -314,20 +299,20 @@ class TestHaltControlExecution:
         }
 
     def test_halt_defaults_scope_to_test(self) -> None:
-        """Verify scope defaults to 'test' when omitted."""
+        """With scope left out, the run fill hands the declared default 'test'."""
         control = HaltControl()
         context = {
-            "parameters": {"status": "failed"},
+            "parameters": _run_fill({"status": "failed"}),
             "variables": {},
         }
         result = asyncio.run(control.execute(context))
         assert result["__halt_scope"] == "test"
 
     def test_halt_defaults_status_to_failed(self) -> None:
-        """Verify status defaults to 'failed' when omitted."""
+        """With status left out, the run fill hands the declared default 'failed'."""
         control = HaltControl()
         context = {
-            "parameters": {"scope": "test"},
+            "parameters": _run_fill({"scope": "test"}),
             "variables": {},
         }
         result = asyncio.run(control.execute(context))
@@ -344,10 +329,10 @@ class TestHaltControlExecution:
         assert result["__halt_message"] is None
 
     def test_halt_all_defaults_when_params_empty(self) -> None:
-        """Verify all defaults applied when no params specified."""
+        """With nothing stored, the run fill hands every declared default."""
         control = HaltControl()
         context = {
-            "parameters": {},
+            "parameters": _run_fill({}),
             "variables": {},
         }
         result = asyncio.run(control.execute(context))
@@ -363,7 +348,7 @@ class TestHaltControlExecution:
         control = HaltControl()
         for status in ("passed", "failed", "skipped"):
             context = {
-                "parameters": {"status": status},
+                "parameters": {"scope": "test", "status": status},
                 "variables": {},
             }
             result = asyncio.run(control.execute(context))
@@ -614,10 +599,10 @@ class TestHaltControlNoLogger:
             assert result["__halt_status"] == status
 
     def test_execute_without_logger_defaults(self) -> None:
-        """Verify defaults work without a logger."""
+        """The run-filled defaults work without a logger."""
         control = HaltControl()
         context = {
-            "parameters": {},
+            "parameters": _run_fill({}),
             "variables": {},
         }
         result = asyncio.run(control.execute(context))

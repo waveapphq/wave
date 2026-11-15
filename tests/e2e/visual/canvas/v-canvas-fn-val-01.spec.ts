@@ -49,7 +49,6 @@ function buildSeed(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',

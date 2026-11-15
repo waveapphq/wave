@@ -56,8 +56,10 @@ function mockApiResponse(
     ended_at: '2026-04-18T10:00:05+00:00',
     workflow: SNAPSHOT_WORKFLOW,
     block_states: { 'node-log': 'passed' },
+    lanes_taken: {},
     variables: { x: 42 },
     variable_definitions: {},
+    secret_variables: [],
     logs: [],
     environment_id: null,
     environment_name: null,
@@ -317,6 +319,7 @@ describe('ExecutionTestCanvasPage - Back navigation and status normalization', (
         workflow: null,
         block_states: null as unknown as Record<string, string>,
         variables: null as unknown as Record<string, unknown>,
+        secret_variables: null as unknown as string[],
         variable_definitions: null as unknown as Record<
           string,
           import('@/features/executions/api/types').HistoricalCanvasVariableDefinition

@@ -1,27 +1,22 @@
 /**
  * V-EXPRESSION-EDITOR-MODAL-TITLES: Modal title routing per context
- *
+ * REQ: REQ-3.5.1.5, REQ-3.4.1.14
  * Phase: no-data (parallel) - palette + element-config interactions only.
  *
  * Pass Criteria:
- *   The Ctrl+E full-editor modal title is `Edit ${displayName}`, falling back
- *   to "Edit expression" when no displayName flows through. Concretely:
+ *   The Ctrl+E full-editor modal title is `Edit ${label}`, falling back
+ *   to "Edit expression" when the label is empty. Concretely:
  *     1. HTTP Client URL parameter (label "URL"): "Edit URL".
  *     2. Var Setter row with name="myvar": "Edit myvar".
- *     3. Assert top-level expression item: "Edit assertion expression".
- *     4. Assert reference-value (expression mode) with variable selected:
- *        "Edit ${variable}".
+ *     3. Assert top-level expression row: "Edit Condition".
+ *     4. Assert compare value in expression mode: "Edit Value".
+ *     5. Var Setter row with no name in expression mode: "Edit expression".
  *
  *   Note on the URL label: the HTTP plugin schema in
  *   `frontend/src/features/workbench/lib/node-parameters/plugins/http-client.ts`
  *   defines the parameter label as `"URL"` (not `"Request URL"`). Production
  *   behavior follows the schema; this spec asserts on the schema's value so it
  *   pins the actual contract end users see.
- *
- *   Note on Var Setter row with empty name: the production code in
- *   `variable-setter-editor/row-fields.tsx` passes `name={row.name || \`row-${index}\`}`
- *   without a `displayName`, so an empty row produces "Edit row-0". This spec
- *   covers the named-row case only.
  */
 
 import { test, expect, type Page, type Locator } from '../../helpers/playwright-fixtures'
@@ -99,7 +94,7 @@ test.describe('V-EXPRESSION-EDITOR-MODAL-TITLES: title routing per context', () 
     await expectTitle(editor, 'Edit myvar')
   })
 
-  test('S3: Assert top-level expression -> "Edit assertion expression"', async ({
+  test('S3: Assert top-level expression -> "Edit Condition"', async ({
     page,
   }) => {
     await page.goto('/workbench')
@@ -113,9 +108,41 @@ test.describe('V-EXPRESSION-EDITOR-MODAL-TITLES: title routing per context', () 
     const exprIcon = modal.locator('[data-testid^="assert-expression-icon-"]').first()
     await expect(exprIcon).toBeVisible()
     const assertCm = modal
-      .locator('[data-testid^="assert-expression-input-"] .cm-content')
+      .locator('[data-testid^="param-input-assert-expr-"] .cm-content')
       .first()
     const editor = await openCtrlEFrom(page, assertCm)
-    await expectTitle(editor, 'Edit assertion expression')
+    await expectTitle(editor, 'Edit Condition')
+  })
+
+  test('S4: Assert compare value in expression mode -> "Edit Value"', async ({
+    page,
+  }) => {
+    await page.goto('/workbench')
+    await waitForCanvasLoad(page)
+    const modal = await dropAndOpenConfig(page, 'assert')
+
+    await modal.locator('[data-testid="assert-add-assertion"]').click()
+    await modal.locator('[data-testid="assert-add-literal"]').click()
+    await modal.locator('[data-testid="assert-expr-toggle-0"]').click()
+    const valueCm = modal.locator('[data-testid="param-input-assert-value-0"] .cm-content')
+    await expect(valueCm).toBeVisible()
+    const editor = await openCtrlEFrom(page, valueCm)
+    await expectTitle(editor, 'Edit Value')
+  })
+
+  test('S5: Var Setter row with no name -> "Edit expression"', async ({ page }) => {
+    await page.goto('/workbench')
+    await waitForCanvasLoad(page)
+    const modal = await dropAndOpenConfig(page, {
+      term: 'var setter',
+      testId: 'palette-item-variable-setter',
+    })
+
+    await expect(modal.locator('[data-testid="varset-name-input-0"]')).toHaveValue('')
+    await modal.locator('[data-testid="varset-expression-toggle-0"]').click()
+    const valueCm = modal.locator('[data-testid="param-input-varset-value-0"] .cm-content')
+    await expect(valueCm).toBeVisible()
+    const editor = await openCtrlEFrom(page, valueCm)
+    await expectTitle(editor, 'Edit expression')
   })
 })

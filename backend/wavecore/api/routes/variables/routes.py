@@ -18,14 +18,18 @@ Endpoints:
 - DELETE /variables/{scope}/{entity_id}/{name}: Delete variable
 """
 
-import json
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
+from wavecore.api.routes.shared import (
+    build_response_meta,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services import variable_service
 from wavecore.api.services.file_tree import content_disposition
@@ -232,12 +236,7 @@ async def import_system_variables(
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError as err:
-            raise ValidationException("Invalid JSON in conflict_resolutions") from err
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     result = variable_service.import_system_variables(content, filename, resolutions)
 

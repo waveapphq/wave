@@ -12,7 +12,10 @@ import { useMemo } from 'react'
 import type { Edge } from '@xyflow/react'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { useExecutionStore } from '@/features/workbench/stores/execution-store'
-import { useHistoricalBlockStatuses } from '@/features/workbench/common/canvas/historical-block-states-context'
+import {
+  useHistoricalBlockStatuses,
+  useHistoricalLanes,
+} from '@/features/workbench/common/canvas/historical-block-states-context'
 import { walkActiveSubtree } from '@/features/functions/canvas/inner-workflow'
 import { START_NODE_ID, GHOST_EDGE_ID, ONBOARDING_NODE_ID } from './canvas-constants'
 
@@ -35,75 +38,39 @@ const TRAVERSED_STYLE: EdgeStyle = { stroke: '#22C55E', strokeWidth: 2 }
 const FAILED_STYLE: EdgeStyle = { stroke: '#EF4444', strokeWidth: 2 }
 
 interface BlockStates {
-  [key: string]: { status?: string } | undefined
+  [key: string]: { status?: string; lanes?: readonly string[] } | undefined
 }
+
+/** Statuses of a Block the flow reached */
+const REACHED_STATUSES = new Set(['running', 'success', 'failed', 'warning', 'stopped'])
 
 // --- Execution coloring helpers ---
 
-/* v8 ignore start - COV-BRANCH-178 */
-/** Compute style for pass/fail (split-mode) edges */
-function computePassFailStyle(
+/** Lane wire: lit only when the run took that lane from its Block (REQ-3.5.0.9) */
+function computeLaneStyle(
   edge: Edge,
   blockStates: BlockStates
 ): EdgeStyle | undefined {
-  if (edge.sourceHandle !== 'pass' && edge.sourceHandle !== 'fail') return undefined
+  const lane = edge.sourceHandle
+  if (!lane || lane === 'then') return undefined
 
-  const sourceExecuted = Boolean(blockStates[edge.source]?.status)
-  if (!sourceExecuted) return undefined
+  const source = blockStates[edge.source]
+  if (!source?.status) return undefined
+  if (!source.lanes?.includes(lane)) return DIMMED_STYLE
 
-  const targetExecuted = Boolean(blockStates[edge.target]?.status)
-  if (!targetExecuted) return DIMMED_STYLE
-
-  return edge.sourceHandle === 'pass' ? TRAVERSED_STYLE : FAILED_STYLE
+  return lane === 'fail' ? FAILED_STYLE : TRAVERSED_STYLE
 }
-/* v8 ignore stop */
 
-/* v8 ignore start - COV-BRANCH-181 */
-/** Compute style for if/else branch edges */
-function computeBranchStyle(
+/** Then wire of a container: lit once the Block after it was reached */
+function computeThenStyle(
   edge: Edge,
   blockStates: BlockStates
 ): EdgeStyle | undefined {
-  if (!edge.sourceHandle?.startsWith('branch_')) return undefined
+  if (edge.sourceHandle !== 'then') return undefined
+  if (!blockStates[edge.source]?.status) return undefined
 
-  const sourceExecuted = Boolean(blockStates[edge.source]?.status)
-  if (!sourceExecuted) return undefined
-
-  // A skipped target means the lane was NOT taken (an un-taken Switch case is
-  // painted skipped so the canvas can dim it).
-  const targetStatus = blockStates[edge.target]?.status
-  return targetStatus && targetStatus !== 'skipped' ? TRAVERSED_STYLE : DIMMED_STYLE
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - COV-BRANCH-183 */
-/** Compute style for try/catch/finally/then path edges */
-function computeTryCatchStyle(
-  edge: Edge,
-  blockStates: BlockStates
-): EdgeStyle | undefined {
-  const tryCatchHandles = ['try', 'catch', 'finally', 'then']
-  if (!edge.sourceHandle || !tryCatchHandles.includes(edge.sourceHandle)) return undefined
-
-  const sourceExecuted = Boolean(blockStates[edge.source]?.status)
-  if (!sourceExecuted) return undefined
-
-  return blockStates[edge.target]?.status ? TRAVERSED_STYLE : DIMMED_STYLE
-}
-/* v8 ignore stop */
-
-/** Compute style for for-loop body/then path edges */
-function computeForLoopStyle(
-  edge: Edge,
-  blockStates: BlockStates
-): EdgeStyle | undefined {
-  const forLoopHandles = ['body']
-  if (!edge.sourceHandle || !forLoopHandles.includes(edge.sourceHandle)) return undefined
-
-  const sourceExecuted = Boolean(blockStates[edge.source]?.status)
-  if (!sourceExecuted) return undefined
-
-  return blockStates[edge.target]?.status ? TRAVERSED_STYLE : DIMMED_STYLE
+  const targetStatus = blockStates[edge.target]?.status ?? ''
+  return REACHED_STATUSES.has(targetStatus) ? TRAVERSED_STYLE : DIMMED_STYLE
 }
 
 /** Compute style for general (non-handled) edges based on execution state */
@@ -149,10 +116,8 @@ function computeExecutionStyle(
     return DIMMED_STYLE
   }
 
-  return computePassFailStyle(edge, blockStates)
-    ?? computeBranchStyle(edge, blockStates)
-    ?? computeTryCatchStyle(edge, blockStates)
-    ?? computeForLoopStyle(edge, blockStates)
+  return computeLaneStyle(edge, blockStates)
+    ?? computeThenStyle(edge, blockStates)
     ?? computeGeneralExecutionStyle(edge, blockStates, passThroughNodes)
 }
 
@@ -299,6 +264,7 @@ export function useCanvasEdges({
   // over the live execution store when present, so history canvases stay
   // insulated from the singleton store used by the live workbench.
   const historical = useHistoricalBlockStatuses()
+  const historicalLanes = useHistoricalLanes()
   const liveBlockStates = useExecutionStore((state) => {
     if (!state.activeExecutionId) return null
     return state.executions[state.activeExecutionId]?.blocks ?? null
@@ -307,12 +273,12 @@ export function useCanvasEdges({
     if (historical) {
       const out: BlockStates = {}
       for (const [id, status] of Object.entries(historical)) {
-        out[id] = { status }
+        out[id] = { status, lanes: historicalLanes[id] }
       }
       return out
     }
     return liveBlockStates as BlockStates | null
-  }, [historical, liveBlockStates])
+  }, [historical, historicalLanes, liveBlockStates])
 
   // Ghost edge connecting Start to onboarding placeholder (only when empty, hidden during proximity drag)
   const ghostEdge: Edge | null = useMemo(

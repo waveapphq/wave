@@ -82,6 +82,53 @@ class TestContentDisposition:
         assert response.headers["content-disposition"] == 'inline; filename="report.v1.html"'
         assert response.headers["content-type"].startswith("text/html")
 
+    @pytest.mark.parametrize("disposition", ["attachment", "inline"])
+    @pytest.mark.parametrize(
+        ("name", "media_type"),
+        [
+            ("page.html", "text/html"),
+            ("drawing.svg", "image/svg+xml"),
+            ("feed.xml", "application/xml"),
+        ],
+    )
+    def test_a_page_runs_sandboxed_outside_the_wave_origin(
+        self, client: TestClient, disposition: str, name: str, media_type: str
+    ) -> None:
+        dir_name, _execution_id, directory = make_execution_dir()
+        write_artifact_file(directory, name, b"<x/>")
+
+        response = client.get(
+            f"/artifacts/content/{dir_name}/{name}", params={"disposition": disposition}
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith(media_type)
+        assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+
+    def test_a_partial_page_is_sandboxed_too(self, client: TestClient) -> None:
+        dir_name, _execution_id, directory = make_execution_dir()
+        write_artifact_file(directory, "page.html", b"<html></html>")
+
+        response = client.get(
+            f"/artifacts/content/{dir_name}/page.html?disposition=inline",
+            headers={"Range": "bytes=0-5"},
+        )
+
+        assert response.status_code == 206
+        assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+
+    @pytest.mark.parametrize("name", ["result.json", "data.txt", "report.pdf", "chart.png"])
+    def test_a_file_that_is_not_a_page_carries_no_policy(
+        self, client: TestClient, name: str
+    ) -> None:
+        dir_name, _execution_id, directory = make_execution_dir()
+        write_artifact_file(directory, name, b"0123456789")
+
+        response = client.get(f"/artifacts/content/{dir_name}/{name}?disposition=inline")
+
+        assert response.status_code == 200
+        assert "content-security-policy" not in response.headers
+
     def test_invalid_disposition_rejected(self, client: TestClient) -> None:
         dir_name, _execution_id, directory = make_execution_dir()
         write_artifact_file(directory, "data.txt", b"0123456789")

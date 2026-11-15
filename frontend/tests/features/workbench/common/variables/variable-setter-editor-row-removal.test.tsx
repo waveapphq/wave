@@ -1,11 +1,13 @@
 /**
  * Deleting a Variable Setter row whose value editor is open.
  *
- * Unsaved text in the row's editor asks first: Keep Editing leaves the row
- * exactly as it was, Close deletes it and drops the text with it. A clean
- * editor is deleted away silently, and a row that stays keeps its own editor.
+ * Each row's value field owns its editor. Unsaved text in the row's editor asks
+ * first: Keep Editing leaves the row exactly as it was, Close deletes it and drops
+ * the text with it. A clean editor is deleted away silently, and a row that stays
+ * keeps its own editor.
  */
 
+import React, { useState } from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -24,34 +26,62 @@ vi.mock('@/features/workbench/common/element-config/expressions/expression-field
   ExpressionField: () => <div data-testid="expression-field" />,
 }))
 
-import { VariableSetterEditor } from '@/features/workbench/common/variables/variable-setter-editor'
+import { VariableSetterEditor } from '@/features/workbench/common/variables/variable-setter-editor/editor'
 import { ChildEditorParent } from '../../../../utils/child-editor-parent'
 
+interface Slots {
+  variables: Record<string, unknown>
+  expressionFields: string[]
+  templateFields: string[]
+  elementTypes: Record<string, unknown>
+  secretFields: string[]
+  rowTypes: Record<string, string>
+}
+
+const Editor = VariableSetterEditor as unknown as React.FC<{
+  slots: Slots
+  availableVariables: { name: string; type: string }[]
+  onSlotsChange: (next: Slots) => void
+  onValidChange: (valid: boolean) => void
+}>
+
+const SLOTS: Slots = {
+  variables: { greeting: 'hello', farewell: 'bye' },
+  expressionFields: [],
+  templateFields: [],
+  elementTypes: {},
+  secretFields: [],
+  rowTypes: { greeting: 'string', farewell: 'string' },
+}
+
+/** The window around the editor: it keeps what the editor writes and hands it back. */
+function SetterHarness({ onSlotsChange }: Readonly<{ onSlotsChange: (next: Slots) => void }>) {
+  const [slots, setSlots] = useState(SLOTS)
+  return (
+    <Editor
+      slots={slots}
+      availableVariables={[]}
+      onSlotsChange={(next) => {
+        onSlotsChange(next)
+        setSlots(next)
+      }}
+      onValidChange={vi.fn()}
+    />
+  )
+}
+
 function renderSetter() {
-  const onVariablesChange = vi.fn()
+  const onSlotsChange = vi.fn()
   render(
     <ChildEditorParent>
-      <VariableSetterEditor
-        variables={{ greeting: 'hello', farewell: 'bye' }}
-        expressionKeys={[]}
-        templateKeys={[]}
-        secretKeys={[]}
-        variableTypes={{ greeting: 'string', farewell: 'string' }}
-        availableVariables={[]}
-        onVariablesChange={onVariablesChange}
-        onExpressionKeysChange={vi.fn()}
-        onTemplateKeysChange={vi.fn()}
-        onSecretKeysChange={vi.fn()}
-        onTypesChange={vi.fn()}
-        onValidChange={vi.fn()}
-      />
+      <SetterHarness onSlotsChange={onSlotsChange} />
     </ChildEditorParent>,
   )
-  return { onVariablesChange }
+  return { onSlotsChange }
 }
 
 async function editGreeting(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByTestId('varset-edit-value-0'))
+  await user.click(screen.getByTestId('param-expand-varset-value-0'))
   const editor = screen.getByTestId('value-editor-sheet')
   await user.click(within(editor).getByTestId('scalar-edit-body-change'))
 }
@@ -61,7 +91,7 @@ const deleteRow = (index: number) => screen.getByTestId(`varset-delete-${index}`
 describe('VariableSetterEditor - a row the editor takes away', () => {
   it('asks Keep Editing or Close while the row editor holds unsaved text', async () => {
     const user = userEvent.setup()
-    const { onVariablesChange } = renderSetter()
+    const { onSlotsChange } = renderSetter()
     await editGreeting(user)
 
     await user.click(deleteRow(0))
@@ -72,7 +102,7 @@ describe('VariableSetterEditor - a row the editor takes away', () => {
         .filter((button) => button.dataset.testid !== undefined)
         .map((button) => button.textContent),
     ).toEqual(['Keep Editing', 'Close'])
-    expect(onVariablesChange).not.toHaveBeenCalled()
+    expect(onSlotsChange).not.toHaveBeenCalled()
   })
 
   it('leaves the row and its editor as they were on Keep Editing', async () => {
@@ -102,7 +132,7 @@ describe('VariableSetterEditor - a row the editor takes away', () => {
   it('deletes at once while the row editor holds no unsaved text', async () => {
     const user = userEvent.setup()
     renderSetter()
-    await user.click(screen.getByTestId('varset-edit-value-0'))
+    await user.click(screen.getByTestId('param-expand-varset-value-0'))
 
     await user.click(deleteRow(0))
 
@@ -113,17 +143,31 @@ describe('VariableSetterEditor - a row the editor takes away', () => {
   it('keeps the editor of a row that stays when an earlier row goes', async () => {
     const user = userEvent.setup()
     renderSetter()
-    await user.click(screen.getByTestId('varset-edit-value-1'))
+    await user.click(screen.getByTestId('param-expand-varset-value-1'))
 
     await user.click(deleteRow(0))
 
     expect(screen.getByTestId('value-editor-sheet')).toBeInTheDocument()
   })
 
+  it('asks first for a row with no name yet, whose editor goes by the row word', async () => {
+    const user = userEvent.setup()
+    const { onSlotsChange } = renderSetter()
+    await user.click(screen.getByTestId('varset-add-button'))
+    await user.click(screen.getByTestId('param-expand-varset-value-2'))
+    await user.click(within(screen.getByTestId('value-editor-sheet')).getByTestId('scalar-edit-body-change'))
+    onSlotsChange.mockClear()
+
+    await user.click(deleteRow(2))
+
+    expect(screen.getByTestId('unsaved-changes-dialog')).toBeInTheDocument()
+    expect(onSlotsChange).not.toHaveBeenCalled()
+  })
+
   it('keeps the editor of a row that stays when a later row goes', async () => {
     const user = userEvent.setup()
     renderSetter()
-    await user.click(screen.getByTestId('varset-edit-value-0'))
+    await user.click(screen.getByTestId('param-expand-varset-value-0'))
 
     await user.click(deleteRow(1))
 

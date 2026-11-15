@@ -14,6 +14,7 @@ from wavecore.api.services.executions import _storage
 from wavecore.api.services.executions import service as executions_service
 from wavecore.api.services.executions._storage import TERMINAL_STATUSES
 from wavecore.api.services.workbench import functions as workbench_functions
+from wavecore.api.services.workbench.signals import _is_diverging_parent, _normalize_element_type
 from wavecore.core.functions.references import iter_blocks, iter_function_references
 from wavecore.core.secrets.owed import (
     OwedSecret,
@@ -33,6 +34,9 @@ _EXCERPT_LEVELS = ("WARN", "ERROR", "FATAL")
 _COUNT_KEYS = ("total", "passed", "failed", "skipped", "stopped", "excluded", "pending")
 
 _MAX_FUNCTION_DEPTH = 8
+
+# Wire handles that continue the flow instead of entering a container lane.
+_FLOW_HANDLES = (None, "then")
 
 
 def build_execution_report(
@@ -485,27 +489,6 @@ def _execution_identity(detail: dict[str, Any]) -> dict[str, Any]:
     return identity
 
 
-def _workflow_maps(workflow: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]:
-    """Return (node names, child -> container parent) for a canvas workflow.
-
-    An edge marks containment when its sourceHandle is non-None and not
-    "then" (the after-egress); plain sequential edges carry a None handle.
-    """
-    nodes = [node for node in workflow.get("nodes", []) if node.get("type") == "workflowNode"]
-    node_ids = {node.get("id") for node in nodes}
-    names = {node["id"]: (node.get("data") or {}).get("label") or node["id"] for node in nodes}
-    parents: dict[str, str] = {}
-    for edge in workflow.get("edges", []):
-        handle = edge.get("sourceHandle")
-        if handle is None or handle == "then":
-            continue
-        source = edge.get("source")
-        target = edge.get("target")
-        if source in node_ids and target in node_ids:
-            parents[target] = source
-    return names, parents
-
-
 def _block_path(node_id: str, names: dict[str, str], parents: dict[str, str]) -> str:
     segments: list[str] = []
     seen: set[str] = set()
@@ -571,9 +554,10 @@ def _block_entries(
 ) -> list[tuple[str, str]]:
     """(block_id, block_path) pairs in execution order, with Function bodies
     spliced in after their Function node under a path prefix."""
-    names, parents = _workflow_maps(workflow)
+    nodes, parents = _structural_nodes(workflow)
+    names = {node["id"]: (node.get("data") or {}).get("label") or node["id"] for node in nodes}
     entries: list[tuple[str, str]] = []
-    for node in _structural_nodes(workflow):
+    for node in nodes:
         node_id = node["id"]
         path = prefix + _block_path(node_id, names, parents)
         entries.append((node_id, path))
@@ -583,31 +567,28 @@ def _block_entries(
     return entries
 
 
-def _structural_nodes(workflow: dict[str, Any]) -> list[dict[str, Any]]:
-    """Workflow nodes in engine traversal order: depth-first along edges with
-    container bodies before the then-continuation. The canvas nodes array is
-    insertion-ordered, not execution-ordered, so it cannot be used directly."""
+def _structural_nodes(
+    workflow: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Blocks in run order (a rejoin after its branches) and each Block's container."""
     nodes = workflow.get("nodes", [])
     by_id = {node.get("id"): node for node in nodes}
-    targets_with_incoming: set[str] = set()
-    body_children: dict[str, list[str]] = {}
-    next_children: dict[str, list[str]] = {}
+    wires: dict[str, list[tuple[str, Any]]] = {}
+    waiting = dict.fromkeys(by_id, 0)
     for edge in workflow.get("edges", []):
         source = edge.get("source")
         target = edge.get("target")
-        if target not in by_id:
-            continue
-        targets_with_incoming.add(target)
-        bucket = next_children if edge.get("sourceHandle") in (None, "then") else body_children
-        bucket.setdefault(source, []).append(target)
+        if source in by_id and target in by_id:
+            wires.setdefault(source, []).append((target, edge.get("sourceHandle")))
+            waiting[target] += 1
 
+    containers: dict[str, str | None] = {}
     visited: set[str] = set()
     ordered: list[dict[str, Any]] = []
     # Entry points first (array order), then every node as a fallback root so
     # disconnected or cyclic fragments still appear.
-    roots = [n["id"] for n in nodes if n["id"] not in targets_with_incoming]
-    roots.extend(n["id"] for n in nodes)
-    for root in roots:
+    roots = [node_id for node_id, count in waiting.items() if not count]
+    for root in [*roots, *by_id]:
         stack = [root]
         while stack:
             node_id = stack.pop()
@@ -615,9 +596,33 @@ def _structural_nodes(workflow: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             visited.add(node_id)
             ordered.append(by_id[node_id])
-            children = body_children.get(node_id, []) + next_children.get(node_id, [])
-            stack.extend(reversed(children))
-    return [node for node in ordered if node.get("type") == "workflowNode"]
+            ready = _follow_wires(node_id, by_id[node_id], wires, waiting, containers)
+            stack.extend(reversed(ready))
+    parents = {node_id: parent for node_id, parent in containers.items() if parent is not None}
+    return [node for node in ordered if node.get("type") == "workflowNode"], parents
+
+
+def _follow_wires(
+    node_id: str,
+    node: dict[str, Any],
+    wires: dict[str, list[tuple[str, Any]]],
+    waiting: dict[str, int],
+    containers: dict[str, str | None],
+) -> list[str]:
+    """Hand the container on along the node's wires, lanes first; return the targets now ready."""
+    own = containers.setdefault(node_id, None)
+    # An If/Else or split Assert branch stays on the flow it leaves (Branching Engine).
+    nests = not _is_diverging_parent(
+        (node.get("data") or {}).get("nodeType"), _normalize_element_type(node)
+    )
+    ready: list[str] = []
+    for target, handle in sorted(wires.get(node_id, []), key=lambda w: w[1] in _FLOW_HANDLES):
+        lane = nests and handle not in _FLOW_HANDLES
+        containers.setdefault(target, node_id if lane else own)
+        waiting[target] -= 1
+        if not waiting[target]:
+            ready.append(target)
+    return ready
 
 
 def _function_body_workflow(node: dict[str, Any], depth: int) -> dict[str, Any] | None:

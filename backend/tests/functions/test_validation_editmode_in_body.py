@@ -240,3 +240,86 @@ class TestTopLevelEditModeNotFlagged:
         )
         result = _validate_test_data(_test_with_nodes([top]), context="save")
         assert _editmode_in_body_errors(result) == []
+
+
+# ---------------------------------------------------------------------------
+# A library Function's flow is a body -> an edit-mode instance in it blocks the save
+# ---------------------------------------------------------------------------
+
+
+def _library_save(nodes: list[dict[str, Any]]) -> None:
+    from wavecore.api.services.functions import service as function_service
+
+    function_service.create_function(
+        {
+            "name": "outer_lib",
+            "inputs": [],
+            "outputs": [],
+            "dependencies": {"functions": [], "plugins": []},
+            "workflow": {
+                "nodes": nodes,
+                "edges": [{"id": "e-entry", "source": "start-node", "target": nodes[0]["id"]}],
+            },
+        }
+    )
+
+
+def _refused_library_save(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    from wavecore.api.services.functions import service as function_service
+
+    with pytest.raises(function_service.SaveValidationError) as refused:
+        _library_save(nodes)
+    return [e for e in refused.value.errors if e.get("code") == "EDIT_MODE_DRAFT_IN_BODY"]
+
+
+class TestLibrarySaveBlocksANestedEditModeDraft:
+    def test_an_edit_mode_instance_in_the_library_flow_blocks_the_save(self) -> None:
+        fn_id = _seed_library_function()
+        inner = _shared_instance(
+            node_id="inner-1",
+            function_id=fn_id,
+            version="1.0.0",
+            label="Inner",
+            edit_mode=True,
+        )
+
+        errors = _refused_library_save([inner])
+
+        assert [(e["node_id"], e["function_path"]) for e in errors] == [("inner-1", [])]
+
+    def test_an_edit_mode_instance_in_a_local_body_of_the_library_flow_blocks_the_save(
+        self,
+    ) -> None:
+        fn_id = _seed_library_function()
+        inner = _shared_instance(
+            node_id="inner-1",
+            function_id=fn_id,
+            version="1.0.0",
+            label="Inner",
+            edit_mode=True,
+        )
+        outer = _local_fn(node_id="outer-1", label="Outer_Fn", body_nodes=[inner])
+
+        errors = _refused_library_save([outer])
+
+        assert [(e["node_id"], e["function_path"]) for e in errors] == [
+            (
+                "inner-1",
+                [{"node_id": "outer-1", "label": "Outer_Fn", "element_type": "function"}],
+            )
+        ]
+
+    def test_a_published_instance_in_a_local_body_of_the_library_flow_saves(self) -> None:
+        from wavecore.api.services.functions import _storage
+
+        fn_id = _seed_library_function()
+        inner = _shared_instance(
+            node_id="inner-1", function_id=fn_id, version="1.0.0", label="Inner"
+        )
+
+        _library_save([_local_fn(node_id="outer-1", label="Outer_Fn", body_nodes=[inner])])
+
+        assert sorted(row["name"] for row in _storage.list_function_summaries()) == [
+            "inner_fn",
+            "outer_lib",
+        ]

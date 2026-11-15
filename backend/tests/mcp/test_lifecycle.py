@@ -774,3 +774,69 @@ class TestToolDispatch:
         adapter = mcp_server._on_loop(handler)
 
         assert await adapter(value=7) == {"value": 7}
+
+
+class TestUndeclaredArguments:
+    """A tool refuses an argument it does not declare, as a recipe refuses an undefined key."""
+
+    @staticmethod
+    async def _refusal(tool: str, arguments: dict[str, Any]) -> str:
+        from mcp.server.mcpserver.exceptions import ToolError
+
+        from wavecore.mcp import server as mcp_server
+
+        with pytest.raises(ToolError) as refused:
+            await mcp_server._build_server().call_tool(tool, arguments)
+        return str(refused.value)
+
+    async def test_a_tool_without_arguments_refuses_one(self) -> None:
+        assert await self._refusal("list_blocks", {"search": "http"}) == (
+            "Error executing tool list_blocks: Unknown argument 'search'; "
+            "this tool takes no arguments"
+        )
+
+    async def test_the_refusal_names_the_arguments_the_tool_declares(self) -> None:
+        assert await self._refusal("list_tests", {"query": "smoke"}) == (
+            "Error executing tool list_tests: Unknown argument 'query'; "
+            "valid arguments: search, tag"
+        )
+
+    async def test_every_undeclared_argument_is_named_in_the_order_sent(self) -> None:
+        refusal = await self._refusal("get_block", {"zeta": 1, "block_id": "log", "alpha": 2})
+
+        assert refusal == (
+            "Error executing tool get_block: Unknown arguments 'zeta', 'alpha'; "
+            "valid arguments: block_id"
+        )
+
+    async def test_the_client_context_is_not_an_argument(self) -> None:
+        refusal = await self._refusal(
+            "start_execution",
+            {"entity_type": "test", "ref": "Smoke", "environment": "Dev", "ctx": {}},
+        )
+
+        assert refusal == (
+            "Error executing tool start_execution: Unknown argument 'ctx'; "
+            "valid arguments: entity_type, environment, profile, ref, variables"
+        )
+
+    async def test_declared_arguments_still_reach_the_tool(self) -> None:
+        refusal = await self._refusal("get_block", {"block_id": "zz-no-such-block"})
+
+        assert refusal == "Error executing tool get_block: Block 'zz-no-such-block' not found"
+
+    async def test_every_registered_tool_refuses_an_undeclared_argument(self) -> None:
+        from wavecore.mcp import server as mcp_server
+
+        tools = await mcp_server._build_server().list_tools()
+
+        for tool in tools:
+            declared = sorted(tool.input_schema.get("properties") or {})
+            valid = (
+                f"valid arguments: {', '.join(declared)}"
+                if declared
+                else "this tool takes no arguments"
+            )
+            assert await self._refusal(tool.name, {"zz_undeclared": 1}) == (
+                f"Error executing tool {tool.name}: Unknown argument 'zz_undeclared'; {valid}"
+            )

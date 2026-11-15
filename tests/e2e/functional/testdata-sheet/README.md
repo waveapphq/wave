@@ -18,13 +18,15 @@ The sheet's own work is split across three suites:
 | `v-testdata-sheet-uploads.spec.ts` | A name the listing already holds caught before anything is sent and Replace all sending one request with `replace=true`; three files at once, each with its own row, a spinner first and then percent, time left and Cancel; a refused file keeping its row while the rest of the batch lands; a file dropped on a folder row landing inside that folder |
 | `v-testdata-sheet-run.spec.ts` | A run resolving `testdata://folder/file` to the bytes that were uploaded, and test data refused while the test is running and accepted once it stops |
 
-Changing a test's files is workbench work, so two more suites cover what other
-sessions see and what a file that did not land offers:
+Changing a test's files is workbench work, so three more suites cover what other
+sessions see, what a file that did not land offers, and what the upload state
+routes answer:
 
 | Spec | Covers |
 |---|---|
 | `v-testdata-sheet-sessions.spec.ts` | A session that follows the holder reads the files and cannot change them; an upload shows up in both sessions and survives a take-over; who may stop one; the amber row a stopped upload leaves and its disposal on close; the chip's state; the close warning naming the uploads |
 | `v-testdata-sheet-recovery.spec.ts` | The notice a refused file leaves, Retry from the tab that still holds the bytes, and Choose file once the test is reopened - including a file offered under the wrong name |
+| `v-testdata-sheet-upload-state.spec.ts` | The upload state routes the sheet reads, called without a page: a saved test with nothing in flight, and a test that does not exist |
 
 ## Prerequisites
 
@@ -136,6 +138,10 @@ test's data folder. No server state is reset and no other shard is affected.
 - **Retry:** the refused row carries the server's reason, a Retry and a Dismiss,
   and no Choose file while the tab still holds the bytes; once the obstacle is
   gone Retry lands the same bytes and clears the notice
+- **Upload state of an unknown test:** a saved test with nothing in flight answers two empty
+  lists; for a test that does not exist, the listing, `GET /tests/{id}/testdata/uploads` and the
+  cancel, dismiss and interrupt routes each answer 404 with error code `NOT_FOUND` and the message
+  `Test not found: <id>`
 - **Choose file:** reopening the test brings the same notice back with Choose
   file and no Retry; a file under another name is reported on the row as
   `That is <chosen>, not <expected>.` and nothing is sent; the expected name

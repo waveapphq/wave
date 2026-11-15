@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react'
 import { EditDialog } from '@/components/ui/edit-dialog'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import {
   useChildEditor,
   useChildEditorScope,
@@ -47,14 +47,14 @@ describe('EditDialog', () => {
   it('points the dialog at its description', () => {
     renderDialog({ description: 'Some help text' })
 
-    const describedBy = screen.getByRole('dialog').getAttribute('aria-describedby')
+    const describedBy = screen.getByRole('dialog', { name: 'Edit Item' }).getAttribute('aria-describedby')
     expect(document.getElementById(describedBy as string)).toHaveTextContent('Some help text')
   })
 
   it('describes a dialog with no description by nothing at all', () => {
     renderDialog({ description: undefined })
 
-    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby')
+    expect(screen.getByRole('dialog', { name: 'Edit Item' })).not.toHaveAttribute('aria-describedby')
   })
 
   it('calls onSave and closes on save click', async () => {
@@ -246,8 +246,7 @@ describe('EditDialog', () => {
           <DraggableSheet
             open
             onClose={() => {}}
-            ariaLabel="Edit value"
-            header={<span>Edit value</span>}
+            header={<SheetTitle>Edit value</SheetTitle>}
             data-testid="dialog-sheet"
           >
             <input data-testid="dialog-sheet-field" />
@@ -256,7 +255,7 @@ describe('EditDialog', () => {
       ),
     })
     const sheet = screen.getByTestId('dialog-sheet')
-    expect(screen.getByRole('dialog')).toContainElement(sheet)
+    expect(screen.getByRole('dialog', { name: 'Edit Item' })).toContainElement(sheet)
     expect(screen.getByTestId('sheet-opener')).not.toContainElement(sheet)
   })
 
@@ -287,7 +286,7 @@ describe('EditDialog - Esc', () => {
     pressEscape()
 
     expect(onOpenChange).not.toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Edit Item' })).toBeInTheDocument()
   })
 
   it('ignores Esc by default even with unsaved changes, and does not ask', () => {

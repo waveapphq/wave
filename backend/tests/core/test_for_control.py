@@ -6,13 +6,30 @@ REQ-3.5.1.15: For loop with counter variable
 """
 
 import asyncio
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
+from tests.core.run_fill_support import run_fill
 from wavecore.controls.loop import ForControl
+from wavecore.core.execution import field_checks
+from wavecore.core.execution.field_checks import FieldFinding
+from wavecore.core.expressions.errors import ExpressionTypeError
 from wavecore.models.controls.parameters import RequiredWhen
 from wavecore.models.enums import ControlId
+
+
+def _run_fill(
+    stored: dict[str, Any],
+    expression_fields: set[str] | None = None,
+    variables: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return run_fill(ForControl(), stored, expression_fields=expression_fields, variables=variables)
+
+
+def _count_field() -> Any:
+    return next(p for p in ForControl().metadata["parameter_schema"] if p.name == "count")
 
 
 class TestForControlMetadata:
@@ -127,9 +144,12 @@ class TestForControlValidation:
     def setup_method(self) -> None:
         self.control = ForControl()
 
-    def test_validate_invalid_mode(self) -> None:
-        with pytest.raises(ValueError, match="^mode must be 'count' or 'range'$"):
-            asyncio.run(self.control.validate({"mode": "invalid"}))
+    def test_the_run_fill_refuses_an_invalid_mode(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match=r"^Parameter 'mode' must be one of: count, range; Actual value was 'invalid'\.$",
+        ):
+            _run_fill({"mode": "invalid", "count": 1})
 
     def test_validate_count_mode_requires_count(self) -> None:
         with pytest.raises(ValueError, match="^count is required when mode is 'count'$"):
@@ -158,9 +178,9 @@ class TestForControlValidation:
         asyncio.run(self.control.validate({"mode": "range", "start": 0, "end": 5}))
 
     def test_validate_default_mode_is_count(self) -> None:
-        """Missing mode defaults to 'count', so count is required."""
+        """The run fill gives a missing mode its declared default 'count', so count is required."""
         with pytest.raises(ValueError, match="^count is required when mode is 'count'$"):
-            asyncio.run(self.control.validate({}))
+            asyncio.run(self.control.validate(_run_fill({})))
 
     def test_validate_count_zero_passes(self) -> None:
         asyncio.run(self.control.validate({"mode": "count", "count": 0}))
@@ -213,7 +233,7 @@ class TestForControlExecution:
 
     def test_execute_empty_loop(self) -> None:
         context: dict = {
-            "parameters": {"mode": "count", "count": 0},
+            "parameters": {"mode": "count", "count": 0, "step": 1},
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -223,7 +243,7 @@ class TestForControlExecution:
 
     def test_execute_default_step(self) -> None:
         context: dict = {
-            "parameters": {"mode": "count", "count": 5},
+            "parameters": _run_fill({"mode": "count", "count": 5}),
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -231,7 +251,7 @@ class TestForControlExecution:
 
     def test_execute_default_mode(self) -> None:
         context: dict = {
-            "parameters": {"count": 3},
+            "parameters": _run_fill({"count": 3}),
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -242,7 +262,7 @@ class TestForControlExecution:
     def test_execute_with_logger(self) -> None:
         logger = MagicMock()
         context: dict = {
-            "parameters": {"mode": "count", "count": 5},
+            "parameters": {"mode": "count", "count": 5, "step": 1},
             "variables": {},
             "logger": logger,
         }
@@ -251,7 +271,7 @@ class TestForControlExecution:
 
     def test_execute_without_logger(self) -> None:
         context: dict = {
-            "parameters": {"mode": "count", "count": 5},
+            "parameters": {"mode": "count", "count": 5, "step": 1},
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -276,7 +296,7 @@ class TestForControlExecution:
     def test_execute_null_count_with_a_logger_runs_zero_times(self) -> None:
         logger = MagicMock()
         context: dict = {
-            "parameters": {"mode": "count", "count": None},
+            "parameters": {"mode": "count", "count": None, "step": 1},
             "variables": {},
             "logger": logger,
         }
@@ -288,10 +308,102 @@ class TestForControlExecution:
 
     def test_execute_null_count_without_a_logger_ends_at_zero(self) -> None:
         context: dict = {
-            "parameters": {"mode": "count", "count": None},
+            "parameters": {"mode": "count", "count": None, "step": 1},
             "variables": {},
         }
 
         result = asyncio.run(self.control.execute(context))
 
         assert result["__loop_end"] == 0
+
+
+class TestForStructureProblems:
+    """The For rule the save check and validate() share (REQ-3.5.0.3)."""
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"mode": "count", "count": 3, "step": 0},
+            {"mode": "range", "start": 0, "end": 5, "step": 0},
+            {"mode": "count", "count": 3, "step": "0"},
+        ],
+        ids=["count-mode", "range-mode", "zero-as-digits"],
+    )
+    def test_a_step_of_zero_is_reported(self, values: dict[str, Any]) -> None:
+        assert ForControl().structure_problems(values) == [
+            FieldFinding("INVALID_SETTING_VALUE", "step must not be zero", None, "step")
+        ]
+
+    @pytest.mark.parametrize("step", [0, "0"], ids=["zero", "zero-as-digits"])
+    def test_a_flagged_step_is_skipped(self, step: int | str) -> None:
+        values = {"mode": "count", "count": 3, "step": step}
+
+        assert ForControl().structure_problems(values, {"step"}) == []
+        assert ForControl().structure_problems(values) == [
+            FieldFinding("INVALID_SETTING_VALUE", "step must not be zero", None, "step")
+        ]
+
+    @pytest.mark.parametrize(
+        "step", [False, 0.0, "0.0", "zero"], ids=["false", "float", "float-text", "word"]
+    )
+    def test_a_step_that_is_no_integer_is_left_to_the_shared_check(self, step: Any) -> None:
+        values = {"mode": "count", "count": 3, "step": step}
+        shared = field_checks.check_block_fields(
+            ForControl().metadata["parameter_schema"],
+            values,
+            block_id="for",
+            expression_fields=set(),
+            template_fields=set(),
+            check_required=True,
+        )
+
+        assert ForControl().structure_problems(values) == []
+        assert [(finding.code, finding.field) for finding in shared] == [
+            ("INVALID_SETTING_TYPE", "step")
+        ]
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"mode": "count", "count": -1, "step": 1},
+            {"mode": "count", "count": None, "step": 1},
+            {"mode": "count", "step": 1},
+        ],
+        ids=["below-zero", "null", "left-out"],
+    )
+    def test_a_count_is_never_a_structure_problem(self, values: dict[str, Any]) -> None:
+        # The count floor is the declared minimum of 'count', checked by the shared check.
+        assert ForControl().structure_problems(values) == []
+
+
+class TestForFields:
+    """The declared marks of the For count (REQ-3.5.1.15, REQ-3.1.3.21)."""
+
+    def test_count_declares_minimum_zero(self) -> None:
+        count = _count_field()
+
+        assert count.minimum is not None
+        assert count.minimum == 0
+
+    def test_count_accepts_null(self) -> None:
+        assert _count_field().accepts_null is True
+
+
+class TestForRunFloor:
+    """validate() keeps the count floor for an {x} result the save cannot see."""
+
+    def test_validate_still_refuses_a_count_below_zero_from_an_expression(self) -> None:
+        resolved = _run_fill({"mode": "count", "count": "start - 5"}, {"count"}, {"start": 2})
+
+        assert resolved["count"] == -3
+        with pytest.raises(ValueError, match="^count must be >= 0$"):
+            asyncio.run(ForControl().validate(resolved))
+
+    def test_a_count_that_is_not_an_integer_is_left_to_the_shared_check(self) -> None:
+        assert (
+            asyncio.run(ForControl().validate({"mode": "count", "count": -2.5, "step": 1})) is None
+        )
+        with pytest.raises(
+            ExpressionTypeError, match="^Parameter 'count' expects integer, got float$"
+        ):
+            _run_fill({"mode": "count", "count": "half"}, {"count"}, {"half": -2.5})

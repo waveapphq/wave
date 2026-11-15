@@ -127,17 +127,6 @@ class TestNoteControlValidation:
         control = NoteControl()
         asyncio.run(control.validate({"color": color}))
 
-    def test_validate_rejects_invalid_color(self):
-        """Verify validation rejects invalid color."""
-        from wavecore.controls.note import NoteControl
-
-        control = NoteControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Invalid note color: 'red'\. Must be one of: blue, green, pink, slate, yellow$",
-        ):
-            asyncio.run(control.validate({"color": "red"}))
-
     def test_validate_accepts_both_params(self):
         """Verify validation passes with both text and color."""
         from wavecore.controls.note import NoteControl

@@ -8,18 +8,23 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, NotFoundException
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.shared import (
+    ImportMembers,
     apply_secrets_mode_to_variables,
     check_foreign_envelopes,
     check_masked_secrets,
     determine_import_item_status,
     export_file_stem,
     first_free_name,
+    member_list_error,
     parse_file,
     parse_zip_file,
+    record_import_fixes,
+    refuse_import_collisions,
     refuse_unimportable_items,
     settle_imported_secret_variables,
+    strip_import_members,
     variable_value_errors,
 )
 from wavecore.api.services.suites import _storage
@@ -113,16 +118,9 @@ def _get_existing_names_map() -> dict[str, str]:
     return {s["name"]: s["id"] for s in _storage._list_all_suites()}
 
 
-def _check_unresolvable_tests(test_ids: list[str]) -> list[dict[str, str]]:
-    """Check for test IDs that don't exist in the system."""
-    return [
-        {
-            "code": "UNRESOLVABLE_TEST",
-            "message": f"Test '{test_id}' not found, will be stripped",
-        }
-        for test_id in test_ids
-        if not _storage._test_exists(test_id)
-    ]
+def _import_tests(item: dict[str, Any]) -> ImportMembers:
+    """The tests an imported suite keeps, and each one stripped as a fix."""
+    return strip_import_members(item, _storage._test_exists, "Test")
 
 
 def _validate_single_import_item(
@@ -143,13 +141,18 @@ def _validate_single_import_item(
         fatal_errors.extend(value_errors)
         has_fatal = True
 
+    member_error = member_list_error(item, "Test")
+    if member_error:
+        fatal_errors.append(member_error)
+        has_fatal = True
+
     # Check variable type collisions with existing suites sharing tests
-    test_ids = item.get("tests", [])
+    members = _import_tests(item)
     variables = item.get("variables", {})
-    if test_ids and variables and not has_fatal:
+    if members.kept and variables and not has_fatal:
         collisions = check_variable_collisions_for_tests(
             exclude_suite_id="",  # new suite, exclude nothing
-            test_ids=test_ids,
+            test_ids=members.kept,
             proposed_variables=variables,
         )
         if collisions:
@@ -166,7 +169,7 @@ def _validate_single_import_item(
             )
             has_fatal = True
 
-    fixable_errors = _check_unresolvable_tests(test_ids)
+    fixable_errors = members.findings
     warnings = [*check_masked_secrets(variables), *check_foreign_envelopes(variables)]
 
     item_status, existing_suite_id = determine_import_item_status(
@@ -199,18 +202,6 @@ def validate_suite_import(content: bytes, filename: str) -> dict[str, Any]:
         "importable": importable,
         "blocked": blocked,
     }
-
-
-def _resolve_test_references(test_ids: list[str]) -> tuple[list[str], list[str]]:
-    """Filter test IDs to only valid ones, returning (valid_ids, fix_descriptions)."""
-    valid: list[str] = []
-    fixes: list[str] = []
-    for test_id in test_ids:
-        if _storage._test_exists(test_id):
-            valid.append(test_id)
-        else:
-            fixes.append(f"Stripped unresolvable test '{test_id}'")
-    return valid, fixes
 
 
 def _build_import_suite_data(
@@ -276,38 +267,15 @@ def _import_existing_item(
     return {"name": new_name, "id": new_id, "action": "renamed"}, None
 
 
-def _record_fixes(
-    fixes_applied: list[dict[str, Any]],
-    item_fixes: list[str],
-    result_name: str,
-) -> None:
-    """Record applied fixes if any exist."""
-    if item_fixes:
-        fixes_applied.append({"name": result_name, "fixes": item_fixes})
-
-
-def _check_import_collisions(items: list[dict[str, Any]]) -> None:
-    """Raise ConflictException if any import item has variable type collisions."""
-    for item in items:
-        test_ids = item.get("tests", [])
-        variables = item.get("variables", {})
-        if not test_ids or not variables:
-            continue
-        collisions = check_variable_collisions_for_tests(
-            exclude_suite_id="",
-            test_ids=test_ids,
-            proposed_variables=variables,
-        )
-        if collisions:
-            collision_details = "; ".join(
-                f"variable '{c['variable']}' is '{c['this_type']}' here but "
-                f"'{c['other_type']}' in suite '{c['other_suite']}'"
-                for c in collisions
-            )
-            raise ConflictException(
-                f"Variable type collision: {collision_details}",
-                details={"collisions": collisions},
-            )
+def _check_import_collisions(items: list[dict[str, Any]], members: list[ImportMembers]) -> None:
+    """Refuse the import when an item's variables collide in type with its Tests' variables."""
+    refuse_import_collisions(
+        items,
+        members,
+        lambda test_ids, variables: check_variable_collisions_for_tests(
+            exclude_suite_id="", test_ids=test_ids, proposed_variables=variables
+        ),
+    )
 
 
 def import_suites(
@@ -319,8 +287,9 @@ def import_suites(
     resolutions = conflict_resolutions or {}
 
     items = _parse_import_items(content, filename)
-    refuse_unimportable_items(items)
-    _check_import_collisions(items)
+    refuse_unimportable_items(items, "Test")
+    members = [_import_tests(item) for item in items]
+    _check_import_collisions(items, members)
 
     existing_names = _get_existing_names_map()
 
@@ -328,11 +297,10 @@ def import_suites(
     skipped: list[dict[str, Any]] = []
     fixes_applied: list[dict[str, Any]] = []
 
-    for item in items:
+    for item, item_members in zip(items, members, strict=True):
         name = item["name"]
 
-        resolved_tests, test_fixes = _resolve_test_references(item.get("tests", []))
-        item_fixes = test_fixes
+        resolved_tests, item_fixes = item_members.kept, item_members.fixes
         now = _now_iso()
 
         if name in existing_names:
@@ -347,11 +315,11 @@ def import_suites(
             )
             if skipped_entry:
                 skipped.append(skipped_entry)
-                _record_fixes(fixes_applied, item_fixes, name)
+                record_import_fixes(fixes_applied, item_fixes, name)
                 continue
             if imported_entry:
                 imported.append(imported_entry)
-                _record_fixes(fixes_applied, item_fixes, imported_entry["name"])
+                record_import_fixes(fixes_applied, item_fixes, imported_entry["name"])
                 continue
 
         new_id = str(uuid.uuid4())
@@ -359,7 +327,7 @@ def import_suites(
         suite_service.persist_suite_document(suite_data, _import_history(suite_data))
         existing_names[name] = new_id
         imported.append({"name": name, "id": new_id, "action": "created"})
-        _record_fixes(fixes_applied, item_fixes, name)
+        record_import_fixes(fixes_applied, item_fixes, name)
 
     return {
         "imported": imported,

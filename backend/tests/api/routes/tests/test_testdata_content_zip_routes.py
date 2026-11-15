@@ -116,6 +116,47 @@ class TestContentRoute:
         )
 
 
+class TestContentRoutePages:
+    """A page in a Test's data renders as itself, but never with WAVE's origin."""
+
+    @pytest.mark.parametrize("disposition", ["attachment", "inline"])
+    @pytest.mark.parametrize(
+        ("name", "media_type"),
+        [
+            ("page.html", "text/html"),
+            ("drawing.svg", "image/svg+xml"),
+            ("feed.xml", "application/xml"),
+        ],
+    )
+    def test_a_page_runs_sandboxed_outside_the_wave_origin(
+        self, client: TestClient, test_id: str, disposition: str, name: str, media_type: str
+    ) -> None:
+        seed_file(test_id, name, b"<x/>")
+
+        response = client.get(
+            f"/tests/{test_id}/testdata/content/{name}", params={"disposition": disposition}
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith(media_type)
+        assert response.headers["content-disposition"] == f'{disposition}; filename="{name}"'
+        assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+
+    @pytest.mark.parametrize("disposition", ["attachment", "inline"])
+    @pytest.mark.parametrize("name", ["orders.json", "notes.txt", "report.pdf", "chart.png"])
+    def test_a_file_that_is_not_a_page_carries_no_policy(
+        self, client: TestClient, test_id: str, disposition: str, name: str
+    ) -> None:
+        seed_file(test_id, name, b"0123456789")
+
+        response = client.get(
+            f"/tests/{test_id}/testdata/content/{name}", params={"disposition": disposition}
+        )
+
+        assert response.status_code == 200
+        assert "content-security-policy" not in response.headers
+
+
 def _zip_names(payload: bytes) -> list[str]:
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         return sorted(archive.namelist())

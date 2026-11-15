@@ -56,7 +56,6 @@ function parallelNode(
       description: 'Fan out at once',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { branches, join }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 200, height: 62 },
@@ -77,7 +76,6 @@ function logNode(id: string, message: string, x: number, y: number): Record<stri
       description: id,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${message}'`, level: 'INFO' },
         outputBindings: {},
@@ -131,7 +129,6 @@ const RUNNING_NODES = [
       description: 'Hold the section open',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { duration: 4000 }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },

@@ -107,7 +107,7 @@ def _cells(value: dict[str, Any]) -> Iterator[ValueProblem | None]:
                 yield _element(row[index], declared, f"row {number}, column '{name}'")
 
 
-def _holds_no_literal(value: Any) -> bool:
+def holds_no_literal(value: Any) -> bool:
     """Null, a sealed secret and the mask placeholder hold no literal to read."""
     return value is None or is_secret_envelope(value) or value == MASK_PLACEHOLDER
 
@@ -116,7 +116,7 @@ def declared_value_problem(
     value: Any, declared_type: str, element_types: Any = None
 ) -> ValueProblem | None:
     """The first way a typed literal breaks the number rule; null and a sealed secret hold none."""
-    if _holds_no_literal(value):
+    if holds_no_literal(value):
         return None
     if declared_type in NUMBER_TYPES:
         return number_value_problem(value, cast(NumberType, declared_type))
@@ -185,7 +185,7 @@ def typed_value_numbers(
     value: Any, declared_type: str, element_types: Any, form: NumberForm
 ) -> Any:
     """A typed literal with each number ``declared_value_problem`` reads written by ``form``."""
-    if _holds_no_literal(value):
+    if holds_no_literal(value):
         return value
     if declared_type in NUMBER_TYPES:
         return form(value, (declared_type,))

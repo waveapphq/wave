@@ -20,6 +20,7 @@ import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
 import { configSheet, openSelectedBlockSheet } from '../../helpers/workbench'
+import { setReference } from '../../helpers/condition-builder'
 
 const BASE = `http://localhost:${BACKEND_PORT}`
 const GUARD_NODE_ID = 'ie-guard'
@@ -46,7 +47,6 @@ function buildGuardFixture(): Record<string, unknown> {
             description: 'If/Else under test',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -160,7 +160,7 @@ test.describe('V-CTRL-IFELSE-01: If/Else Control', () => {
     await expect(expressionOption).toBeVisible()
     await expressionOption.click()
 
-    const editor = body.locator('[data-testid^="assert-expression-input-"] .cm-content').last()
+    const editor = body.locator('[data-testid^="param-input-assert-expr-"] .cm-content').last()
     await expect(editor).toBeVisible()
     await editor.click()
     await page.keyboard.type('1 == 1')
@@ -635,7 +635,7 @@ test.describe('V-CTRL-IFELSE-01: If/Else Control', () => {
       await expect(modal.locator('[data-testid="branch-alert-branch_0"]')).toBeVisible()
     })
 
-    await test.step('Picking the variable unlocks Save and clears the header marker', async () => {
+    await test.step('Picking the variable moves the refusal to the empty compare value', async () => {
       const anchor = ifBody.locator('[data-testid="assert-variable-2"]')
       await anchor.click()
       // An option's accessible name carries its type pill too, so match the row
@@ -647,6 +647,15 @@ test.describe('V-CTRL-IFELSE-01: If/Else Control', () => {
       await expect(option).toBeVisible({ timeout: 5_000 })
       await option.click()
       await expect(anchor).toHaveValue('mode')
+      await expect(ifBody.locator('[data-testid="assert-variable-error-2"]')).toHaveCount(0)
+      await expect(ifBody.locator('[data-testid="param-error-assert-value-2"]')).toHaveText('Value is required')
+      await expect(modal.locator('[data-testid="branch-alert-branch_0"]')).toBeVisible()
+      await expect(saveBtn).toBeDisabled()
+    })
+
+    await test.step('Typing the compare value unlocks Save and clears the header marker', async () => {
+      await setReference(ifBody, '2', 'go')
+      await expect(ifBody.locator('[data-testid="param-error-assert-value-2"]')).toHaveCount(0)
       await expect(modal.locator('[data-testid="branch-alert-branch_0"]')).toHaveCount(0)
       await expect(saveBtn).toBeEnabled()
     })
@@ -654,8 +663,9 @@ test.describe('V-CTRL-IFELSE-01: If/Else Control', () => {
     await test.step('An empty expression row refuses Save until it carries text', async () => {
       await ifBody.locator('[data-testid="assert-add-assertion"]').click()
       await ifBody.locator('[data-testid="assert-add-expression"]').click()
-      const exprRow = ifBody.locator('[data-testid="assert-expression-input-4"]')
-      await expect(exprRow.locator('[class*="border-destructive"]').first()).toBeVisible()
+      const exprRow = ifBody.locator('[data-testid="param-input-assert-expr-4"]')
+      await expect(exprRow).toHaveClass(/border-destructive/)
+      await expect(ifBody.locator('[data-testid="param-error-assert-expr-4"]')).toHaveText('Condition is required')
       await expect(saveBtn).toBeDisabled()
 
       await exprRow.locator('.cm-content').first().click()
@@ -688,7 +698,7 @@ test.describe('V-CTRL-IFELSE-01: If/Else Control', () => {
       for (const row of rows) {
         const filled =
           row.type === 'literal'
-            ? String(row.variable ?? '').trim().length > 0
+            ? String(row.variable ?? '').trim().length > 0 && String(row.reference_value ?? '').trim().length > 0
             : String(row.expression ?? '').trim().length > 0
         expect(filled, `a half-built condition reached storage: ${JSON.stringify(row)}`).toBeTruthy()
       }

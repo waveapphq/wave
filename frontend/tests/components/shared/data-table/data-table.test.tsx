@@ -117,6 +117,20 @@ describe('DataTable loading state', () => {
     expect(screen.getAllByTestId('skeleton-row')).toHaveLength(9)
   })
 
+  it('redraws a skeleton bar width that would favor the widest bars', () => {
+    let draws = 0
+    const getRandomValues = vi
+      .spyOn(globalThis.crypto, 'getRandomValues')
+      .mockImplementation(<T extends ArrayBufferView | null>(array: T): T => {
+        ;(array as unknown as Uint32Array).fill(draws++ === 0 ? 0xffffffff : 0)
+        return array
+      })
+    renderWithRouter(<DataTable columns={testColumns} data={[]} loading getRowId={(r) => r.id} />)
+    const widths = screen.getAllByTestId('skeleton-bar').map((bar) => /w-\[\d+%\]/.exec(bar.className)?.[0])
+    getRandomValues.mockRestore()
+    expect(widths).toEqual(Array.from({ length: 9 }, () => 'w-[60%]'))
+  })
+
   it('shows skeleton pagination when loading with pageInfo', () => {
     renderWithRouter(
       <DataTable

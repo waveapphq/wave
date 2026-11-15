@@ -8,7 +8,7 @@ Test Coverage:
 - System info retrieval: Version, build, support links
 - Response structure: Standard success format, metadata
 - Caching: Long cache for static system info
-- Error handling: Internal errors with correlation ID
+- Error handling: an internal fault answers the generic 500
 """
 
 import re
@@ -18,6 +18,8 @@ from unittest.mock import patch
 import pytest
 from fastapi import Request, Response
 from fastapi.testclient import TestClient
+
+from tests.api.error_reply_support import assert_internal_error
 
 SYSTEM_INFO_KEYS = {"version", "build", "build_date", "runtime", "support"}
 INFO_PATH = "/api/v1/system/info"
@@ -201,18 +203,17 @@ class TestSystemInfoErrorHandling:
 
         return TestClient(app)
 
-    def test_internal_error_returns_500_with_correlation_id(self, client: TestClient) -> None:
-        """Test that internal errors return 500 with correlation ID."""
+    @pytest.mark.parametrize("fault", [RuntimeError, ValueError])
+    def test_an_internal_error_answers_the_generic_500(
+        self, client: TestClient, fault: type[Exception]
+    ) -> None:
+        """An internal fault answers the generic 500 with the request id, never its text."""
         with patch("wavecore.api.routes.system.system_service.get_system_info") as mock_get:
-            mock_get.side_effect = RuntimeError("Unexpected error")
+            mock_get.side_effect = fault("internal system info fault")
 
             response = client.get("/api/v1/system/info")
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "INTERNAL_ERROR"
-            assert "correlation_id" in data["error"]
+        assert_internal_error(response, "internal system info fault")
 
 
 class TestSuccessEnvelope:

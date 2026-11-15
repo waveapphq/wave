@@ -451,3 +451,54 @@ class TestTypedSettings:
             set(),
         )
         assert result == values
+
+
+class TestDottedPlaces:
+    """A Variable Setter row keeps its entry types at its dotted place `variables.<row>`; the
+    realizer reaches that one entry of the `variables` map (REQ-3.1.3.19, REQ-3.4.1.14)."""
+
+    def test_a_dotted_place_realizes_that_map_entry_by_its_types(self) -> None:
+        values = {
+            "variables": {
+                "limits": {"max": "2.5", "min": "1", "label": "07"},
+                "hosts": ["16", "web-1"],
+                "plain": "7",
+            }
+        }
+        result = realize_typed_settings(
+            values,
+            {
+                "variables.limits": {"max": "float", "min": "integer"},
+                "variables.hosts": ["integer", "string"],
+            },
+            set(),
+        )
+        assert result == {
+            "variables": {
+                "limits": {"max": Decimal("2.5"), "min": 1, "label": "07"},
+                "hosts": [16, "web-1"],
+                "plain": "7",
+            }
+        }
+        assert isinstance(result["variables"]["limits"]["max"], WaveDecimal)
+        assert values["variables"]["limits"] == {"max": "2.5", "min": "1", "label": "07"}
+        assert values["variables"]["hosts"] == ["16", "web-1"]
+
+    def test_flagged_sub_entries_are_kept_as_written(self) -> None:
+        result = realize_typed_settings(
+            {"variables": {"limits": {"max": "2.5", "min": "1"}, "hosts": ["16", "17"]}},
+            {
+                "variables.limits": {"max": "float", "min": "integer"},
+                "variables.hosts": ["integer", "integer"],
+            },
+            {"variables.limits.max", "variables.hosts.1"},
+        )
+        assert result == {"variables": {"limits": {"max": "2.5", "min": 1}, "hosts": [16, "17"]}}
+
+    def test_a_flagged_row_is_kept_as_written(self) -> None:
+        result = realize_typed_settings(
+            {"variables": {"codes": ["5"], "hosts": ["16"]}},
+            {"variables.codes": ["integer"], "variables.hosts": ["integer"]},
+            {"variables.codes"},
+        )
+        assert result == {"variables": {"codes": ["5"], "hosts": [16]}}

@@ -1,6 +1,6 @@
 /** Matrix B1 cells: Break and Continue inside each non-loop container inside each loop kind (see README.md). */
 
-import { test, type Page } from '../../helpers/playwright-fixtures'
+import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import {
   DEFAULT_LOOP_ITERATIONS,
   SLOT_CONTAINER,
@@ -60,6 +60,9 @@ const SETTLED_SLOTS: readonly SlotKind[] = [
   'catch',
   'finally',
 ]
+
+/** A Function is its own flow, so a signal in its body aims at no loop it holds: the publish refuses it. */
+const OUTSIDE_LOOP = { code: 'BREAK_OUTSIDE_LOOP', message: 'break/continue is only valid inside a loop body' }
 
 /** Try/Catch paths: a signal there leaves through the finally path, which the cell enables for every one of them. */
 const TRY_SLOTS: readonly SlotKind[] = ['try', 'catch', 'finally']
@@ -174,6 +177,11 @@ export async function runBreakContinueCell(page: Page, { loop, slot, signal, tar
     return
   }
 
+  if (slot === 'function-body') {
+    await expectPublishRefused(page, cellId, chain)
+    return
+  }
+
   // The design leaves this crossing open: record whether it is refused and what the run did, assert no outcome.
   test.info().annotations.push({ type: 'unsettled', description: `${cellId} outcome is not settled by the design` })
   const opened = await openSignalCell(page, cellId, { chain }, { requireValid: false })
@@ -183,6 +191,18 @@ export async function runBreakContinueCell(page: Page, { loop, slot, signal, tar
   }
   const run = await runCell(page, opened.cell, { awaitBookend: false })
   expectNoNodeRunning(opened.cell, run)
+}
+
+/** The Function holding the signal is refused at publish with the save's loop text, and nothing is stored. */
+async function expectPublishRefused(page: Page, cellId: string, chain: NestStep[]): Promise<void> {
+  const opened = await openSignalCell(page, cellId, { chain }, { requireValid: false })
+  expect(opened.cell, `${cellId}: nothing opens`).toBeNull()
+  const publish = opened.refusal === null ? undefined : opened.publish
+  expect(publish?.status, `${cellId}: ${opened.refusal}`).toBe(422)
+  const error = (publish?.body as { error?: { message?: string; details?: Array<{ code?: string; message?: string }> } })
+    ?.error
+  expect(error?.message).toBe('Function has 1 validation error(s)')
+  expect((error?.details ?? []).map(({ code, message }) => ({ code, message }))).toEqual([OUTSIDE_LOOP])
 }
 
 /** For Loop body > Try/Catch (try: a marker, then an If/Else whose if branch holds a Break; finally: a Log) > Log after the loop. */

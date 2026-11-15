@@ -80,7 +80,6 @@ async function seedHostTest(page: Page, functionId: string): Promise<string> {
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
             },
             measured: { width: 120, height: 62 },
           },
@@ -98,7 +97,6 @@ async function seedHostTest(page: Page, functionId: string): Promise<string> {
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               localDefinition: {
                 name: 'LocalFn',

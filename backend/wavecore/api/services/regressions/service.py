@@ -30,6 +30,7 @@ from wavecore.api.services.shared import (
     batch_delete,
     bump_version_and_record,
     read_secret_variables,
+    refuse_repeated_members,
     refuse_unknown_members,
     resolve_entities_by_ids,
     restore_masked_secrets,
@@ -106,6 +107,7 @@ def create_regression(data: dict[str, Any]) -> dict[str, Any]:
 
     suites = data.get("suites", [])
     refuse_unknown_members(suites, (), "Suite", _suite_exists)
+    refuse_repeated_members(suites, "Suite")
     variables = data.get("variables", {})
     refuse_value_problems(variables or {})
 
@@ -390,6 +392,7 @@ def update_regression(regression_id: str, data: dict[str, Any]) -> dict[str, Any
         refuse_unknown_members(
             data["suites"], regression.get("suites") or [], "Suite", _suite_exists
         )
+        refuse_repeated_members(data["suites"], "Suite")
     if "variables" in data:
         refuse_value_problems(data["variables"])
     _check_regression_variable_collisions(regression, regression_id, data)

@@ -6,14 +6,21 @@ Covers single/split modes, logging, variable passthrough, and error propagation.
 """
 
 import asyncio
+import re
 from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.core.run_fill_support import run_fill
 from wavecore.controls.conditional import AssertControl
 from wavecore.models.enums import ControlId
+
+
+def _run_fill(stored: dict[str, Any]) -> dict[str, Any]:
+    return run_fill(AssertControl(), stored)
+
 
 # =============================================================================
 # Metadata Tests
@@ -52,12 +59,12 @@ class TestAssertControlMetadata:
         assert assertions_param.required is True
 
     def test_metadata_has_mode_parameter(self):
-        """Verify Assert control has mode parameter (string, optional, default=split)."""
+        """Verify Assert control has mode parameter (string, required, default=split)."""
         control = AssertControl()
         params = control.metadata["parameter_schema"]
         mode_param = next(p for p in params if p.name == "mode")
         assert mode_param.type == "string"
-        assert mode_param.required is False
+        assert mode_param.required is True
         assert mode_param.default == "split"
         assert mode_param.enum_values == ["single", "split"]
 
@@ -131,15 +138,14 @@ class TestAssertControlValidation:
         with pytest.raises(ValueError, match="^assertions must not be empty$"):
             asyncio.run(control.validate({"assertions": []}))
 
-    def test_validate_rejects_invalid_mode(self):
-        """Verify validation fails for invalid mode value."""
-        control = AssertControl()
+    def test_the_run_fill_refuses_an_invalid_mode(self):
+        """A mode outside the declared list stops the Block before validate() runs."""
         assertions = [{"type": "literal", "variable": "x", "operator": "equals"}]
         with pytest.raises(
             ValueError,
-            match=r"^Invalid mode: 'invalid'\. Must be 'single' or 'split'$",
+            match=r"^Parameter 'mode' must be one of: single, split; Actual value was 'invalid'\.$",
         ):
-            asyncio.run(control.validate({"assertions": assertions, "mode": "invalid"}))
+            _run_fill({"assertions": assertions, "mode": "invalid"})
 
     def test_validate_accepts_valid_params_single_mode(self):
         """Verify validation passes with valid params and single mode."""
@@ -172,6 +178,47 @@ class TestAssertControlValidation:
             asyncio.run(control.validate({"assertions": 42}))
 
 
+_CHECK = {"type": "expression", "expression": "x == 1"}
+_AND = {"type": "operator", "value": "and"}
+_OR = {"type": "operator", "value": "or"}
+_STRAY_JOIN = "'and' and 'or' go between two conditions"
+
+
+class TestAssertConditionJoins:
+    """The run refuses a condition list out of order with the save's text (REQ-3.5.0.3)."""
+
+    @pytest.mark.parametrize(
+        ("assertions", "message"),
+        [
+            pytest.param(
+                [_CHECK, _CHECK],
+                "Condition items in 'assertions' must be joined by 'and' or 'or'",
+                id="side-by-side",
+            ),
+            pytest.param(
+                [_CHECK, _AND, {"type": "group", "items": [_CHECK, _CHECK]}],
+                "Condition items in 'assertions.2.items' must be joined by 'and' or 'or'",
+                id="side-by-side-in-a-group",
+            ),
+            pytest.param([_AND, _CHECK], _STRAY_JOIN, id="marker-first"),
+            pytest.param([_CHECK, _OR], _STRAY_JOIN, id="marker-last"),
+            pytest.param([_CHECK, _AND, _OR, _CHECK], _STRAY_JOIN, id="marker-doubled"),
+        ],
+    )
+    def test_validate_refuses_a_list_out_of_order(
+        self, assertions: list[dict[str, Any]], message: str
+    ) -> None:
+        with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+            asyncio.run(AssertControl().validate({"assertions": assertions, "mode": "single"}))
+
+    def test_validate_takes_a_list_joined_at_every_depth(self) -> None:
+        group = {"type": "group", "items": [_CHECK, _OR, _CHECK]}
+
+        asyncio.run(
+            AssertControl().validate({"assertions": [_CHECK, _AND, group], "mode": "single"})
+        )
+
+
 # =============================================================================
 # Execution Tests - Single Mode
 # =============================================================================
@@ -193,7 +240,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -213,7 +260,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -221,7 +268,8 @@ class TestAssertControlExecutionSingleMode:
         assert "__branch" not in result
 
     def test_default_mode_is_split(self):
-        """Verify mode defaults to split when not specified: a pass takes the pass handle."""
+        """With mode left out, the run fill hands the declared default split: a pass takes the
+        pass handle."""
         control = AssertControl()
         assertions = [
             {
@@ -233,14 +281,15 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions},
+            "parameters": _run_fill({"assertions": assertions}),
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
         assert result == {"passed": True, "__branch": "pass"}
 
     def test_default_mode_sends_a_failure_down_the_fail_handle(self):
-        """With mode not specified, a failed assertion takes the fail handle (split)."""
+        """With mode left out, the run fill's split sends a failed assertion down the fail
+        handle."""
         control = AssertControl()
         assertions = [
             {
@@ -252,7 +301,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions},
+            "parameters": _run_fill({"assertions": assertions}),
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -272,7 +321,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 10},
             "logger": logger,
         }
@@ -293,7 +342,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"status": 500},
             "logger": logger,
         }
@@ -316,7 +365,7 @@ class TestAssertControlExecutionSingleMode:
             {"type": "expression", "expression": "x != 0"},
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 5},
             "logger": logger,
         }
@@ -344,7 +393,7 @@ class TestAssertControlExecutionSingleMode:
             {"type": "expression", "expression": "x != 0"},
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 5},
             "logger": logger,
         }
@@ -362,7 +411,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 5},
             "logger": logger,
         }
@@ -387,7 +436,7 @@ class TestAssertControlExecutionSingleMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"big": large_string},
             "logger": logger,
         }
@@ -406,6 +455,7 @@ class TestAssertControlExecutionSingleMode:
             "parameters": {
                 "assertions": [_null_status_check("not_equals", "done")],
                 "mode": "single",
+                "fail_current_scope": False,
             },
             "variables": {"status": None},
             "logger": logger,
@@ -419,7 +469,11 @@ class TestAssertControlExecutionSingleMode:
     def test_a_null_value_fails_equals_with_a_failure_line_and_no_raise(self):
         logger = MagicMock()
         context = {
-            "parameters": {"assertions": [_null_status_check("equals", "done")], "mode": "single"},
+            "parameters": {
+                "assertions": [_null_status_check("equals", "done")],
+                "mode": "single",
+                "fail_current_scope": False,
+            },
             "variables": {"status": None},
             "logger": logger,
         }
@@ -470,7 +524,15 @@ def _check_failure_lines(check: dict[str, Any], **detail: Any) -> list[str]:
     with patch("wavecore.controls.conditional.evaluate_assertions", return_value=result):
         asyncio.run(
             AssertControl().execute(
-                {"parameters": {"assertions": [check]}, "variables": {}, "logger": logger}
+                {
+                    "parameters": {
+                        "assertions": [check],
+                        "mode": "split",
+                        "fail_current_scope": False,
+                    },
+                    "variables": {},
+                    "logger": logger,
+                }
             )
         )
     return [call.args[0] for call in logger.warn.call_args_list]
@@ -487,7 +549,15 @@ def _failure_lines(**detail: Any) -> list[str]:
     with patch("wavecore.controls.conditional.evaluate_assertions", return_value=result):
         asyncio.run(
             AssertControl().execute(
-                {"parameters": {"assertions": [_STATUS_CHECK]}, "variables": {}, "logger": logger}
+                {
+                    "parameters": {
+                        "assertions": [_STATUS_CHECK],
+                        "mode": "split",
+                        "fail_current_scope": False,
+                    },
+                    "variables": {},
+                    "logger": logger,
+                }
             )
         )
     return [call.args[0] for call in logger.warn.call_args_list]
@@ -549,7 +619,11 @@ class TestAssertFailureDetailActualLine:
         asyncio.run(
             AssertControl().execute(
                 {
-                    "parameters": {"assertions": [check]},
+                    "parameters": {
+                        "assertions": [check],
+                        "mode": "split",
+                        "fail_current_scope": False,
+                    },
                     "variables": {"codes": [1, None]},
                     "logger": logger,
                 }
@@ -583,7 +657,11 @@ class TestAssertFailureDetailActualLine:
         asyncio.run(
             AssertControl().execute(
                 {
-                    "parameters": {"assertions": [_null_status_check("is_not_null")]},
+                    "parameters": {
+                        "assertions": [_null_status_check("is_not_null")],
+                        "mode": "split",
+                        "fail_current_scope": False,
+                    },
                     "variables": {"status": None},
                     "logger": logger,
                 }
@@ -603,7 +681,11 @@ class TestAssertFailureDetailActualLine:
         output = asyncio.run(
             AssertControl().execute(
                 {
-                    "parameters": {"assertions": [check]},
+                    "parameters": {
+                        "assertions": [check],
+                        "mode": "split",
+                        "fail_current_scope": False,
+                    },
                     "variables": {"tok": "abc"},
                     "logger": logger,
                 }
@@ -636,7 +718,7 @@ class TestAssertControlExecutionSplitMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "split"},
+            "parameters": {"assertions": assertions, "mode": "split", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -655,7 +737,7 @@ class TestAssertControlExecutionSplitMode:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "split"},
+            "parameters": {"assertions": assertions, "mode": "split", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -666,6 +748,7 @@ class TestAssertControlExecutionSplitMode:
             "parameters": {
                 "assertions": [_null_status_check("equals", "done")],
                 "mode": "split",
+                "fail_current_scope": False,
             },
             "variables": {"status": None},
         }
@@ -696,7 +779,7 @@ class TestAssertControlFailTest:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": _run_fill({"assertions": assertions, "mode": "single"}),
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -833,7 +916,7 @@ class TestAssertControlFailTest:
         assert logger.error.call_count == 0
 
     def test_fail_current_scope_default_is_false(self):
-        """Verify fail_current_scope defaults to False when omitted from params."""
+        """With fail_current_scope left out, the run fill hands its declared default False."""
         control = AssertControl()
         logger = MagicMock()
         assertions = [
@@ -846,7 +929,7 @@ class TestAssertControlFailTest:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": _run_fill({"assertions": assertions, "mode": "single"}),
             "variables": {"x": 10},
             "logger": logger,
         }
@@ -877,7 +960,7 @@ class TestAssertControlVariablePassthrough:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"my_var": "hello"},
         }
         result = asyncio.run(control.execute(context))
@@ -893,7 +976,7 @@ class TestAssertControlVariablePassthrough:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"a": 10, "b": 20},
         }
         result = asyncio.run(control.execute(context))
@@ -912,7 +995,7 @@ class TestAssertControlVariablePassthrough:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},
         }
         with pytest.raises(KeyError, match="nonexistent"):
@@ -940,7 +1023,7 @@ class TestAssertControlErrorPropagation:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},  # Missing variable -> KeyError
         }
         with pytest.raises(KeyError):
@@ -959,7 +1042,7 @@ class TestAssertControlErrorPropagation:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": "not_a_number"},
         }
         with pytest.raises(TypeError):
@@ -974,10 +1057,10 @@ class TestAssertControlErrorPropagation:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},
         }
-        with pytest.raises(ValueError, match="Unknown assertion item type"):
+        with pytest.raises(ValueError, match=r"^Unknown assertion item type: 'unknown_type'$"):
             asyncio.run(control.execute(context))
 
 
@@ -1002,7 +1085,7 @@ class TestAssertControlNoLogger:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -1021,7 +1104,7 @@ class TestAssertControlNoLogger:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions, "mode": "single"},
+            "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": 10},
         }
         result = asyncio.run(control.execute(context))
@@ -1057,7 +1140,7 @@ class TestAssertControlInlineOperators:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions},
+            "parameters": {"assertions": assertions, "mode": "split", "fail_current_scope": False},
             "variables": {"x": 10, "y": 20},
         }
         result = asyncio.run(control.execute(context))
@@ -1085,7 +1168,7 @@ class TestAssertControlInlineOperators:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions},
+            "parameters": {"assertions": assertions, "mode": "split", "fail_current_scope": False},
             "variables": {"x": 10, "y": 20},
         }
         result = asyncio.run(control.execute(context))
@@ -1113,7 +1196,7 @@ class TestAssertControlInlineOperators:
             },
         ]
         context = {
-            "parameters": {"assertions": assertions},
+            "parameters": {"assertions": assertions, "mode": "split", "fail_current_scope": False},
             "variables": {"x": 10, "y": 20},
         }
         result = asyncio.run(control.execute(context))

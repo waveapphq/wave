@@ -2,8 +2,7 @@
  * useConfigModal Hook Tests
  *
  * Tests for the config modal hook including internal helper functions
- * (getDefaultValueForType, removeMatchingEdges, cleanupAssertModeEdges,
- * cleanupOrphanedBranchEdges, createOutputBindingVariables,
+ * (removeMatchingEdges, cleanupGoneHandleEdges, createOutputBindingVariables,
  * createVariableSetterVariables) exercised through handleConfigSave.
  */
 
@@ -153,6 +152,11 @@ function createSaveData(overrides: Partial<SaveData> = {}): SaveData {
   }
 }
 
+/** Per-row Setter keys beside the shared lists (each starts with `variable` and a capital); the shared shape has none. */
+function perRowSetterKeys(record: object | null | undefined): string[] {
+  return Object.keys(record ?? {}).filter((key) => /^variable[A-Z]/.test(key))
+}
+
 // ===========================================================================
 // Tests
 // ===========================================================================
@@ -250,9 +254,6 @@ describe('useConfigModal', () => {
           },
           expressionFields: ['command'],
           templateFields: ['template_param'],
-          variableExpressionKeys: ['var1'],
-          variableTypes: { var1: 'string' },
-          variableElementTypes: { var1: ['integer'] },
           elementTypes: { command: { a: 'string' } },
         },
       }]
@@ -271,10 +272,35 @@ describe('useConfigModal', () => {
       expect(element.profileBindings).toEqual([{ profileId: 'p1', profileName: 'db', profileType: 'sql', alias: 'db' }])
       expect(element.expressionFields).toEqual(['command'])
       expect(element.templateFields).toEqual(['template_param'])
-      expect(element.variableExpressionKeys).toEqual(['var1'])
-      expect(element.variableTypes).toEqual({ var1: 'string' })
-      expect(element.variableElementTypes).toEqual({ var1: ['integer'] })
       expect(element.elementTypes).toEqual({ command: { a: 'string' } })
+    })
+
+    it('hands a Variable Setter window its rows in the shared lists and its secret marks from config.secretFields (REQ-3.4.1.14)', () => {
+      mockStore.configModalNodeId = 'node-1'
+      mockStore.nodes = [{
+        id: 'node-1',
+        data: {
+          label: 'Variable Setter',
+          elementType: 'variable-setter',
+          version: '1.0.0',
+          config: {
+            values: { variables: { token: 'abc', hosts: ['a', 'b'], next_id: 'id + 1' } },
+            secretFields: ['variables.token'],
+          },
+          expressionFields: ['variables.next_id', 'variables.hosts.1'],
+          templateFields: [],
+          elementTypes: { 'variables.hosts': ['string', 'string'] },
+        },
+      }]
+
+      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const element = result.current.configModalElement!
+
+      expect(element.currentValues).toEqual({ variables: { token: 'abc', hosts: ['a', 'b'], next_id: 'id + 1' } })
+      expect(element.expressionFields).toEqual(['variables.next_id', 'variables.hosts.1'])
+      expect(element.elementTypes).toEqual({ 'variables.hosts': ['string', 'string'] })
+      expect(element.secretFields).toEqual(['variables.token'])
+      expect(perRowSetterKeys(element)).toEqual([])
     })
 
     it('uses elementType as name fallback when label is missing', () => {
@@ -359,10 +385,8 @@ describe('useConfigModal', () => {
       const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
       expect(result.current.configModalElement!.expressionFields).toEqual([])
       expect(result.current.configModalElement!.templateFields).toEqual([])
-      expect(result.current.configModalElement!.variableExpressionKeys).toEqual([])
-      expect(result.current.configModalElement!.variableTypes).toEqual({})
-      expect(result.current.configModalElement!.variableElementTypes).toEqual({})
       expect(result.current.configModalElement!.elementTypes).toEqual({})
+      expect(perRowSetterKeys(result.current.configModalElement)).toEqual([])
     })
 
     it('defaults empty objects for config values/outputBindings when missing', () => {
@@ -477,114 +501,264 @@ describe('useConfigModal', () => {
   })
 
   // =========================================================================
-  // handleConfigSave - cleanupAssertModeEdges
+  // handleConfigSave - cleanupGoneHandleEdges
   // =========================================================================
 
-  describe('handleConfigSave - assert mode edge cleanup', () => {
-    it('removes all outgoing edges when assert mode changes', () => {
+  describe('handleConfigSave - the connections of a handle the Save removes go (REQ-3.5.1.11, REQ-3.5.4.3)', () => {
+    type StoreEdge = (typeof mockStore.edges)[number]
+
+    const OTHER_EDGE: StoreEdge = { id: 'e-other', source: 'other-node', sourceHandle: 'catch', target: 'node-1' }
+
+    function edgeFrom(id: string, sourceHandle?: string): StoreEdge {
+      return sourceHandle === undefined
+        ? { id, source: 'node-1', target: `${id}-target` }
+        : { id, source: 'node-1', sourceHandle, target: `${id}-target` }
+    }
+
+    /** Saves a Block that stores `storedValues` with `savedValues` while `edges` are on the canvas. */
+    function saveBlock(elementType: string, storedValues: Record<string, unknown> | undefined, savedValues: Record<string, unknown>, edges: StoreEdge[]) {
       mockStore.configModalNodeId = 'node-1'
       mockStore.nodes = [{
         id: 'node-1',
         data: {
-          label: 'Assert',
-          elementType: 'assert',
+          label: 'Block_1',
+          elementType,
           version: '1.0.0',
-          config: { values: { mode: 'single' } },
+          ...(storedValues === undefined ? {} : { config: { values: storedValues } }),
         },
       }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', target: 'node-2' },
-        { id: 'e2', source: 'node-1', sourceHandle: 'pass', target: 'node-3' },
-        { id: 'e3', source: 'other', target: 'node-4' },
-      ]
-
+      mockStore.edges = edges
       const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
       act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: { mode: 'split' }, // Changed from 'single'
-        }))
+        result.current.handleConfigSave(createSaveData({ values: savedValues }))
       })
+    }
 
-      // Should remove edges from node-1 (e1, e2), keep e3
-      expect(mockSetEdges).toHaveBeenCalledWith([
-        { id: 'e3', source: 'other', target: 'node-4' },
-      ])
+    it('Catch off removes the edges from catch and keeps try, finally and then', () => {
+      const tryEdge = edgeFrom('e-try', 'try')
+      const finallyEdge = edgeFrom('e-finally', 'finally')
+      const thenEdge = edgeFrom('e-then', 'then')
+      saveBlock(
+        'try-catch-finally',
+        { enable_catch: true, enable_finally: true },
+        { enable_catch: false, enable_finally: true },
+        [tryEdge, edgeFrom('e-catch', 'catch'), finallyEdge, thenEdge, OTHER_EDGE],
+      )
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([tryEdge, finallyEdge, thenEdge, OTHER_EDGE])
     })
 
-    it('does not remove edges when assert mode is unchanged', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: {
-          label: 'Assert',
-          elementType: 'assert',
-          version: '1.0.0',
-          config: { values: { mode: 'single' } },
-        },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', target: 'node-2' },
-      ]
+    it('Catch off on a Block that never stored the flag removes the edges from catch (Catch is on by default)', () => {
+      const tryEdge = edgeFrom('e-try', 'try')
+      const thenEdge = edgeFrom('e-then', 'then')
+      saveBlock('try-catch-finally', undefined, { enable_catch: false }, [tryEdge, edgeFrom('e-catch', 'catch'), thenEdge])
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      expect(mockSetEdges).toHaveBeenLastCalledWith([tryEdge, thenEdge])
+    })
 
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: { mode: 'single' }, // Same mode
-        }))
-      })
+    it('Catch off with no edge from catch writes no edges', () => {
+      saveBlock(
+        'try-catch-finally',
+        { enable_catch: true, enable_finally: true },
+        { enable_catch: false, enable_finally: true },
+        [edgeFrom('e-try', 'try'), edgeFrom('e-then', 'then'), OTHER_EDGE],
+      )
 
-      // setEdges should not be called for assert cleanup (mode unchanged)
-      // It might still be called for orphan cleanup, check it wasn't called at all
-      // since there are no branches in this save data
       expect(mockSetEdges).not.toHaveBeenCalled()
     })
 
-    it('does not run assert edge cleanup for non-assert elements', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Shell Script', elementType: 'shell-script', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', target: 'node-2' },
-      ]
+    it('Finally off removes the edges from finally and keeps the others', () => {
+      const tryEdge = edgeFrom('e-try', 'try')
+      const catchEdge = edgeFrom('e-catch', 'catch')
+      const thenEdge = edgeFrom('e-then', 'then')
+      saveBlock(
+        'try-catch-finally',
+        { enable_catch: true, enable_finally: true },
+        { enable_catch: true, enable_finally: false },
+        [tryEdge, catchEdge, edgeFrom('e-finally', 'finally'), thenEdge, OTHER_EDGE],
+      )
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      expect(mockSetEdges).toHaveBeenLastCalledWith([tryEdge, catchEdge, thenEdge, OTHER_EDGE])
+    })
 
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: { mode: 'different' },
-        }))
-      })
+    /** The edges the last Save wrote, as [id, source handle] pairs. */
+    function savedHandles(): Array<[string, string | null]> {
+      const edges = mockSetEdges.mock.lastCall?.[0] as StoreEdge[]
+      return edges.map((e) => [e.id, e.sourceHandle ?? null])
+    }
+
+    it.each([
+      ['a Wait Until stored in Retry', { mode: 'retry' }],
+      ['a Wait Until that never stored a mode (Retry by default)', undefined],
+    ])('Wait Retry to Watch removes the retry edge and moves the then edge to the single exit: %s', (_label, storedValues) => {
+      saveBlock(
+        'wait-until',
+        storedValues,
+        { mode: 'watch' },
+        [edgeFrom('e-retry', 'retry'), edgeFrom('e-then', 'then'), OTHER_EDGE],
+      )
+
+      expect(savedHandles()).toEqual([['e-then', null], ['e-other', 'catch']])
+      expect(mockSetEdges).toHaveBeenLastCalledWith([{ id: 'e-then', source: 'node-1', target: 'e-then-target' }, OTHER_EDGE])
+    })
+
+    it('Wait Retry to Watch removes a lone retry edge', () => {
+      saveBlock('wait-until', { mode: 'retry' }, { mode: 'watch' }, [edgeFrom('e-retry', 'retry'), OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([OTHER_EDGE])
+    })
+
+    it('Wait Retry to Watch keeps the then edge, the one a run leaves by, on the single exit and removes an unnamed one beside it', () => {
+      saveBlock(
+        'wait-until',
+        { mode: 'retry' },
+        { mode: 'watch' },
+        [edgeFrom('e-out'), edgeFrom('e-then', 'then'), OTHER_EDGE],
+      )
+
+      expect(savedHandles()).toEqual([['e-then', null], ['e-other', 'catch']])
+    })
+
+    it('Wait Watch to Retry moves the single exit edge to then', () => {
+      saveBlock('wait-until', { mode: 'watch' }, { mode: 'retry' }, [edgeFrom('e-out'), OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([{ ...edgeFrom('e-out'), sourceHandle: 'then' }, OTHER_EDGE])
+    })
+
+    it('Wait Watch to Retry keeps an edge already on the retry lane', () => {
+      saveBlock('wait-until', { mode: 'watch' }, { mode: 'retry' }, [edgeFrom('e-retry', 'retry'), edgeFrom('e-out'), OTHER_EDGE])
+
+      expect(savedHandles()).toEqual([['e-retry', 'retry'], ['e-out', 'then'], ['e-other', 'catch']])
+    })
+
+    it('Wait mode change with no edge out of the Block writes no edges', () => {
+      saveBlock('wait-until', { mode: 'watch' }, { mode: 'retry' }, [OTHER_EDGE])
+
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('Assert mode change removes every egress (as today): Split to Single', () => {
+      saveBlock('assert', { mode: 'split' }, { mode: 'single' }, [edgeFrom('e-pass', 'pass'), edgeFrom('e-fail', 'fail'), OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([OTHER_EDGE])
+    })
+
+    it('Assert mode change removes every egress (as today): Single to Split', () => {
+      saveBlock('assert', { mode: 'single' }, { mode: 'split' }, [edgeFrom('e-out'), OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([OTHER_EDGE])
+    })
+
+    it('Assert mode change removes every egress: Single to Split also removes a pass edge the single mode never drew', () => {
+      // A mode change drops every connection out of the Assert, also one whose handle the new mode has.
+      saveBlock('assert', { mode: 'single' }, { mode: 'split' }, [edgeFrom('e-out'), edgeFrom('e-pass', 'pass'), OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([OTHER_EDGE])
+    })
+
+    it('removed branch id removes its edges: If/Else keeps the other branches', () => {
+      const branchA = edgeFrom('e-a', 'branch-a')
+      const branchC = edgeFrom('e-c', 'branch-c')
+      saveBlock(
+        'if-else',
+        { branches: [{ id: 'branch-a' }, { id: 'branch-b' }, { id: 'branch-c' }] },
+        { branches: [{ id: 'branch-a' }, { id: 'branch-c' }] },
+        [branchA, edgeFrom('e-b', 'branch-b'), branchC, OTHER_EDGE],
+      )
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([branchA, branchC, OTHER_EDGE])
+    })
+
+    it('an If/Else Save that removes every branch removes the branch edges and keeps the single exit edge', () => {
+      const exitEdge = edgeFrom('e-out')
+      saveBlock('if-else', { branches: [{ id: 'branch-a' }] }, { branches: [] }, [edgeFrom('e-a', 'branch-a'), exitEdge, OTHER_EDGE])
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([exitEdge, OTHER_EDGE])
+    })
+
+    it('removed branch id removes its edges: Switch keeps the other cases and the then egress', () => {
+      const case0 = edgeFrom('e-0', 'branch_0')
+      const thenEdge = edgeFrom('e-then', 'then')
+      saveBlock(
+        'switch-case',
+        { branches: [{ id: 'branch_0' }, { id: 'branch_1' }] },
+        { branches: [{ id: 'branch_0' }] },
+        [case0, edgeFrom('e-1', 'branch_1'), thenEdge],
+      )
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([case0, thenEdge])
+    })
+
+    it('removed branch id removes its edges: Parallel keeps the other lanes and the then egress', () => {
+      const lane0 = edgeFrom('e-0', 'branch_0')
+      const lane2 = edgeFrom('e-2', 'branch_2')
+      const thenEdge = edgeFrom('e-then', 'then')
+      saveBlock(
+        'parallel',
+        { branches: [{ id: 'branch_0', name: 'a' }, { id: 'branch_1', name: 'b' }, { id: 'branch_2', name: 'c' }] },
+        { branches: [{ id: 'branch_0', name: 'a' }, { id: 'branch_2', name: 'c' }] },
+        [lane0, edgeFrom('e-1', 'branch_1'), lane2, thenEdge],
+      )
+
+      expect(mockSetEdges).toHaveBeenLastCalledWith([lane0, lane2, thenEdge])
+    })
+
+    it('unchanged handle list keeps all: a Switch Save that keeps its cases keeps the then egress', () => {
+      saveBlock(
+        'switch-case',
+        { branches: [{ id: 'branch_0' }] },
+        { branches: [{ id: 'branch_0' }] },
+        [edgeFrom('e-0', 'branch_0'), edgeFrom('e-then', 'then')],
+      )
+
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('unchanged handle list keeps all: an If/Else Save that keeps its branches keeps every edge, a handle-less one included', () => {
+      saveBlock(
+        'if-else',
+        { branches: [{ id: 'branch-a' }] },
+        { branches: [{ id: 'branch-a' }] },
+        [edgeFrom('e-out'), edgeFrom('e-a', 'branch-a')],
+      )
+
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('unchanged handle list keeps all: a Try/Catch/Finally Save that keeps both flags', () => {
+      saveBlock(
+        'try-catch-finally',
+        { enable_catch: true, enable_finally: true },
+        { enable_catch: true, enable_finally: true },
+        [edgeFrom('e-try', 'try'), edgeFrom('e-catch', 'catch'), edgeFrom('e-finally', 'finally'), edgeFrom('e-then', 'then')],
+      )
+
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('unchanged handle list keeps all: a Wait Until Save that keeps its mode', () => {
+      saveBlock('wait-until', { mode: 'watch' }, { mode: 'watch' }, [edgeFrom('e-out')])
+
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('does not remove edges when assert mode is unchanged', () => {
+      saveBlock('assert', { mode: 'single' }, { mode: 'single' }, [edgeFrom('e-out')])
+
+      // The Save leaves the Block's handle list as it was, so no edge goes.
+      expect(mockSetEdges).not.toHaveBeenCalled()
+    })
+
+    it('does not run edge cleanup for a Block with one default egress', () => {
+      saveBlock('shell-script', undefined, { mode: 'different', branches: [{ id: 'x' }] }, [edgeFrom('e-out')])
 
       expect(mockSetEdges).not.toHaveBeenCalled()
     })
 
     it('treats a fresh Assert (no stored mode) as default split: editing without a mode flip keeps edges', () => {
-      // The node was just dropped; ``data.config.values.mode`` was never
-      // saved, so cleanupAssertModeEdges sees ``oldMode = undefined``. The
-      // saveData also omits the mode key. Both normalize to 'split', so the
-      // helper short-circuits without wiping edges - this exercises both
-      // ``?? 'split'`` defaults in cleanupAssertModeEdges.
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Assert', elementType: 'assert', version: '1.0.0' },
-      }]
-      mockStore.edges = [{ id: 'e1', source: 'node-1', target: 'node-2' }]
+      // A just-dropped Assert stores no mode and the Save carries none: both read as Split.
+      saveBlock('assert', undefined, {}, [edgeFrom('e-pass', 'pass')])
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {}, // no mode key
-        }))
-      })
-
-      // No flip -> no setEdges call from the assert path. cleanupOrphanedBranchEdges
-      // also short-circuits because there are no branches.
       expect(mockSetEdges).not.toHaveBeenCalled()
     })
   })
@@ -611,144 +785,6 @@ describe('useConfigModal', () => {
       expect(mockUpdateNode).toHaveBeenCalledWith('node-1', {
         data: expect.objectContaining({ label: 'PreservedLabel' }),
       })
-    })
-  })
-
-  // =========================================================================
-  // handleConfigSave - cleanupOrphanedBranchEdges
-  // =========================================================================
-
-  describe('handleConfigSave - orphaned branch edge cleanup', () => {
-    it('removes edges for branches that no longer exist', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'If-Else', elementType: 'if_else', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', sourceHandle: 'branch-a', target: 'node-2' },
-        { id: 'e2', source: 'node-1', sourceHandle: 'branch-b', target: 'node-3' },
-        { id: 'e3', source: 'node-1', sourceHandle: 'branch-c', target: 'node-4' },
-        { id: 'e4', source: 'other-node', target: 'node-5' },
-      ]
-
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {
-            branches: [{ id: 'branch-a' }, { id: 'branch-c' }],
-          },
-        }))
-      })
-
-      // branch-b was removed, so e2 should be cleaned up
-      expect(mockSetEdges).toHaveBeenCalledWith([
-        { id: 'e1', source: 'node-1', sourceHandle: 'branch-a', target: 'node-2' },
-        { id: 'e3', source: 'node-1', sourceHandle: 'branch-c', target: 'node-4' },
-        { id: 'e4', source: 'other-node', target: 'node-5' },
-      ])
-    })
-
-    it('keeps a container egress edge that is not a branch', () => {
-      // Guard: a Switch's `then` lane is an egress, not a case, so saving the
-      // config must not sweep the edge wired from it.
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Switch/Case', elementType: 'switch-case', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', sourceHandle: 'branch_0', target: 'node-2' },
-        { id: 'e2', source: 'node-1', sourceHandle: 'then', target: 'node-3' },
-      ]
-
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {
-            branches: [{ id: 'branch_0' }],
-          },
-        }))
-      })
-
-      expect(mockSetEdges).not.toHaveBeenCalled()
-    })
-
-    it('still removes a deleted case edge while keeping the egress edge', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Switch/Case', elementType: 'switch-case', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', sourceHandle: 'branch_0', target: 'node-2' },
-        { id: 'e2', source: 'node-1', sourceHandle: 'branch_1', target: 'node-3' },
-        { id: 'e3', source: 'node-1', sourceHandle: 'then', target: 'node-4' },
-      ]
-
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {
-            branches: [{ id: 'branch_0' }],
-          },
-        }))
-      })
-
-      expect(mockSetEdges).toHaveBeenCalledWith([
-        { id: 'e1', source: 'node-1', sourceHandle: 'branch_0', target: 'node-2' },
-        { id: 'e3', source: 'node-1', sourceHandle: 'then', target: 'node-4' },
-      ])
-    })
-
-    it('does nothing when save data has no branches', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Shell Script', elementType: 'shell-script', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', target: 'node-2' },
-      ]
-
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {}, // no branches
-        }))
-      })
-
-      expect(mockSetEdges).not.toHaveBeenCalled()
-    })
-
-    it('does not remove edges without sourceHandle (they are not branch edges)', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'If-Else', elementType: 'if_else', version: '1.0.0' },
-      }]
-      mockStore.edges = [
-        { id: 'e1', source: 'node-1', target: 'node-2' }, // No sourceHandle
-        { id: 'e2', source: 'node-1', sourceHandle: 'branch-a', target: 'node-3' },
-      ]
-
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
-
-      act(() => {
-        result.current.handleConfigSave(createSaveData({
-          values: {
-            branches: [{ id: 'branch-a' }],
-          },
-        }))
-      })
-
-      // e1 has no sourceHandle, so shouldRemove returns false (!!undefined = false)
-      // All branch edges match existing branches, so nothing to remove
-      expect(mockSetEdges).not.toHaveBeenCalled()
     })
   })
 
@@ -984,15 +1020,23 @@ describe('useConfigModal', () => {
   // =========================================================================
 
   describe('handleConfigSave - variable setter variable creation', () => {
-    it('creates variables from variable setter entries with correct default values', () => {
+    function seedSetter(extraData: Record<string, unknown> = {}) {
       mockStore.configModalNodeId = 'node-1'
       mockStore.nodes = [{
         id: 'node-1',
-        data: { label: 'Variable Setter', elementType: 'variable_setter', version: '1.0.0' },
+        data: { label: 'Variable Setter', elementType: 'variable-setter', version: '1.0.0', ...extraData },
       }]
+    }
+
+    function renderSetterSheet() {
+      return renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+    }
+
+    it('creates variables from variable setter entries with correct default values', () => {
+      seedSetter()
       mockStore.variables = []
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
@@ -1007,7 +1051,7 @@ describe('useConfigModal', () => {
               myTable: [],
             },
           },
-          variableTypes: {
+          newTargetTypes: {
             myString: 'string',
             myInt: 'integer',
             myBool: 'boolean',
@@ -1038,39 +1082,94 @@ describe('useConfigModal', () => {
       }
     })
 
-    it('skips when variableTypes is undefined', () => {
+    it('declares a new target with the type picked in the window and writes no row type on the node (REQ-3.4.1.14)', () => {
+      seedSetter()
+      mockStore.variables = []
+
+      const { result } = renderSetterSheet()
+
+      act(() => {
+        result.current.handleConfigSave(createSaveData({
+          values: { variables: { retries: null } },
+          newTargetTypes: { retries: 'integer' },
+        }))
+      })
+
+      expect(mockAddVariable).toHaveBeenCalledWith({ name: 'retries', type: 'integer', isSecret: false })
+      const data = mockUpdateNode.mock.calls[0][1].data as Record<string, unknown>
+      expect(data).not.toHaveProperty('newTargetTypes')
+      expect(perRowSetterKeys(data)).toEqual([])
+      expect(data.elementTypes ?? {}).not.toHaveProperty('variables')
+    })
+
+    it('reads a new target type only from the window pick, never from a type stored on the node', () => {
+      // A row type stored on the node must not decide the declared type.
+      seedSetter({ elementTypes: { variables: { retries: 'boolean' } } })
+      mockStore.variables = []
+
+      const { result } = renderSetterSheet()
+
+      act(() => {
+        result.current.handleConfigSave(createSaveData({
+          values: { variables: { retries: null } },
+          newTargetTypes: { retries: 'integer' },
+        }))
+      })
+
+      expect(mockAddVariable).toHaveBeenCalledTimes(1)
+      expect(mockAddVariable).toHaveBeenCalledWith({ name: 'retries', type: 'integer', isSecret: false })
+    })
+
+    it('declares a new target secret from the secret mark the Save stores under config.secretFields (REQ-4.5.20)', () => {
+      seedSetter()
+      mockStore.variables = []
+
+      const { result } = renderSetterSheet()
+
+      act(() => {
+        result.current.handleConfigSave(createSaveData({
+          values: { variables: { api_token: 's3cret', region: 'eu' } },
+          newTargetTypes: { api_token: 'string', region: 'string' },
+          secretFields: ['variables.api_token'],
+        }))
+      })
+
+      const data = mockUpdateNode.mock.calls[0][1].data as { config: Record<string, unknown> }
+      expect(data.config.secretFields).toEqual(['variables.api_token'])
+      expect(perRowSetterKeys(data.config)).toEqual([])
+      expect(mockAddVariable).toHaveBeenCalledWith({ name: 'api_token', type: 'string', isSecret: true })
+      expect(mockAddVariable).toHaveBeenCalledWith({ name: 'region', type: 'string', isSecret: false })
+      expect(mockRequestSecretPromotion).not.toHaveBeenCalled()
+    })
+
+    it('skips when the Save carries no new target types', () => {
+      // A plugin field that happens to be named `variables` declares nothing.
       mockStore.configModalNodeId = 'node-1'
       mockStore.nodes = [{
         id: 'node-1',
         data: { label: 'Shell Script', elementType: 'shell-script', version: '1.0.0' },
       }]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { a: 1 } },
-          // variableTypes is undefined
         }))
       })
 
-      // No variable setter variables created - no variableTypes
       expect(mockAddVariable).not.toHaveBeenCalled()
     })
 
     it('skips when values.variables is undefined', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: {}, // no variables key
-          variableTypes: { a: 'string' },
+          newTargetTypes: { a: 'string' },
         }))
       })
 
@@ -1078,21 +1177,17 @@ describe('useConfigModal', () => {
     })
 
     it('skips existing variables', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = [
         { id: 'v1', name: 'existing', value: 'old', type: 'string' },
       ]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { existing: 'new_val' } },
-          variableTypes: { existing: 'string' },
+          newTargetTypes: { existing: 'string' },
         }))
       })
 
@@ -1100,21 +1195,17 @@ describe('useConfigModal', () => {
     })
 
     it('skips variable when name already exists in store', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = [
         { id: 'v1', name: 'inherited', value: 'suite_val', type: 'string' },
       ]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { inherited: 'overridden' } },
-          variableTypes: { inherited: 'string' },
+          newTargetTypes: { inherited: 'string' },
         }))
       })
 
@@ -1123,37 +1214,29 @@ describe('useConfigModal', () => {
     })
 
     it('skips empty variable names', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { '': 'value' } },
-          variableTypes: { '': 'string' },
+          newTargetTypes: { '': 'string' },
         }))
       })
 
       expect(mockAddVariable).not.toHaveBeenCalled()
     })
 
-    it('defaults variable type to string when type is missing from variableTypes', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+    it('defaults variable type to string when the window picked none for a new target', () => {
+      seedSetter()
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { untyped: 'val' } },
-          variableTypes: {}, // no type mapping
+          newTargetTypes: {}, // no type picked
         }))
       })
 
@@ -1165,22 +1248,18 @@ describe('useConfigModal', () => {
     })
 
     it('marks an existing variable secret when a setter row marks it secret', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = [
         { id: 'var-1', name: 'token', value: '', type: 'string', isSecret: false },
       ]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { token: 'hunter2' } },
-          variableTypes: { token: 'string' },
-          variableSecretKeys: ['token'],
+          newTargetTypes: {},
+          secretFields: ['variables.token'],
         }))
       })
 
@@ -1202,7 +1281,7 @@ describe('useConfigModal', () => {
           functionLifecycle: 'local',
           localDefinition: {
             workflow: {
-              nodes: [{ id: 'node-1', data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' } }],
+              nodes: [{ id: 'node-1', data: { label: 'Setter', elementType: 'variable-setter', version: '1.0.0' } }],
               edges: [],
             },
             inputs: [],
@@ -1212,13 +1291,13 @@ describe('useConfigModal', () => {
         },
       }]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { res: 'hunter2' } },
-          variableTypes: { res: 'string' },
-          variableSecretKeys: ['res'],
+          newTargetTypes: {},
+          secretFields: ['variables.res'],
         }))
       })
 
@@ -1229,22 +1308,18 @@ describe('useConfigModal', () => {
     })
 
     it('does not re-mark a variable that is already secret', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = [
         { id: 'var-1', name: 'token', value: '', type: 'string', isSecret: true },
       ]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { token: 'hunter2' } },
-          variableTypes: { token: 'string' },
-          variableSecretKeys: ['token'],
+          newTargetTypes: {},
+          secretFields: ['variables.token'],
         }))
       })
 
@@ -1252,77 +1327,59 @@ describe('useConfigModal', () => {
     })
 
     it('promotes an existing variable whose secret flag is unset', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = [
         { id: 'var-1', name: 'token', value: '', type: 'string' },
       ]
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { token: 'hunter2' } },
-          variableTypes: { token: 'string' },
-          variableSecretKeys: ['token'],
+          newTargetTypes: {},
+          secretFields: ['variables.token'],
         }))
       })
 
       expect(mockUpdateVariable).toHaveBeenCalledWith('var-1', { isSecret: true })
     })
 
-    it('ignores a setter secret key with no matching existing variable', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+    it('ignores a setter secret mark with no matching existing variable: the new target is created secret', () => {
+      seedSetter()
       mockStore.variables = []
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
       act(() => {
         result.current.handleConfigSave(createSaveData({
           values: { variables: { fresh: 'hunter2' } },
-          variableTypes: { fresh: 'string' },
-          variableSecretKeys: ['fresh'],
+          newTargetTypes: { fresh: 'string' },
+          secretFields: ['variables.fresh'],
         }))
       })
 
       // The fresh variable is created (addVariable), never updated by the sync.
+      expect(mockAddVariable).toHaveBeenCalledWith({ name: 'fresh', type: 'string', isSecret: true })
       expect(mockUpdateVariable).not.toHaveBeenCalled()
     })
 
     it('does not create duplicate variable setter variables within same save', () => {
-      mockStore.configModalNodeId = 'node-1'
-      mockStore.nodes = [{
-        id: 'node-1',
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
-      }]
+      seedSetter()
       mockStore.variables = []
 
-      const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
+      const { result } = renderSetterSheet()
 
-      // The variable setter uses Object.keys, so duplicates come from
-      // output bindings creating a variable first
-      // Two variables with different names should both be created
+      // The store list does not change inside one Save, so the output binding and the Setter row both declare the name.
       act(() => {
         result.current.handleConfigSave(createSaveData({
           outputBindings: { out1: 'shared_name' },
           outputTypes: { out1: 'string' },
           values: { variables: { shared_name: 'val' } },
-          variableTypes: { shared_name: 'string' },
+          newTargetTypes: { shared_name: 'string' },
         }))
       })
 
-      // Output binding creates 'shared_name' first, variable setter skips it
-      // because existingTestVarNames won't contain it (but existingVarNames in output binding does)
-      // Actually these are separate functions with separate sets, so both may create
-      // The output binding creates via addVariable but existingTestVarNames in setter is from store
-      // In the store, variables is still empty, so setter will also create
       expect(mockAddVariable).toHaveBeenCalledTimes(2)
     })
   })
@@ -1658,7 +1715,7 @@ describe('useConfigModal', () => {
     function saveFunctionBlock(id: string, fields: Record<string, unknown>) {
       const { result } = renderHook(() => useConfigModal(mockStore.configModalNodeId), { wrapper: withReactFlow })
       act(() => {
-        result.current.handleConfigSave(createSaveData({ id, ...fields } as Partial<SaveData>))
+        result.current.handleConfigSave(createSaveData({ id, ...fields }))
       })
     }
 
@@ -1829,7 +1886,7 @@ describe('useConfigModal', () => {
         id: 'setter-1',
         type: 'workflowNode',
         position: { x: 0, y: 0 },
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
+        data: { label: 'Setter', elementType: 'variable-setter', version: '1.0.0' },
       }
       mockStore.nodes = [{
         id: 'fn-1',
@@ -1857,7 +1914,7 @@ describe('useConfigModal', () => {
         result.current.handleConfigSave(createSaveData({
           id: 'setter-1',
           values: { variables: { declaredInput: '1' } },
-          variableTypes: { declaredInput: 'string' },
+          newTargetTypes: { declaredInput: 'string' },
         }))
       })
 
@@ -1871,7 +1928,7 @@ describe('useConfigModal', () => {
         id: 'setter-1',
         type: 'workflowNode',
         position: { x: 0, y: 0 },
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
+        data: { label: 'Setter', elementType: 'variable-setter', version: '1.0.0' },
       }
       const fnNode = {
         id: 'fn-1',
@@ -1904,7 +1961,7 @@ describe('useConfigModal', () => {
           values: {
             variables: { declaredInput: '1', declaredOutput: '2', brandNew: '3' },
           },
-          variableTypes: {
+          newTargetTypes: {
             declaredInput: 'string',
             declaredOutput: 'string',
             brandNew: 'string',
@@ -1972,7 +2029,7 @@ describe('useConfigModal', () => {
         id: 'setter-2',
         type: 'workflowNode',
         position: { x: 0, y: 0 },
-        data: { label: 'Setter', elementType: 'variable_setter', version: '1.0.0' },
+        data: { label: 'Setter', elementType: 'variable-setter', version: '1.0.0' },
       }
       const fnNode = {
         id: 'fn-bare',
@@ -1999,7 +2056,7 @@ describe('useConfigModal', () => {
         result.current.handleConfigSave(createSaveData({
           id: 'setter-2',
           values: { variables: { fresh: '1' } },
-          variableTypes: { fresh: 'string' },
+          newTargetTypes: { fresh: 'string' },
         }))
       })
 
@@ -2152,12 +2209,12 @@ describe('useConfigModal', () => {
       },
       {
         carrier: 'a Variable Setter Secret row',
-        elementType: 'variable_setter',
+        elementType: 'variable-setter',
         saveFor: (names) =>
           createSaveData({
             values: { variables: Object.fromEntries(names.map((name) => [name, "'s3cret'"])) },
-            variableTypes: Object.fromEntries(names.map((name) => [name, 'string'])),
-            variableSecretKeys: names,
+            newTargetTypes: Object.fromEntries(names.map((name) => [name, 'string'])),
+            secretFields: names.map((name) => `variables.${name}`),
           }),
       },
     ]

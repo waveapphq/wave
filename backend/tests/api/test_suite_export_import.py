@@ -1354,6 +1354,7 @@ class TestImportSuiteVariableCollision:
 
         with (
             patch("wavecore.api.services.suites._storage._list_all_suites", return_value=[]),
+            patch("wavecore.api.services.suites._storage._test_exists", return_value=True),
             patch("wavecore.api.services.suites.import_export.parse_file") as mock_parse,
             patch(
                 "wavecore.api.services.suites.import_export.check_variable_collisions_for_tests",
@@ -1503,3 +1504,161 @@ class TestExportKeepsTheWholeFileName:
             response = client.post("/suites/export", json={"suite_ids": [suite_id]})
 
         assert_whole_name(response, name)
+
+
+class TestImportASuiteThatListsATestTwice:
+    """A repeated Test in an imported Suite is stripped as a fix, like an unknown one."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture
+    def member_id(self) -> str:
+        from wavecore.api.services.tests import service as test_service
+
+        return str(test_service.create_test({"name": "Member Test"})["id"])
+
+    def _file(self, member_id: str) -> dict[str, Any]:
+        tests = [member_id, "gone-test", member_id]
+        content = yaml.dump({"name": "Twice Suite", "tests": tests}).encode()
+        return {"file": ("suite.yaml", content, "application/x-yaml")}
+
+    def test_validation_names_the_repeat_as_fixable(
+        self, client: TestClient, member_id: str
+    ) -> None:
+        response = client.post("/suites/import/validate", files=self._file(member_id))
+
+        item = response.json()["data"]["suites"][0]
+        assert item["status"] == "fixable"
+        assert item["fixable_errors"] == [
+            {
+                "code": "UNRESOLVABLE_TEST",
+                "message": "Test 'gone-test' not found, will be stripped",
+            },
+            {
+                "code": "REPEATED_TEST",
+                "message": f"Test '{member_id}' is listed more than once, will be stripped",
+            },
+        ]
+
+    def test_import_keeps_the_test_once_and_reports_the_fix(
+        self, client: TestClient, member_id: str
+    ) -> None:
+        from tests.api.suite_test_helpers import load_suite_file
+
+        response = client.post("/suites/import", files=self._file(member_id))
+
+        data = response.json()["data"]
+        assert data["fixes_applied"] == [
+            {
+                "name": "Twice Suite",
+                "fixes": [
+                    "Stripped unresolvable test 'gone-test'",
+                    f"Stripped repeated test '{member_id}'",
+                ],
+            }
+        ]
+        stored = load_suite_file(data["imported"][0]["id"])
+        assert stored is not None
+        assert stored["tests"] == [member_id]
+
+
+# Each member that is not an ID string, and the finding and fix it is stripped with
+_NOT_ID_TESTS = [
+    (5, "Test '5' not found, will be stripped", "Stripped unresolvable test '5'"),
+    (
+        {"id": "x"},
+        "Test '{'id': 'x'}' not found, will be stripped",
+        "Stripped unresolvable test '{'id': 'x'}'",
+    ),
+    (None, "Test 'None' not found, will be stripped", "Stripped unresolvable test 'None'"),
+]
+
+_TYPED_VARIABLES = {"env": {"type": "string", "value": "dev"}}
+
+
+class TestImportASuiteWhoseTestsAreNotIDs:
+    """A Test list member that is not an ID string is stripped as a fix, like an unknown
+    Test; a Test list that is not a list is fatal for the Suite."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture
+    def member_id(self) -> str:
+        from wavecore.api.services.tests import service as test_service
+
+        return str(test_service.create_test({"name": "Member Test"})["id"])
+
+    @staticmethod
+    def _file(document: dict[str, Any]) -> dict[str, Any]:
+        content = yaml.dump({"name": "Odd Suite", **document}).encode()
+        return {"file": ("suite.yaml", content, "application/x-yaml")}
+
+    @pytest.mark.parametrize("variables", [{}, _TYPED_VARIABLES], ids=["plain", "typed"])
+    def test_validation_names_each_one_as_fixable(
+        self, client: TestClient, member_id: str, variables: dict[str, Any]
+    ) -> None:
+        tests = [member_id, *(member for member, _, _ in _NOT_ID_TESTS)]
+        document = {"tests": tests, "variables": variables}
+
+        response = client.post("/suites/import/validate", files=self._file(document))
+
+        item = response.json()["data"]["suites"][0]
+        assert item["status"] == "fixable"
+        assert item["fatal_errors"] == []
+        assert item["fixable_errors"] == [
+            {"code": "UNRESOLVABLE_TEST", "message": message} for _, message, _ in _NOT_ID_TESTS
+        ]
+
+    @pytest.mark.parametrize("variables", [{}, _TYPED_VARIABLES], ids=["plain", "typed"])
+    def test_import_keeps_the_known_test_and_reports_each_fix(
+        self, client: TestClient, member_id: str, variables: dict[str, Any]
+    ) -> None:
+        from tests.api.suite_test_helpers import load_suite_file
+
+        tests = [member_id, *(member for member, _, _ in _NOT_ID_TESTS)]
+        document = {"tests": tests, "variables": variables}
+
+        response = client.post("/suites/import", files=self._file(document))
+
+        data = response.json()["data"]
+        assert data["fixes_applied"] == [
+            {"name": "Odd Suite", "fixes": [fix for _, _, fix in _NOT_ID_TESTS]}
+        ]
+        stored = load_suite_file(data["imported"][0]["id"])
+        assert stored is not None
+        assert stored["tests"] == [member_id]
+
+    @pytest.mark.parametrize("tests", ["abc", 5, {"id": "x"}, None])
+    def test_validation_names_a_test_list_that_is_not_a_list_as_fatal(
+        self, client: TestClient, tests: Any
+    ) -> None:
+        response = client.post("/suites/import/validate", files=self._file({"tests": tests}))
+
+        data = response.json()["data"]
+        assert data["blocked"] == 1
+        item = data["suites"][0]
+        assert item["status"] == "fatal"
+        assert item["fatal_errors"] == [
+            {"code": "INVALID_TESTS", "message": "Field 'tests' must be a list"}
+        ]
+        assert item["fixable_errors"] == []
+
+    @pytest.mark.parametrize("tests", ["abc", 5, {"id": "x"}, None])
+    def test_import_refuses_a_test_list_that_is_not_a_list(
+        self, client: TestClient, tests: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+        from wavecore.api.services.suites import _storage
+
+        response = client.post("/suites/import", files=self._file({"tests": tests}))
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Field 'tests' must be a list")
+        assert _storage._list_all_suites() == []

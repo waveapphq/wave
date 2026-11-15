@@ -338,10 +338,10 @@ class TestUpdateSuiteService:
 
         created = suite_service.create_suite({"name": "Test Suite"})
 
-        from wavecore.api.exceptions import ConflictException
+        from wavecore.api.exceptions import PreconditionRequiredException
 
         with pytest.raises(
-            ConflictException,
+            PreconditionRequiredException,
             match=r"^Precondition failed: resource has been modified$",
         ):
             suite_service.update_suite(created["id"], {"name": "Updated"}, etag='"invalid-etag"')

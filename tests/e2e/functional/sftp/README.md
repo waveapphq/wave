@@ -37,7 +37,8 @@ headless cleanup runs every spec starts from its `afterAll` through `runCleanup`
   writes to the console under the source `SFTP : <Name>` (EXEC-25), so every block a spec reads by
   its console lines carries its own Name: unique on the canvas, at most 32 characters.
 - Sheet rows: `fillTextRow` (a literal string row through its Edit value sheet) and
-  `replaceSecretRow` (a stored secret: Edit protected value, Delete & Edit, the new text).
+  `replaceSecretRow` (a stored secret: its `<label>: Edit protected value` control, Delete & Edit,
+  the new text).
 - `runCleanup(request, { account, paths, probe })` runs the cleanup fixture headless with
   `runTrackedTest`, asserts it passed, deletes its Test and clears the settled workbench session.
 

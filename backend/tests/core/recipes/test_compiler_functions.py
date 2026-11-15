@@ -15,6 +15,7 @@ from tests.core.recipes.conftest import (
     find_finding,
     make_recipe,
 )
+from tests.core.recipes.test_compiler_constructs import variable_prefixed_keys
 
 LOCAL_DEFINITION_KEYS = {"name", "workflow", "inputs", "outputs", "variables"}
 
@@ -654,11 +655,14 @@ class TestSetterRowTypesInAFunctionBody:
             for node in definition["workflow"]["nodes"]
             if node["data"]["elementType"] == "variable-setter"
         )
-        assert setter["data"]["variableTypes"] == {
-            "count": "integer",
-            "total": "float",
-            "seen": "integer",
+        # No row type on the Block: each row reads the type its Function scope declares.
+        assert variable_prefixed_keys(setter["data"]) == []
+        assert setter["data"]["expressionFields"] == ["variables.count", "variables.seen"]
+        declared = {
+            entry["name"]: entry["type"]
+            for entry in [*definition["outputs"], *definition["variables"]]
         }
+        assert declared == {"count": "integer", "total": "float", "seen": "integer"}
 
     def test_an_expression_row_the_function_does_not_declare_stays_untyped(self) -> None:
         function = {
@@ -674,15 +678,38 @@ class TestSetterRowTypesInAFunctionBody:
         )
         definition = nodes_by_id(compile_clean(recipe))["node-1"]["data"]["localDefinition"]
         setter = definition["workflow"]["nodes"][0]
-        assert setter["data"]["variableTypes"] == {}
+        assert variable_prefixed_keys(setter["data"]) == []
+        assert setter["data"]["expressionFields"] == ["variables.other"]
+        assert definition["variables"] == []
 
     def test_a_test_level_row_still_takes_the_test_declaration(self) -> None:
         recipe = make_recipe(
             [{"set": {"count": {"expr": "1 + 1"}}}],
             variables={"count": {"type": "integer", "value": 0}},
         )
-        setter = nodes_by_id(compile_clean(recipe))["node-1"]
-        assert setter["data"]["variableTypes"] == {"count": "integer"}
+        result = compile_clean(recipe)
+        setter = nodes_by_id(result)["node-1"]
+        assert variable_prefixed_keys(setter["data"]) == []
+        assert setter["data"]["expressionFields"] == ["variables.count"]
+        assert result["test_data"]["variables"]["count"]["type"] == "integer"
+
+    def test_entry_types_follow_the_function_scope_declaration(self) -> None:
+        function = {
+            "name": "tally",
+            "inputs": [],
+            "outputs": [],
+            "variables": {"bag": {"type": "map", "value": {}}},
+            "flow": [{"set": {"bag": {"n": 1, "s": "a"}}}],
+        }
+        recipe = make_recipe(
+            [{"function": "tally"}],
+            variables={"bag": {"type": "string", "value": "x"}},
+            functions=[function],
+        )
+        definition = nodes_by_id(compile_clean(recipe))["node-1"]["data"]["localDefinition"]
+        setter = definition["workflow"]["nodes"][0]
+        assert setter["data"]["elementTypes"] == {"variables.bag": {"n": "integer", "s": "string"}}
+        assert variable_prefixed_keys(setter["data"]) == []
 
 
 class TestMarkedFunctionCaptureMakesADeclaredVariableSecret:

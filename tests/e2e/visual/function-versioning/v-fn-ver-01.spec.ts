@@ -82,7 +82,6 @@ function buildSeedTest(fn: SeededFunction): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { msg: 'hello' }, outputBindings: {}, profileBindings: [] },
           },
           measured: { width: 120, height: 62 },

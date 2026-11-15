@@ -76,13 +76,14 @@ export interface HistoricalCanvasLog {
 /**
  * Test variable declaration as the BE returns it (matches the
  * convertBackendVariables shape - keyed by name, with `type`, `value`,
- * optional `isExpression` / `secret`). Used by the Historical Canvas to
- * power the eye-OFF "definition" view of the Variable Manager panel.
+ * optional `isExpression` / `isTemplate` / `secret`). Used by the Historical
+ * Canvas to power the eye-OFF "definition" view of the Variable Manager panel.
  */
 export interface HistoricalCanvasVariableDefinition {
   type: string
   value: unknown
   isExpression?: boolean
+  isTemplate?: boolean
   secret?: boolean
   scope?: string
 }
@@ -97,10 +98,14 @@ export interface HistoricalTestCanvasResponse {
   ended_at: string | null
   workflow: HistoricalCanvasWorkflow | null
   block_states: Record<string, string>
+  /** The lanes each Block took in its last pass, by Block. Drives the lane wires. */
+  lanes_taken: Record<string, string[]>
   /** End-of-run runtime values (secrets masked). Drives the eye-ON view. */
   variables: Record<string, unknown>
   /** Test definition (declared variables with type / flags). Drives the eye-OFF view. */
   variable_definitions: Record<string, HistoricalCanvasVariableDefinition>
+  /** The names the run held secret: the SECRET badge once the test is deleted (REQ-3.1.3.5). */
+  secret_variables: string[]
   logs: HistoricalCanvasLog[]
   environment_id: string | null
   environment_name: string | null

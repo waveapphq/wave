@@ -31,7 +31,7 @@ describe('buildVariablesFromDefinitions', () => {
       api_url: { type: 'string', value: "'https://api.test/x'", isExpression: true },
       password: { type: 'string', value: '********', secret: true },
     }
-    const result = buildVariablesFromDefinitions(defs, {})
+    const result = buildVariablesFromDefinitions(defs, {}, [])
     const byName = (name: string) => result.find((v: Variable) => v.name === name)!
 
     expect(byName('counter').type).toBe('integer')
@@ -42,11 +42,38 @@ describe('buildVariablesFromDefinitions', () => {
     expect(byName('password').isSecret).toBe(true)
   })
 
+  it('carries the Template flag, so the names a Template variable reads count as used', () => {
+    const defs: Record<string, HistoricalCanvasVariableDefinition> = {
+      greeting: { type: 'string', value: 'Hi {{ name }}', isTemplate: true },
+      name: { type: 'string', value: 'Ann' },
+    }
+    const result = buildVariablesFromDefinitions(defs, {}, [])
+    const byName = (name: string) => result.find((v: Variable) => v.name === name)!
+
+    expect(byName('greeting').isTemplate).toBe(true)
+    expect(byName('name').isTemplate).toBeUndefined()
+  })
+
+  it('types a stored table as a table when the test was deleted, before guessing a map', () => {
+    const table = { columns: [{ name: 'id', type: 'integer' }], rows: [[1], [2]] }
+    const result = buildVariablesFromDefinitions(
+      {},
+      { rows_out: table, settings: { columns: 3, rows: 4 }, items: [{ a: 1 }] },
+      [],
+    )
+    const byName = (name: string) => result.find((v: Variable) => v.name === name)!
+
+    expect(byName('rows_out').type).toBe('table')
+    expect(byName('rows_out').value).toEqual(table)
+    expect(byName('settings').type).toBe('map')
+    expect(byName('items').type).toBe('array')
+  })
+
   it('infers type from the definition value when the declared type is unknown', () => {
     const defs: Record<string, HistoricalCanvasVariableDefinition> = {
       mystery: { type: 'unknown', value: [1, 2, 3] },
     }
-    const result = buildVariablesFromDefinitions(defs, {})
+    const result = buildVariablesFromDefinitions(defs, {}, [])
     expect(result[0].type).toBe('array')
   })
 
@@ -67,6 +94,7 @@ describe('buildVariablesFromDefinitions', () => {
         password: '********',
         n: null,
       },
+      ['password'],
     )
     const byName = (name: string) => result.find((v: Variable) => v.name === name)!
 
@@ -82,6 +110,29 @@ describe('buildVariablesFromDefinitions', () => {
     expect(byName('str').isSecret).toBeUndefined()
   })
 
+  it('marks secret only the names the run held secret, never a copy the run stored masked', () => {
+    const result = buildVariablesFromDefinitions(
+      {},
+      { vault_rows: '********', copied_rows: '********', unfilled: null },
+      ['unfilled', 'vault_rows'],
+    )
+    const byName = (name: string) => result.find((v: Variable) => v.name === name)!
+
+    expect(byName('vault_rows').isSecret).toBe(true)
+    expect(byName('unfilled').isSecret).toBe(true)
+    expect(byName('copied_rows').isSecret).toBeUndefined()
+    expect(byName('copied_rows').value).toBe('********')
+  })
+
+  it('takes the secret flag from the declarations while the test exists', () => {
+    const result = buildVariablesFromDefinitions(
+      { copied_rows: { type: 'table', value: [] } },
+      { copied_rows: '********' },
+      ['copied_rows'],
+    )
+    expect(result[0].isSecret).toBeUndefined()
+  })
+
   it('sorts the output alphabetically by name', () => {
     const result = buildVariablesFromDefinitions(
       {
@@ -90,6 +141,7 @@ describe('buildVariablesFromDefinitions', () => {
         cherry: { type: 'integer', value: 3 },
       },
       {},
+      [],
     )
     expect(result.map((v: Variable) => v.name)).toEqual(['apple', 'banana', 'cherry'])
   })
@@ -98,13 +150,14 @@ describe('buildVariablesFromDefinitions', () => {
     const result = buildVariablesFromDefinitions(
       { x: { type: 'integer', value: 42 } },
       {},
+      [],
     )
     expect(result[0].id).toBe('x')
     expect(result[0].name).toBe('x')
   })
 
   it('returns empty array when both definitions and runtime fallback are empty', () => {
-    expect(buildVariablesFromDefinitions({}, {})).toEqual([])
+    expect(buildVariablesFromDefinitions({}, {}, [])).toEqual([])
   })
 })
 
@@ -116,10 +169,11 @@ describe('buildRuntimeValuesMap', () => {
     expect(map.get('items')).toEqual([1, 2])
   })
 
-  it('drops masked secret entries (the row already renders ********)', () => {
-    const map = buildRuntimeValuesMap({ counter: 5, password: '********' })
-    expect(map.size).toBe(1)
-    expect(map.has('password')).toBe(false)
+  it('keeps a masked entry, so a row the run held masked shows the mask', () => {
+    const map = buildRuntimeValuesMap({ counter: 5, password: '********', copied_rows: '********' })
+    expect(map.size).toBe(3)
+    expect(map.get('password')).toBe('********')
+    expect(map.get('copied_rows')).toBe('********')
   })
 
   it('returns an empty map for an empty snapshot', () => {
@@ -254,6 +308,32 @@ describe('HistoryVariableManager', () => {
     ])
     expect(screen.getByTestId('secret-badge-password')).toBeInTheDocument()
     expect(screen.getByTestId('variable-value-password').textContent).toContain('********')
+  })
+
+  it('shows an unflagged copy of a secret table, map or list as the mask the run stored', () => {
+    const runtime = buildRuntimeValuesMap({
+      vault_rows: '********',
+      copied_rows: '********',
+      copied_map: '********',
+      copied_list: '********',
+      plain_copy: { columns: [{ name: 'region', type: 'string' }, { name: 'tier', type: 'string' }], rows: [['eu-west', 'gold']] },
+    })
+    renderManager(
+      [
+        { id: 'vault_rows', name: 'vault_rows', value: '********', type: 'table', isSecret: true },
+        { id: 'copied_rows', name: 'copied_rows', value: [], type: 'table' },
+        { id: 'copied_map', name: 'copied_map', value: {}, type: 'map' },
+        { id: 'copied_list', name: 'copied_list', value: [], type: 'array' },
+        { id: 'plain_copy', name: 'plain_copy', value: [], type: 'table' },
+      ],
+      runtime,
+    )
+
+    expect(screen.getByTestId('variable-value-vault_rows').textContent).toBe('********')
+    expect(screen.getByTestId('variable-value-copied_rows').textContent).toBe('********')
+    expect(screen.getByTestId('variable-value-copied_map').textContent).toBe('********')
+    expect(screen.getByTestId('variable-value-copied_list').textContent).toBe('********')
+    expect(screen.getByTestId('variable-value-plain_copy').textContent).toBe('1×2 table')
   })
 
   it('treats row body click as a no-op (no expand modal)', async () => {

@@ -24,6 +24,7 @@ Test Coverage:
 import dataclasses
 import io
 import json
+import logging
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -38,6 +39,7 @@ from tests.api.body_shape_support import (
     NOT_ID_ITEMS,
     NOT_OBJECT_ITEMS,
 )
+from tests.api.error_reply_support import INTERNAL_ERROR_MESSAGE
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services import shared
 from wavecore.api.services.environments import service as environment_service
@@ -47,6 +49,23 @@ from wavecore.api.services.profiles import _common as profile_common
 from wavecore.api.services.regressions import import_export as regression_import_export
 from wavecore.api.services.suites import import_export as suite_import_export
 from wavecore.api.services.tests import service as test_service
+
+_INTERNAL_TEXT = "internal batch fault"
+
+# Faults no batch item means: their text stays in the server log, never in the reply.
+_UNEXPECTED_FAULTS = [
+    pytest.param(ValueError(_INTERNAL_TEXT), id="value-error"),
+    pytest.param(KeyError(_INTERNAL_TEXT), id="key-error"),
+    pytest.param(RuntimeError(_INTERNAL_TEXT), id="runtime-error"),
+]
+
+
+def _assert_fault_logged_not_answered(caplog: pytest.LogCaptureFixture, result: Any) -> None:
+    assert _INTERNAL_TEXT not in json.dumps(result)
+    assert any(
+        record.exc_info is not None and _INTERNAL_TEXT in str(record.exc_info[1])
+        for record in caplog.records
+    )
 
 
 class TestBuildExportZip:
@@ -828,17 +847,34 @@ class TestBatchDelete:
         }
         assert seen == ["free"]
 
-    @pytest.mark.parametrize("error", [ConflictException("Busy"), ValueError("Busy")])
-    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+    def test_keeps_a_refusal_and_goes_on(self) -> None:
         def delete(item_id: str) -> bool:
             if item_id == "busy":
-                raise error
+                raise ConflictException("Busy")
             return True
 
         assert shared.batch_delete(["busy", "free"], delete, "Regression") == {
             "deleted": ["free"],
             "failed": [{"index": 0, "error": "Busy"}],
         }
+
+    @pytest.mark.parametrize("fault", _UNEXPECTED_FAULTS)
+    def test_an_unexpected_fault_fails_its_item_with_the_generic_message(
+        self, fault: Exception, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def delete(item_id: str) -> bool:
+            if item_id == "broken":
+                raise fault
+            return True
+
+        with caplog.at_level(logging.ERROR, logger=shared.__name__):
+            result = shared.batch_delete(["broken", "free"], delete, "Regression")
+
+        assert result == {
+            "deleted": ["free"],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+        }
+        _assert_fault_logged_not_answered(caplog, result)
 
 
 class TestBatchUpdateProblem:
@@ -901,17 +937,34 @@ class TestBatchClone:
         }
         assert seen == ["free"]
 
-    @pytest.mark.parametrize("error", [ConflictException("Taken"), ValueError("Taken")])
-    def test_keeps_a_refusal_and_goes_on(self, error: Exception) -> None:
+    def test_keeps_a_refusal_and_goes_on(self) -> None:
         def clone(item_id: str) -> dict[str, Any]:
             if item_id == "taken":
-                raise error
+                raise ConflictException("Taken")
             return {"id": f"{item_id}-copy"}
 
         assert shared.batch_clone(["taken", "free"], clone, "Suite") == {
             "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
             "failed": [{"index": 0, "error": "Taken"}],
         }
+
+    @pytest.mark.parametrize("fault", _UNEXPECTED_FAULTS)
+    def test_an_unexpected_fault_fails_its_item_with_the_generic_message(
+        self, fault: Exception, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def clone(item_id: str) -> dict[str, Any]:
+            if item_id == "broken":
+                raise fault
+            return {"id": f"{item_id}-copy"}
+
+        with caplog.at_level(logging.ERROR, logger=shared.__name__):
+            result = shared.batch_clone(["broken", "free"], clone, "Suite")
+
+        assert result == {
+            "cloned": [{"original_id": "free", "cloned_id": "free-copy"}],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+        }
+        _assert_fault_logged_not_answered(caplog, result)
 
 
 class TestBumpVersionAndRecord:

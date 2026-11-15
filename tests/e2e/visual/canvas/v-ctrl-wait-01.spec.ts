@@ -57,7 +57,6 @@ function waitNode(
       description: 'Pod comes up',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 160, height: 62 },
@@ -78,7 +77,6 @@ function logNode(id: string, message: string, x: number, y: number): Record<stri
       description: id,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${message}'`, level: 'INFO' },
         outputBindings: {},

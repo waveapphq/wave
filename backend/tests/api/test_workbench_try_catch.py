@@ -64,7 +64,6 @@ def _make_node(
             "disabled": disabled,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

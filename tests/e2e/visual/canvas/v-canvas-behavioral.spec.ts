@@ -28,7 +28,7 @@ import { toggleTheme } from '../../helpers/theme'
 const HALT = { term: 'halt', testId: 'palette-item-halt' }
 
 const toolbarButton = (page: Page, name: 'save' | 'edit') => page.locator(`[data-testid="toolbar-${name}-button"]`)
-const testDialog = (page: Page) => page.getByRole('dialog')
+const testDialog = (page: Page) => page.getByRole('dialog', { name: /^(New Test|Edit Test|Edit Test Info)$/ })
 
 async function openDraftCanvas(page: Page): Promise<void> {
   await page.request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => {})

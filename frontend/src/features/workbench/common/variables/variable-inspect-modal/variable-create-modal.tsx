@@ -12,7 +12,7 @@
  * REQ-3.2.1.6: Runtime variable override during pause
  */
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type Ref, type RefObject } from 'react'
 import { GripVertical, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ import {
 } from '@/components/shared/child-editors/child-editor-scope'
 import { UnsavedChangesDialog } from '@/components/shared/child-editors/unsaved-changes-dialog'
 import { NameField } from '@/components/shared/fields/name-field'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import type { ListItemType } from '@/components/shared/variable-bodies/array-edit-body'
 import { useProtectedValueConfirm } from '@/components/shared/variable-bodies/protected-value-field'
 import { RequiredMark } from '@/components/shared/fields/required-mark'
@@ -236,7 +236,6 @@ function NameBlock({ value, error, readOnly, onChange, nameRef, children }: Read
         aria-invalid={!!error}
         aria-describedby={error ? errorId : undefined}
         className={cn('font-mono', error && 'border-destructive focus-visible:ring-destructive')}
-        autoFocus
         ref={nameRef}
       />
       {error && <FieldError id={errorId} testId="create-name-error" message={error} />}
@@ -295,7 +294,7 @@ function CreateSheetHeader({ title, mode, closeLabel, onClose }: Readonly<Create
     <>
       <div className="flex flex-1 items-center gap-2 min-w-0">
         <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-lg font-semibold truncate">{title}</h2>
+        <SheetTitle className="text-lg font-semibold truncate">{title}</SheetTitle>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {mode !== 'variable' && (
@@ -373,7 +372,7 @@ export interface VariableCreateModalProps {
   /** This window's place among the open ones, setting its cascade offset. */
   cascadeIndex?: number
   /** The Name field, for an opener that hands focus to it once its own menu has closed. */
-  nameRef?: Ref<HTMLTextAreaElement>
+  nameRef?: RefObject<HTMLTextAreaElement | null>
   /** The row the pencil opened; absent in Add. */
   editTarget?: WindowEditTarget
   /** The window's scope has a saved baseline: an unsaved secret stays visible until that definition is saved. */
@@ -540,6 +539,8 @@ export function VariableCreateModal({
   onSaveCurrent,
 }: Readonly<VariableCreateModalProps>) {
   const isEdit = editTarget !== undefined
+  const ownNameRef = useRef<HTMLTextAreaElement>(null)
+  const nameFieldRef = nameRef ?? ownNameRef
   const childEditors = useChildEditorScope()
   const protectedConfirm = useProtectedValueConfirm()
   const [askClose, setAskClose] = useState(false)
@@ -728,13 +729,13 @@ export function VariableCreateModal({
         sheetId={`variable-create-${windowId}`}
         persistGeometry
         resizable
-        ariaLabel={title}
         data-testid="variable-create-modal"
         dataAttributes={{ 'data-window-mode': isEdit ? 'edit' : 'add' }}
         initialOffset={{ x: offset, y: offset }}
         initialWidth={size.width}
         minWidth={size.minWidth}
         className="max-w-[90vw] max-h-screen shadow-xl"
+        initialFocus={nameFieldRef}
         header={
           <CreateSheetHeader
             title={title}
@@ -751,7 +752,7 @@ export function VariableCreateModal({
               error={create.errors.name}
               readOnly={create.definitionReadOnly}
               onChange={create.setDraftName}
-              nameRef={nameRef}
+              nameRef={nameFieldRef}
             >
               {create.renamedFrom !== null && <RenameNotice oldName={create.renamedFrom} across={renameAcross} />}
             </NameBlock>

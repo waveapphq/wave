@@ -1562,14 +1562,18 @@ class TestEnvironmentServiceETag:
         assert result["name"] == "updated-name"
 
     def test_update_with_mismatched_etag_raises_precondition_failed(self) -> None:
-        """Test that update raises ValueError when ETag mismatches."""
+        """Test that update raises the 412 precondition error when ETag mismatches."""
+        from wavecore.api.exceptions import PreconditionRequiredException
         from wavecore.api.services.environments import service as environment_service
 
         environment_service._clear_storage()
 
         created = environment_service.create_environment(name="etag-test")
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        with pytest.raises(
+            PreconditionRequiredException,
+            match=r"^Precondition failed: resource has been modified$",
+        ):
             environment_service.update_environment(
                 environment_id=created["id"],
                 name="updated-name",

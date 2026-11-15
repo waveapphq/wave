@@ -87,7 +87,7 @@ class TestLoadFunctionDefinition:
                             "nodeType": "control",
                             "config": {
                                 "values": {"variables": {"token": "sk-shared-secret"}},
-                                "variableSecretKeys": ["token"],
+                                "secretFields": ["variables.token"],
                             },
                         },
                     }

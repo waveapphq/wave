@@ -14,12 +14,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock AssertionBuilder to avoid rendering the full assertion builder
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: (props: {
     assertions: unknown[]
     availableVariables: unknown[]
     onAssertionsChange: (v: unknown[]) => void
-    onValidChange?: (v: boolean) => void
   }) => {
     return (
       <div data-testid="assertion-builder-mock">
@@ -55,7 +54,6 @@ import {
 
 describe('CaseBranchEditor', () => {
   let onBranchesChange: ReturnType<typeof vi.fn>
-  let onValidChange: ReturnType<typeof vi.fn>
   const defaultVars = [{ name: 'myVar', type: 'string' }]
   const conditions: NonNullable<CaseBranch['conditions']> = [
     {
@@ -86,7 +84,6 @@ describe('CaseBranchEditor', () => {
 
   beforeEach(() => {
     onBranchesChange = vi.fn()
-    onValidChange = vi.fn()
   })
 
   function renderEditor(branches: CaseBranch[]) {
@@ -95,7 +92,6 @@ describe('CaseBranchEditor', () => {
         branches={branches}
         availableVariables={defaultVars}
         onBranchesChange={onBranchesChange}
-        onValidChange={onValidChange}
       />
     )
   }
@@ -589,7 +585,6 @@ describe('CaseBranchEditor', () => {
           branches={next}
           availableVariables={defaultVars}
           onBranchesChange={onBranchesChange}
-          onValidChange={onValidChange}
         />
       )
 
@@ -658,34 +653,36 @@ describe('CaseBranchEditor', () => {
     })
   })
 
+  // The card alert comes from the shared check of the case's list (REQ-3.5.1.20, REQ-3.5.1.5).
   describe('Validation', () => {
-    it('reports invalid when a case has no conditions', () => {
+    it('marks a case with no conditions', () => {
       renderEditor([{ id: 'branch_0', type: 'case', label: '', conditions: [], break: true }])
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports invalid when a case has only operator items', () => {
+    it('marks a case holding only operator items', () => {
       renderEditor([
         { id: 'branch_0', type: 'case', label: '', conditions: operatorOnly, break: true },
       ])
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports invalid when a case has undefined conditions', () => {
+    it('marks a case whose conditions are undefined', () => {
       renderEditor([{ id: 'branch_0', type: 'case', label: '', break: true }])
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports invalid when one of several cases has no conditions', () => {
+    it('marks only the case that has no conditions among several', () => {
       renderEditor([
         { id: 'branch_0', type: 'case', label: '', conditions, break: true },
         { id: 'branch_1', type: 'case', label: '', conditions: [], break: true },
       ])
 
-      expect(onValidChange).toHaveBeenCalledWith(false)
+      expect(screen.queryByTestId('case-alert-branch_0')).not.toBeInTheDocument()
+      expect(screen.getByTestId('case-alert-branch_1')).toBeInTheDocument()
     })
 
     it('marks a case with no assertions so a collapsed card still explains the block', () => {
@@ -715,7 +712,7 @@ describe('CaseBranchEditor', () => {
       expect(screen.queryByTestId('default-alert-branch_1')).not.toBeInTheDocument()
     })
 
-    it('reports invalid when a case condition names no variable', () => {
+    it('marks a case whose condition names no variable', () => {
       // A half-built row does not count as a condition.
       renderEditor([
         {
@@ -726,10 +723,10 @@ describe('CaseBranchEditor', () => {
           conditions: unboundCondition,
         },
       ])
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports invalid when a case carries an empty expression row', () => {
+    it('marks a case that carries an empty expression row', () => {
       renderEditor([
         {
           id: 'branch_0',
@@ -739,26 +736,40 @@ describe('CaseBranchEditor', () => {
           conditions: [{ id: 'e1', type: 'expression', expression: '' }],
         },
       ])
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
     })
 
-    it('reports valid when every case has a non-operator item', () => {
+    it('marks a case whose condition has no compare value', () => {
+      renderEditor([
+        {
+          id: 'branch_0',
+          type: 'case',
+          label: '',
+          break: true,
+          conditions: [{ id: 'a1', type: 'literal', variable: 'x', value_type: 'integer', operator: 'equals' }],
+        },
+      ])
+      expect(screen.getByTestId('case-alert-branch_0')).toBeInTheDocument()
+    })
+
+    it('leaves every case unmarked when each has a complete condition', () => {
       renderEditor([
         { id: 'branch_0', type: 'case', label: '', conditions, break: true },
         { id: 'branch_1', type: 'case', label: '', conditions, break: false },
       ])
 
-      expect(onValidChange).toHaveBeenCalledWith(true)
+      expect(screen.queryByTestId('case-alert-branch_0')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('case-alert-branch_1')).not.toBeInTheDocument()
     })
 
-    it('ignores the default when computing validity', () => {
+    it('ignores the default when marking cases', () => {
       renderEditor([
         { id: 'branch_0', type: 'case', label: '', conditions, break: true },
         { id: 'branch_1', type: 'default', label: '' },
       ])
 
-      expect(onValidChange).toHaveBeenCalledWith(true)
-      expect(onValidChange).not.toHaveBeenCalledWith(false)
+      expect(screen.queryByTestId('case-alert-branch_0')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('default-alert-branch_1')).not.toBeInTheDocument()
     })
   })
 

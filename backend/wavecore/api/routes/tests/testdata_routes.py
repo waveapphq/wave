@@ -68,6 +68,8 @@ async def list_testdata(test_id: str) -> dict[str, Any]:
 @router.post("/tests/{test_id}/testdata/upload", status_code=status.HTTP_201_CREATED)
 async def upload_testdata(test_id: str, request: Request) -> dict[str, Any]:
     """Stream one file part straight to disk; path and replace must arrive before it."""
+    # Checked before the stream, so an unknown test is never left a notice.
+    await run_in_threadpool(testdata_service.require_test, test_id)
     fields = dict(_DEFAULT_FIELDS)
     stored: dict[str, Any] | None = None
     events = multipart_stream.iter_events(request)
@@ -164,6 +166,7 @@ async def _store_part(
 @router.get("/tests/{test_id}/testdata/uploads")
 async def list_testdata_uploads(test_id: str) -> dict[str, Any]:
     """Everything in flight for this test, and every file that did not land."""
+    testdata_service.require_test(test_id)
     return testdata_uploads.snapshot(test_id)
 
 
@@ -173,6 +176,7 @@ async def list_testdata_uploads(test_id: str) -> dict[str, Any]:
 )
 async def cancel_testdata_upload(test_id: str, upload_id: str, body: UploadSessionBody) -> Response:
     """Stop one upload in flight; the streaming request drops what it had written."""
+    testdata_service.require_test(test_id)
     testdata_uploads.cancel(test_id, upload_id, body.session)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -183,6 +187,7 @@ async def cancel_testdata_upload(test_id: str, upload_id: str, body: UploadSessi
 )
 async def dismiss_testdata_upload(test_id: str, upload_id: str) -> Response:
     """Clear the notice one file left behind."""
+    testdata_service.require_test(test_id)
     testdata_uploads.dismiss(test_id, upload_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -195,6 +200,7 @@ async def interrupt_testdata_upload(
     test_id: str, upload_id: str, body: UploadInterruptBody
 ) -> Response:
     """Record a file the client never got to send, so it leaves the same notice."""
+    testdata_service.require_test(test_id)
     rel = f"{body.path}/{body.name}" if body.path else body.name
     testdata_uploads.interrupt(
         test_id,

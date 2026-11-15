@@ -155,6 +155,18 @@ export function isParameterVisible(
   return true
 }
 
+/** required / requiredWhen / requiredWhenAll resolution for one parameter; with no values only `required` counts. */
+export function isParameterRequired(
+  parameter: Pick<Parameter, 'required' | 'requiredWhen' | 'requiredWhenAll'>,
+  values?: Record<string, unknown>,
+  allParameters?: Parameter[],
+): boolean {
+  if (parameter.required) return true
+  if (!values) return false
+  if (parameter.requiredWhen) return matchesCondition(parameter.requiredWhen, values, allParameters)
+  return parameter.requiredWhenAll?.every((condition) => matchesCondition(condition, values, allParameters)) ?? false
+}
+
 /**
  * When an enum param with `clampsSibling` changes, returns the sibling update
  * needed to keep it at-or-above / at-or-below the new value on the shared scale

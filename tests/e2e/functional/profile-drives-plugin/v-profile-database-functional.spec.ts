@@ -44,7 +44,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
-import { getLogCopyTexts, setConsoleMinimumLevel } from '../../helpers/log-reader'
+import { escapeRegExp, getLogCopyTexts, setConsoleMinimumLevel } from '../../helpers/log-reader'
 import {
   getActiveSessionId,
   getSessionVariables,
@@ -225,7 +225,7 @@ test.describe('V-PROFILE-DATABASE-FUNCTIONAL', () => {
         expect(
           logs.some((t) =>
             new RegExp(
-              `^Connected to PostgreSQL \\S+.* at ${SQL_TARGET_HOST.replace(/\./g, '\\.')}:${POSTGRES_PORT}$`,
+              `^Connected to PostgreSQL \\S+.* at ${escapeRegExp(SQL_TARGET_HOST)}:${POSTGRES_PORT}$`,
             ).test(t),
           ),
           all,

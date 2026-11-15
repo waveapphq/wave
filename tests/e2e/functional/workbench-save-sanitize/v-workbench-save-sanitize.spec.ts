@@ -47,7 +47,6 @@ const FIXTURE = {
           hasNewerVersion: false,
           expressionFields: ['message'],
           templateFields: [],
-          variableExpressionKeys: [],
           config: {
             values: { message: "'a'", level: 'INFO' },
             outputBindings: {},
@@ -69,7 +68,6 @@ const FIXTURE = {
           hasNewerVersion: false,
           expressionFields: ['message'],
           templateFields: [],
-          variableExpressionKeys: [],
           config: {
             values: { message: "'b'", level: 'INFO' },
             outputBindings: {},

@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "(\n    \"alpha\"\n    + \"-beta\"\n)", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "(\n    \"red\"\n    + \"-green\"\n)", "level": "INFO" },
             "outputBindings": {},
@@ -64,7 +62,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "ratio": "2.0", "note": "first" },
             "outputBindings": {},
@@ -95,7 +92,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": { "message": "\"ratio=\" + str(ratio) + \" note=\" + note", "level": "INFO" },
                       "outputBindings": {},
@@ -132,7 +128,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "ratio": "1.5" },
             "outputBindings": {},
@@ -163,7 +158,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": { "message": "\"ratio=\" + str(ratio) + \" note=\" + note", "level": "INFO" },
                       "outputBindings": {},
@@ -200,7 +194,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'expression-text-done'", "level": "INFO" },
             "outputBindings": {},

@@ -33,7 +33,6 @@ function logNode(id: string, x: number, y: number) {
       description: id,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${id}'`, level: 'INFO' },
         outputBindings: {},
@@ -527,7 +526,6 @@ test.describe('Edge Drag: Creation & Relocation', () => {
             description: 'lane source',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -585,7 +583,6 @@ test.describe('Edge Drag: Creation & Relocation', () => {
             description: 'lane source 2',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { enable_catch: true, enable_finally: false },
               outputBindings: {},

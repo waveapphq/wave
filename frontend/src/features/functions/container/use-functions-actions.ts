@@ -43,7 +43,7 @@ export function useFunctionsActions({
 
   const handleViewFunction = useCallback(
     (functionId: string) => {
-      navigate(`/functions/${functionId}`)
+      void navigate(`/functions/${functionId}`)
     },
     [navigate],
   )

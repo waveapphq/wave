@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from wavecore.api.services.storage_paths import get_artifacts_storage_path
 from wavecore.api.services.workbench import _common as wb_common
@@ -176,6 +177,49 @@ class TestSessionArtifactContent:
         assert response.json()["error"]["message"] == _NO_SESSION_MESSAGE
 
 
+class TestSessionArtifactPages:
+    """A session page renders as itself, but never with WAVE's origin."""
+
+    @pytest.mark.parametrize("disposition", ["attachment", "inline"])
+    @pytest.mark.parametrize(
+        ("name", "media_type"),
+        [
+            ("page.html", "text/html"),
+            ("drawing.svg", "image/svg+xml"),
+            ("feed.xml", "application/xml"),
+        ],
+    )
+    def test_a_page_runs_sandboxed_outside_the_wave_origin(
+        self, client: TestClient, disposition: str, name: str, media_type: str
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / name).write_bytes(b"<x/>")
+
+        response = client.get(
+            f"/workbench/session/artifacts/content/{name}", params={"disposition": disposition}
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith(media_type)
+        assert response.headers["content-disposition"] == f'{disposition}; filename="{name}"'
+        assert response.headers["content-security-policy"] == "sandbox allow-scripts"
+
+    @pytest.mark.parametrize("disposition", ["attachment", "inline"])
+    @pytest.mark.parametrize("name", ["result.json", "data.txt", "report.pdf", "chart.png"])
+    def test_a_file_that_is_not_a_page_carries_no_policy(
+        self, client: TestClient, disposition: str, name: str
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / name).write_bytes(b"0123456789")
+
+        response = client.get(
+            f"/workbench/session/artifacts/content/{name}", params={"disposition": disposition}
+        )
+
+        assert response.status_code == 200
+        assert "content-security-policy" not in response.headers
+
+
 class TestDeleteSessionArtifact:
     """DELETE /workbench/session/artifacts/{path} (hard delete, ephemeral only)."""
 
@@ -313,3 +357,109 @@ class TestDeleteSessionArtifact:
         assert response.status_code == 204
         assert (execution_dir / "report.json").exists()
         assert client.get("/artifacts").json()["data"] == before
+
+
+def _route(method: str, path: str) -> str:
+    """The content route for a read, the artifact route for a delete."""
+    if method == "get":
+        return f"/workbench/session/artifacts/content/{path}"
+    return f"/workbench/session/artifacts/{path}"
+
+
+def _assert_invalid(response: Response, path: str) -> None:
+    assert response.status_code == 400, response.text
+    assert response.json()["error"]["message"] == f"Invalid artifact path: {path}"
+
+
+class TestSessionArtifactContainment:
+    """A path names a file inside the session's folder, through links too."""
+
+    @pytest.fixture
+    def outside(self, tmp_path: Path) -> Path:
+        folder = tmp_path / "outside"
+        folder.mkdir()
+        (folder / "secret.txt").write_bytes(b"outside\n")
+        return folder
+
+    @pytest.mark.parametrize("method", ["get", "delete"])
+    def test_a_link_to_a_file_outside_is_refused_and_both_stay(
+        self, client: TestClient, outside: Path, method: str
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / "leak.txt").symlink_to(outside / "secret.txt")
+
+        response = client.request(method.upper(), _route(method, "leak.txt"))
+
+        _assert_invalid(response, "leak.txt")
+        assert (session_dir / "leak.txt").is_symlink()
+        assert (outside / "secret.txt").read_bytes() == b"outside\n"
+
+    @pytest.mark.parametrize("method", ["get", "delete"])
+    def test_a_path_through_a_folder_link_that_leads_outside_is_refused(
+        self, client: TestClient, outside: Path, method: str
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / "out").symlink_to(outside)
+
+        response = client.request(method.upper(), _route(method, "out/secret.txt"))
+
+        _assert_invalid(response, "out/secret.txt")
+        assert (outside / "secret.txt").read_bytes() == b"outside\n"
+
+    @pytest.mark.parametrize("method", ["get", "delete"])
+    @pytest.mark.parametrize("path", ["a", "a/x"])
+    def test_two_links_that_point_at_each_other_are_an_invalid_path(
+        self, client: TestClient, method: str, path: str
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / "a").symlink_to(session_dir / "b")
+        (session_dir / "b").symlink_to(session_dir / "a")
+
+        response = client.request(method.upper(), _route(method, path))
+
+        _assert_invalid(response, path)
+
+    @pytest.mark.parametrize("method", ["get", "delete"])
+    def test_a_nul_byte_is_an_invalid_path(self, client: TestClient, method: str) -> None:
+        _prime_active_session()
+
+        response = client.request(method.upper(), _route(method, "a%00b.txt"))
+
+        _assert_invalid(response, "a\0b.txt")
+
+    def test_a_link_that_stays_inside_is_served_with_its_targets_bytes(
+        self, client: TestClient
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / "real.txt").write_bytes(b"inside\n")
+        (session_dir / "alias.txt").symlink_to(session_dir / "real.txt")
+
+        response = client.get("/workbench/session/artifacts/content/alias.txt")
+
+        assert response.status_code == 200
+        assert response.content == b"inside\n"
+
+    def test_a_delete_of_a_link_that_stays_inside_removes_the_link_only(
+        self, client: TestClient
+    ) -> None:
+        _session_id, session_dir = _prime_active_session()
+        (session_dir / "real.txt").write_bytes(b"inside\n")
+        (session_dir / "alias.txt").symlink_to(session_dir / "real.txt")
+
+        response = client.delete("/workbench/session/artifacts/alias.txt")
+
+        assert response.status_code == 204
+        assert not (session_dir / "alias.txt").is_symlink()
+        assert (session_dir / "real.txt").read_bytes() == b"inside\n"
+
+    @pytest.mark.parametrize("method", ["get", "delete"])
+    def test_a_session_with_nowhere_to_write_refuses_an_unsafe_path_first(
+        self, client: TestClient, method: str
+    ) -> None:
+        session_id, _session_dir = _prime_active_session()
+        wb_common._workbench_sessions[session_id]["artifacts_dir"] = None
+
+        _assert_invalid(client.request(method.upper(), _route(method, "..%2Fx.txt")), "../x.txt")
+        missing = client.request(method.upper(), _route(method, "x.txt"))
+        assert missing.status_code == 404
+        assert missing.json()["error"]["message"] == "Session artifact x.txt not found"

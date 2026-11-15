@@ -10,6 +10,7 @@
  */
 
 import { cn } from '@/lib/utils'
+import { counterState } from '@/lib/field-constraints'
 import type { ChangeEvent, HTMLAttributes, KeyboardEvent, MouseEvent } from 'react'
 
 export interface TextFieldProps {
@@ -36,19 +37,11 @@ export interface TextFieldProps {
   role?: string
   disabled?: boolean
   readOnly?: boolean
-  autoFocus?: boolean
   className?: string
   'data-testid'?: string
   id?: string
   name?: string
   ref?: React.Ref<HTMLTextAreaElement>
-}
-
-/** Counter visibility: hidden < 80%, muted 80-99%, destructive 100%. */
-function counterState(length: number, max: number): 'hidden' | 'muted' | 'destructive' {
-  if (length >= max) return 'destructive'
-  if (length >= 0.8 * max) return 'muted'
-  return 'hidden'
 }
 
 export function TextField({
@@ -64,7 +57,6 @@ export function TextField({
   showCount,
   disabled,
   readOnly,
-  autoFocus,
   className,
   id,
   name,
@@ -115,7 +107,6 @@ export function TextField({
         maxLength={maxLength}
         disabled={disabled}
         readOnly={readOnly}
-        autoFocus={autoFocus}
         role={role}
         aria-invalid={ariaInvalid ? 'true' : undefined}
         aria-expanded={ariaExpanded}

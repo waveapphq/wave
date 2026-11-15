@@ -1,0 +1,89 @@
+{
+  "name": "V-EDGE-IDS",
+  "version": "1.0.0",
+  "description": "Two Logs chained from Start; both wires carry the id e-repeat.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ei-log-a",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 160
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "First Log",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ei-a-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ei-log-b",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Second Log",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ei-b-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-repeat",
+        "source": "start-node",
+        "target": "ei-log-a",
+        "type": "default"
+      },
+      {
+        "id": "e-repeat",
+        "source": "ei-log-a",
+        "target": "ei-log-b",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

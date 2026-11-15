@@ -23,7 +23,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"SEC n={sm['n'] + 1} f={sm['f'] * 2} zt={type(sm['zip']) == str} a0={sa[0] + 1} a1t={type(sa[1]) == str} pmn={pm['n'] + 1} sn={suite.ss['n'] + 1} szt={type(suite.ss['zip']) == str} sp={suite.sp} plain={plain_counter}\"",

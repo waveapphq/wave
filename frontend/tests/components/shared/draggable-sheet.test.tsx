@@ -3,7 +3,7 @@
  *
  * Shared non-blocking floating panel promoted from the Functions Library
  * modal's drag pattern. Contract under test:
- *   - open/closed rendering (`<section aria-label>` shell, no overlay)
+ *   - open/closed rendering (a non-modal dialog named by its title, no overlay)
  *   - every sheet is its own window, mounted at viewport level
  *   - header drag updates the centered-offset transform
  *   - viewport clamping during drag and on ResizeObserver re-clamp
@@ -16,9 +16,11 @@
 import { createRef, useEffect, useRef, type ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import {
   DraggableSheet,
+  SheetTitle,
   focusSheet,
   pulseSheet,
   refocusSheet,
@@ -35,8 +37,7 @@ function renderSheet(
     <DraggableSheet
       open
       onClose={() => {}}
-      ariaLabel="Test Sheet"
-      header={<span>Sheet Header</span>}
+      header={<SheetTitle>Test Sheet</SheetTitle>}
       data-testid="test-sheet"
       {...props}
     >
@@ -46,7 +47,7 @@ function renderSheet(
 }
 
 function getRoot(name = /test sheet/i): HTMLElement {
-  return screen.getByRole('region', { name })
+  return screen.getByRole('dialog', { name })
 }
 
 function getHandle(testid = 'test-sheet'): HTMLElement {
@@ -83,15 +84,165 @@ describe('DraggableSheet - open/closed rendering', () => {
   it('renders nothing when open is false', () => {
     renderSheet({ open: false })
     expect(
-      screen.queryByRole('region', { name: /test sheet/i }),
+      screen.queryByRole('dialog', { name: /test sheet/i }),
     ).not.toBeInTheDocument()
   })
 
-  it('renders a region with the given aria-label, header, and children', () => {
+  it('renders a non-modal dialog named by the title in its header, with its children', () => {
+    renderSheet()
+    const root = getRoot()
+    const title = screen.getByRole('heading', { name: 'Test Sheet' })
+    expect(root.tagName).toBe('DIALOG')
+    expect(root).toHaveAttribute('open')
+    expect(root).toHaveAttribute('aria-modal', 'false')
+    expect(root).toHaveAttribute('aria-labelledby', title.id)
+    expect(getHandle()).toContainElement(title)
+    expect(screen.getByText('Sheet body')).toBeInTheDocument()
+  })
+
+  it('does not count as a modal dialog', () => {
     renderSheet()
     expect(getRoot()).toBeInTheDocument()
-    expect(screen.getByText('Sheet Header')).toBeInTheDocument()
-    expect(screen.getByText('Sheet body')).toBeInTheDocument()
+    expect(hasOpenModalDialog()).toBe(false)
+  })
+
+  it('names each open sheet by its own title', () => {
+    render(
+      <DraggableSheet
+        open
+        onClose={() => {}}
+        header={<SheetTitle>Outer Sheet</SheetTitle>}
+        data-testid="outer-sheet"
+      >
+        <DraggableSheet
+          open
+          onClose={() => {}}
+          header={<SheetTitle>Inner Sheet</SheetTitle>}
+          data-testid="inner-sheet"
+        >
+          <p>inner body</p>
+        </DraggableSheet>
+      </DraggableSheet>,
+    )
+    expect(screen.getByRole('dialog', { name: 'Outer Sheet' })).toBe(screen.getByTestId('outer-sheet'))
+    expect(screen.getByRole('dialog', { name: 'Inner Sheet' })).toBe(screen.getByTestId('inner-sheet'))
+  })
+
+  it('renders a title outside any sheet as a heading with no id', () => {
+    render(<SheetTitle className="text-sm">Loose title</SheetTitle>)
+    const heading = screen.getByRole('heading', { name: 'Loose title' })
+    expect(heading).not.toHaveAttribute('id')
+    expect(heading).toHaveClass('text-sm')
+  })
+})
+
+describe('DraggableSheet - the cursor on open', () => {
+  function FocusSheet({ open, withTarget = true }: Readonly<{ open: boolean; withTarget?: boolean }>) {
+    const nameRef = useRef<HTMLInputElement>(null)
+    return (
+      <DraggableSheet
+        open={open}
+        onClose={() => {}}
+        header={<SheetTitle>Focus Sheet</SheetTitle>}
+        initialFocus={nameRef}
+        data-testid="focus-sheet"
+      >
+        <button type="button">First</button>
+        {withTarget && <input ref={nameRef} aria-label="Name" />}
+      </DraggableSheet>
+    )
+  }
+
+  it('moves the cursor into the field it names as it opens', () => {
+    render(<FocusSheet open />)
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus()
+  })
+
+  it('places the cursor again each time it reopens', () => {
+    const view = render(<FocusSheet open />)
+    view.rerender(<FocusSheet open={false} />)
+    expect(document.body).toHaveFocus()
+    view.rerender(<FocusSheet open />)
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus()
+  })
+
+  it('leaves the cursor where it was when the named field is not on the page', () => {
+    render(<button type="button">Opener</button>)
+    const opener = screen.getByRole('button', { name: 'Opener' })
+    opener.focus()
+    render(<FocusSheet open withTarget={false} />)
+    expect(opener).toHaveFocus()
+  })
+
+  it('leaves the cursor where it was when no field is named', () => {
+    render(<button type="button">Opener</button>)
+    const opener = screen.getByRole('button', { name: 'Opener' })
+    opener.focus()
+    renderSheet()
+    expect(opener).toHaveFocus()
+  })
+
+  it('does not take the cursor back when the named field changes while it is open', () => {
+    function Switching({ which }: Readonly<{ which: 'a' | 'b' }>) {
+      const aRef = useRef<HTMLInputElement>(null)
+      const bRef = useRef<HTMLInputElement>(null)
+      return (
+        <DraggableSheet
+          open
+          onClose={() => {}}
+          header={<SheetTitle>Switching Sheet</SheetTitle>}
+          initialFocus={which === 'a' ? aRef : bRef}
+          data-testid="switching-sheet"
+        >
+          <input ref={aRef} aria-label="A" />
+          <input ref={bRef} aria-label="B" />
+        </DraggableSheet>
+      )
+    }
+    const view = render(<Switching which="a" />)
+    expect(screen.getByRole('textbox', { name: 'A' })).toHaveFocus()
+    view.rerender(<Switching which="b" />)
+    expect(screen.getByRole('textbox', { name: 'A' })).toHaveFocus()
+  })
+})
+
+describe('DraggableSheet - the page behind', () => {
+  it('stays in the accessibility tree and takes clicks and focus while a sheet is open', () => {
+    const onPageClick = vi.fn()
+    render(
+      <button type="button" onClick={onPageClick}>
+        Page action
+      </button>,
+    )
+    renderSheet()
+    const pageButton = screen.getByRole('button', { name: 'Page action' })
+    fireEvent.click(pageButton)
+    pageButton.focus()
+    expect(onPageClick).toHaveBeenCalledTimes(1)
+    expect(pageButton).toHaveFocus()
+    expect(getRoot()).toBeInTheDocument()
+  })
+
+  it('lets Tab leave the sheet after its last control', async () => {
+    const user = userEvent.setup()
+    render(<button type="button">Page action</button>)
+    render(
+      <DraggableSheet
+        open
+        onClose={() => {}}
+        header={<SheetTitle>Tab Sheet</SheetTitle>}
+        data-testid="tab-sheet"
+      >
+        <button type="button">Last control</button>
+      </DraggableSheet>,
+    )
+    screen.getByRole('button', { name: 'Last control' }).focus()
+    await user.tab()
+    expect(screen.getByRole('dialog', { name: 'Tab Sheet' })).not.toContainElement(
+      document.activeElement as HTMLElement,
+    )
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Page action' })).toHaveFocus()
   })
 
   it('starts centered with a zero offset transform by default', () => {
@@ -316,8 +467,7 @@ describe('DraggableSheet - capture-phase Escape (captureEsc)', () => {
           open
           captureEsc
           onClose={onCloseA}
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="sheet-a"
         >
           <p>body a</p>
@@ -326,8 +476,7 @@ describe('DraggableSheet - capture-phase Escape (captureEsc)', () => {
           open
           captureEsc
           onClose={onCloseB}
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="sheet-b"
         >
           <p>body b</p>
@@ -353,8 +502,7 @@ describe('DraggableSheet - nested sheets', () => {
         <DraggableSheet
           open
           onClose={onCloseOuter}
-          ariaLabel="Outer Sheet"
-          header={<span>Outer</span>}
+          header={<SheetTitle>Outer Sheet</SheetTitle>}
           data-testid="outer-sheet"
         >
           <button data-testid="outer-field">outer field</button>
@@ -362,8 +510,7 @@ describe('DraggableSheet - nested sheets', () => {
             <DraggableSheet
               open
               onClose={onCloseInner}
-              ariaLabel="Inner Sheet"
-              header={<span>Inner</span>}
+              header={<SheetTitle>Inner Sheet</SheetTitle>}
               data-testid="inner-sheet"
               {...innerProps}
             >
@@ -449,8 +596,7 @@ describe('DraggableSheet - every sheet is its own window', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Inner Sheet"
-          header={<span>Inner</span>}
+          header={<SheetTitle>Inner Sheet</SheetTitle>}
           data-testid="inner-sheet"
           {...innerProps}
         >
@@ -462,10 +608,9 @@ describe('DraggableSheet - every sheet is its own window', () => {
           <DraggableSheet
             open
             onClose={() => {}}
-            ariaLabel="Outer Sheet"
             header={
               <>
-                <span>Outer</span>
+                <SheetTitle>Outer Sheet</SheetTitle>
                 {innerInHeader && inner}
               </>
             }
@@ -627,8 +772,7 @@ describe('DraggableSheet - z-ordering across multiple sheets', () => {
         <DraggableSheet
           open
           onClose={onCloseA}
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="sheet-a"
         >
           <p>body a</p>
@@ -636,8 +780,7 @@ describe('DraggableSheet - z-ordering across multiple sheets', () => {
         <DraggableSheet
           open={openB}
           onClose={onCloseB}
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="sheet-b"
         >
           <p>body b</p>
@@ -659,8 +802,8 @@ describe('DraggableSheet - z-ordering across multiple sheets', () => {
     const onCloseA = vi.fn()
     const onCloseB = vi.fn()
     renderTwoSheets(onCloseA, onCloseB)
-    const rootA = screen.getByRole('region', { name: /sheet a/i })
-    const rootB = screen.getByRole('region', { name: /sheet b/i })
+    const rootA = screen.getByRole('dialog', { name: /sheet a/i })
+    const rootB = screen.getByRole('dialog', { name: /sheet b/i })
 
     fireEvent.pointerDown(rootA)
     expect(Number(rootA.style.zIndex)).toBeGreaterThan(
@@ -682,8 +825,7 @@ describe('DraggableSheet - z-ordering across multiple sheets', () => {
         <DraggableSheet
           open
           onClose={onCloseA}
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="sheet-a"
         >
           <p>body a</p>
@@ -691,8 +833,7 @@ describe('DraggableSheet - z-ordering across multiple sheets', () => {
         <DraggableSheet
           open={false}
           onClose={onCloseB}
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="sheet-b"
         >
           <p>body b</p>
@@ -714,8 +855,7 @@ describe('DraggableSheet - named-sheet focus (focusSheet)', () => {
           open
           onClose={() => {}}
           sheetId="sheet-a"
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="sheet-a"
         >
           <p>body a</p>
@@ -724,16 +864,15 @@ describe('DraggableSheet - named-sheet focus (focusSheet)', () => {
           open
           onClose={() => {}}
           sheetId="sheet-b"
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="sheet-b"
         >
           <p>body b</p>
         </DraggableSheet>
       </>,
     )
-    const rootA = screen.getByRole('region', { name: /sheet a/i })
-    const rootB = screen.getByRole('region', { name: /sheet b/i })
+    const rootA = screen.getByRole('dialog', { name: /sheet a/i })
+    const rootB = screen.getByRole('dialog', { name: /sheet b/i })
     expect(Number(rootB.style.zIndex)).toBeGreaterThan(Number(rootA.style.zIndex))
 
     let focused = false
@@ -758,8 +897,7 @@ describe('DraggableSheet - active (front-most) state', () => {
           open
           onClose={() => {}}
           sheetId="active-a"
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="active-a"
         >
           <p>a</p>
@@ -768,8 +906,7 @@ describe('DraggableSheet - active (front-most) state', () => {
           open
           onClose={() => {}}
           sheetId="active-b"
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="active-b"
         >
           <p>b</p>
@@ -800,8 +937,7 @@ describe('DraggableSheet - active (front-most) state', () => {
           open
           onClose={() => {}}
           sheetId="active-a"
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="active-a"
         >
           <p>a</p>
@@ -810,8 +946,7 @@ describe('DraggableSheet - active (front-most) state', () => {
           open={false}
           onClose={() => {}}
           sheetId="active-b"
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="active-b"
         >
           <p>b</p>
@@ -851,8 +986,7 @@ describe('DraggableSheet - reopen affordance (refocusSheet)', () => {
           open
           onClose={() => {}}
           sheetId="refocus-a"
-          ariaLabel="Sheet A"
-          header={<span>A</span>}
+          header={<SheetTitle>Sheet A</SheetTitle>}
           data-testid="refocus-a"
         >
           <p>a</p>
@@ -861,8 +995,7 @@ describe('DraggableSheet - reopen affordance (refocusSheet)', () => {
           open
           onClose={() => {}}
           sheetId="refocus-b"
-          ariaLabel="Sheet B"
-          header={<span>B</span>}
+          header={<SheetTitle>Sheet B</SheetTitle>}
           data-testid="refocus-b"
         >
           <p>b</p>
@@ -901,8 +1034,7 @@ function OpenerHarness({ label }: Readonly<{ label: string }>) {
         ref={opener.ref}
         open={opener.open}
         onClose={opener.hide}
-        ariaLabel={label}
-        header={<span>{label}</span>}
+        header={<SheetTitle>{label}</SheetTitle>}
         data-testid={`opener-${label}`}
       >
         <button type="button" onClick={opener.hide}>
@@ -984,8 +1116,7 @@ describe('DraggableSheet - openOrRefocus', () => {
           ref={handle}
           open={false}
           onClose={() => {}}
-          ariaLabel="Closed"
-          header={<span>Closed</span>}
+          header={<SheetTitle>Closed</SheetTitle>}
           data-testid="closed-sheet"
         >
           <p>closed</p>
@@ -993,8 +1124,7 @@ describe('DraggableSheet - openOrRefocus', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Front"
-          header={<span>Front</span>}
+          header={<SheetTitle>Front</SheetTitle>}
           data-testid="front-sheet"
         >
           <p>front</p>
@@ -1013,8 +1143,7 @@ describe('DraggableSheet - responsiveSize (mode-driven default)', () => {
       <DraggableSheet
         open
         onClose={() => {}}
-        ariaLabel="Responsive"
-        header={<span>R</span>}
+        header={<SheetTitle>Responsive</SheetTitle>}
         data-testid="responsive"
         responsiveSize
         initialWidth={width}
@@ -1076,8 +1205,7 @@ describe('DraggableSheet - responsiveSize (mode-driven default)', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Auto"
-          header={<span>A</span>}
+          header={<SheetTitle>Auto</SheetTitle>}
           data-testid="auto-resp"
           responsiveSize
           initialWidth={width}
@@ -1111,8 +1239,7 @@ describe('DraggableSheet - extraHeight (validation strip)', () => {
       <DraggableSheet
         open
         onClose={() => {}}
-        ariaLabel="Extra"
-        header={<span>E</span>}
+        header={<SheetTitle>Extra</SheetTitle>}
         data-testid="extra"
         initialWidth={300}
         initialHeight={200}
@@ -1201,8 +1328,7 @@ describe('DraggableSheet - geometry memory (sheetId)', () => {
         open
         onClose={() => {}}
         sheetId={sheetId}
-        ariaLabel="Geometry Sheet"
-        header={<span>G</span>}
+        header={<SheetTitle>Geometry Sheet</SheetTitle>}
         data-testid="geometry-sheet"
         initialOffset={initialOffset}
       >
@@ -1212,7 +1338,7 @@ describe('DraggableSheet - geometry memory (sheetId)', () => {
   }
 
   function getNamedRoot(): HTMLElement {
-    return screen.getByRole('region', { name: /geometry sheet/i })
+    return screen.getByRole('dialog', { name: /geometry sheet/i })
   }
 
   it('reopens a dragged and resized sheet where the user left it', () => {
@@ -1242,8 +1368,7 @@ describe('DraggableSheet - geometry memory (sheetId)', () => {
         open
         onClose={() => {}}
         sheetId="geom-floor"
-        ariaLabel="Geometry Sheet"
-        header={<span>G</span>}
+        header={<SheetTitle>Geometry Sheet</SheetTitle>}
         data-testid="geometry-sheet"
         initialWidth={width}
         initialHeight={height}
@@ -1387,8 +1512,7 @@ describe('DraggableSheet - height geometry memory (sheetId)', () => {
         open
         onClose={() => {}}
         sheetId="geom-corner"
-        ariaLabel="Corner Sheet"
-        header={<span>C</span>}
+        header={<SheetTitle>Corner Sheet</SheetTitle>}
         data-testid="corner-sheet"
       >
         <p>body</p>
@@ -1402,7 +1526,7 @@ describe('DraggableSheet - height geometry memory (sheetId)', () => {
     })
     // width 672 + 50 * 2 = 772; height 300 + 15 * 2 = 330.
     expect(
-      screen.getByRole('region', { name: /corner sheet/i }).style.height,
+      screen.getByRole('dialog', { name: /corner sheet/i }).style.height,
     ).toBe('330px')
     first.unmount()
 
@@ -1411,14 +1535,13 @@ describe('DraggableSheet - height geometry memory (sheetId)', () => {
         open
         onClose={() => {}}
         sheetId="geom-corner"
-        ariaLabel="Corner Sheet"
-        header={<span>C</span>}
+        header={<SheetTitle>Corner Sheet</SheetTitle>}
         data-testid="corner-sheet"
       >
         <p>body</p>
       </DraggableSheet>,
     )
-    const reopened = screen.getByRole('region', { name: /corner sheet/i })
+    const reopened = screen.getByRole('dialog', { name: /corner sheet/i })
     expect(reopened.style.width).toBe('772px')
     expect(reopened.style.height).toBe('330px')
   })
@@ -1441,8 +1564,7 @@ describe('DraggableSheet - persisted geometry (persistGeometry)', () => {
         onClose={() => {}}
         sheetId={sheetId}
         persistGeometry
-        ariaLabel="Persistent Sheet"
-        header={<span>P</span>}
+        header={<SheetTitle>Persistent Sheet</SheetTitle>}
         data-testid="persistent-sheet"
         {...props}
       >
@@ -1452,7 +1574,7 @@ describe('DraggableSheet - persisted geometry (persistGeometry)', () => {
   }
 
   function getPersistentRoot(): HTMLElement {
-    return screen.getByRole('region', { name: /persistent sheet/i })
+    return screen.getByRole('dialog', { name: /persistent sheet/i })
   }
 
   it('restores localStorage geometry on mount (reload survival)', () => {
@@ -1601,8 +1723,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open={open}
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <button data-testid="inside">Inside</button>
@@ -1622,8 +1743,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <button data-testid="inside">Inside</button>
@@ -1638,8 +1758,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open={false}
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <button data-testid="inside">Inside</button>
@@ -1659,8 +1778,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <p>Sheet body</p>
@@ -1676,8 +1794,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open={false}
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <p>Sheet body</p>
@@ -1706,8 +1823,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <p>Sheet body</p>
@@ -1721,8 +1837,7 @@ describe('DraggableSheet - handing focus back on close', () => {
         <DraggableSheet
           open={false}
           onClose={() => {}}
-          ariaLabel="Test Sheet"
-          header={<span>Sheet Header</span>}
+          header={<SheetTitle>Test Sheet</SheetTitle>}
           data-testid="test-sheet"
         >
           <p>Sheet body</p>

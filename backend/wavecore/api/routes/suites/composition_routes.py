@@ -12,7 +12,6 @@ Endpoints:
 - POST /suites/{suite_id}/clone: Clone suite
 """
 
-import re
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -24,29 +23,13 @@ from wavecore.api.routes.shared import (
     validate_uuid,
     validate_variable_types,
 )
+from wavecore.api.routes.suites.routes import validate_suite_name
+from wavecore.api.services.shared import validate_semantic_version
 from wavecore.api.services.suites import service as suite_service
 from wavecore.api.services.suites import version_service as _suite_version_svc
 
 # Create router for suite composition endpoints
 router = APIRouter(tags=["Suites"])
-
-# Semantic version pattern
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-
-
-def validate_semantic_version(version: str) -> None:
-    """Validate semantic version format.
-
-    Args:
-        version: Version string to validate
-
-    Raises:
-        ValidationException: If version format is invalid
-    """
-    if not SEMVER_PATTERN.match(version):
-        raise ValidationException(
-            f"Version '{version}' does not follow semantic versioning format (x.y.z)"
-        )
 
 
 @router.get("/suites/{suite_id}/tests")
@@ -97,6 +80,8 @@ async def add_test_to_suite(suite_id: str, request: Request) -> dict[str, Any]:
     test_id = body["test_id"]
     validate_uuid(test_id, "test_id")
     order = body.get("order")
+    if order is not None and (isinstance(order, bool) or not isinstance(order, int)):
+        raise ValidationException("Field 'order' must be an integer")
 
     # ValidationException propagates to middleware for test not found
     result = _suite_version_svc.add_test_to_suite(suite_id, test_id, order)
@@ -170,10 +155,7 @@ async def update_suite_variables(suite_id: str, request: Request) -> dict[str, A
 
     body = await read_json_object(request)
 
-    try:
-        validate_variable_types(body)
-    except ValueError as e:
-        raise ValidationException(str(e)) from e
+    validate_variable_types(body)
 
     result = suite_service.update_suite(suite_id, {"variables": body})
 
@@ -206,6 +188,7 @@ async def clone_suite(suite_id: str, request: Request) -> dict[str, Any]:
         raise ValidationException("Field 'new_name' is required")
 
     new_name = body["new_name"]
+    validate_suite_name(new_name)
     new_version = body.get("new_version")
 
     # Validate new_version if provided

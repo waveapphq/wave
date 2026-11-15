@@ -2,9 +2,9 @@
  * The one WAVE tooltip - REQ-5.2.1.17
  *
  * Every hover hint in the product comes from this component. It fixes the
- * surface, arrow, stacking, Escape, close-on-leave and not-shown-on-touch; a
- * call site chooses only delay, side/align, the wide variant, and whether
- * there is content at all.
+ * surface, arrow, stacking, Escape, close-on-leave, keyboard-only focus and
+ * not-shown-on-touch; a call site chooses only delay, side/align, the wide
+ * variant, and whether there is content at all.
  */
 
 import * as React from 'react'
@@ -20,6 +20,11 @@ import { cn, detectTouchDevice } from '@/lib/utils'
  */
 export const ENABLED_TOOLTIP_DELAY_MS = 500
 export const DISABLED_TOOLTIP_DELAY_MS = 100
+
+/** Focus opens the hint only from the keyboard, not when code hands focus back after a mouse action (SHELL-7b). */
+function keepClosedUnlessKeyboardFocus(event: React.FocusEvent): void {
+  if (!event.target.matches(':focus-visible')) event.preventDefault()
+}
 
 export interface ConditionalTooltipProps {
   /** Tooltip body. Empty (undefined / null / '') renders the trigger unwrapped. */
@@ -66,7 +71,9 @@ export function ConditionalTooltip({
       disableHoverableContent
     >
       <RadixTooltip.Root open={open} onOpenChange={onOpenChange}>
-        <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+        <RadixTooltip.Trigger asChild onFocus={keepClosedUnlessKeyboardFocus}>
+          {children}
+        </RadixTooltip.Trigger>
         <RadixTooltip.Portal>
           <RadixTooltip.Content
             data-slot="tooltip-content"

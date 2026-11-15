@@ -6,8 +6,9 @@ This file holds WAVE's code rules. They hold for every change, made by hand or w
 
 ### SonarQube Policy
 - **Fix the code, not the report** - When SonarQube reports an issue, fix it in the source code. Never suppress it in SonarQube.
-- **No NOSONAR comments** - Never add `// NOSONAR`, `# NOSONAR`, or any other SonarQube suppression comment to source code.
-- **False positives** - A maintainer reviews false positives in SonarQube.
+- **No NOSONAR comments** - Never add `// NOSONAR`, `# NOSONAR`, or any other SonarQube suppression comment to source code. An exclusion ID comment is not a suppression: it changes nothing in what the tool reports.
+- **False positives** - A maintainer marks a false positive in SonarQube Cloud. It gets an entry in `tests/exclusions/sonarqube-cloud.md`, and the code carries its `SQ-*` ID in a one-line comment at the spot.
+- **CodeQL dismissals** - A maintainer dismisses a CodeQL alert on GitHub. It gets an entry in `tests/exclusions/codeql.md`, and the code carries its `CQL-*` ID in a one-line comment at the spot.
 
 ### Typography Policy
 - **Never use em dashes or en dashes** (Unicode U+2014 and U+2013) - Always use regular hyphens/dashes (-) in all code, comments, documentation, and UI text. This applies to every file in the repository without exception.
@@ -23,7 +24,10 @@ This file holds WAVE's code rules. They hold for every change, made by hand or w
 | Referent lives in | Verdict | Examples |
 |---|---|---|
 | The design and the requirements in the WAVE docs repo | **VALID - keep** | `REQ-3.1.3.14`, `CANVAS-72`, `LIST-7`, `SHELL-2`, "per the Lifecycle badge location decision" |
-| `frontend/coverage-exclusions.md` | **MANDATORY** | `COV-BRANCH-146` - a `v8 ignore` without its registry ID is a policy violation |
+| `tests/exclusions/frontend-coverage.md` | **MANDATORY** | `COV-BRANCH-146` - a `v8 ignore` without its registry ID is a policy violation |
+| `tests/exclusions/backend-coverage.md` | **MANDATORY** | `BCOV-ABSTRACT-001` - a `pragma: no cover` without its ID is a policy violation |
+| `tests/exclusions/sonarqube-cloud.md` | **MANDATORY** | `SQ-HASH-001` - marks the spot of an issue a maintainer marked as a false positive |
+| `tests/exclusions/codeql.md` | **MANDATORY** | `CQL-LOG-001` - marks the spot of an alert a maintainer dismissed |
 | A roadmap, a session handoff, a ticket tracker, a PR, or a past conversation | **FORBIDDEN** | "Roadmap 10.6 #8", "phase 12.6", "D7", "issue #123", "ABC-42", "added for the Y flow", "fix for the Z regression", "session 4 decided" |
 
 Requirements and design are the contracts the code must satisfy; pointing at them is traceability and is wanted. Roadmaps, handoffs and tickets are scheduling and history; they get reordered and deleted, so a pointer to one outlives its referent and becomes dead weight. Never run a sweep that strips `REQ-*`, design-decision IDs, or `COV-*` from source.
@@ -95,7 +99,7 @@ Every change must follow this process:
 ### Production Code vs Test Mocks Policy
 - **Never implement production logic in test mocks** - Production code goes in `wavecore/`/`backend/`, not `tests/`
 - **Never put test/mock code in production files** - No mock implementations, test stubs, simulation logic, or test data in prod files
-- **Exception**: `data-testid` attributes and registered coverage exclusions (`/* v8 ignore next - COV-XXX-NNN */` with ID in `frontend/coverage-exclusions.md`) are allowed
+- **Exception**: `data-testid` attributes and registered coverage exclusions (`/* v8 ignore next - COV-XXX-NNN */` with ID in `tests/exclusions/frontend-coverage.md`) are allowed
 - **If tests fail, check for production code first** - Does `wavecore/` contain the real implementation? If not, create it. Never "fix" by elaborating mocks.
 - **Mock complexity is a red flag** - If a mock has >50 lines, you're implementing in the wrong place
 - **Correct**: `wavecore/plugins/sql_client.py` (real impl) + `tests/plugins/sql_client/conftest.py` (test fixtures over a scripted fake connection)
@@ -107,9 +111,10 @@ Every change must follow this process:
 - **If 100% seems hard, the code design may be wrong** - Question the architecture, not the requirement.
 
 ### Coverage Exclusions Registry (do not modify)
-- **Registry**: `frontend/coverage-exclusions.md` - no modifications without a maintainer's approval
+- **Registry**: `tests/exclusions/frontend-coverage.md` - no modifications without a maintainer's approval
 - **Format**: `/* v8 ignore next - COV-XXX-NNN */` - verify the ID exists in the registry before accepting
 - **Unregistered `/* v8 ignore */` comments are policy violations**
+- **Backend**: `tests/exclusions/backend-coverage.md` holds the backend's exclusions, under the same approval rule. Format: `# pragma: no cover - BCOV-XXX-NNN` - the ID must exist in the backend list. An unregistered `# pragma: no cover` in `backend/wavecore/` is a policy violation
 - **Before proposing exclusions**: Write tests for the edge case, fallback, and negative case first. Exclusions are only for genuinely untestable code (SSR checks, React concurrent internals, missing jsdom APIs) - not for "we didn't test this branch"
 - **Adding new exclusions**: Stop, explain why the code is untestable, and get a maintainer's approval; a maintainer adds the registry entry
 
@@ -120,7 +125,7 @@ Every change must follow this process:
 ### CI Validation Policy
 - **All CI checks must pass** - Never declare a change or any work complete until CI is green; fix any failing check immediately, never disable CI checks, and never use `# type: ignore` without explicit justification
 - **Change CI files only when that is the pull request's purpose** - A pull request that changes the CI scripts (`scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`), the text check settings (`typos.toml`), the SonarQube scripts and settings (`scripts/sonar-*.sh`, `backend/sonar-project.properties`, `frontend/sonar-project.properties`) or the GitHub workflows and code owners (`.github/workflows/`, `.github/CODEOWNERS`) is rejected unless fixing those files is the purpose of its issue. Fix the code instead; change a test only as the Test-Driven Development Policy allows.
-- **Local validation is mandatory** - Run the full CI suite locally before declaring work complete. There are exactly three CI surfaces; do not invoke `pytest --cov`, `npm test -- --coverage`, or `sonar-scan-*.sh` separately - the BE and FE CI scripts run coverage and SonarQube (with `qualitygate.wait=true`) internally.
+- **Local validation is mandatory** - Run the full CI suite locally before declaring work complete. There are exactly three CI surfaces; do not invoke `pytest --cov`, `npm test -- --coverage`, or `sonar-scan-*.sh` separately - the BE and FE CI scripts run coverage and then `sonar-scan-*.sh` internally. The one exception is a `sonar-scan-*.sh` run to read new issues early, before the CI scripts run; its coverage and gate result do not count. The scan goes to SonarQube Cloud (organization `waveapphq`, projects `waveapphq_wave-backend` and `waveapphq_wave-frontend`), waits for the quality gate (`qualitygate.wait=true`), and runs as the current branch, so a detached HEAD stops it. GitHub CI runs the same scan scripts.
   ```bash
   # Backend CI (container-based) - includes text checks, tests, 100% coverage gate,
   # mypy, black, ruff, and SonarQube scan with quality-gate wait
@@ -135,7 +140,8 @@ Every change must follow this process:
   ```
 - **Required host** - The three suites are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. For now, this is a hard requirement.
 - **Text checks** - `./scripts/check-text.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments. The backend and frontend CI scripts and GitHub CI run it. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
-- **Optional results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize SonarQube findings after a scan has already run. Use them only to inspect details when the quality-gate fails inside a CI script; never as a substitute for the CI script itself.
+- **Optional results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings of the current branch after a scan of that branch has run. Use them only to inspect details when the quality-gate fails inside a CI script; never as a substitute for the CI script itself. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it.
+- **Optional CodeQL check** - `./scripts/codeql-scan.sh` runs the checks GitHub's code scanning runs, on the host, and lists the alerts the target branch does not have (`--all` lists every alert of the working tree instead, `--flows` adds the path from the input to each problem). Run it before a push; it is not part of the CI scripts, and GitHub runs CodeQL on each pull request itself.
 - **CI scripts write logs to files** - Output is tee'd to `/tmp/ci-frontend.log` and `/tmp/ci-backend.log`
 - **Never re-run CI to see truncated output** - After a CI run, read or search the log file to find specific details (coverage gaps, error messages, etc.)
 - **Group changes before running CI** - Make all reasonable code and test changes first, then run CI once. Do not run CI after every small edit. Group related fixes (implementation + tests + coverage) together, then verify. CI runs take minutes - minimize the number of runs by doing more work between them.
@@ -361,7 +367,7 @@ npm run type-check
 - `frontend/src/app/router.tsx` - Route definitions
 - `frontend/src/app/main.tsx` - Frontend entry point
 - `backend/config/config.example.yaml` - dev config starting point
-- `frontend/coverage-exclusions.md` - V8 exclusion registry
+- `tests/exclusions/README.md` - the index of the exclusion lists: frontend and backend coverage, SonarQube Cloud, CodeQL
 - `scripts/Containerfile` - Container build definition
 
 ## Environment Variables
@@ -370,5 +376,9 @@ npm run type-check
 - `WAVE_ADMIN_ALLOWED=true` - Enable admin API
 - `WAVE_LOG_LEVEL=DEBUG` - Log verbosity (DEBUG/INFO/WARN/ERROR/FATAL); overrides the config file's level at startup
 - `VITE_API_BASE_URL=http://localhost:8001` - Override API URL for frontend
-- `SONAR_TOKEN` - Required for SonarQube scanning
+- `SONAR_TOKEN` - Required for the SonarQube scan and the results helpers; a token with scan rights on the two SonarQube Cloud projects
+- `SONAR_URL` - Optional; points the scan and the results helpers at another SonarQube server (default `https://sonarcloud.io`)
+- `CODEQL_WORK_DIR` - Optional; where the CodeQL scan keeps its work files, several GB while a scan runs (default `~/.cache/wave-codeql`)
+- `CODEQL_BASE` - Optional; the branch the CodeQL scan compares with (default `release/<version>` for a fix or feature branch, else `master`)
+- `CODEQL_GITHUB_TOKEN` - Optional; a GitHub token that can read code scanning alerts. With it, the CodeQL scan leaves out the alerts a maintainer dismissed on GitHub for the branch or its pull request
 - `WAVE_MCP_SECRETS_DIR` - Server-side root for the recipe `value_from_file` secret mode (overrides `security.secrets_input_dir`; unset disables the mode)

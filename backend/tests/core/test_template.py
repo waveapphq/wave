@@ -2,11 +2,16 @@
 
 import time
 
+import pytest
+
 from wavecore.core.expressions.template import template_expressions
 
-# A quadratic marker scan takes seconds on one unclosed line of this many braces.
-BRACE_RUN = "{" * 50_000
-LINEAR_BOUND_SECONDS = 1.0
+# A quadratic marker scan takes seconds on each of these unclosed lines, a linear one milliseconds.
+UNCLOSED_LINES = {
+    "brace run": "{" * 50_000,
+    "repeated openings": "{{{{" + "{{{{a" * 12_000,
+}
+LINEAR_BOUND_SECONDS = 0.25
 
 
 class TestTemplateExpressions:
@@ -19,9 +24,10 @@ class TestTemplateExpressions:
     def test_a_second_opening_starts_the_marker_over(self) -> None:
         assert template_expressions("{{ a {{ b }}") == ["b"]
 
-    def test_a_long_unclosed_run_of_braces_is_scanned_in_linear_time(self) -> None:
+    @pytest.mark.parametrize("line", UNCLOSED_LINES.values(), ids=UNCLOSED_LINES.keys())
+    def test_a_long_unclosed_line_is_scanned_in_linear_time(self, line: str) -> None:
         start = time.perf_counter()
-        expressions = template_expressions(BRACE_RUN)
+        expressions = template_expressions(line)
         elapsed = time.perf_counter() - start
 
         assert expressions == []

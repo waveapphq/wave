@@ -21,6 +21,7 @@ import { DescriptionField } from '@/components/shared/fields/description-field'
 import { NameField } from '@/components/shared/fields/name-field'
 import {
   DraggableSheet,
+  SheetTitle,
   hasOpenModalDialog,
   openOrRefocus,
   type SheetHandle,
@@ -89,6 +90,8 @@ const RUN_PINS: Readonly<Partial<Record<string, Readonly<Record<string, unknown>
 }
 
 const SETTINGS_NOTE = formErrorsNote('settings')
+/** The width a condition Block, Setter or Parallel window opens at, so its rows fit (REQ-3.1.1.5, FIELD-16). */
+const WIDE_WINDOW_WIDTH = 880
 const BLOCK_DESCRIPTION_PLACEHOLDER = 'Optional. Short description of what this block does in this test.'
 
 /** SQL-2: the Parameters entry names; null while Parameters is an expression. */
@@ -533,14 +536,12 @@ export function ElementConfigModal({
       outputBindings={state.outputBindings}
       outputErrors={state.outputErrors}
       enrichedVariables={state.enrichedVariables}
-      variableExpressionKeys={state.variableExpressionKeys}
-      variableTemplateKeys={state.variableTemplateKeys}
-      variableSecretKeys={state.variableSecretKeys}
-      variableTypes={state.variableTypes}
-      variableElementTypes={state.variableElementTypes}
       settingElementTypes={state.settingElementTypes}
       expressionFields={state.expressionFields}
       templateFields={state.templateFields}
+      secretFields={state.secretFields}
+      setterRowTypes={state.setterRowTypes}
+      setterRevision={state.setterRevision}
       outputSecretFields={state.outputSecretFields}
       isPlugin={isPlugin}
       secretMasking={state.secretMasking}
@@ -549,50 +550,19 @@ export function ElementConfigModal({
       secretMaskFields={secretMaskFields}
       unmaskedSecretFields={state.unmaskedSecretFields}
       setUnmaskedSecretFields={state.setUnmaskedSecretFields}
-      assertAssertions={state.assertAssertions}
-      assertMode={state.assertMode}
-      assertFailCurrentScope={state.assertFailCurrentScope}
-      ifElseBranches={state.ifElseBranches}
-      whileConditions={state.whileConditions}
-      switchBranches={state.switchBranches}
-      waitConditions={state.waitConditions}
-      waitMode={state.waitMode}
-      waitFailCurrentScope={state.waitFailCurrentScope}
-      parallelBranches={state.parallelBranches}
-      parallelJoin={state.parallelJoin}
       outputList={state.outputList}
       handleInputChange={state.handleInputChange}
       handleOutputChange={state.handleOutputChange}
       handleFieldValidationChange={state.handleFieldValidationChange}
       setExpressionFields={state.setExpressionFields}
       setTemplateFields={state.setTemplateFields}
-      setVariableExpressionKeys={state.setVariableExpressionKeys}
-      setVariableTemplateKeys={state.setVariableTemplateKeys}
-      setVariableSecretKeys={state.setVariableSecretKeys}
+      setSecretFields={state.setSecretFields}
+      setSetterRowTypes={state.setSetterRowTypes}
       setOutputSecretFields={state.setOutputSecretFields}
-      setVariableTypes={state.setVariableTypes}
-      setVariableElementTypes={state.setVariableElementTypes}
       setSettingElementTypes={state.setSettingElementTypes}
       setVarSetterValid={state.setVarSetterValid}
       setXmlQueryValid={state.setXmlQueryValid}
       setJsonQueryValid={state.setJsonQueryValid}
-      setAssertValid={state.setAssertValid}
-      setIfElseValid={state.setIfElseValid}
-      setWhileValid={state.setWhileValid}
-      setSwitchValid={state.setSwitchValid}
-      setWaitValid={state.setWaitValid}
-      setAssertAssertions={state.setAssertAssertions}
-      setAssertMode={state.setAssertMode}
-      setAssertFailCurrentScope={state.setAssertFailCurrentScope}
-      setIfElseBranches={state.setIfElseBranches}
-      setWhileConditions={state.setWhileConditions}
-      setSwitchBranches={state.setSwitchBranches}
-      setWaitConditions={state.setWaitConditions}
-      setWaitMode={state.setWaitMode}
-      setWaitFailCurrentScope={state.setWaitFailCurrentScope}
-      setParallelBranches={state.setParallelBranches}
-      setParallelJoin={state.setParallelJoin}
-      setParallelValid={state.setParallelValid}
     />
   )
 
@@ -601,18 +571,18 @@ export function ElementConfigModal({
       open={isOpen}
       onClose={handleSheetClose}
       sheetId={`config-${element.id}`}
-      ariaLabel={`${displayName} configuration`}
       data-testid="element-config-sheet"
       initialOffset={initialOffset}
+      initialWidth={state.wideWindow ? WIDE_WINDOW_WIDTH : undefined}
       minWidth={520}
       minHeight={400}
       className="max-w-[90vw] max-h-[90vh]"
       header={
         <>
-          <h2 className="flex items-center gap-2 text-base font-semibold min-w-0">
+          <SheetTitle className="flex items-center gap-2 text-base font-semibold min-w-0">
             <ElementIcon className={`h-5 w-5 shrink-0 ${elementIconColor}`} aria-hidden="true" />
             <span className="truncate">{displayName} - Edit Config</span>
-          </h2>
+          </SheetTitle>
           <div className="flex items-center gap-2">
             {readOnly ? (
               <ReadOnlyPill data-testid="element-config-read-only-pill" />

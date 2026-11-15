@@ -1,0 +1,168 @@
+{
+  "name": "zz-ctrl-fields-setter",
+  "version": "1.0.0",
+  "description": "One Variable Setter with every row form (text, {x}, a text for Template, secret text, a list with one {x} entry, a map, an integer, a secret integer, a secret list), a Local Function whose body Setter writes its output, and a Log printing each variable.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "86ae114b-0ba4-42ab-b235-282b849a063f",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 120 },
+        "data": {
+          "label": "Set run values",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Every Setter row form",
+          "hasNewerVersion": false,
+          "expressionFields": ["variables.next_attempt", "variables.host_list.2"],
+          "templateFields": [],
+          "elementTypes": {
+            "variables.limits": { "cpu": "integer", "mem": "string" }
+          },
+          "config": {
+            "values": {
+              "variables": {
+                "greeting": "hello world",
+                "next_attempt": "attempt + 1",
+                "summary": "Run {{ run_id }} done",
+                "api_token": "tok-setter-4471-qz",
+                "host_list": ["web-1", "web-2", "backup_host"],
+                "limits": { "cpu": 2, "mem": "4Gi" },
+                "retries": 3,
+                "port": 8443,
+                "vault_keys": ["k-alpha-7731", "k-beta-2290"]
+              }
+            },
+            "secretFields": ["variables.api_token", "variables.port", "variables.vault_keys"],
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "afb0667f-28f0-4816-b7d3-c5c7ffffff65",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 240 },
+        "data": {
+          "label": "Set_Out",
+          "elementType": "function",
+          "nodeType": "function",
+          "functionLifecycle": "local",
+          "category": "function",
+          "version": "1.0.0",
+          "description": "A Setter inside a Function writes its output",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {},
+            "outputBindings": { "out": "fn_out" },
+            "profileBindings": []
+          },
+          "localDefinition": {
+            "name": "Set_Out",
+            "description": "Writes its output out with a Variable Setter",
+            "inputs": [],
+            "outputs": [{ "name": "out", "type": "integer", "default": 0 }],
+            "variables": [],
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "f6a9e000-67e2-4523-8daf-4baf85048247",
+                  "type": "workflowNode",
+                  "position": { "x": 200, "y": 160 },
+                  "data": {
+                    "label": "Set the output",
+                    "elementType": "variable-setter",
+                    "nodeType": "control",
+                    "category": "flow",
+                    "version": "1.0.0",
+                    "description": "Writes out",
+                    "hasNewerVersion": false,
+                    "expressionFields": [],
+                    "templateFields": [],
+                    "config": {
+                      "values": { "variables": { "out": 5 } },
+                      "outputBindings": {},
+                      "profileBindings": []
+                    }
+                  },
+                  "measured": { "width": 120, "height": 62 }
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e-fn-1",
+                  "source": "start-node",
+                  "target": "f6a9e000-67e2-4523-8daf-4baf85048247",
+                  "type": "default"
+                }
+              ]
+            }
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "83638a07-a412-4938-865b-29e075398839",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 360 },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Print each variable",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": ["message"],
+          "config": {
+            "values": {
+              "message": "vars greeting={{ greeting }} next_attempt={{ next_attempt }} summary={{ summary }} api_token={{ api_token }} host_list={{ host_list }} limits={{ limits }} retries={{ retries }} port={{ port }} vault_keys={{ vault_keys }} last_error={{ last_error }} fn_out={{ fn_out }}",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "86ae114b-0ba4-42ab-b235-282b849a063f", "type": "default" },
+      {
+        "id": "e2",
+        "source": "86ae114b-0ba4-42ab-b235-282b849a063f",
+        "target": "afb0667f-28f0-4816-b7d3-c5c7ffffff65",
+        "type": "default"
+      },
+      {
+        "id": "e3",
+        "source": "afb0667f-28f0-4816-b7d3-c5c7ffffff65",
+        "target": "83638a07-a412-4938-865b-29e075398839",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "greeting": { "value": "hi", "type": "string", "scope": "test" },
+    "summary": { "value": "", "type": "string", "scope": "test" },
+    "api_token": { "value": "tok-initial-1180-qz", "type": "string", "scope": "test", "secret": true },
+    "run_id": { "value": "7", "type": "string", "scope": "test" },
+    "backup_host": { "value": "db-backup-1", "type": "string", "scope": "test" },
+    "next_attempt": { "value": 0, "type": "integer", "scope": "test" },
+    "attempt": { "value": 1, "type": "integer", "scope": "test" },
+    "host_list": { "value": [], "type": "array", "scope": "test" },
+    "limits": { "value": {}, "type": "map", "scope": "test" },
+    "retries": { "value": 0, "type": "integer", "scope": "test" },
+    "port": { "value": 22, "type": "integer", "scope": "test", "secret": true },
+    "vault_keys": { "value": ["k-old-0001"], "type": "array", "scope": "test", "secret": true },
+    "last_error": { "value": "unset", "type": "string", "scope": "test" },
+    "fn_out": { "value": 0, "type": "integer", "scope": "test" }
+  },
+  "metadata": { "tags": [], "suite_id": null, "parent_suite": null }
+}

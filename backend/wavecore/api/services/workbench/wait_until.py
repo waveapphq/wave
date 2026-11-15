@@ -5,7 +5,6 @@ sub-flow run between checks, and an always-present 'then' egress.
 """
 
 import asyncio
-import math
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -13,9 +12,14 @@ from typing import Any
 from wavecore.api.services.workbench._common import (
     WorkbenchStatus,
     _add_execution_log,
+    _elapsed_ms,
     _push_variable_changes,
 )
-from wavecore.api.services.workbench.block_status import leave_by_then, skip_lane_never_run
+from wavecore.api.services.workbench.block_status import (
+    leave_by_then,
+    skip_lane_never_run,
+    take_lane,
+)
 from wavecore.api.services.workbench.for_loop import (
     _consume_loop_signals,
     _execute_body_chain_iteration,
@@ -42,16 +46,18 @@ class WaitSpec:
     check_interval_ms: int
     message: str | None
     fail_scope: bool
+    watch: bool
     output_bindings: dict[str, str]
 
     @classmethod
     def from_signals(cls, signals: dict[str, Any], output_bindings: dict[str, str]) -> "WaitSpec":
         return cls(
             conditions=signals.get("condition") or [],
-            timeout_ms=signals.get("wait_timeout") or 0,
-            check_interval_ms=signals.get("check_interval") or 1000,
+            timeout_ms=signals["wait_timeout"],
+            check_interval_ms=signals["check_interval"],
             message=signals.get("wait_message"),
             fail_scope=bool(signals.get("wait_fail_scope")),
+            watch=signals.get("wait_mode") == "watch",
             output_bindings=output_bindings,
         )
 
@@ -79,10 +85,6 @@ def _resolve_wait_targets(
     if then_target is None:
         then_target = next((child for child, handle in outgoing if handle is None), None)
     return handle_targets.get("retry"), then_target
-
-
-def _elapsed_ms(start_monotonic: float) -> int:
-    return int(math.ceil((time.monotonic() - start_monotonic) * 1000))
 
 
 def _is_stopped(session: dict[str, Any]) -> bool:
@@ -175,6 +177,8 @@ async def _run_wait_rounds(
             block_id=node_id,
         )
 
+        if retry_chain:
+            await take_lane(session, session_id, node_id, "retry")
         outcome = await _run_retry_round(
             retry_chain,
             node_map,
@@ -275,7 +279,8 @@ async def _execute_wait_until_body(
     retry_target, then_target = _resolve_wait_targets(outgoing)
 
     retry_chain: list[str] = []
-    if retry_target:
+    # Watch only checks its condition: a retry edge left from Retry never runs (REQ-3.5.4.3).
+    if retry_target and not spec.watch:
         retry_chain = _trace_body_chain(retry_target, adj, node_map, executed)
 
     _add_execution_log(

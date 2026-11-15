@@ -103,7 +103,8 @@ const inputsEcho = (message: string): RegExp =>
   new RegExp(`^Inputs: \\{.*"message":${escapeRegExp(JSON.stringify(message))}.*\\}$`)
 
 /** The last DEBUG line of a block run: once it is rendered the run's console is complete. */
-const completedLine = (blockName: string): string => `Completed '${blockName}'`
+const completedLine = (blockName: string): RegExp =>
+  new RegExp(`^Completed '${escapeRegExp(blockName)}' \\(\\d+ ms\\)$`)
 
 const requestLine = (port: string): RegExp =>
   new RegExp(`^HTTP GET ${escapeRegExp(healthUrl(port))} \\(timeout: [\\d.]+s\\)$`)
@@ -281,7 +282,7 @@ test.describe('V-RC-VARIABLE-EDITS: a variable edited between block runs', () =>
       await target.click()
       await target.fill('lport')
       await target.press('Tab')
-      const written = sheet.locator('[data-testid="scalar-edit-input"]')
+      const written = sheet.locator('[data-testid="param-input-varset-value-0"]')
       await written.fill(HTTP_HEALTH_PORT)
       await expect(target).toHaveValue('lport')
       await expect(written).toHaveValue(HTTP_HEALTH_PORT)

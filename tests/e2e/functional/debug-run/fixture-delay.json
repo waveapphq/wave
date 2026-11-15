@@ -40,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'delay-done'", "level": "INFO" },
             "outputBindings": {},

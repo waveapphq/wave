@@ -43,7 +43,11 @@ These tests follow a common pattern: load a `fixture.json` containing a pre-buil
 | [Delay Control](#delay-control) | `delay-control/` | 11 (4 Delay + 1 VarSetter + 6 Log) | Literal/expression durations, output bindings, sequential delays, 1ms boundary |
 | [XML Parser](#xml-parser) | `xml-parser/` | 14 (4 XML Parser + 10 Log) | Combined/individual mode, type coercion, error handling, namespace queries |
 | [Assert Control](#assert-control) | `assert-control/` | 29 (1 VarSetter + 13 Assert + 15 Log) | The six types other than table and their comparison operators, groups, expressions, single/split branching; null and table checks are in [Checks on Null](null-checks/README.md) |
-| [Recipe Authoring via MCP](#recipe-authoring-via-mcp) | `recipe-authoring/` | 22 (7 constructs + VarSetter/Break/Halt + 12 Log) | Live MCP validate/create tools, rejoin-edge persistence guard, canvas sanity, branch/loop/parallel/assert execution, and block geometry: a recipe-built block is stored at the width its name needs, the longest names stop at the maximum, a hand-set size survives an amend while a generated one is regenerated, and the recipe readback carries no geometry |
+| [MCP Run Report](#mcp-run-report) | `mcp-report/` | Three JSON fixtures: 9 Blocks (If/Else, Switch, For, `if` with no `else`, Assert, Logs), 6 Blocks (If/Else with two branches that rejoin) and 4 Blocks (three Logs and a Delay, with a secret variable) | `get_run_report` and `get_failure_report` over the live MCP endpoint name each Block by the containers it sits in, never by an If/Else; every Block of a loop body carries the loop; the Blocks of rejoined branches are listed in flow order before the join; the report viewer shows the same paths; the tool list describes what the run report holds and its formats; for a finished run `json` holds the variables, the per-Block timeline and the logs the `GET` routes answer, with the secret masked, and `html` renders the same run; a run in progress, an unknown id and an unknown format get their exact refusals |
+| [MCP Suites](mcp-suites/README.md) | `mcp-suites/` | `fixture.json`: 1 Block (Log), the member Test | `create_suite`, `update_suite`, `get_suite` and `list_suites` over the live MCP endpoint, seeded through the API: a create stores exactly the name, description, tags, Tests in the order given and typed variables with the secret masked, and the Suites page lists it; an update changes only what it names, removes one Test and one variable, and a secret sent back masked keeps its value; get returns the stored Suite by id and by name; list sends one row per Suite and `search` filters by name and description; a duplicate name, an unknown Test, a removal of a non-member and a bare variable value are refused with their exact findings and change nothing, and an unknown Suite raises its not found message |
+| [MCP Regressions](mcp-regressions/README.md) | `mcp-regressions/` | None: Suites and Regressions seeded through the API (member Tests from `../mcp-suites/fixture.json`) | `create_regression`, `update_regression`, `get_regression` and `list_regressions` over the live MCP endpoint, seeded through the API: a create stores exactly the name, description, tags, Suites in the order given and typed variables with the secret masked, and the Regressions page lists it; an update changes only what it names, removes one Suite and one variable, and a secret sent back masked keeps its value; get returns the stored Regression by id and by name; list sends one row per Regression and `search` filters by name and description; a duplicate name, an unknown Suite, a removal of a non-member and a bare variable value are refused with their exact findings and change nothing, and an unknown Regression raises its not found message |
+| [MCP Listing Tools](mcp-lists/README.md) | `mcp-lists/` | Per-spec seeds through the API: Log and Assert Tests, a Suite, an environment, a library Function at two versions, a custom profile, System variables | One spec per listing tool over the live MCP endpoint: `list_tests` rows match the Tests page and the stored Tests, `search` and `tag` filter; `list_blocks` holds every palette Block and three entries equal `get_block`; `list_environments` matches Settings > Environments; `list_executions` is newest first, filters by status, type and limit and attributes an MCP run to its client; `list_functions` is one card of the latest version with the secret default masked; `list_profiles` lists `profile_type` and fields with the secret masked; `list_variables` lists `system` and `global` by name with the secret masked; every spec checks the exact refusal of a bad argument |
+| [Recipe Authoring via MCP](#recipe-authoring-via-mcp) | `recipe-authoring/` | 22 (7 constructs + VarSetter/Break/Halt + 12 Log) | Live MCP validate/create tools, rejoin-edge persistence guard, canvas sanity, branch/loop/parallel/assert execution, and block geometry: a recipe-built block is stored at the width its name needs, the longest names stop at the maximum, a hand-set size survives an amend while a generated one is regenerated, and the recipe readback carries no geometry; every control Block field form a recipe writes (OR, groups, compare-to {x} / template / literal, branch labels, Setter template, {x}, entry and secret rows, lane {x}) is stored, shown in the windows, read back expressible and kept by an amend of its readback |
 | [K8s Connect](k8s-connect/README.md) | `k8s-connect/` | Per-spec, built by `helpers/k8s-nodes.ts` | K8s Connect against the real kwok cluster: the credential matrix (static token, service-account token request, client certificate), the run-token denial, a tunneled Connect with `tls_server_name` and a CA with verification on, the session reveal, and the value-editor guard |
 | [K8s Read](k8s-read/README.md) | `k8s-read/` | Per-spec, built by `helpers/k8s-nodes.ts` from a case table | Get / Events / Logs / Top against the real kwok cluster plus a fault-injecting stub: the full option matrix under the README's option ids - the shared session, timeout, namespace and impersonation set, kind resolution across 23 Kinds, the selectors and output formats, log tail / since / timestamps / previous, pod and node metrics, the read failures, and a read cut short by its Parallel lane's time limit staying silent once the cluster's held answer is finally due |
 | [K8s Exec](k8s-exec/README.md) | `k8s-exec/` | Per-spec, built by `helpers/k8s-nodes.ts` from a case table | Exec / Script / Copy over kwok's real exec channel: container selection, working directory, exit codes and stderr, stdin-fed interpreters, and file transfer in both directions |
@@ -56,6 +60,10 @@ These tests follow a common pattern: load a `fixture.json` containing a pre-buil
 | [Nesting](nesting/README.md) | `nesting/` | Per-cell graphs built by `helpers/nesting-graph.ts`, one Test per cell, each ending in a tokened bookend Log | Every container kind (If/Else, Switch/Case, split Assert, For, For Each, While, Wait Until, Parallel, Try/Catch, Remote Execution, Function) inside every slot kind of every container (176 placement cells): the inner sub-flow runs the expected number of times, untaken branches never run, the inner and outer `then` successors run in order, the verdict passes with no node left running and no ERROR line, a variable written at the innermost depth reads at the top, and validation agrees with the run. Needs `sshd` |
 | [For Control](for-control/README.md) | `for-control/` | Fixture flows plus canvas-built For loops | Count and range mode, literal and expression settings, a timeout caught by a Try/Catch, a disabled For as a pass-through, a null count running zero times with its then lane and index 0, and range mode failing on a null start, end or step with the field named |
 | [For Each Control](for-each-control/README.md) | `for-each-control/` | Fixture flows plus canvas-built For Each loops | Arrays, maps, tables, literal lists, empty collections and a timeout; a null or empty collection runs zero times at the top level and inside a For with its then lane, index 0 and the item kept; a null item reaches the body as null; a non-collection fails the run |
+| [Note Control](note-control/README.md) | `note-control/` | Per-test graphs built by `note-control/note-flows.ts`, one Test per case, each ending in a tokened bookend Log | A Note passes the run on inside a For, For Each and While body, a Try section, a Switch case and a Parallel lane: the Blocks after it run on every pass and a While whose body starts with a Note ends after its rounds; on an untaken If/Else branch in a For body and in a body that runs zero times, the Block after a Note paints skipped |
+| [Control Block Fields](control-block-fields/README.md) | `control-block-fields/` | Five JSON fixtures (`fixture-conditions.json`, `fixture-setter.json`, `fixture-parallel.json`, `fixture-modes.json`, `fixture-untouched.json`); the save spec builds its bodies inline | The one value field in the control Blocks: condition rows of If/Else, Switch, Assert, While, Wait Until and CSV filters (literal, {x}, Template, number text, value-loss questions, window errors, role names, `_cell`), Setter rows, lane limits in {x}, mode sections and untouched windows, each stored and run; the save check's exact refusals for control structure, condition rows, undeclared names, element types, read-only expressions at save and import, load warnings and Function saves. Six specs: `v-ctrl-fields-conditions-functional` (3 tests), `v-ctrl-fields-save-functional` (5), `v-ctrl-fields-setter-functional` (8), `v-ctrl-fields-parallel-functional` (1), `v-ctrl-fields-modes-functional` (5) and `v-ctrl-fields-untouched-functional` (2), with the shared module `stored-blocks.ts` |
+| [Canvas Run Wires](canvas-run-wires/README.md) | `canvas-run-wires/` | Two JSON fixtures, the stored Tests a recipe compiles | After a run only the lane wires the flow went through are highlighted: If/Else branches that join one Block or lead to different Blocks, split Assert lanes that join, a Try/Catch catch that never ran, a While body that never ran (skipped, dimmed) and its then lane; live, after a reload and on the history canvas |
+| [Artifact Inline Page](artifact-inline-page/README.md) | `artifact-inline-page/` | `fixture.json`: 2 File I/O writes (`page.html`, `drawing.svg`) | An HTML page and an SVG drawing opened inline from a tracked run's artifacts, a Test's data and the workbench session's artifacts still render and run their script, but the script's read of WAVE's API is refused; a download keeps the file's own type and name |
 | [Profile Drives Plugin](profile-drives-plugin/README.md) | `profile-drives-plugin/` | Per-suite JSON fixtures, profiles filled or built per run | A Profile's own fields configure a real plugin and the workflow runs: an ssh profile driving `ssh-session-open` against `sshd`, an http profile driving `http-client` against `http-echo` and mutual-TLS `tls-lab`, and a kubernetes profile driving `k8s-connect` against kwok. Every plugin parameter the profile schema covers is bound to the profile, never typed into the Block. `v-profile-ssh-passphrase-functional.spec.ts` builds an ssh profile on the Profiles page with a passphrase-protected OpenSSH key, opens the session SFTP runs on from it, catches a wrong passphrase, and proves the profile Type picker and filter offer no `sftp` |
 | [Ping](ping/README.md) | `ping/` | Two fixtures: 21 blocks on the WAVE server (15 of them Ping), plus a remote flow | Real ICMP echo requests, on the WAVE server and on a remote host inside a Remote Execution body: loopback and the gateway answered, every Advanced row (IPv4, TTL, Don't fragment, a held Source address, Packet size 0), a silent host recorded, all four Pass when rules passing and failing, the whole-block Timeout, an unresolvable host, forced IPv6 with no address, a foreign Source address, Fail the block inside a Try/Catch, and Log Output on and off. The remote spec adds the R locus badges, a compose service only the remote host resolves, the remote host's own loopback, Record and continue on the remote host, and the same Host unresolvable from WAVE. Needs `sshd` and `netcat-target`, and unprivileged ICMP open to the container's user |
 | [SFTP](sftp/README.md) | `sftp/` | Per-spec JSON fixtures (one flow built on the canvas), each ending in a tokened bookend Log | The SFTP block on real OpenSSH servers: Upload, Download, List, Stats, Delete, Move and Create folder; wildcards, folder trees and merge, the Max files / Max size (MiB) refusals, read-only Test Data, a closed session and a server with no SFTP subsystem, Timeout and Stop leaving no partial file, a three-hop chain, a session through an SSH tunnel with Strict host keys, and the chrooted SFTP-only `dropzone` account. Each spec works in its own `e2e-<spec>-<uuid>` server folder and removes it. Needs `sshd` and `sshd-no-sftp`; the tunnel spec dials `sshd-no-fwd` by service name |
@@ -75,7 +83,7 @@ These tests follow a common pattern: load a `fixture.json` containing a pre-buil
 | [Function Output Validation](fn-output-validation/README.md) | `fn-output-validation/` | No fixture; `zz-` Tests with Local Functions built in the UI or seeded, and library Functions seeded per test | An unwritten output is a non-blocking warning; every call of a Function prints a run-console WARN per input no block uses and per output no block writes, for Local, library and nested Functions, also when the call is refused or its body fails, once per call in a loop |
 | [Required Function Inputs](fn-required-input/README.md) | `fn-required-input/` | No fixture; `zz-` library Functions and Tests seeded per test | The input window locks a Required input's default to null for every type; an old default is dropped on save; running a Local or library Function alone uses the Current value set before the run, also right after Reset, and with no value stops and names the input; a library Function Block bound to null fails the run |
 | [Variable Create Modal](variable-create-modal/README.md) | `variable-create-modal/` | No fixture; each spec seeds a `zz-` Test (blank or with one Local Function) | The Variable Manager creation windows: every type and kind, complex editors, element types, precision, secrets, and Set to null in the Variable, Function local, Input and Output windows (created null, stored as a plain null, null after a reload and in a run) |
-| [Variable Manager Panel](var-manager-panel/README.md) | `var-manager-panel/` | `fixture.json`, `fixture-live-table.json`, `fixture-virtualized.json`; the reference specs seed a blank `zz-` Test per test | The Variable Manager panel: post-run row state, live complex values, the virtualized list, the Unused badge at every place a block or variable reads a name (Test scope and inside a Function), renames that follow every name site, and delete dialogs that count readers and name cleared bindings |
+| [Variable Manager Panel](var-manager-panel/README.md) | `var-manager-panel/` | `fixture.json`, `fixture-live-table.json`, `fixture-virtualized.json`; the reference specs seed a blank `zz-` Test per test | The Variable Manager panel: post-run row state, live complex values, the virtualized list, the Unused badge at every place a block or variable reads a name (Test scope and inside a Function), renames that follow every name site, delete dialogs that count readers and name cleared bindings, and the row pencil's tooltip, which a closed Edit window does not open |
 | [Function Parameter Persistence](function-canvas-param-persist/README.md) | `function-canvas-param-persist/` | `fixture.json` (one empty Local Function); the null and block-fields specs seed their own `zz-` Tests | Inputs, outputs and Function locals survive Save and a reload; created null with Set to null, each of every type stays null through Save, a reload and Publish to Library, and a run reads null in the body or in the bound caller variable; Function Block inputs open as their literal widget, show an unset default in gray in both modes, store nothing until a value is given, keep typed list and map items as numbers, and preview a table as its rows' JSON |
 | [Table Runtime Forms](table-runtime-forms/README.md) | `table-runtime-forms/` | Per-test JSON fixtures; the filter-on-null spec seeds a `zz-` Test with one CSV block | Both runtime forms of a table reach every consumer (For Each, Variable Setter, CSV and Excel shaping, schema source), and `table.filter()` typed in Variable Setter rows reads a null cell by the check rule on every operator |
 
@@ -98,6 +106,7 @@ Tests that exercise API and UI lifecycle operations without workflow execution.
 |-------|-----------|----------|
 | [Backup & Restore](#backup--restore) | `backup-restore/` | Full backup/restore lifecycle, selective backup, the periodic schedule, the network settings round trip |
 | [Global Variables](#global-variables) | `global-variables/` | API CRUD, UI CRUD, persistence, all 7 types, backup integration |
+| [Edge Identity](edge-identity/README.md) | `edge-identity/` | A workflow whose wires repeat an id is refused as sent with one `DUPLICATE_EDGE_ID` finding by `POST` and `PUT /tests`, a Local Function body, `POST /functions`, the import and its preview, the backup restore and its preview, and the run gate; the Fix endpoint refuses such a stored Test and drops no wire |
 
 ---
 
@@ -198,7 +207,7 @@ Settings > Network > Proxy (REQ-4.7.14) against the `tinyproxy` pair. `v-network
 
 **Variables**: `str_var`, `int_var`, `float_var`, `bool_var` (literals), `computed_str`, `computed_sum` (expressions)
 
-**Features**: Literal scalar assignment (string, integer, float, boolean), per-variable expression resolution, variable propagation to downstream blocks, multiple variables per setter, type preservation, `variableExpressionKeys` wire format.
+**Features**: Literal scalar assignment (string, integer, float, boolean), per-variable expression resolution, variable propagation to downstream blocks, multiple variables per setter, type preservation, `expressionFields` `variables.<row>` wire format.
 
 ### Delay Control
 
@@ -212,7 +221,7 @@ Settings > Network > Proxy (REQ-4.7.14) against the `tinyproxy` pair. `v-network
 ### Wait Until Control
 
 **Directory**: `wait-until-control/`
-**Files**: `fixture.json`, `fixture-fail-scope.json`, `v-ctrl-wait-until-functional.spec.ts`, `README.md`
+**Files**: `fixture.json`, `fixture-fail-scope.json`, `fixture-watch-wires.json`, `fixture-fn-wait-wires.json`, `v-ctrl-wait-until-functional.spec.ts`, `v-ctrl-wait-until-wires-functional.spec.ts`, `v-ctrl-wait-until-fn-wires-functional.spec.ts`, `v-ctrl-wait-until-fn-stranded-functional.spec.ts`, `README.md`
 
 Four permutations chained through their `then` lanes in one workflow, plus a second
 workflow for the failing timeout (a failed wait is the whole session's outcome, so
@@ -225,7 +234,16 @@ so a wait that passes only passes because the polled system changed its answer b
 bindings), informational timeout (block shown amber, session untouched, WARN line), failing
 timeout with Fail Current Scope (block shown red, failed session, ERROR line, the flow stops at the wait), Watch mode
 on an already-true condition costing less than one check interval, and a disabled wait
-cascade-skipping its lane.
+cascade-skipping its lane. A second spec switches Retry to Watch and back in the window and
+saves Watch waits through the API: only the retry wire goes, the wire to the next Block
+stays, the save lists only that removal, and a run reaches the Block after the wait. It also
+saves a Retry wait whose next wire names no lane: the save puts it on `then` and the canvas
+draws it from the `then` dot. A third spec saves the same wires inside a library Function and
+a Local Function body: each wait's next wire is stored on the lane its mode draws and only the
+retry wire goes. A fourth spec saves a Watch wait whose retry wire is the only way into a Block,
+as a library Function, a Test's Local Function and a Local Function nested in a library
+Function: each save is refused, and its one `NODE_UNREACHABLE` finding names the removed retry
+wire as the reason.
 
 ### XML Parser
 
@@ -268,11 +286,18 @@ cascade-skipping its lane.
 ### Recipe Authoring via MCP
 
 **Directory**: `recipe-authoring/`
-**Files**: `recipe.yaml`, `mcp_recipe_client.py`, `mcp_tool_client.py`,
+**Files**: `recipe.yaml`, `recipe-control-fields.yaml`, `mcp_recipe_client.py`, `mcp_tool_client.py`,
 `v-mcp-recipe-functional.spec.ts`, `v-mcp-recipe-lifecycle-functional.spec.ts`,
 `v-mcp-recipe-geometry-functional.spec.ts`,
 `v-mcp-recipe-choice-words-functional.spec.ts`,
-`v-mcp-recipe-null-params-functional.spec.ts`, `README.md`
+`v-mcp-recipe-null-params-functional.spec.ts`,
+`v-mcp-recipe-element-types-functional.spec.ts`,
+`v-mcp-recipe-filters-functional.spec.ts`,
+`v-mcp-recipe-wire-ids-functional.spec.ts`,
+`v-mcp-recipe-lane-limit-functional.spec.ts`,
+`v-mcp-recipe-notes-functional.spec.ts`,
+`v-mcp-recipe-control-fields-functional.spec.ts`,
+`v-mcp-recipe-function-notes-functional.spec.ts`, `notes-helpers.ts`, `README.md`
 
 Import-free: the 22-node workflow is created at runtime through the live MCP
 `create_test_from_recipe` tool (listener enabled until-restart via `PUT /mcp/settings`,
@@ -300,6 +325,52 @@ geometry.
 input refused with a default, `default: null` meaning no default, `expr:` / `template:`
 outputs that run evaluated, the kind form refused on an input, and `is_null` with no
 `value_type` taking the declared type on every type.
+
+**Wire ids**: `v-mcp-recipe-wire-ids-functional.spec.ts` covers an If/Else whose
+three branches hold no steps before a Log: every stored wire has its own id, each
+branch handle has its own wire into the Log, and the canvas draws each of those
+wires once, leaving from its own branch dot.
+
+**Lane limits**: `v-mcp-recipe-lane-limit-functional.spec.ts` covers a Parallel lane
+`time_limit` written as a template (text, number, or holding `{{ }}`): `validate_recipe`
+and `create_test_from_recipe` refuse it with `TEMPLATE_NOT_ALLOWED`, and nothing is stored.
+
+**Element types**: `v-mcp-recipe-element-types-functional.spec.ts` covers `element_types` on
+variables, a set step and a SQL block step: the created Test stores them, the run reads every
+element as its declared type, the readback writes them in full, and a float element written as
+`.nan` or `.inf` is refused.
+
+**Filters**: `v-mcp-recipe-filters-functional.spec.ts` covers the filter and sort item shapes
+`get_recipe_guide` and `get_block` describe: a CSV block written in that shape is stored as
+written, its config sheet shows the filter and the sort, and the run keeps the expected rows.
+
+**Notes**: `v-mcp-recipe-notes-functional.spec.ts` and
+`v-mcp-recipe-function-notes-functional.spec.ts`, with their shared `notes-helpers.ts`, cover
+Notes in a recipe: a note step stored wired into the flow and a `notes:` Note stored with no
+wire, at the top, in a For body and in a local Function, each read back where it was written;
+the guide's text on notes; a malformed `notes:` item and a step after a Halt refused with nothing
+stored; a hand-built Test with a Note wired between two Logs read back and amended with the Note
+kept in place; and a Log nothing reaches in a local Function, or a wired Note's description and
+disabled mark, named in `inexpressible`, with the amend refused.
+
+---
+
+### MCP Run Report
+
+**Directory**: `mcp-report/`
+**Files**: `fixture-paths.json`, `fixture-rejoin.json`, `fixture-report.json`, `v-mcp-run-report-functional.spec.ts`
+
+Each fixture is imported through `POST /tests` and run through the live MCP endpoint
+(`start_execution`, then `get_execution` until the run ends). An If/Else and a split
+Assert are not containers, so a Block on one of their branches, or where they rejoin,
+carries no If/Else name (REPORT-10).
+
+**Verified**: the `get_run_report` timeline paths and error paths, the
+`get_failure_report` path of the failed Assert inside an `if` branch, the path prefixes
+the report viewer shows, the order of two rejoined branches before the join, the
+`get_run_report` description in the tool list, the run report of a finished run
+(variables with the secret masked, one timeline row per Block, the logs, the html
+document) and the refusals for a run in progress, an unknown id and an unknown format.
 
 ---
 

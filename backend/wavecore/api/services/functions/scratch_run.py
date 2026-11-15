@@ -38,10 +38,8 @@ def _checked_draft(
     if structural:
         _refuse_draft([{"message": message} for message in structural])
     try:
-        # As on a Test run, the run refuses a Function Block's Required input left empty.
-        function_service.refuse_invalid_body(
-            function_id, definition, required_function_inputs=False
-        )
+        # Checked as a Test run checks its Function bodies.
+        function_service.refuse_invalid_body(function_id, definition, context="run")
     except function_service.SaveValidationError as exc:
         _refuse_draft(exc.errors)
     return definition

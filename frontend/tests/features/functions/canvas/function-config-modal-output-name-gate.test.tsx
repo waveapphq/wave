@@ -121,7 +121,7 @@ describe('Function Block window - the unsaved-changes prompt honors the same gat
     await user.type(resultBinding(), 'k8s-')
     await user.click(screen.getByRole('button', { name: /^cancel$/i }))
 
-    const prompt = screen.getByRole('dialog')
+    const prompt = screen.getByRole('dialog', { name: 'Unsaved changes' })
     expect(within(prompt).getByRole('button', { name: /^save$/i })).toBeDisabled()
 
     const close = within(prompt).getByTestId('unsaved-close')
@@ -138,7 +138,7 @@ describe('Function Block window - the unsaved-changes prompt honors the same gat
     await user.type(screen.getByTestId('element-description-input'), 'edited')
     await user.click(screen.getByRole('button', { name: /^cancel$/i }))
 
-    const prompt = screen.getByRole('dialog')
+    const prompt = screen.getByRole('dialog', { name: 'Unsaved changes' })
     const save = within(prompt).getByRole('button', { name: /^save$/i })
     expect(save).not.toBeDisabled()
 

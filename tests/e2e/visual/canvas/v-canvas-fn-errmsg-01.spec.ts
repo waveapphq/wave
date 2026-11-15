@@ -55,7 +55,6 @@ function rootLogTest(name: string): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             // No `message` -> REQUIRED_PARAM_MISSING at save time.
             config: { values: { level: 'INFO' }, outputBindings: {}, profileBindings: [] },
           },
@@ -90,7 +89,6 @@ function innerLogInFunctionTest(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -108,7 +106,6 @@ function innerLogInFunctionTest(name: string): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: { values: { level: 'INFO' }, outputBindings: {}, profileBindings: [] },
                     },
                     measured: { width: 120, height: 62 },

@@ -19,7 +19,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "localDefinition": {
             "name": "Function_1",
             "workflow": {
@@ -68,7 +67,6 @@
           "version": "1.0.0",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {"message": "'after fn'", "level": "INFO"},
             "profileBindings": [],

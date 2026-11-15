@@ -6,9 +6,15 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.blocks._storage import (
     _check_backward_compatibility,
+    _check_name_unique,
     _generate_etag,
     _list_all_blocks,
     _load_block,
@@ -108,7 +114,7 @@ def update_block_version(
         current_etag = _generate_etag(block)
         etag_value = etag.strip('"')
         if etag_value != current_etag:
-            raise ConflictException(
+            raise PreconditionRequiredException(
                 f"Precondition failed: resource has been modified. "
                 f"Expected ETag '{etag_value}', current ETag '{current_etag}'"
             )
@@ -148,10 +154,11 @@ def delete_block_version(block_id: str, version: str) -> bool:
 def clone_block(
     block_id: str, new_name: str, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a block with a new name."""
+    """Clone a block with a new name no other block has."""
     source = _load_block(block_id)
     if source is None:
         return None
+    _check_name_unique(new_name)
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())
@@ -187,6 +194,8 @@ def import_block(content: bytes, filename: str = "", overwrite: bool = False) ->
         data = load_yaml(content)
     except yaml.YAMLError as e:
         raise ValidationException(f"Invalid YAML in '{filename}': {e!s}") from e
+    except ValueError as e:
+        raise ValidationException(f"Invalid YAML in '{filename}': could not parse file") from e
 
     refuse_unencodable_file(content, data)
     if not isinstance(data, dict):
@@ -279,7 +288,7 @@ def restore_block_version(block_id: str, version: str) -> dict[str, Any] | None:
     versions = _load_versions(block_id)
     version_entry = next((v for v in versions if v["version"] == version), None)
     if version_entry is None:
-        raise ValidationException(f"Version '{version}' not found for block '{block_id}'")
+        raise NotFoundException(f"Version '{version}' not found for block '{block_id}'")
 
     now = datetime.now(UTC).isoformat()
     new_version = next_semantic_version(str(block.get("version", "1.0.0")), "minor")

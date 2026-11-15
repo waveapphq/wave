@@ -93,11 +93,10 @@ export function useTestCrud({
 
   /** What the open test still has arriving, read when the dialog is about to show it. */
   const updateSwitchDialogUploadCount = useCallback(async () => {
+    // A read that fails leaves no count from an earlier dialog behind.
+    setUploadCount(0)
     const { editingTestId } = useWorkflowStore.getState()
-    if (editingTestId === null) {
-      setUploadCount(0)
-      return
-    }
+    if (editingTestId === null) return
     const { uploads } = await testdataApi.uploadState(editingTestId)
     setUploadCount(uploads.length)
   }, [setUploadCount])
@@ -160,7 +159,7 @@ export function useTestCrud({
     async (testId: string) => {
       const { isDirty, editingTestId } = useWorkflowStore.getState()
       if (testId === editingTestId) {
-        navigate(`/workbench?editTest=${testId}`)
+        void navigate(`/workbench?editTest=${testId}`)
         return
       }
 
@@ -183,7 +182,7 @@ export function useTestCrud({
         setSwitchTestDialogOpen(true)
         return
       }
-      navigate(`/workbench?editTest=${testId}`)
+      void navigate(`/workbench?editTest=${testId}`)
     },
     [navigate, setSwitchTestDialogOpen, setSwitchTestExecutionActive, setPendingOpenTestId, setRunningSession, updateSwitchDialogCounts]
   )
@@ -353,7 +352,7 @@ export function useTestCrud({
 
   const handleBulkRun = useCallback(() => {
     const ids = selectedIds.join(',')
-    navigate(`/executions/new?tests=${ids}`)
+    void navigate(`/executions/new?tests=${ids}`)
   }, [selectedIds, navigate])
 
   // Every selected test is attempted, the list always reloads so what landed

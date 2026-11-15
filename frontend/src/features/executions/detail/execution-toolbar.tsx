@@ -166,7 +166,7 @@ export function ExecutionToolbar({
     })
       .then(() => {
         // Test runs stream live on the Workbench canvas.
-        navigate('/workbench')
+        void navigate('/workbench')
       })
       .catch(rerunFailure.report)
   }
@@ -198,7 +198,7 @@ export function ExecutionToolbar({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { navigate('/workbench') }}
+            onClick={() => { void navigate('/workbench') }}
           >
             <Eye className="mr-1.5 h-4 w-4" />
             View Running
@@ -232,7 +232,7 @@ export function ExecutionToolbar({
             variant="outline"
             size="sm"
             data-testid="report-button"
-            onClick={() => { navigate(`/reports/${execution.id}`) }}
+            onClick={() => { void navigate(`/reports/${execution.id}`) }}
           >
             <FileBarChart className="mr-1.5 h-4 w-4" />
             Report

@@ -32,13 +32,18 @@ import { createNamespaceDottedEntries } from '@/features/workbench/live/variable
 import { canonicalEqual } from '@/features/workbench/lib/canonical-workflow'
 import { getDefaultValueForType } from '@/lib/variable-defaults'
 import { isNullValue } from '@/lib/variable-format'
-import { PYTHON_KEYWORD_SET } from '@/features/workbench/lib/python-builtins'
-import { EXPRESSION_SAFE_NAMES } from '@/features/workbench/lib/expression-sandbox'
 import { detectExpressionCycle, type VariableLike as VariableLikeForCycle } from '@/features/workbench/live/expression-cycle-detector'
 import { isScopeReadOnly, walkActiveSubtree, type DrillEntry } from '@/features/functions/canvas/inner-workflow'
 import { useReadOnlyCanvas } from '@/features/workbench/common/canvas/use-readonly-canvas'
 import type { ElementTypes } from '@/lib/variable-validation'
-import { blockReads, blockWrites, namesInText, type NamedBlock } from '@/features/workbench/lib/saved-block-fields'
+import type { NamedBlock } from '@/features/workbench/lib/saved-block-fields'
+import {
+  collectOutputBindings,
+  namesReadBySource,
+  scopeBlockUsage,
+  scopeReferencedNames,
+  type OutputBindingNode,
+} from '@/features/workbench/lib/variable-usage'
 import {
   activeFunctionScopeBody,
   functionScopeRows,
@@ -151,36 +156,6 @@ export interface VariableManagementResult {
 // Helpers - output binding / input reference analysis
 // ===========================================================================
 
-interface NodeLike {
-  data: Record<string, unknown> & {
-    config?: Record<string, unknown>
-    label?: string
-  }
-}
-
-function collectOutputBindings(
-  node: NodeLike,
-  names: Set<string>,
-  sources: Map<string, string[]>,
-): void {
-  const bindings = node.data.config?.outputBindings as Record<string, string> | undefined
-  if (!bindings) return
-  /* v8 ignore next - COV-BRANCH-123 */
-  const nodeName = node.data.label || ''
-  for (const varName of Object.values(bindings)) {
-    if (!varName) continue
-    names.add(varName)
-    const existing = sources.get(varName) || []
-    existing.push(nodeName)
-    sources.set(varName, existing)
-  }
-}
-
-/** The names a computed variable's source reads, scanned as the engine scans them. */
-function namesReadBySource(source: string, isTemplate: boolean): string[] {
-  return namesInText(source, isTemplate ? 'template' : 'expression')
-}
-
 interface ProfileBindingShape {
   alias?: string
   profileName?: string
@@ -245,7 +220,7 @@ export function buildScopeAutocomplete(
     return [...inputs, ...outputs, ...locals].map((v) => ({ name: v.name, type: v.type }))
   }
   const sources = new Map<string, string[]>()
-  for (const node of root.nodes) collectOutputBindings(node as unknown as NodeLike, new Set(), sources)
+  for (const node of root.nodes) collectOutputBindings(node as OutputBindingNode, new Set(), sources)
   return [
     ...root.variables.map((v) => ({ name: v.name, type: v.type, source: sources.get(v.name)?.[0] })),
     ...createNamespaceDottedEntries(root.namespaceVariables.system, 'system'),
@@ -483,35 +458,6 @@ function withoutBindingsTo<N extends { data: Record<string, unknown> }>(nodes: N
   return changed ? next : nodes
 }
 
-/** Filter out the variable's own name plus the sandbox's names and keywords. */
-function isCrossVariableRef(ident: string, ownName: string): boolean {
-  return (
-    ident !== ownName &&
-    !EXPRESSION_SAFE_NAMES.has(ident) &&
-    !PYTHON_KEYWORD_SET.has(ident)
-  )
-}
-
-/** The other variables one computed variable (or Expression / Template output) reads. */
-function extractCrossRefsFromVariable(v: WorkflowVariable): string[] {
-  if ((!v.isExpression && !v.isTemplate) || typeof v.value !== 'string') return []
-  return namesReadBySource(v.value, !v.isExpression)
-    .filter((ident) => isCrossVariableRef(ident, v.name))
-}
-
-/** Names other computed variables read; a self-reference does not count. */
-function collectCrossVariableExpressionRefs(
-  variables: ReadonlyArray<WorkflowVariable>,
-): Set<string> {
-  const refs = new Set<string>()
-  for (const v of variables) {
-    for (const ident of extractCrossRefsFromVariable(v)) {
-      refs.add(ident)
-    }
-  }
-  return refs
-}
-
 /** The parameter patch a window Save writes; a present key holding undefined removes that field (REQ-3.1.2.10, REQ-3.1.2.11). */
 function windowParamPatch(kind: 'input' | 'output', target: WorkflowVariable, spec: VariableCreateSpec): Partial<ParamSpec> {
   const patch: Partial<ParamSpec> = {
@@ -679,27 +625,8 @@ export function useVariableManagement(
   // the "References will become unresolved" prompt even when an inner plugin
   // still uses the name.
   // inputRefCounts counts the blocks of the scope that read each name (VMGR-105).
-  const { outputBoundVarNames, outputBoundVarSources, inputRefCounts, blockWrittenNames } = useMemo(() => {
-    const names = new Set<string>()
-    const sources = new Map<string, string[]>()
-    const inputRefs = new Map<string, number>()
-    const written = new Set<string>()
-    let scopedNodes: typeof nodes = nodes
-    if (drillPathRaw.length > 0) {
-      scopedNodes = walkActiveSubtree(nodes, [], [], drillPathRaw).nodes
-    }
-    for (const node of scopedNodes) {
-      collectOutputBindings(node as unknown as NodeLike, names, sources)
-      for (const name of blockReads(node)) inputRefs.set(name, (inputRefs.get(name) ?? 0) + 1)
-      for (const name of blockWrites(node)) written.add(name)
-    }
-    return {
-      outputBoundVarNames: names,
-      outputBoundVarSources: sources,
-      inputRefCounts: inputRefs,
-      blockWrittenNames: written,
-    }
-  }, [nodes, drillPathRaw])
+  const blockUsage = useMemo(() => scopeBlockUsage(nodes, drillPathRaw), [nodes, drillPathRaw])
+  const { outputBoundVarNames, outputBoundVarSources, inputRefCounts } = blockUsage
 
   const namespaceVariables = useWorkflowStore((state) => state.namespaceVariables)
   // The autocomplete of the shown scope; a window left open elsewhere builds its own the same way.
@@ -825,16 +752,10 @@ export function useVariableManagement(
     return functionScopeRows(activeFunctionScopeBody(nodes, drillPathRaw))
   }, [drillPathRaw, nodes, workflowVariables])
 
-  // A variable read only by another variable or an Expression / Template output is not Unused.
-  const crossVariableRefs = useMemo(
-    () => collectCrossVariableExpressionRefs(displayVariables),
-    [displayVariables],
-  )
-
   // Every name a block of the scope reads or writes, or another variable reads.
   const workflowReferencedVarNames = useMemo(
-    () => new Set([...outputBoundVarNames, ...inputRefCounts.keys(), ...blockWrittenNames, ...crossVariableRefs]),
-    [outputBoundVarNames, inputRefCounts, blockWrittenNames, crossVariableRefs],
+    () => scopeReferencedNames(blockUsage, displayVariables),
+    [blockUsage, displayVariables],
   )
 
   const savedVariables = useWorkflowStore((state) => state.getSavedVariables())

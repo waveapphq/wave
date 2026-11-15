@@ -7,8 +7,10 @@ cannot be a variable name, the suggestion list used to drop over the sentence
 explaining why, so the reason was unreadable and the disabled Save had no
 visible cause.
 
-Two specs, because the Block config sheet and the Function config modal are
-different components that share only the row table underneath.
+The name gate has two specs, because the Block config sheet and the Function
+config modal are different components that share only the row table
+underneath. Two more specs in this folder cover what the same box holds and
+how its empty hint looks (see the sections at the end).
 
 ## Prerequisites
 
@@ -52,3 +54,53 @@ different components that share only the row table underneath.
 - **Function modal:** the same message, the same description reference and the
   same disabled Save; and a stale binding left for an output the Function no
   longer declares renders no row and no message and does not keep Save disabled
+
+## V-BINDING-ASSIGN-NAME: the Assign to box holds a variable name
+
+`v-binding-assign-name-functional.spec.ts`. The Assign to box of an output
+holds the name of the variable the output writes, never a value of the
+output's type, so no value check of that type runs on it. The only line under
+an output row is its binding error (CANVAS-131).
+
+### Steps
+
+1. Seed a Test with an HTTP Request Block and open its window
+2. Type `scode` into Status Code (Integer) and `took` into Response Time
+   (Float), then save the window and the Test
+3. Seed a Test with a Local Function Block whose Function declares the outputs
+   `url` (string) and `total` (integer); type `final_url` and `n`, then save
+4. Seed a Test that declares the string variable `code_text` and type it into
+   Status Code
+
+### Validation
+
+- **No value check:** no line under either row (no
+  `Enter a valid integer value`, no `Enter a valid float value`, no URL line
+  under the output named `url`), no Save note, Save enabled
+- **Stored:** the saved Block's `outputBindings` hold both names
+- **Binding error kept:** `Type mismatch: "code_text" is string, expected integer`
+  at `field-error-status_code` is the one line under the row, the box points
+  at it through `aria-describedby`, and Save stays disabled with
+  `Save is disabled: the settings have errors`
+
+## V-BINDING-ASSIGN-HINT: the empty hint is the gray of a not-set default
+
+`v-binding-assign-hint-functional.spec.ts`. An empty Assign to box shows the
+hint `variable_name` in Text Muted, the gray of a not-set default (FIELD-2,
+CANVAS-131).
+
+### Steps
+
+1. Seed a Test with an HTTP Request Block, no output bound and Retry Delay not
+   set, and open its window
+2. Open Timeouts & Retries and read the computed colors; close the window,
+   switch the theme with the shell toggle and read them again
+
+### Validation
+
+- **Not set:** Retry Delay shows the default `1` in Text Muted with no reset
+  icon
+- **Hint:** the `Assign Body to` box is empty with the placeholder
+  `variable_name`
+- **Same gray:** in the light and the dark theme, the computed color of that
+  placeholder equals the computed color of the gray default `1`

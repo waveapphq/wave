@@ -65,7 +65,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Switch surface',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -96,7 +95,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'If/Else surface',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [
@@ -127,7 +125,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Assert surface',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { mode: 'single', assertions: [condition('vp-as-cond', OTHER_NAME)] },
               outputBindings: {},
@@ -148,7 +145,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'While surface',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 mode: 'while-do',
@@ -173,7 +169,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Table transform surface',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 operation: 'parse',

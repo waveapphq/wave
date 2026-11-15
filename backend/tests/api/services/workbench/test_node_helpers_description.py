@@ -41,8 +41,6 @@ def _make_node(
     output_bindings: dict[str, str] | None = None,
     expression_fields: list[str] | None = None,
     template_fields: list[str] | None = None,
-    variable_expression_keys: list[str] | None = None,
-    variable_types: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a workflowNode dict shaped like the production payload."""
     data: dict[str, Any] = {
@@ -56,8 +54,6 @@ def _make_node(
         },
         "expressionFields": expression_fields or [],
         "templateFields": template_fields or [],
-        "variableExpressionKeys": variable_expression_keys or [],
-        "variableTypes": variable_types or {},
     }
     if description is not None:
         data["description"] = description

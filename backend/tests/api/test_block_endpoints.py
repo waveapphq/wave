@@ -42,6 +42,12 @@ from tests.api.body_shape_support import (
     assert_refused,
     send_text,
 )
+from tests.api.error_reply_support import (
+    INTERNAL_ERROR_MESSAGE,
+    assert_error_reply,
+    assert_internal_error,
+)
+from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
 
 class TestListBlocksEndpoint:
@@ -386,7 +392,9 @@ class TestCreateBlockEndpoint:
         plugin_id = str(uuid.uuid4())
 
         with patch("wavecore.api.routes.blocks.routes.block_service.create_block") as mock_create:
-            mock_create.side_effect = ValueError("Block with name 'SSH Login Block' already exists")
+            mock_create.side_effect = ConflictException(
+                "Block with name 'SSH Login Block' already exists"
+            )
 
             response = client.post(
                 "/blocks",
@@ -396,12 +404,8 @@ class TestCreateBlockEndpoint:
                 },
             )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Block with name 'SSH Login Block' already exists$",
-                data["error"]["message"],
+            assert_error_reply(
+                response, 409, "CONFLICT", "Block with name 'SSH Login Block' already exists"
             )
 
     def test_create_block_validates_plugin_reference(self, client: TestClient) -> None:
@@ -409,7 +413,7 @@ class TestCreateBlockEndpoint:
         plugin_id = str(uuid.uuid4())
 
         with patch("wavecore.api.routes.blocks.routes.block_service.create_block") as mock_create:
-            mock_create.side_effect = ValueError(f"Plugin with ID '{plugin_id}' not found")
+            mock_create.side_effect = ValidationException(f"Plugin with ID '{plugin_id}' not found")
 
             response = client.post(
                 "/blocks",
@@ -419,10 +423,9 @@ class TestCreateBlockEndpoint:
                 },
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "not found" in data["error"]["message"]
+            assert_error_reply(
+                response, 400, "VALIDATION_ERROR", f"Plugin with ID '{plugin_id}' not found"
+            )
 
     def test_create_block_validates_circular_dependencies(self, client: TestClient) -> None:
         """Test that POST /blocks detects circular dependencies (REQ-5.2.4.2)."""
@@ -430,7 +433,7 @@ class TestCreateBlockEndpoint:
         dep_block_id = str(uuid.uuid4())
 
         with patch("wavecore.api.routes.blocks.routes.block_service.create_block") as mock_create:
-            mock_create.side_effect = ValueError(
+            mock_create.side_effect = ValidationException(
                 "Circular dependency detected: block-a -> block-b -> block-a"
             )
 
@@ -443,12 +446,11 @@ class TestCreateBlockEndpoint:
                 },
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Circular dependency detected: block-a -> block-b -> block-a$",
-                data["error"]["message"],
+            assert_error_reply(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Circular dependency detected: block-a -> block-b -> block-a",
             )
 
     def test_create_block_accepts_optional_parameters(self, client: TestClient) -> None:
@@ -602,19 +604,19 @@ class TestDeleteBlockEndpoint:
         block_id = str(uuid.uuid4())
 
         with patch("wavecore.api.routes.blocks.routes.block_service.delete_block") as mock_delete:
-            mock_delete.side_effect = ValueError(
+            mock_delete.side_effect = ConflictException(
                 "Cannot delete block 'SSH Login Block': 3 blocks and 2 tests depend on it. "
                 "Use cascade=true to delete all dependents."
             )
 
             response = client.delete(f"/blocks/{block_id}")
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Cannot delete block 'SSH Login Block': 3 blocks and 2 tests depend on it\.",
-                data["error"]["message"],
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Cannot delete block 'SSH Login Block': 3 blocks and 2 tests depend on it. "
+                "Use cascade=true to delete all dependents.",
             )
 
     def test_delete_block_with_cascade_deletes_dependents(self, client: TestClient) -> None:
@@ -873,7 +875,7 @@ class TestAddBlockVersionEndpoint:
         with patch(
             "wavecore.api.routes.blocks.version_routes._block_version_svc.add_block_version"
         ) as mock_add:
-            mock_add.side_effect = ValueError(
+            mock_add.side_effect = ValidationException(
                 "Backward compatibility violation in minor version: required parameter 'host' was "
                 "removed"
             )
@@ -886,13 +888,12 @@ class TestAddBlockVersionEndpoint:
                 },
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Backward compatibility violation in minor version: required parameter 'host' "
-                r"was removed$",
-                data["error"]["message"],
+            assert_error_reply(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Backward compatibility violation in minor version: required parameter 'host' "
+                "was removed",
             )
 
     def test_add_major_version_allows_breaking_changes(self, client: TestClient) -> None:
@@ -1050,28 +1051,26 @@ class TestUpdateBlockVersionEndpoint:
             assert data["success"] is True
             assert data["data"]["description"] == "Updated description"
 
-    def test_update_published_version_returns_400(self, client: TestClient) -> None:
-        """Test that PUT /blocks/{block_id}/versions/{version} returns 400 for published versions
+    def test_update_published_version_returns_409(self, client: TestClient) -> None:
+        """Test that PUT /blocks/{block_id}/versions/{version} returns 409 for published versions
         (REQ-5.2.4.2).
         """
-        block_id = str(uuid.uuid4())
+        from wavecore.api.services.blocks import _storage as block_storage
 
-        with patch(
-            "wavecore.api.routes.blocks.version_routes._block_version_svc.update_block_version"
-        ) as mock_update:
-            mock_update.side_effect = ValueError(
-                "Cannot modify published version '1.0.0'. Published versions are immutable."
-            )
+        block_id = _stored_block()
+        block_storage._set_version_attribute(block_id, "1.0.0", "published", True)
 
-            response = client.put(
-                f"/blocks/{block_id}/versions/1.0.0",
-                json={"description": "Updated"},
-            )
+        response = client.put(
+            f"/blocks/{block_id}/versions/1.0.0",
+            json={"description": "Updated"},
+        )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "immutable" in data["error"]["message"]
+        assert_error_reply(
+            response,
+            409,
+            "CONFLICT",
+            "Cannot modify published version '1.0.0'. Published versions are immutable.",
+        )
 
 
 class TestDeleteBlockVersionEndpoint:
@@ -1119,18 +1118,17 @@ class TestDeleteBlockVersionEndpoint:
         with patch(
             "wavecore.api.routes.blocks.version_routes._block_version_svc.delete_block_version"
         ) as mock_delete:
-            mock_delete.side_effect = ValueError(
+            mock_delete.side_effect = ConflictException(
                 "Cannot delete version '1.0.0': 5 blocks reference this version"
             )
 
             response = client.delete(f"/blocks/{block_id}/versions/1.0.0")
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Cannot delete version '1\.0\.0': 5 blocks reference this version$",
-                data["error"]["message"],
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Cannot delete version '1.0.0': 5 blocks reference this version",
             )
 
 
@@ -1299,7 +1297,7 @@ class TestCloneBlockEndpoint:
         ) as mock_clone:
             mock_clone.return_value = {
                 "id": clone_id,
-                "name": "SSH Login Block (Copy)",
+                "name": "SSH Login Block Copy",
                 "version": "1.0.0",
                 "plugin_id": plugin_id,
                 "description": "Cloned block",
@@ -1312,14 +1310,14 @@ class TestCloneBlockEndpoint:
 
             response = client.post(
                 f"/blocks/{original_id}/clone",
-                json={"new_name": "SSH Login Block (Copy)"},
+                json={"new_name": "SSH Login Block Copy"},
             )
 
             assert response.status_code == 201
             data = response.json()
             assert data["success"] is True
             assert data["data"]["id"] == clone_id
-            assert data["data"]["name"] == "SSH Login Block (Copy)"
+            assert data["data"]["name"] == "SSH Login Block Copy"
 
     def test_clone_block_requires_new_name(self, client: TestClient) -> None:
         """Test that POST /blocks/{block_id}/clone requires new_name field."""
@@ -1363,7 +1361,7 @@ class TestCloneBlockEndpoint:
         ) as mock_clone:
             mock_clone.return_value = {
                 "id": clone_id,
-                "name": "SSH Login Block (Copy)",
+                "name": "SSH Login Block Copy",
                 "version": "2.0.0",
                 "plugin_id": plugin_id,
                 "description": "Cloned block",
@@ -1376,7 +1374,7 @@ class TestCloneBlockEndpoint:
 
             response = client.post(
                 f"/blocks/{original_id}/clone",
-                json={"new_name": "SSH Login Block (Copy)", "new_version": "2.0.0"},
+                json={"new_name": "SSH Login Block Copy", "new_version": "2.0.0"},
             )
 
             assert response.status_code == 201
@@ -1440,6 +1438,75 @@ class TestCloneBlockEndpoint:
             data["error"]["message"],
         )
 
+    @pytest.mark.parametrize("new_version", [5, ["1.0.0"]])
+    def test_clone_block_refuses_a_version_that_is_not_a_string(
+        self, client: TestClient, new_version: Any
+    ) -> None:
+        response = client.post(
+            f"/blocks/{uuid.uuid4()}/clone",
+            json={"new_name": "Cloned Block", "new_version": new_version},
+        )
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            f"Invalid version format '{new_version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)",
+        )
+
+    @pytest.mark.parametrize(
+        ("new_name", "message"),
+        [
+            (
+                "SSH Login Block (Copy)",
+                "Block name 'SSH Login Block (Copy)' violates naming convention: must contain "
+                "only alphanumeric characters, spaces, hyphens, and underscores",
+            ),
+            ("", "Block name must be between 1 and 255 characters"),
+            ("A" * 256, "Block name must be between 1 and 255 characters"),
+            (5, "Field 'name' must be a string"),
+            (None, "Field 'name' must be a string"),
+        ],
+    )
+    def test_clone_block_checks_the_new_name_like_create(
+        self, client: TestClient, new_name: Any, message: str
+    ) -> None:
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.api.services.blocks import service as block_service
+
+        source_id = block_service.create_block({"name": "Clone Source"})["id"]
+
+        response = client.post(f"/blocks/{source_id}/clone", json={"new_name": new_name})
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+        assert [b["id"] for b in block_storage._list_all_blocks()] == [source_id]
+
+    def test_clone_block_refuses_a_name_another_block_has(self, client: TestClient) -> None:
+        from wavecore.api.services.blocks import _storage as block_storage
+        from wavecore.api.services.blocks import service as block_service
+
+        source_id = block_service.create_block({"name": "Clone Source"})["id"]
+        taken_id = block_service.create_block({"name": "Taken Name"})["id"]
+
+        response = client.post(f"/blocks/{source_id}/clone", json={"new_name": "Taken Name"})
+
+        assert_error_reply(response, 409, "CONFLICT", "Block with name 'Taken Name' already exists")
+        assert sorted(b["id"] for b in block_storage._list_all_blocks()) == sorted(
+            [source_id, taken_id]
+        )
+
+    def test_clone_block_saves_the_copy_under_a_free_name(self, client: TestClient) -> None:
+        from wavecore.api.services.blocks import service as block_service
+
+        source_id = block_service.create_block({"name": "Clone Source"})["id"]
+
+        response = client.post(f"/blocks/{source_id}/clone", json={"new_name": "Clone Copy"})
+
+        assert response.status_code == 201, response.text
+        assert response.json()["data"]["name"] == "Clone Copy"
+        assert response.json()["data"]["metadata"]["cloned_from"] == source_id
+
 
 class TestImportBlockEndpoint:
     """Test suite for POST /blocks/import endpoint."""
@@ -1490,7 +1557,9 @@ class TestImportBlockEndpoint:
         with patch(
             "wavecore.api.routes.blocks.import_export_routes._block_version_svc.import_block"
         ) as mock_import:
-            mock_import.side_effect = ValueError("Invalid YAML format: expected mapping")
+            mock_import.side_effect = ValidationException(
+                "Invalid YAML in 'block.yaml': expected mapping"
+            )
 
             yaml_content = b"invalid: yaml: content:"
             response = client.post(
@@ -1498,17 +1567,16 @@ class TestImportBlockEndpoint:
                 files={"file": ("block.yaml", yaml_content, "application/yaml")},
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "Invalid YAML" in data["error"]["message"]
+            assert_error_reply(
+                response, 400, "VALIDATION_ERROR", "Invalid YAML in 'block.yaml': expected mapping"
+            )
 
     def test_import_block_returns_409_on_conflict(self, client: TestClient) -> None:
         """Test that POST /blocks/import returns 409 when block already exists (REQ-5.2.4.2)."""
         with patch(
             "wavecore.api.routes.blocks.import_export_routes._block_version_svc.import_block"
         ) as mock_import:
-            mock_import.side_effect = ValueError(
+            mock_import.side_effect = ConflictException(
                 "Block 'Imported Block' already exists. Set overwrite=true to replace."
             )
 
@@ -1518,10 +1586,12 @@ class TestImportBlockEndpoint:
                 files={"file": ("block.yaml", yaml_content, "application/yaml")},
             )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert "already exists" in data["error"]["message"]
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Block 'Imported Block' already exists. Set overwrite=true to replace.",
+            )
 
     def test_import_block_with_overwrite_replaces_existing(self, client: TestClient) -> None:
         """Test that POST /blocks/import with overwrite=true replaces existing block."""
@@ -2052,13 +2122,15 @@ class TestRestoreBlockVersionEndpoint:
         with patch(
             "wavecore.api.routes.blocks.version_routes._block_version_svc.restore_block_version"
         ) as mock_restore:
-            mock_restore.side_effect = ValueError(
+            mock_restore.side_effect = NotFoundException(
                 f"Version '99.0.0' not found for block '{block_id}'"
             )
 
             response = client.post(f"/blocks/{block_id}/restore/99.0.0")
 
-            assert response.status_code == 404
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Version '99.0.0' not found for block '{block_id}'"
+            )
 
 
 class TestBlockEndpointCaching:
@@ -2162,8 +2234,8 @@ class TestBlockEndpointErrorHandling:
 
         return TestClient(app)
 
-    def test_internal_error_returns_500_with_correlation_id(self, client: TestClient) -> None:
-        """Test that internal errors return 500 with correlation ID (REQ-5.2.4.2)."""
+    def test_internal_error_returns_the_generic_500(self, client: TestClient) -> None:
+        """Test that internal errors return the generic 500 with a request id (REQ-5.2.4.2)."""
         plugin_id = str(uuid.uuid4())
 
         with patch("wavecore.api.routes.blocks.routes.block_service.create_block") as mock_create:
@@ -2177,36 +2249,27 @@ class TestBlockEndpointErrorHandling:
                 },
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert "correlation_id" in data["error"]
-            assert re.match(
-                r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-                data["error"]["correlation_id"],
-            )
+            assert_internal_error(response, "Database connection failed")
 
     def test_version_constraint_violation_returns_409(self, client: TestClient) -> None:
         """Test that version constraint violations return 409 (REQ-5.2.4.2)."""
         block_id = str(uuid.uuid4())
+        message = (
+            "Version constraint violation: dependency 'block-a' requires version >=2.0.0 but "
+            "only 1.x available"
+        )
 
         with patch(
             "wavecore.api.routes.blocks.version_routes._block_version_svc.add_block_version"
         ) as mock_add:
-            mock_add.side_effect = ValueError(
-                "Version constraint violation: dependency 'block-a' requires version >=2.0.0 but "
-                "only 1.x available"
-            )
+            mock_add.side_effect = ConflictException(message)
 
             response = client.post(
                 f"/blocks/{block_id}/versions",
                 json={"description": "New version"},
             )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert "Version constraint violation" in data["error"]["message"]
+            assert_error_reply(response, 409, "CONFLICT", message)
 
 
 class TestBlockEndpointConcurrencyControl:
@@ -2285,43 +2348,50 @@ class TestBlockEndpointConcurrencyControl:
         """Test that PUT /blocks/{block_id}/versions/{version} returns 412 with mismatched
         If-Match.
         """
-        block_id = str(uuid.uuid4())
+        from wavecore.api.services.blocks import _storage as block_storage
 
-        with patch(
-            "wavecore.api.routes.blocks.version_routes._block_version_svc.update_block_version"
-        ) as mock_update:
-            mock_update.side_effect = ValueError(
-                "Precondition failed: resource has been modified. "
-                "Expected ETag 'abc123', current ETag 'def456'"
-            )
+        block_id = _stored_block()
+        stored = block_storage._load_block(block_id)
+        assert stored is not None
+        current = block_storage._generate_etag(stored)
 
-            response = client.put(
-                f"/blocks/{block_id}/versions/1.0.0",
-                json={"description": "Updated description"},
-                headers={"If-Match": '"abc123"'},
-            )
+        response = client.put(
+            f"/blocks/{block_id}/versions/1.0.0",
+            json={"description": "Updated description"},
+            headers={"If-Match": '"abc123"'},
+        )
 
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+        assert_error_reply(
+            response,
+            412,
+            "PRECONDITION_REQUIRED",
+            "Precondition failed: resource has been modified. "
+            f"Expected ETag 'abc123', current ETag '{current}'",
+        )
 
     def test_delete_block_with_mismatched_etag_returns_412(self, client: TestClient) -> None:
         """Test that DELETE /blocks/{block_id} returns 412 with mismatched If-Match."""
         block_id = str(uuid.uuid4())
+        stored = {"id": block_id, "version": "1.0.0", "updated_at": "2026-01-01T00:00:00"}
 
-        with patch("wavecore.api.routes.blocks.routes.block_service.delete_block") as mock_delete:
-            mock_delete.side_effect = ValueError("Precondition failed: resource has been modified")
+        with (
+            patch("wavecore.api.routes.blocks.routes.block_service.get_block") as mock_get,
+            patch("wavecore.api.routes.blocks.routes.block_service.delete_block") as mock_delete,
+        ):
+            mock_get.return_value = stored
 
             response = client.delete(
                 f"/blocks/{block_id}",
                 headers={"If-Match": '"stale-etag"'},
             )
 
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+            assert_error_reply(
+                response,
+                412,
+                "PRECONDITION_REQUIRED",
+                "Precondition failed: resource has been modified",
+            )
+            mock_delete.assert_not_called()
 
     def test_update_without_if_match_header_succeeds(self, client: TestClient) -> None:
         """Test that update without If-Match header proceeds (non-strict mode)."""
@@ -2744,3 +2814,614 @@ class TestStoredVersionThatIsNotSemantic:
         )
         assert block_storage._load_block(block_id) == stored
         assert block_storage._load_versions(block_id) == history
+
+
+_INTERNAL_TEXT = "internal block detail that stays in the server log"
+_MISSING_ID = "6f1c2b9e-4d3a-4c5b-9e8f-000000000391"
+_UPLOAD = {"files": {"file": ("block.yaml", b"name: Uploaded\n", "application/x-yaml")}}
+
+
+def _raise_internal(*_args: Any, **_kwargs: Any) -> Any:
+    raise ValueError(_INTERNAL_TEXT)
+
+
+def _stored_block(**fields: Any) -> str:
+    from wavecore.api.services.blocks import service as block_service
+
+    data = {"name": f"Reply {uuid.uuid4().hex[:8]}", **fields}
+    return str(block_service.create_block(data)["id"])
+
+
+class TestABlockRouteFault:
+    """An unexpected fault behind a Block route answers the generic 500, never its own text."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("module", "function", "method", "path", "kwargs"),
+        [
+            pytest.param(
+                "service",
+                "create_block",
+                "POST",
+                "/blocks",
+                {"json": {"name": "Fault Block", "plugin_id": _MISSING_ID}},
+                id="create",
+            ),
+            pytest.param("service", "get_block", "GET", "/blocks/{id}", {}, id="get"),
+            pytest.param("service", "delete_block", "DELETE", "/blocks/{id}", {}, id="delete"),
+            pytest.param(
+                "version_service",
+                "list_block_versions",
+                "GET",
+                "/blocks/{id}/versions",
+                {},
+                id="list-versions",
+            ),
+            pytest.param(
+                "version_service",
+                "add_block_version",
+                "POST",
+                "/blocks/{id}/versions",
+                {"json": {}},
+                id="add-version",
+            ),
+            pytest.param(
+                "version_service",
+                "get_block_version",
+                "GET",
+                "/blocks/{id}/versions/1.0.0",
+                {},
+                id="get-version",
+            ),
+            pytest.param(
+                "version_service",
+                "update_block_version",
+                "PUT",
+                "/blocks/{id}/versions/1.0.0",
+                {"json": {}},
+                id="update-version",
+            ),
+            pytest.param(
+                "version_service",
+                "delete_block_version",
+                "DELETE",
+                "/blocks/{id}/versions/1.0.0",
+                {},
+                id="delete-version",
+            ),
+            pytest.param(
+                "version_service",
+                "get_block_history",
+                "GET",
+                "/blocks/{id}/history",
+                {},
+                id="history",
+            ),
+            pytest.param(
+                "version_service",
+                "restore_block_version",
+                "POST",
+                "/blocks/{id}/restore/1.0.0",
+                {},
+                id="restore",
+            ),
+            pytest.param(
+                "version_service", "import_block", "POST", "/blocks/import", _UPLOAD, id="import"
+            ),
+            pytest.param(
+                "_storage",
+                "get_block_dependencies",
+                "GET",
+                "/blocks/{id}/dependencies",
+                {},
+                id="dependencies",
+            ),
+            pytest.param(
+                "_storage",
+                "get_block_dependents",
+                "GET",
+                "/blocks/{id}/dependents",
+                {},
+                id="dependents",
+            ),
+            pytest.param(
+                "_storage", "get_block_usage", "GET", "/blocks/{id}/usage", {}, id="usage"
+            ),
+            pytest.param(
+                "version_service",
+                "clone_block",
+                "POST",
+                "/blocks/{id}/clone",
+                {"json": {"new_name": "Fault Clone"}},
+                id="clone",
+            ),
+        ],
+    )
+    def test_answers_the_generic_internal_error(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        module: str,
+        function: str,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+    ) -> None:
+        from importlib import import_module
+
+        monkeypatch.setattr(
+            import_module(f"wavecore.api.services.blocks.{module}"), function, _raise_internal
+        )
+
+        response = client.request(method, path.format(id=_MISSING_ID), **kwargs)
+
+        assert_internal_error(response, _INTERNAL_TEXT)
+
+
+_BAD_ID = "Invalid UUID format for block_id: 'not-a-uuid'"
+_NO_BLOCK = f"Block with ID '{_MISSING_ID}' not found"
+_NO_VERSION = f"Version '1.0.0' not found for block '{_MISSING_ID}'"
+
+
+class TestABlockRefusalReply:
+    """A Block refusal answers in the shared error envelope with its status, code and message."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "kwargs", "status", "code", "message"),
+        [
+            pytest.param(
+                "GET",
+                "/blocks?plugin_id=not-a-uuid",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid UUID format for plugin_id: 'not-a-uuid'",
+                id="list-bad-plugin-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"plugin_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' is required",
+                id="create-no-name",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": "No Plugin"}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'plugin_id' is required",
+                id="create-no-plugin-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": "", "plugin_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                "Block name must be between 1 and 255 characters",
+                id="create-empty-name",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": 5, "plugin_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' must be a string",
+                id="create-name-not-a-string",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": "Bad@Name", "plugin_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                "Block name 'Bad@Name' violates naming convention: must contain only "
+                "alphanumeric characters, spaces, hyphens, and underscores",
+                id="create-bad-name",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": "Good Name", "plugin_id": "not-a-uuid"}},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid UUID format for plugin_id: 'not-a-uuid'",
+                id="create-bad-plugin-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks",
+                {"json": {"name": "Good Name", "plugin_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                f"Plugin with ID '{_MISSING_ID}' not found",
+                id="create-unknown-plugin",
+            ),
+            pytest.param(
+                "GET", "/blocks/not-a-uuid", {}, 400, "VALIDATION_ERROR", _BAD_ID, id="get-bad-id"
+            ),
+            pytest.param("GET", "/blocks/{id}", {}, 404, "NOT_FOUND", _NO_BLOCK, id="get-missing"),
+            pytest.param(
+                "DELETE",
+                "/blocks/not-a-uuid",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="delete-bad-id",
+            ),
+            pytest.param(
+                "DELETE", "/blocks/{id}", {}, 404, "NOT_FOUND", _NO_BLOCK, id="delete-missing"
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/versions",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="list-versions-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/{id}/versions",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="list-versions-missing",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/not-a-uuid/versions",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="add-version-bad-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/{id}/versions",
+                {"json": {}},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="add-version-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/versions/1.0.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="get-version-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/{id}/versions/1.0.0",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_VERSION,
+                id="get-version-missing",
+            ),
+            pytest.param(
+                "PUT",
+                "/blocks/not-a-uuid/versions/1.0.0",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="update-version-bad-id",
+            ),
+            pytest.param(
+                "PUT",
+                "/blocks/{id}/versions/1.0.0",
+                {"json": {}},
+                404,
+                "NOT_FOUND",
+                _NO_VERSION,
+                id="update-version-missing",
+            ),
+            pytest.param(
+                "DELETE",
+                "/blocks/not-a-uuid/versions/1.0.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="delete-version-bad-id",
+            ),
+            pytest.param(
+                "DELETE",
+                "/blocks/{id}/versions/1.0.0",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_VERSION,
+                id="delete-version-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/history",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="history-bad-id",
+            ),
+            pytest.param(
+                "GET", "/blocks/{id}/history", {}, 404, "NOT_FOUND", _NO_BLOCK, id="history-missing"
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/not-a-uuid/restore/1.0.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="restore-bad-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/{id}/restore/1.0.0",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="restore-missing",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/validate-dependencies",
+                {"json": {"dependencies": []}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'block_id' is required",
+                id="validate-dependencies-no-block-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/validate-dependencies",
+                {"json": {"block_id": _MISSING_ID}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'dependencies' is required",
+                id="validate-dependencies-no-dependencies",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/dependencies",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="dependencies-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/{id}/dependencies",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="dependencies-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/dependents",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="dependents-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/{id}/dependents",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="dependents-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/blocks/not-a-uuid/usage",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="usage-bad-id",
+            ),
+            pytest.param(
+                "GET", "/blocks/{id}/usage", {}, 404, "NOT_FOUND", _NO_BLOCK, id="usage-missing"
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/not-a-uuid/clone",
+                {"json": {"new_name": "Clone"}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_ID,
+                id="clone-bad-id",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/{id}/clone",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'new_name' is required",
+                id="clone-no-new-name",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/{id}/clone",
+                {"json": {"new_name": "Clone", "new_version": "1.0"}},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid version format '1.0': must follow semantic versioning "
+                "(MAJOR.MINOR.PATCH)",
+                id="clone-bad-version",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/{id}/clone",
+                {"json": {"new_name": "Clone"}},
+                404,
+                "NOT_FOUND",
+                _NO_BLOCK,
+                id="clone-missing",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/import",
+                {"files": {"file": ("block.yaml", b"- a\n- b\n", "application/x-yaml")}},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid YAML in 'block.yaml': expected mapping",
+                id="import-not-a-mapping",
+            ),
+            pytest.param(
+                "POST",
+                "/blocks/import",
+                {"files": {"file": ("block.yaml", b"name: A\nwhen: 2024-13-45\n", "text/yaml")}},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid YAML in 'block.yaml': could not parse file",
+                id="import-unreadable-value",
+            ),
+        ],
+    )
+    def test_answers_in_the_shared_envelope(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+        status: int,
+        code: str,
+        message: str,
+    ) -> None:
+        response = client.request(method, path.format(id=_MISSING_ID), **kwargs)
+
+        assert_error_reply(response, status, code, message)
+
+    def test_a_stale_if_match_on_delete_is_a_failed_precondition(self, client: TestClient) -> None:
+        block_id = _stored_block()
+
+        response = client.delete(f"/blocks/{block_id}", headers={"If-Match": '"stale"'})
+
+        assert_error_reply(
+            response,
+            412,
+            "PRECONDITION_REQUIRED",
+            "Precondition failed: resource has been modified",
+        )
+        assert client.get(f"/blocks/{block_id}").status_code == 200
+
+    def test_the_etag_a_read_answers_lets_the_delete_through(self, client: TestClient) -> None:
+        block_id = _stored_block()
+        etag = client.get(f"/blocks/{block_id}").headers["ETag"]
+
+        response = client.delete(f"/blocks/{block_id}", headers={"If-Match": etag})
+
+        assert response.status_code == 204, response.text
+        assert client.get(f"/blocks/{block_id}").status_code == 404
+
+    def test_a_circular_dependency_is_refused(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        from wavecore.api.services.blocks import _storage as block_storage
+
+        monkeypatch.setattr(block_storage, "_get_storage", MagicMock())
+        other_id = _stored_block(name="Cycle Other", dependencies=["Cycle Start"])
+
+        response = client.post(
+            "/blocks",
+            json={"name": "Cycle Start", "plugin_id": _MISSING_ID, "dependencies": [other_id]},
+        )
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Circular dependency detected: Cycle Start -> Cycle Other -> Cycle Start",
+        )
+
+    def test_a_removed_required_parameter_is_refused_in_a_minor_version(
+        self, client: TestClient
+    ) -> None:
+        block_id = _stored_block(parameters={"host": {"required": True}})
+
+        response = client.post(f"/blocks/{block_id}/versions", json={"parameters": {}})
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Backward compatibility violation in minor version: "
+            "required parameter 'host' was removed",
+        )
+
+    def test_a_missing_version_to_restore_is_not_found(self, client: TestClient) -> None:
+        block_id = _stored_block()
+
+        response = client.post(f"/blocks/{block_id}/restore/9.9.9")
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", f"Version '9.9.9' not found for block '{block_id}'"
+        )
+
+
+class TestABlockBatchCreateFault:
+    """An unexpected fault on one batch item fails that item with the generic message only."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def test_the_item_fails_with_the_generic_message(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services.blocks import service as block_service
+
+        create = block_service.create_block
+
+        def create_or_fault(data: dict[str, Any]) -> dict[str, Any]:
+            if data["name"] == "Faulty Item":
+                raise ValueError(_INTERNAL_TEXT)
+            return create(data)
+
+        monkeypatch.setattr(block_service, "create_block", create_or_fault)
+
+        response = client.post("/blocks/batch", json=[{"name": "Faulty Item"}, {"name": "Fine"}])
+
+        assert response.status_code == 201, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}]
+        assert len(body["created"]) == 1
+        assert _INTERNAL_TEXT not in response.text

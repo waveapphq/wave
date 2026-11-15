@@ -68,7 +68,7 @@ class PluginBase(ABC):
                 - proxy_support: Optional. How the plugin relates to the Proxy setting:
                     supported, unsupported or not_applicable (the default when not stated)
         """
-        pass  # pragma: no cover
+        pass  # pragma: no cover - BCOV-ABSTRACT-001
 
     @property
     def proxy_support(self) -> str:
@@ -94,7 +94,7 @@ class PluginBase(ABC):
         Raises:
             Exception: On execution failure
         """
-        pass  # pragma: no cover
+        pass  # pragma: no cover - BCOV-ABSTRACT-001
 
     @abstractmethod
     async def validate(self, params: dict[str, Any]) -> None:
@@ -111,7 +111,7 @@ class PluginBase(ABC):
             ValueError: On validation failure with descriptive error message
             TypeError: On type mismatch
         """
-        pass  # pragma: no cover
+        pass  # pragma: no cover - BCOV-ABSTRACT-001
 
     async def initialize(self, context: dict[str, Any]) -> None:  # noqa: B027
         """

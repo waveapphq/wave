@@ -78,7 +78,6 @@ async function seedEditModeRenameTest(request: APIRequestContext, shared: Seeded
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               editMode: true,
               upstreamLink: { functionId: shared.functionId, sourceVersion: '1.0.0' },
@@ -219,7 +218,6 @@ test.describe('V-FN-PUBLISH-VERSION-GATE (functional): bump gating + blocked aff
                 hasNewerVersion: false,
                 expressionFields: [],
                 templateFields: [],
-                variableExpressionKeys: [],
                 config: { values: {}, outputBindings: {}, profileBindings: [] },
                 localDefinition: {
                   name: 'LocalFn',
@@ -242,7 +240,6 @@ test.describe('V-FN-PUBLISH-VERSION-GATE (functional): bump gating + blocked aff
                           version: '1.0.0',
                           expressionFields: ['message'],
                           templateFields: [],
-                          variableExpressionKeys: [],
                           config: { values: { message: "'x'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
                         },
                       },

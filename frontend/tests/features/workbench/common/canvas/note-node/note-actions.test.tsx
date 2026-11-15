@@ -36,7 +36,10 @@ const mockStore = {
   copy: vi.fn(),
   cut: vi.fn(),
   unlinkNode: vi.fn(),
-  edges: [{ id: 'e1', source: 'note-1', target: 'other' }] as Array<{ id: string; source: string; target: string }>,
+  edges: [{ id: 'e1', source: 'note-1', target: 'other' }] as Array<{ id: string; source: string; target: string; targetHandle?: string }>,
+  nodes: [] as unknown[],
+  variables: [] as unknown[],
+  drillPath: [] as unknown[],
 }
 
 vi.mock('@/features/workbench/stores/workflow-store', () => ({
@@ -70,7 +73,7 @@ async function mountNote(opts: { selected?: boolean; text?: string } = {}) {
     <NoteNode
       id="note-1"
       type="noteNode"
-      data={{ label: 'Note', config: { text: opts.text ?? 'My note', color: 'amber' } }}
+      data={{ label: 'Note', config: { values: { text: opts.text ?? 'My note', color: 'yellow' } } }}
       selected={opts.selected ?? true}
       positionAbsoluteX={0}
       positionAbsoluteY={0}
@@ -155,8 +158,29 @@ describe('NoteNode - color change', () => {
     expect(mockStore.updateNode).toHaveBeenCalledTimes(1)
     const [updatedId, payload] = mockStore.updateNode.mock.calls[0]
     expect(updatedId).toBe('note-1')
-    expect(payload.data.config.color).toBe('blue')
+    expect(payload.data.config.values.color).toBe('blue')
+    // The text stays where it was; nothing is written beside values.
+    expect(payload.data.config.values.text).toBe('My note')
+    expect(payload.data.config).not.toHaveProperty('color')
     expect(mockStore.commitHistory).toHaveBeenCalledWith('Change note color')
+  })
+
+  // REQ-3.5.0.3: the menu and the Note field list read one color id list.
+  it('the color menu lists the five ids of the one Note color list, in its order', async () => {
+    const { NOTE_COLOR_IDS } = (await import('@/features/workbench/lib/node-parameters/controls/note')) as unknown as {
+      NOTE_COLOR_IDS?: readonly string[]
+    }
+    const { NOTE_COLOR_PRESETS } = await import('@/features/workbench/common/canvas/note-node/note-color-presets')
+    await mountNote({ selected: true })
+    fireEvent.doubleClick(screen.getByTestId('note-node-note-1'))
+
+    const swatches = (await screen.findAllByTestId(/^note-color-(?!picker$)/)).map((item) =>
+      item.getAttribute('data-testid'),
+    )
+
+    expect(NOTE_COLOR_IDS).toEqual(['yellow', 'pink', 'blue', 'green', 'slate'])
+    expect(NOTE_COLOR_PRESETS.map((preset) => preset.id)).toEqual(NOTE_COLOR_IDS)
+    expect(swatches).toEqual((NOTE_COLOR_IDS ?? []).map((id) => `note-color-${id}`))
   })
 })
 

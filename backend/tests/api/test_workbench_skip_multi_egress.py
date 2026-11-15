@@ -68,7 +68,6 @@ def _log_node(node_id: str, label: str, message: str = "'ok'") -> dict[str, Any]
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -102,7 +101,6 @@ def _if_else_node(node_id: str, label: str = "If/Else") -> dict[str, Any]:
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -143,7 +141,6 @@ def _switch_node(node_id: str, label: str = "Switch") -> dict[str, Any]:
             "description": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -168,7 +165,6 @@ def _assert_node(node_id: str, label: str, mode: str = "single") -> dict[str, An
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -191,7 +187,6 @@ def _for_node(node_id: str, label: str, count: int) -> dict[str, Any]:
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -216,7 +211,6 @@ def _try_catch_node(
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -238,7 +232,6 @@ def _parallel_node(node_id: str, label: str = "Parallel") -> dict[str, Any]:
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

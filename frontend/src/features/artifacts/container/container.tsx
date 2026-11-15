@@ -108,7 +108,7 @@ export function ArtifactsListContainer(): ReactNode {
 
   const handleOpenExecution = useCallback(
     (execution: ExecutionArtifactSummary) => {
-      navigate(`/artifacts/${execution.execution_id}`)
+      void navigate(`/artifacts/${execution.execution_id}`)
     },
     [navigate],
   )

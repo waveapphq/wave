@@ -1,0 +1,222 @@
+{
+  "name": "zz-ctrl-fields-parallel-1",
+  "version": "1.0.0",
+  "description": "Two five-second lanes, capped and probe, neither limited; probe_ms holds the limit the window gives probe",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "9af8db94-37fa-4768-9313-6727cd764143",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 40
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log before",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'parallel-before'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "839b31d4-d5c8-43e5-b0e1-180c0d62709e",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 140
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Race the probe",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "capped"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "probe"
+                }
+              ],
+              "join": "all"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "3e806b0f-6665-47c2-b693-96b327d2d424",
+        "type": "workflowNode",
+        "position": {
+          "x": 260,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Capped wait",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "5e9a0bcf-f983-4fb5-8159-e60dfc8ae399",
+        "type": "workflowNode",
+        "position": {
+          "x": 460,
+          "y": 260
+        },
+        "data": {
+          "label": "Delay",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Probe wait",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "duration": 5000
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "47293592-cd11-411a-87b8-f9bccc1494c1",
+        "type": "workflowNode",
+        "position": {
+          "x": 680,
+          "y": 260
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log then",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'parallel-then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-par-start",
+        "source": "start-node",
+        "target": "9af8db94-37fa-4768-9313-6727cd764143",
+        "type": "default"
+      },
+      {
+        "id": "e-par-before",
+        "source": "9af8db94-37fa-4768-9313-6727cd764143",
+        "target": "839b31d4-d5c8-43e5-b0e1-180c0d62709e",
+        "type": "default"
+      },
+      {
+        "id": "e-par-capped",
+        "source": "839b31d4-d5c8-43e5-b0e1-180c0d62709e",
+        "target": "3e806b0f-6665-47c2-b693-96b327d2d424",
+        "type": "default",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "e-par-probe",
+        "source": "839b31d4-d5c8-43e5-b0e1-180c0d62709e",
+        "target": "5e9a0bcf-f983-4fb5-8159-e60dfc8ae399",
+        "type": "default",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "e-par-then",
+        "source": "839b31d4-d5c8-43e5-b0e1-180c0d62709e",
+        "target": "47293592-cd11-411a-87b8-f9bccc1494c1",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "probe_ms": {
+      "value": 60,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

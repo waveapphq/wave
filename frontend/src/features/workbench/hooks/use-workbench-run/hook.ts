@@ -6,7 +6,7 @@
  * Key WAVE-specific behaviors:
  * - Ephemeral runs use session_id (NOT execution_id)
  * - WebSocket topic format: workbench:{session_id}
- * - Pre-flight profile validation with warnings (doesn't block execution)
+ * - Run warnings shown as toasts (they never block execution)
  * - Toast notifications for user feedback
  * - State transitions: idle → running → paused/passed/failed/stopped
  */
@@ -27,14 +27,14 @@ import type {
   WorkbenchStatus,
   CurrentBlock,
   Progress,
-  Warning,
   StartRunParams,
   StartDebugRunParams,
   StandaloneRunParams,
   UseWorkbenchRunReturn,
   WorkbenchEvent,
+  ExecutionCompletedEvent,
 } from './types'
-import { transformWarning, isRunningStatus } from './types'
+import { isRunningStatus } from './types'
 import { hydrateWorkbenchSession, useSessionRecovery } from './session-recovery'
 import { WorkbenchRunSharedContext } from './shared-context'
 import { usePageBlock } from '@/hooks/use-page-block'
@@ -82,7 +82,6 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
   const [websocketTopic, setWebsocketTopic] = useState<string | null>(null)
   const [currentBlock, setCurrentBlock] = useState<CurrentBlock | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
-  const [warnings, setWarnings] = useState<Warning[]>([])
   const [error, setError] = useState<Error | null>(null)
   // Track when session recovery has completed (whether session found or not)
   const [isSessionRecoveryComplete, setIsSessionRecoveryComplete] = useState(false)
@@ -188,6 +187,63 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
     for (const resolve of pending) resolve()
   }, [])
 
+  // The terminal event: release the waits, finish the run in the store, then follow, redirect or stay.
+  const handleExecutionCompleted = useCallback((event: ExecutionCompletedEvent) => {
+    setStatus(event.status)
+    resolveDraftWaiters()
+    // Clear the paused-node marker on any terminal transition so the
+    // amber halo doesn't stick around after Stop / passed / failed.
+    useWorkflowStore.getState().setPausedNodeId(null)
+
+    // Capture the ad-hoc flag BEFORE the toast helper resets it - we
+    // need it to decide whether to roll the parent execution's terminal
+    // state forward. Ad-hoc runs only re-execute a subset of the test;
+    // the full-test pass/fail recorded by the previous run still stands.
+    const wasAdHoc = adhocRunRef.current
+    emitAdHocCompletionToast(event.status, event.error)
+
+    // V-CANVAS-04: Complete execution in store
+    if (executionIdRef.current && !wasAdHoc) {
+      // When stopped, mark the current running/paused block as stopped.
+      // Prefer the workflow store's pausedNodeId when the session ended
+      // from a paused state - currentBlockIdRef is now also aligned with
+      // it (see debug_breakpoint_hit handler below).
+      const pausedId = useWorkflowStore.getState().pausedNodeId
+      const stoppedBlockId = pausedId ?? currentBlockIdRef.current
+      if (event.status === 'stopped' && stoppedBlockId) {
+        updateBlockExecution(executionIdRef.current, stoppedBlockId, {
+          status: 'stopped',
+        })
+      }
+      const completionStatusMap: Record<string, string> = { passed: 'success', skipped: 'skipped' }
+      const storeStatus = (completionStatusMap[event.status] ?? event.status) as 'success' | 'failed' | 'stopped' | 'skipped'
+      completeStoreExecution(executionIdRef.current, storeStatus)
+    }
+
+    // Three terminal paths:
+    // 1. Sequential suite/regression child - parent still running.
+    //    Follow to the next child (swap canvas) instead of redirecting.
+    // 2. Test-type tracked execution - redirect to detail view.
+    // 3. Ephemeral workbench run - keep canvas, user resets manually.
+    if (parentExecutionIdRef.current) {
+      const parentId = parentExecutionIdRef.current
+      const previousSessionId = sessionIdRef.current
+      followNextSequentialChildRef.current?.(parentId, previousSessionId)?.catch(() => undefined)
+    } else if (executionIdTrackedRef.current) {
+      const trackedId = executionIdTrackedRef.current
+      trackedTerminalHandlerRef.current?.(trackedId)
+      executionIdTrackedRef.current = null
+      setExecutionId(null)
+      setParentExecutionId(null)
+      setStatus('idle')
+      setSessionId(null)
+      setTestId(null)
+      setWebsocketTopic(null)
+      setCurrentBlock(null)
+      setProgress(null)
+    }
+  }, [updateBlockExecution, completeStoreExecution, emitAdHocCompletionToast, resolveDraftWaiters])
+
   const handleWebSocketEvent = useCallback((payload: unknown) => {
     const event = payload as WorkbenchEvent
 
@@ -219,63 +275,15 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
         }
         break
 
-      case 'execution_completed': {
-        setStatus(event.status)
-        resolveDraftWaiters()
-        // Clear the paused-node marker on any terminal transition so the
-        // amber halo doesn't stick around after Stop / passed / failed.
-        useWorkflowStore.getState().setPausedNodeId(null)
-
-        // Capture the ad-hoc flag BEFORE the toast helper resets it - we
-        // need it to decide whether to roll the parent execution's terminal
-        // state forward. Ad-hoc runs only re-execute a subset of the test;
-        // the full-test pass/fail recorded by the previous run still stands.
-        const wasAdHoc = adhocRunRef.current
-        emitAdHocCompletionToast(event.status, event.error)
-
-        // V-CANVAS-04: Complete execution in store
-        if (executionIdRef.current && !wasAdHoc) {
-          // When stopped, mark the current running/paused block as stopped.
-          // Prefer the workflow store's pausedNodeId when the session ended
-          // from a paused state - currentBlockIdRef is now also aligned with
-          // it (see debug_breakpoint_hit handler above).
-          const pausedId = useWorkflowStore.getState().pausedNodeId
-          const stoppedBlockId = pausedId ?? currentBlockIdRef.current
-          if (event.status === 'stopped' && stoppedBlockId) {
-            updateBlockExecution(executionIdRef.current, stoppedBlockId, {
-              status: 'stopped',
-            })
-          }
-          const completionStatusMap: Record<string, string> = { passed: 'success', skipped: 'skipped' }
-          const storeStatus = (completionStatusMap[event.status] ?? event.status) as 'success' | 'failed' | 'stopped' | 'skipped'
-          completeStoreExecution(executionIdRef.current, storeStatus)
-        }
-
-        // Three terminal paths:
-        // 1. Sequential suite/regression child - parent still running.
-        //    Follow to the next child (swap canvas) instead of redirecting.
-        // 2. Test-type tracked execution - redirect to detail view.
-        // 3. Ephemeral workbench run - keep canvas, user resets manually.
-        if (parentExecutionIdRef.current) {
-          const parentId = parentExecutionIdRef.current
-          const previousSessionId = sessionIdRef.current
-          followNextSequentialChildRef.current?.(parentId, previousSessionId)?.catch(() => undefined)
-        } else if (executionIdTrackedRef.current) {
-          const trackedId = executionIdTrackedRef.current
-          trackedTerminalHandlerRef.current?.(trackedId)
-          executionIdTrackedRef.current = null
-          setExecutionId(null)
-          setParentExecutionId(null)
-          setStatus('idle')
-          setSessionId(null)
-          setTestId(null)
-          setWebsocketTopic(null)
-          setCurrentBlock(null)
-          setProgress(null)
-          setWarnings([])
+      case 'lanes_taken':
+        if (executionIdRef.current) {
+          updateBlockExecution(executionIdRef.current, event.block_id, { lanes: event.lanes })
         }
         break
-      }
+
+      case 'execution_completed':
+        handleExecutionCompleted(event)
+        break
 
       case 'execution_paused':
         setStatus('paused')
@@ -300,7 +308,7 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
         resolveDraftWaiters()
         break
     }
-  }, [updateBlockExecution, completeStoreExecution, emitAdHocCompletionToast, resolveDraftWaiters])
+  }, [updateBlockExecution, handleExecutionCompleted, resolveDraftWaiters])
 
   // Forward variable events to the registered handler (useVariableUpdates)
   const handleVariableEvent = useCallback((payload: unknown) => {
@@ -412,7 +420,6 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
       setWebsocketTopic(null)
       setCurrentBlock(null)
       setProgress(null)
-      setWarnings([])
     },
     [
       connect,
@@ -532,19 +539,10 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
       setExecutionId(responseExecId)
       setSessionTestName(response.test_name ?? null)
 
-      if (response.warnings && response.warnings.length > 0) {
-        const transformedWarnings: Warning[] = response.warnings.map(transformWarning)
-        setWarnings(transformedWarnings)
-        transformedWarnings.forEach((warning: Warning) => {
-          // The BE emits warnings with a `type` tag; map each tag to a
-          // user-facing toast title so we don't blanket-label every
-          // advisory as a profile problem.
-          const title = warning.type === 'SCOPED_RUN_ADVISORY'
-            ? 'Scope Initialized'
-            : 'Missing Profile Value'
-          toast.warning(warning.message, title)
-        })
-      }
+      // The scoped-run advisory is the only warning a run carries.
+      response.warnings.forEach((warning) => {
+        toast.warning(warning.message, 'Scope Initialized')
+      })
     },
     [toast]
   )
@@ -751,8 +749,7 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
           variables: params.variables,
           function_variables: params.function_variables,
         })
-        // Same session shape as /workbench/run; warnings carry an optional
-        // profile_name the standalone advisory omits (transformWarning tolerates it).
+        // Same session shape as /workbench/run; its warning entries are typed more loosely.
         applyRunResponse(response as unknown as WorkbenchRunResponse)
       } catch (err) {
         handleRunFailure(err)
@@ -913,7 +910,6 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
     setWebsocketTopic(null)
     setCurrentBlock(null)
     setProgress(null)
-    setWarnings([])
     setError(null)
     setExecutionId(null)
     setParentExecutionId(null)
@@ -1025,7 +1021,6 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
     websocketTopic,
     currentBlock,
     progress,
-    warnings,
     isRunning,
     error,
     isSessionRecoveryComplete,

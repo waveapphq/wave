@@ -4907,7 +4907,8 @@ class TestProfileServiceETag:
             assert result["name"] == "updated-name"
 
     def test_update_with_mismatched_etag_raises_precondition_failed(self) -> None:
-        """Test that update raises ValueError when ETag mismatches."""
+        """Test that update raises the 412 precondition error when ETag mismatches."""
+        from wavecore.api.exceptions import PreconditionRequiredException
         from wavecore.api.services.profiles import service as profile_service
 
         profile_id = str(uuid.uuid4())
@@ -4923,7 +4924,10 @@ class TestProfileServiceETag:
         }
 
         with _patch_profile_storage({profile_id: profile_data}):
-            with pytest.raises(ConflictException, match="Precondition failed"):
+            with pytest.raises(
+                PreconditionRequiredException,
+                match=r"^Precondition failed: resource has been modified$",
+            ):
                 profile_service.update_profile(
                     profile_id,
                     name="updated-name",

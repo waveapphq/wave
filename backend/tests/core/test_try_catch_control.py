@@ -4,10 +4,16 @@ Covers metadata declaration, parameter validation, and execution signals.
 """
 
 import asyncio
+from typing import Any
 from unittest.mock import MagicMock
 
+from tests.core.run_fill_support import run_fill
 from wavecore.controls.flow import TryCatchFinallyControl
 from wavecore.models.enums import ControlId
+
+
+def _run_fill(stored: dict[str, Any]) -> dict[str, Any]:
+    return run_fill(TryCatchFinallyControl(), stored)
 
 
 class TestTryCatchFinallyControlMetadata:
@@ -104,7 +110,7 @@ class TestTryCatchFinallyControlExecution:
         self.control = TryCatchFinallyControl()
 
     def test_execute_defaults(self) -> None:
-        context: dict = {"parameters": {}, "variables": {}}
+        context: dict = {"parameters": _run_fill({}), "variables": {}}
         result = asyncio.run(self.control.execute(context))
         assert result["__branch"] == "try"
         assert result["__try_catch"] is True
@@ -113,7 +119,7 @@ class TestTryCatchFinallyControlExecution:
 
     def test_execute_catch_disabled(self) -> None:
         context: dict = {
-            "parameters": {"enable_catch": False},
+            "parameters": {"enable_catch": False, "enable_finally": False},
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -121,7 +127,7 @@ class TestTryCatchFinallyControlExecution:
 
     def test_execute_finally_enabled(self) -> None:
         context: dict = {
-            "parameters": {"enable_finally": True},
+            "parameters": {"enable_catch": True, "enable_finally": True},
             "variables": {},
         }
         result = asyncio.run(self.control.execute(context))
@@ -143,17 +149,23 @@ class TestTryCatchFinallyControlExecution:
 
     def test_execute_with_logger(self) -> None:
         logger = MagicMock()
-        context: dict = {"parameters": {}, "variables": {}, "logger": logger}
+        context: dict = {"parameters": _run_fill({}), "variables": {}, "logger": logger}
         asyncio.run(self.control.execute(context))
         logger.info.assert_called_once_with("Try/Catch: catch=True, finally=False")
 
     def test_execute_without_logger(self) -> None:
-        context: dict = {"parameters": {}, "variables": {}}
+        context: dict = {
+            "parameters": {"enable_catch": True, "enable_finally": False},
+            "variables": {},
+        }
         result = asyncio.run(self.control.execute(context))
         assert result is not None
 
     def test_execute_no_error_variable_in_result(self) -> None:
         """The result carries no error variable."""
-        context: dict = {"parameters": {}, "variables": {}}
+        context: dict = {
+            "parameters": {"enable_catch": True, "enable_finally": False},
+            "variables": {},
+        }
         result = asyncio.run(self.control.execute(context))
         assert "__error_variable" not in result

@@ -91,3 +91,39 @@ describe('the empty value Clear & Empty leaves (FIELD-7)', () => {
     expect(emptyValueOf('map', false)).toEqual({})
   })
 })
+
+// A Setter row typed Table asks the same question before a type change clears it (REQ-3.4.1.14, REQ-3.1.3.21).
+describe('a table value', () => {
+  const TABLE: VariableType = 'table'
+  const ROW_OBJECTS = [
+    { host: 'db-1', port: 5432 },
+    { host: 'db-2', port: 5433 },
+  ]
+  const STORED_TABLE = {
+    columns: [
+      { name: 'host', type: 'string' },
+      { name: 'port', type: 'integer' },
+    ],
+    rows: [
+      ['db-1', 5432],
+      ['db-2', 5433],
+      ['db-3', 5434],
+    ],
+  }
+
+  it('holds a table with rows and counts its rows', () => {
+    expect(plainValueIsHeld(ROW_OBJECTS, TABLE)).toBe(true)
+    expect(clearedCount(ROW_OBJECTS, TABLE)).toBe(2)
+    expect(plainValueIsHeld(STORED_TABLE, TABLE)).toBe(true)
+    expect(clearedCount(STORED_TABLE, TABLE)).toBe(3)
+  })
+
+  it('holds nothing in null or in an empty table', () => {
+    expect(plainValueIsHeld(null, TABLE)).toBe(false)
+    expect(plainValueIsHeld([], TABLE)).toBe(false)
+  })
+
+  it('holds nothing in a table with columns and no rows', () => {
+    expect(plainValueIsHeld({ columns: STORED_TABLE.columns, rows: [] }, TABLE)).toBe(false)
+  })
+})

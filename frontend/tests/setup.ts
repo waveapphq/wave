@@ -299,6 +299,12 @@ beforeAll(() => {
   Element.prototype.setPointerCapture = vi.fn()
   Element.prototype.releasePointerCapture = vi.fn()
 
+  // jsdom keeps no input modality, so every focus counts as keyboard focus; a pointer-focus test stubs it itself.
+  const nativeMatches = Element.prototype.matches
+  Element.prototype.matches = function matches(this: Element, selectors: string): boolean {
+    return selectors === ':focus-visible' || nativeMatches.call(this, selectors)
+  }
+
   // Mock getClientRects for CodeMirror (used for text measurements)
   // jsdom's Range.getClientRects returns an empty object, not a proper DOMRectList
   // CodeMirror needs this for cursor positioning and text measurements

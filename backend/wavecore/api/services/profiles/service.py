@@ -10,7 +10,11 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.profiles import _common as _profile_common
 from wavecore.api.services.profiles._common import (
     PROFILE_TYPE_DESCRIPTIONS,
@@ -324,10 +328,7 @@ def update_profile(
     if etag:
         current_etag = _generate_etag(profile)
         if etag != current_etag:
-            exc = ConflictException("Precondition failed: resource has been modified")
-            exc.status_code = 412
-            exc.error_code = "PRECONDITION_FAILED"
-            raise exc
+            raise PreconditionRequiredException("Precondition failed: resource has been modified")
 
     if name is not None and name != profile["name"]:
         _reconcile_cache()

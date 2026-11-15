@@ -11,6 +11,7 @@ import { render, screen } from '@testing-library/react'
 import {
   HistoricalBlockStatesProvider,
   useHistoricalBlockStatuses,
+  useHistoricalLanes,
   normalizeBackendStatus,
   buildHistoricalBlockStates,
 } from '@/features/workbench/common/canvas/historical-block-states-context'
@@ -20,7 +21,41 @@ function Probe() {
   return <div data-testid="probe">{value ? JSON.stringify(value) : 'null'}</div>
 }
 
+function LanesProbe() {
+  const value = useHistoricalLanes()
+  return <div data-testid="lanes-probe">{JSON.stringify(value)}</div>
+}
+
 describe('HistoricalBlockStatesProvider', () => {
+  it('provides the lanes each block took to descendants', () => {
+    render(
+      <HistoricalBlockStatesProvider
+        blockStates={{ 'route-1': 'success' }}
+        lanes={{ 'route-1': ['branch_0'] }}
+      >
+        <LanesProbe />
+      </HistoricalBlockStatesProvider>,
+    )
+
+    expect(screen.getByTestId('lanes-probe').textContent).toBe('{"route-1":["branch_0"]}')
+  })
+
+  it('provides no lanes when the run stored none', () => {
+    render(
+      <HistoricalBlockStatesProvider blockStates={{ 'route-1': 'success' }}>
+        <LanesProbe />
+      </HistoricalBlockStatesProvider>,
+    )
+
+    expect(screen.getByTestId('lanes-probe').textContent).toBe('{}')
+  })
+
+  it('returns no lanes outside the provider', () => {
+    render(<LanesProbe />)
+
+    expect(screen.getByTestId('lanes-probe').textContent).toBe('{}')
+  })
+
   it('provides the block-states map to descendants', () => {
     render(
       <HistoricalBlockStatesProvider blockStates={{ 'block-1': 'success' }}>

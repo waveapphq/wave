@@ -12,12 +12,9 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Header, Query, Response, status
 from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
 from wavecore.api.routes.executions.shared import _create_success_response
 from wavecore.api.services import artifact_service
-from wavecore.api.services.file_tree import content_disposition
-
-_VALID_DISPOSITIONS = ("attachment", "inline")
+from wavecore.api.services.file_tree import content_disposition, download_headers
 
 router = APIRouter(prefix="/artifacts", tags=["Artifacts"])
 
@@ -86,17 +83,8 @@ async def download_artifact_content(
     disposition: Annotated[str, Query()] = "attachment",
 ) -> Response:
     """Stream artifact bytes; supports HTTP Range requests (206)."""
-    if disposition not in _VALID_DISPOSITIONS:
-        raise ValidationException(
-            f"Invalid disposition '{disposition}': "
-            f"valid values are {', '.join(_VALID_DISPOSITIONS)}"
-        )
     result = artifact_service.read_artifact_content(artifact_id, range_header=range)
-    headers = {
-        "Content-Disposition": content_disposition(disposition, result["filename"]),
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control": "no-store",
-    }
+    headers = download_headers(disposition, result["filename"], result["content_type"])
     if result["content_range"] is not None:
         headers["Content-Range"] = result["content_range"]
     return Response(

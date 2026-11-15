@@ -36,6 +36,7 @@ from wavecore.api.services.executions._storage import (
     _tail_logs,
 )
 from wavecore.core.logging.formatter import cap_message
+from wavecore.core.logging.log_safe import log_safe
 from wavecore.core.secrets import masking_settings
 from wavecore.core.secrets.masking import mask_text
 from wavecore.core.secrets.registry import SecretRegistry
@@ -388,7 +389,7 @@ async def _drain_session_broadcasts(
         except Exception:
             # One bad entry must never end the session's stream; CancelledError
             # is a BaseException, so teardown still stops this task.
-            _logger.exception("Log broadcast failed for session %s", session_id)
+            _logger.exception("Log broadcast failed for session %s", log_safe(session_id))
         queue.task_done()
 
 

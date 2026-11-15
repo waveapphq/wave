@@ -186,7 +186,7 @@ test.describe('V-MCP-RECIPE-ELEMENT-TYPES: recipe element types', () => {
       const nodes = stored.workflow.nodes as Array<Record<string, any>>
       const setter = nodes.find((node) => node.data.elementType === 'variable-setter')
       expect(setter?.data.config.values.variables.built).toEqual({ n: '16', s: '16' })
-      expect(setter?.data.variableElementTypes).toEqual({ built: { n: 'integer', s: 'string' } })
+      expect(setter?.data.elementTypes).toEqual({ 'variables.built': { n: 'integer', s: 'string' } })
       const sql = nodes.find((node) => node.data.elementType === 'sql-client')
       const sqlNode = await getNode(request, testId, sql?.id as string)
       expect(sqlNode.data.config.values.driver_options).toEqual({ timeout: '7' })

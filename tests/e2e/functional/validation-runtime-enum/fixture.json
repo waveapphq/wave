@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'before-all'", "level": "INFO" },
             "outputBindings": {},
@@ -42,7 +41,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "xyz_error", "caught": "xyz_caught" },
@@ -65,7 +63,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["method"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "method": "'xyz'",
@@ -99,7 +96,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'xyz-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -123,7 +119,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "long_error", "caught": "long_caught" },
@@ -146,7 +141,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["method"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "method": "'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
@@ -180,7 +174,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'long-caught'", "level": "WARN" },
             "outputBindings": {},
@@ -204,7 +197,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'after-all'", "level": "INFO" },
             "outputBindings": {},

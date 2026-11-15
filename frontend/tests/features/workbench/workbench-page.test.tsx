@@ -556,7 +556,7 @@ describe('WorkbenchPage', () => {
 
       // Save dialog should be visible
       await waitFor(function waitForDialog() {
-        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByRole('dialog', { name: 'New Test' })).toBeInTheDocument()
       })
       expect(screen.getByText('New Test')).toBeInTheDocument()
 
@@ -604,7 +604,7 @@ describe('WorkbenchPage', () => {
 
       // Close confirm dialog should be visible
       await waitFor(function waitForDialog() {
-        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByRole('dialog', { name: 'Unsaved Changes' })).toBeInTheDocument()
       })
       // Look for the dialog heading specifically
       expect(screen.getByRole('heading', { name: /unsaved changes/i })).toBeInTheDocument()
@@ -614,7 +614,7 @@ describe('WorkbenchPage', () => {
 
       // Dialog should be closed
       await waitFor(function waitForDialogClosed() {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('dialog', { name: 'Unsaved Changes' })).not.toBeInTheDocument()
       })
     })
 
@@ -650,7 +650,7 @@ describe('WorkbenchPage', () => {
 
       // Verify dialog is open
       await waitFor(function waitForDialog() {
-        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByRole('dialog', { name: 'Unsaved Changes' })).toBeInTheDocument()
       })
 
       // Click "Discard and Close" to trigger handleDiscardAndClose
@@ -658,7 +658,7 @@ describe('WorkbenchPage', () => {
 
       // Dialog should close
       await waitFor(function waitForDialogClosed() {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('dialog', { name: 'Unsaved Changes' })).not.toBeInTheDocument()
       })
 
       // Canvas should be reset (close button should be disabled)
@@ -747,7 +747,7 @@ describe('WorkbenchPage', () => {
       await user.type(nameInput, 'My Test')
 
       // Click save button in dialog (within the dialog)
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'New Test' })
       const dialogSaveButton = within(dialog).getByRole('button', { name: /save|create test/i })
       await user.click(dialogSaveButton)
 
@@ -1005,7 +1005,7 @@ describe('WorkbenchPage', () => {
       await user.type(nameInput, 'My Test')
 
       // Click save button in dialog (within the dialog)
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'New Test' })
       const dialogSaveButton = within(dialog).getByRole('button', { name: /save|create test/i })
       await user.click(dialogSaveButton)
 
@@ -1191,7 +1191,7 @@ describe('WorkbenchPage', () => {
       await user.type(nameInput, 'Updated Test Name')
 
       // Click save
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Edit Test Info' })
       const saveButton = within(dialog).getByRole('button', { name: /save/i })
       await user.click(saveButton)
 

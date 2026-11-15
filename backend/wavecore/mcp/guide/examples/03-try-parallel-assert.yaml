@@ -5,6 +5,8 @@ test:
 variables:
   service_ok: {type: boolean, value: true}
   last_attempt_ok: {type: boolean, value: false}
+  slow_budget_ms: {type: integer, value: 1000}
+  summary: {type: string, value: ""}
 flow:
   - try:
       steps:
@@ -31,13 +33,13 @@ flow:
         - name: quick
           steps:
             - delay: 100
-        - name: slow
-          steps:
-            - delay: 250
+        - {name: slow, time_limit: {expr: "slow_budget_ms"}, steps: [{delay: 250}]}
+  - set: {summary: "last attempt ok: {{ last_attempt_ok }}"}
   - assert:
       that:
         - "service_ok"
         - {variable: service_ok, operator: is_true, value_type: boolean}
+      capture: {passed: service_checked}
   - assert:
       that:
         - "flaky_status != 500"

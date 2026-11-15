@@ -55,7 +55,6 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<{ id: st
               hasNewerVersion: false,
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: { message: "'inner'", level: 'INFO' }, outputBindings: {}, profileBindings: [] },
             },
           },
@@ -96,7 +95,6 @@ async function seedHostTest(request: APIRequestContext, functionId: string): Pro
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
             },
             measured: { width: 120, height: 62 },
           },
@@ -152,7 +150,7 @@ async function openMakeLocalDialog(page: Page, nodeId: string) {
 async function dragLibraryCardOntoCanvas(page: Page) {
   await expandPalette(page)
   await page.locator('[data-testid="palette-blocks-library-button"]').click()
-  const modal = page.locator('[aria-label="Functions Library"]')
+  const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
   await expect(modal).toBeVisible()
   const card = modal.locator('[data-testid="library-card"]').first()
   await expect(card).toBeVisible()

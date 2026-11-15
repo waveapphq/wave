@@ -128,7 +128,6 @@ def _local_function_node(node_id: str, name: str) -> dict[str, Any]:
                                 "displayName": "inner",
                                 "expressionFields": ["message"],
                                 "templateFields": [],
-                                "variableExpressionKeys": [],
                             },
                         }
                     ],

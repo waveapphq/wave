@@ -1,0 +1,381 @@
+{
+  "name": "zz-ctrl-fields-untouched-1",
+  "version": "1.0.0",
+  "description": "One stored Assert, If/Else, Switch, While, Wait Until, Parallel and Setter, opened and closed untouched",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "940864cd-f1ca-44de-8959-6c1027b6c28a",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Set greeting",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "variables.counter"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "variables": {
+                "greeting": "hello",
+                "counter": "counter + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "a709a1f1-e30b-4a59-8928-b7c1fad0faf7",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 140
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log after the Setter",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'untouched'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "21d544ab-ec6b-4515-8038-009010389113",
+        "type": "workflowNode",
+        "position": {
+          "x": -420,
+          "y": 300
+        },
+        "data": {
+          "label": "Assert",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Check ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "id": "cond-ut-assert",
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "8707730c-f9e4-4e6b-81cc-1bdb9f8af1de",
+        "type": "workflowNode",
+        "position": {
+          "x": -200,
+          "y": 300
+        },
+        "data": {
+          "label": "If/Else",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Route on ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_if",
+                  "type": "if",
+                  "label": "ready",
+                  "conditions": [
+                    {
+                      "id": "cond-ut-if",
+                      "type": "literal",
+                      "variable": "ready",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "yes"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_else",
+                  "type": "else",
+                  "label": "otherwise"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "7d26dc9c-3523-4f5b-adb9-44971bad138b",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 300
+        },
+        "data": {
+          "label": "Switch",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Pick region",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "case",
+                  "label": "eu",
+                  "conditions": [
+                    {
+                      "id": "cond-ut-case",
+                      "type": "literal",
+                      "variable": "region",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "eu"
+                    }
+                  ],
+                  "break": true
+                },
+                {
+                  "id": "branch_1",
+                  "type": "default",
+                  "label": ""
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      },
+      {
+        "id": "f3457f26-bf7c-4205-a158-05f8fd850812",
+        "type": "workflowNode",
+        "position": {
+          "x": -420,
+          "y": 460
+        },
+        "data": {
+          "label": "While Loop",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Count up",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "id": "cond-ut-while",
+                  "type": "literal",
+                  "variable": "counter",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "3"
+                }
+              ],
+              "max_iterations": 5
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "97603cc8-1433-47f3-b74d-94c93b704ff1",
+        "type": "workflowNode",
+        "position": {
+          "x": -200,
+          "y": 460
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for ready",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "id": "cond-ut-wait",
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes"
+                }
+              ],
+              "timeout": 3000,
+              "check_interval": 200
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "02c02b7d-16e8-4365-b4ce-47ea2223f53f",
+        "type": "workflowNode",
+        "position": {
+          "x": 80,
+          "y": 460
+        },
+        "data": {
+          "label": "Parallel",
+          "elementType": "parallel",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Fan out",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_1",
+                  "name": "one"
+                },
+                {
+                  "id": "branch_2",
+                  "name": "two"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 224,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-ut-start",
+        "source": "start-node",
+        "target": "940864cd-f1ca-44de-8959-6c1027b6c28a",
+        "type": "default"
+      },
+      {
+        "id": "e-ut-setter",
+        "source": "940864cd-f1ca-44de-8959-6c1027b6c28a",
+        "target": "a709a1f1-e30b-4a59-8928-b7c1fad0faf7",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "ready": {
+      "value": "yes",
+      "type": "string",
+      "scope": "test"
+    },
+    "region": {
+      "value": "eu",
+      "type": "string",
+      "scope": "test"
+    },
+    "greeting": {
+      "value": "hi",
+      "type": "string",
+      "scope": "test"
+    },
+    "counter": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

@@ -7,6 +7,7 @@ realizer; the session read reports the real run-time element types.
 
 from __future__ import annotations
 
+import inspect
 import uuid
 from collections.abc import Generator
 from decimal import Decimal
@@ -25,6 +26,7 @@ from wavecore.api.services.workbench.node_helpers import _execute_node, _extract
 from wavecore.controls.variable_setter import VariableSetterControl
 from wavecore.core.table import Table
 from wavecore.core.variables.decimal_value import WaveDecimal
+from wavecore.core.variables.declared_types import declared_type_scope
 
 TYPED_MAP = {"n": "16", "f": "1.0", "zip": "02134", "txt": "[1, 2]"}
 TYPED_MAP_TYPES = {"n": "integer", "f": "float", "zip": "string", "txt": "string"}
@@ -114,21 +116,53 @@ class TestNamespaceVariables:
         assert variables["system.plain"] == "raw"
 
 
+def _setter_node(rows: dict[str, Any], **data: Any) -> dict[str, Any]:
+    """A stored Variable Setter node on the shared shape; no row type is stored on it."""
+    return {
+        "id": "node-1",
+        "data": {
+            "label": "Set",
+            "elementType": "variable-setter",
+            "nodeType": "control",
+            "version": "1.0.0",
+            "config": {"values": {"variables": rows}},
+            **data,
+        },
+    }
+
+
+async def _run_setter_node(
+    node: dict[str, Any], variables: dict[str, Any], declared: dict[str, str]
+) -> None:
+    """Run one stored Setter node through the run's node path with ``declared`` published."""
+    with (
+        patch(
+            "wavecore.controls.registry.get_control_implementation",
+            return_value=VariableSetterControl,
+        ),
+        declared_type_scope(declared),
+    ):
+        await _execute_node(_extract_node_fields(node), variables, "s-1", "node-1")
+
+
 class TestVariableSetter:
     def test_a_literal_map_row_realizes_its_element_types(self) -> None:
-        params: dict[str, Any] = {"variables": {"m": dict(TYPED_MAP), "e": {"n": 1}}}
-        _wb_plugins._coerce_setter_variables(
-            params,
-            {"m": "map", "e": "map"},
-            {"m": TYPED_MAP_TYPES, "e": {"n": "string"}},
-            {"e"},
+        node = _setter_node(
+            {"m": dict(TYPED_MAP), "e": {"n": 1}},
+            expressionFields=["variables.e"],
+            elementTypes={"variables.m": TYPED_MAP_TYPES, "variables.e": {"n": "string"}},
         )
+        params = _extract_node_fields(node)["config_values"]
+        with declared_type_scope({"m": "map", "e": "map"}):
+            _wb_plugins._coerce_setter_variables(params, {"variables.e"})
         assert params["variables"]["m"] == REALIZED_MAP
+        assert isinstance(params["variables"]["m"]["f"], WaveDecimal)
         assert params["variables"]["e"] == {"n": 1}
 
     def test_a_literal_table_row_stored_typed_runs_as_a_test_variable_table(self) -> None:
         params: dict[str, Any] = {"variables": {"vt": dict(STORED_TABLE)}}
-        _wb_plugins._coerce_setter_variables(params, {"vt": "table"})
+        with declared_type_scope({"vt": "table"}):
+            _wb_plugins._coerce_setter_variables(params, set())
         literals, _expr, _tmpl = workbench_service._flatten_variables(
             {"vt": {"type": "table", "value": dict(STORED_TABLE)}}
         )
@@ -139,14 +173,16 @@ class TestVariableSetter:
 
     def test_a_literal_table_row_of_row_maps_runs_as_a_table(self) -> None:
         params: dict[str, Any] = {"variables": {"vt": [{"n": 16, "zip": "02134"}]}}
-        _wb_plugins._coerce_setter_variables(params, {"vt": "table"})
+        with declared_type_scope({"vt": "table"}):
+            _wb_plugins._coerce_setter_variables(params, set())
         realized = params["variables"]["vt"]
         assert isinstance(realized, Table)
         assert realized.to_list() == [{"n": 16, "zip": "02134"}]
 
     def test_an_expression_table_row_holding_the_stored_form_runs_as_a_table(self) -> None:
         params: dict[str, Any] = {"variables": {"vt": dict(STORED_TABLE)}}
-        _wb_plugins._coerce_setter_variables(params, {"vt": "table"}, {}, {"vt"})
+        with declared_type_scope({"vt": "table"}):
+            _wb_plugins._coerce_setter_variables(params, {"variables.vt"})
         assert params["variables"]["vt"].to_list() == [{"n": 16, "zip": "02134"}]
 
     @pytest.mark.asyncio
@@ -154,9 +190,12 @@ class TestVariableSetter:
         self,
     ) -> None:
         variables: dict[str, Any] = {"vt": None}
-        with patch(
-            "wavecore.controls.registry.get_control_implementation",
-            return_value=VariableSetterControl,
+        with (
+            patch(
+                "wavecore.controls.registry.get_control_implementation",
+                return_value=VariableSetterControl,
+            ),
+            declared_type_scope({"vt": "table"}),
         ):
             await _wb_plugins._execute_control(
                 control_type="variable-setter",
@@ -164,7 +203,6 @@ class TestVariableSetter:
                 parameters={"variables": {"vt": dict(STORED_TABLE)}},
                 variables=variables,
                 expression_fields=set(),
-                setter_rows=_wb_plugins.SetterRows(types={"vt": "table"}),
             )
         assert variables["vt"][0]["zip"] == "02134"
         assert variables["vt"].row_count() == 1
@@ -183,63 +221,85 @@ class TestVariableSetter:
     ) -> None:
         params: dict[str, Any] = {"variables": {"n": value}}
 
-        with pytest.raises(TypeError, match=f"^Value for variable 'n' {said}$"):
-            _wb_plugins._coerce_setter_variables(params, {"n": "integer"})
+        with (
+            declared_type_scope({"n": "integer"}),
+            pytest.raises(TypeError, match=f"^Value for variable 'n' {said}$"),
+        ):
+            _wb_plugins._coerce_setter_variables(params, set())
 
     def test_a_literal_number_row_is_parsed_exactly(self) -> None:
         params: dict[str, Any] = {"variables": {"n": "1234567890123456789", "f": "2.50"}}
 
-        _wb_plugins._coerce_setter_variables(params, {"n": "integer", "f": "float"})
+        with declared_type_scope({"n": "integer", "f": "float"}):
+            _wb_plugins._coerce_setter_variables(params, set())
 
         assert params["variables"] == {"n": 1234567890123456789, "f": Decimal("2.50")}
         assert str(params["variables"]["f"]) == "2.50"
 
-    def test_a_literal_typed_element_that_breaks_the_rule_stops_the_block(self) -> None:
-        params: dict[str, Any] = {"variables": {"ids": ["1", "x"]}}
+    @pytest.mark.asyncio
+    async def test_a_literal_typed_element_that_breaks_the_rule_stops_the_block(self) -> None:
+        node = _setter_node(
+            {"ids": ["1", "x"]}, elementTypes={"variables.ids": ["integer", "integer"]}
+        )
 
         with pytest.raises(
             TypeError, match=r"^Value for variable 'ids' at item 2 is not a valid integer$"
         ):
-            _wb_plugins._coerce_setter_variables(
-                params, {"ids": "array"}, {"ids": ["integer", "integer"]}
-            )
+            await _run_setter_node(node, {"ids": []}, {"ids": "array"})
 
     def test_expression_and_template_rows_keep_their_conversion(self) -> None:
         params: dict[str, Any] = {"variables": {"e": "1e3", "t": " 30 "}}
 
-        _wb_plugins._coerce_setter_variables(
-            params, {"e": "integer", "t": "integer"}, {}, {"e"}, {"t"}
-        )
+        with declared_type_scope({"e": "integer", "t": "integer"}):
+            _wb_plugins._coerce_setter_variables(params, {"variables.e", "variables.t"})
 
         assert params["variables"] == {"e": 1000, "t": 30}
 
     def test_a_row_without_a_declared_type_is_left_alone(self) -> None:
         params: dict[str, Any] = {"variables": {"x": "7"}}
-        _wb_plugins._coerce_setter_variables(params, {}, {"x": ["integer"]})
+        with declared_type_scope({}):
+            _wb_plugins._coerce_setter_variables(params, set())
         assert params["variables"]["x"] == "7"
 
     @pytest.mark.asyncio
     async def test_the_node_forwards_its_element_types_to_the_control(self) -> None:
-        node = {
-            "id": "node-1",
-            "data": {
-                "label": "Set",
-                "elementType": "variable-setter",
-                "nodeType": "control",
-                "version": "1.0.0",
-                "config": {"values": {"variables": {"m": dict(TYPED_MAP)}}},
-                "variableTypes": {"m": "map"},
-                "variableElementTypes": {"m": TYPED_MAP_TYPES},
-            },
-        }
+        node = _setter_node({"m": dict(TYPED_MAP)}, elementTypes={"variables.m": TYPED_MAP_TYPES})
         fields = _extract_node_fields(node)
-        assert fields["variable_element_types"] == {"m": TYPED_MAP_TYPES}
+        assert fields["config_values"]["variables"]["m"] == REALIZED_MAP
+        execute_control = _wb_plugins._execute_control
         with patch(
             "wavecore.api.services.workbench.plugins._execute_control",
             new=AsyncMock(return_value=None),
         ) as control:
             await _execute_node(fields, {}, "s-1", "node-1")
-        assert control.call_args.kwargs["setter_rows"].element_types == {"m": TYPED_MAP_TYPES}
+        sent = (
+            inspect.signature(execute_control)
+            .bind(*control.call_args.args, **control.call_args.kwargs)
+            .arguments
+        )
+        assert sent["parameters"]["variables"]["m"] == REALIZED_MAP
+        assert "setter_rows" not in sent
+
+    @pytest.mark.asyncio
+    async def test_a_row_reads_the_type_of_its_declared_variable_at_run(self) -> None:
+        variables: dict[str, Any] = {"n": None}
+
+        await _run_setter_node(_setter_node({"n": "42"}), variables, {"n": "integer"})
+        assert variables["n"] == 42
+        assert type(variables["n"]) is int
+
+        await _run_setter_node(_setter_node({"n": "42"}), variables, {"n": "float"})
+        assert variables["n"] == Decimal("42")
+        assert isinstance(variables["n"], WaveDecimal)
+
+    @pytest.mark.asyncio
+    async def test_a_table_row_is_realized(self) -> None:
+        variables: dict[str, Any] = {"vt": None}
+
+        await _run_setter_node(_setter_node({"vt": dict(STORED_TABLE)}), variables, {"vt": "table"})
+
+        assert isinstance(variables["vt"], Table)
+        assert variables["vt"].to_list() == [{"n": 16, "zip": "02134"}]
 
 
 class TestTypedBlockSettings:

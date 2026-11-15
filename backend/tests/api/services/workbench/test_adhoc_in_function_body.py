@@ -18,6 +18,7 @@ from tests.api.services.workbench.parallel_harness import (  # noqa: F401
     edge,
     engine_registries,
     function_node,
+    lifecycle_lines,
     local_definition,
     log_messages,
     log_node,
@@ -32,6 +33,7 @@ from tests.api.services.workbench.test_remote_exec_body_contents import (
     rex_node,
 )
 from tests.api.services.workbench.test_variable_push_on_write import _paths, _push_recorder
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.plugins.http_client import HTTPClientPlugin
@@ -290,7 +292,7 @@ class TestRunScopeOnANestedFunction:
         assert run.session["status"] == "passed", log_messages(run.session_id)
 
     async def test_an_unknown_function_on_the_path_is_refused(self) -> None:
-        with _stored(_nested_graph()), pytest.raises(LookupError) as refused:
+        with _stored(_nested_graph()), pytest.raises(NotFoundException) as refused:
             await _run_scope("inner", ("missing",))
 
         assert str(refused.value) == f"Function block 'missing' not found in Test '{TEST_ID}'"
@@ -331,8 +333,20 @@ class TestRunCurrentInsideAFunctionBody:
         assert run.session["status"] == "passed", log_messages(run.session_id)
         assert run.markers == ["outer-log:outer-run"]
 
+    async def test_the_block_run_logs_its_start_and_completion(self) -> None:
+        """REQ-3.7.2.5: the completion line is the outcome line of the block run."""
+        with _stored(_nested_graph()):
+            await _full_run()
+            run = await _run_current("inner-log", ("outer", "inner"))
+
+        assert run.session["status"] == "passed", log_messages(run.session_id)
+        assert lifecycle_lines(run.session_id) == [
+            "Executing 'inner-log' (plugin/log)",
+            "Completed 'inner-log' (<n> ms)",
+        ]
+
     async def test_an_unknown_block_in_the_body_is_refused(self) -> None:
-        with _stored(_nested_graph()), pytest.raises(LookupError) as refused:
+        with _stored(_nested_graph()), pytest.raises(NotFoundException) as refused:
             await _run_current("after", ("outer",))
 
         assert str(refused.value) == "block not found in workflow"
@@ -441,7 +455,7 @@ class TestAFailureInsideTheBody:
         missing = function_node("gone", local_definition("Gone", [], []))
         missing["data"] = {**missing["data"], "functionLifecycle": "shared", "functionId": ""}
         graph = ([missing], [edge("start-node", "gone")])
-        with _stored(graph), pytest.raises(LookupError) as refused:
+        with _stored(graph), pytest.raises(NotFoundException) as refused:
             await _run_current("anything", ("gone",))
 
         assert str(refused.value) == "Shared Function block missing functionId"

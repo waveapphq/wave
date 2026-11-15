@@ -148,13 +148,13 @@ class TestStartExecution:
             )
 
     def test_start_execution_raises_when_entity_not_found(self) -> None:
-        """Test that start_execution raises LookupError when entity not found."""
+        """Test that start_execution raises NotFoundException when entity not found."""
         from wavecore.api.services.executions import service as execution_service
 
         entity_id = str(uuid.uuid4())
 
         with patch.object(execution_service, "_get_entity", return_value=None):
-            with pytest.raises(LookupError, match=r"not found"):
+            with pytest.raises(NotFoundException, match=rf"^Test with ID '{entity_id}' not found$"):
                 execution_service.start_execution(
                     entity_type="test",
                     entity_id=entity_id,
@@ -257,7 +257,7 @@ class TestStartExecution:
             assert retrieved["environment_id"] == TEST_ENV_ID
 
     def test_start_execution_raises_when_environment_not_found(self) -> None:
-        """Test that start_execution raises LookupError for non-existent environment."""
+        """Test that start_execution raises NotFoundException for non-existent environment."""
         from wavecore.api.services.executions import service as execution_service
 
         entity_id = str(uuid.uuid4())
@@ -267,7 +267,7 @@ class TestStartExecution:
             execution_service, "_get_entity", return_value={"id": entity_id, "name": "test-1"}
         ):
             with pytest.raises(
-                LookupError, match=r"^Environment with ID 'env-nonexistent-000' not found$"
+                NotFoundException, match=r"^Environment with ID 'env-nonexistent-000' not found$"
             ):
                 execution_service.start_execution(
                     entity_type="test",
@@ -2100,12 +2100,14 @@ class TestGetEntityServiceWiring:
         assert result["status"] == "running"
 
     def test_start_execution_fails_for_nonexistent_entity(self) -> None:
-        """Test that start_execution raises LookupError for non-existent entity."""
+        """Test that start_execution raises NotFoundException for non-existent entity."""
         from wavecore.api.services.executions import service as execution_service
 
         nonexistent_id = str(uuid.uuid4())
 
-        with pytest.raises(LookupError, match=r"not found"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Test with ID '{nonexistent_id}' not found$"
+        ):
             execution_service.start_execution(
                 entity_type="test",
                 entity_id=nonexistent_id,
@@ -3397,6 +3399,37 @@ class TestOnWorkbenchSessionTerminatedHelpers:
             assert snapshot["variables"] == {"x": 42}
             assert snapshot["workflow"] == {"nodes": [], "edges": []}
             assert _exec_storage._execution_storage[session_id]["status"] == "passed"
+        finally:
+            _wb_common._workbench_sessions.pop(session_id, None)
+
+    def test_callback_persists_the_lanes_each_block_took(self) -> None:
+        """The run history paints the lane wires from the lanes the run stored."""
+        from wavecore.api.services.executions import _storage as _exec_storage
+        from wavecore.api.services.executions import service as execution_service
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _exec_storage._clear_storage()
+        session_id = str(uuid.uuid4())
+        _exec_storage._execution_storage[session_id] = {
+            "id": session_id,
+            "status": "running",
+            "entity_type": "test",
+            "entity_id": str(uuid.uuid4()),
+            "started_at": "2026-04-22T00:00:00+00:00",
+            "run_id": session_id,
+        }
+        _exec_storage._save_execution(_exec_storage._execution_storage[session_id])
+        _wb_common._workbench_sessions[session_id] = {
+            "session_id": session_id,
+            "block_states": {"route": "passed", "loop": "passed"},
+            "lanes_taken": {"route": ["branch_0"], "loop": ["body"]},
+            "variables": {},
+        }
+
+        try:
+            execution_service._on_workbench_session_terminated(session_id, "passed", None)
+            snapshot = _exec_storage._load_snapshot(session_id, session_id) or {}
+            assert snapshot["lanes_taken"] == {"route": ["branch_0"], "loop": ["body"]}
         finally:
             _wb_common._workbench_sessions.pop(session_id, None)
 

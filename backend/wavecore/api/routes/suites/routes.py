@@ -14,7 +14,6 @@ Endpoints:
 - DELETE /suites/{suite_id}: Delete suite
 """
 
-import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Query, Request, Response
@@ -22,7 +21,9 @@ from fastapi import status as status_module
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.routes.shared import (
+    entity_etag,
     read_json_object,
+    refuse_stale_etag,
     validate_computed_expression,
     validate_uuid,
     validate_variable_types,
@@ -32,42 +33,16 @@ from wavecore.api.services.suites import service as suite_service
 # Create router for suite endpoints
 router = APIRouter(tags=["Suites"])
 
-# Name pattern: alphanumeric, spaces, hyphens, underscores
-NAME_PATTERN = re.compile(r"^[a-zA-Z0-9 _-]+$")
 
-
-def validate_suite_name(name: str) -> None:
-    """Validate suite name format and length.
-
-    Args:
-        name: Suite name to validate
-
-    Raises:
-        ValidationException: If name is invalid
-    """
+def validate_suite_name(name: Any) -> None:
+    """Refuse a suite name that is not text of 1 to 255 characters within the naming convention."""
+    if not isinstance(name, str):
+        raise ValidationException("Field 'name' must be a string")
     if not name or len(name) > 255:
         raise ValidationException("Suite name must be between 1 and 255 characters")
-
-    if not NAME_PATTERN.match(name):
-        raise ValidationException(
-            f"Suite name '{name}' violates naming convention: must contain only "
-            "alphanumeric characters, spaces, hyphens, and underscores"
-        )
-
-
-def _generate_etag(suite: dict[str, Any]) -> str:
-    """Generate ETag for a suite.
-
-    Args:
-        suite: Suite data
-
-    Returns:
-        ETag string (quoted hex hash)
-    """
-    import hashlib
-
-    content = f"{suite.get('id')}{suite.get('version')}{suite.get('updated_at')}"
-    return f'"{hashlib.sha256(content.encode()).hexdigest()}"'
+    problem = suite_service.name_convention_problem(name)
+    if problem:
+        raise ValidationException(problem)
 
 
 # Reusable string constants
@@ -229,21 +204,13 @@ async def create_suite(request: Request, response: Response) -> dict[str, Any]:
     # Validate field values
     validate_suite_name(body["name"])
 
-    # Validate variables if provided - convert ValueError to ValidationException
     if "variables" in body:
-        try:
-            validate_variable_types(body["variables"])
-        except ValueError as e:
-            raise ValidationException(str(e)) from e
+        validate_variable_types(body["variables"])
 
         # Validate computed variable expressions
         for var_name, var_info in body["variables"].items():
             if isinstance(var_info, dict) and var_info.get("computed"):
-                expression = var_info.get("expression", "")
-                try:
-                    validate_computed_expression(var_name, expression)
-                except ValueError as e:
-                    raise ValidationException(str(e)) from e
+                validate_computed_expression(var_name, var_info.get("expression", ""))
 
     # Create suite - ConflictException propagates to middleware
     suite = suite_service.create_suite(body)
@@ -273,7 +240,7 @@ async def get_suite(suite_id: str, response: Response) -> dict[str, Any]:
         raise NotFoundException(f"Suite with ID '{suite_id}' not found")
 
     # Set ETag header for concurrency control
-    response.headers["ETag"] = _generate_etag(suite)
+    response.headers["ETag"] = entity_etag(suite)
 
     return {"success": True, "data": suite}
 
@@ -304,14 +271,14 @@ async def update_suite(
     if "name" in body:
         validate_suite_name(body["name"])
 
-    # ConflictException propagates to middleware for etag/name conflicts
+    # A stale ETag (412) and a taken name (409) propagate to the middleware
     result = suite_service.update_suite(suite_id, body, etag=if_match)
 
     if result is None:
         raise NotFoundException(f"Suite with ID '{suite_id}' not found")
 
     # Set new ETag and cache invalidation headers
-    response.headers["ETag"] = _generate_etag(result)
+    response.headers["ETag"] = entity_etag(result)
     response.headers["X-Cache-Invalidated"] = f"suite_{suite_id},suites_list"
 
     return {"success": True, "data": result}
@@ -335,15 +302,8 @@ async def delete_suite(
     Returns:
         Empty response with 204 status code
     """
-    from wavecore.api.exceptions import ConflictException
-
-    # Check ETag if provided
-    if if_match:
-        suite = suite_service.get_suite(suite_id)
-        if suite:
-            current_etag = _generate_etag(suite)
-            if if_match != current_etag:
-                raise ConflictException("Precondition failed: resource has been modified")
+    validate_uuid(suite_id, "suite_id")
+    refuse_stale_etag(if_match, suite_service.get_suite, suite_id)
 
     # ConflictException propagates to middleware for regression references
     deleted = suite_service.delete_suite(suite_id)

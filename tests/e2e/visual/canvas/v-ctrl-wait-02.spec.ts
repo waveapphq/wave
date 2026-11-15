@@ -55,7 +55,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Wait under test',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 conditions: [

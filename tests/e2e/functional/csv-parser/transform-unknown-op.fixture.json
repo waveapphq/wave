@@ -1,7 +1,7 @@
 {
   "name": "CSV Transform Unknown Op E2E",
   "version": "1.0.0",
-  "description": "T9 unknown filter operator aborts",
+  "description": "T9 unknown filter operator refused at save",
   "workflow": {
     "nodes": [
       {

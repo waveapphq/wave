@@ -1,7 +1,8 @@
 /**
  * Operator lists of the check rows (REQ-3.1.3.25): every type offers "is null" and
  * "not null" last, a table offers its own four, and a row on an operator that takes no
- * compare-to value keeps none.
+ * compare-to value keeps none. One new-row seed and one drop rule for the compare value
+ * (REQ-3.5.1.5).
  */
 
 import { describe, expect, it } from 'vitest'
@@ -147,9 +148,32 @@ function literalRow(overrides: Partial<LiteralAssertion> = {}): LiteralAssertion
   }
 }
 
+/** A row in the stored shape of an operator that takes no compare value: none of the three value keys. */
+function bareRow(overrides: Partial<LiteralAssertion> = {}): LiteralAssertion {
+  return { id: 'lit-1', type: 'literal', variable: 'x', value_type: 'string', operator: 'is_null', ...overrides }
+}
+
+const VALUE_KEYS = ['reference_value', 'reference_is_expression', 'reference_is_template'] as const
+
+function expectNoCompareTo(row: LiteralAssertion): void {
+  for (const key of VALUE_KEYS) expect(row).not.toHaveProperty(key)
+}
+
+interface RowRules {
+  newLiteralRow: (valueType?: string) => LiteralAssertion
+  dropUnusedCompareTo: (row: LiteralAssertion) => LiteralAssertion
+}
+
+/** The new-row seed and the drop rule, read inside each case so the other cases run without them. */
+async function rowRules(): Promise<RowRules> {
+  return (await import('@/features/workbench/common/config/assertion-builder/types')) as unknown as RowRules
+}
+
 describe('withOperator - a row given an operator (REQ-3.1.3.25)', () => {
-  it.each([...UNARY_OPERATORS])('%s leaves the row no compare-to value', (operator) => {
-    expect(withOperator(literalRow(), operator)).toEqual(literalRow({ operator, reference_value: null }))
+  it.each([...UNARY_OPERATORS])('%s leaves the row no compare value and no flag', (operator) => {
+    const next = withOperator(literalRow({ reference_is_template: false }), operator)
+    expect(next).toEqual(bareRow({ operator }))
+    expectNoCompareTo(next)
   })
 
   it('an operator that compares keeps the compare-to value', () => {
@@ -157,11 +181,11 @@ describe('withOperator - a row given an operator (REQ-3.1.3.25)', () => {
   })
 
   it.each([...UNARY_OPERATORS])(
-    'switching from %s back to an operator that compares gives the empty value a new row has',
+    'switching from %s back to an operator that compares leaves the compare value not set',
     (unary) => {
-      expect(withOperator(literalRow({ operator: unary, reference_value: null }), 'equals')).toEqual(
-        literalRow({ operator: 'equals', reference_value: '' }),
-      )
+      const next = withOperator(bareRow({ operator: unary }), 'equals')
+      expect(next).toEqual(bareRow({ operator: 'equals' }))
+      expect(next).not.toHaveProperty('reference_value')
     },
   )
 })
@@ -177,18 +201,83 @@ describe('withValueType - a row read as another value type (REQ-3.1.3.25)', () =
     )
   })
 
-  it("a row leaving the boolean is_true for a string falls to equals with the empty value a new row has", () => {
-    expect(
-      withValueType(literalRow({ value_type: 'boolean', operator: 'is_true', reference_value: null }), 'string'),
-    ).toEqual(literalRow({ operator: 'equals', reference_value: '' }))
+  it('a row leaving the boolean is_true for a string falls to equals with the compare value not set', () => {
+    const next = withValueType(bareRow({ value_type: 'boolean', operator: 'is_true' }), 'string')
+    expect(next).toEqual(bareRow({ operator: 'equals' }))
+    expect(next).not.toHaveProperty('reference_value')
   })
 
   it.each([
     ['boolean', 'is_true'],
     ['table', 'is_null'],
-  ])("falls to the %s type's first operator %s and leaves no compare-to value", (valueType, operator) => {
-    expect(withValueType(literalRow({ reference_value: '' }), valueType)).toEqual(
-      literalRow({ value_type: valueType, operator, reference_value: null }),
-    )
+  ])("falls to the %s type's first operator %s and leaves no compare value and no flag", (valueType, operator) => {
+    const next = withValueType(literalRow({ reference_value: '' }), valueType)
+    expect(next).toEqual(bareRow({ value_type: valueType, operator }))
+    expectNoCompareTo(next)
+  })
+})
+
+describe('newLiteralRow - the one new-row seed (REQ-3.5.1.5)', () => {
+  it('starts a control row with no variable, on equals, with no compare value and no flag', async () => {
+    const { newLiteralRow } = await rowRules()
+    const row = newLiteralRow()
+    expect(row).toEqual({ id: row.id, type: 'literal', variable: '', value_type: 'string', operator: 'equals' })
+    expect(row.id).toMatch(/\S/)
+    expectNoCompareTo(row)
+  })
+
+  it.each([
+    ['string', 'equals'],
+    ['integer', 'equals'],
+    ['float', 'equals'],
+    ['boolean', 'is_true'],
+    ['array', 'contains'],
+    ['map', 'has_key'],
+    ['table', 'is_null'],
+  ])("starts a row of type %s on the type's first operator %s with no compare value", async (valueType, operator) => {
+    const { newLiteralRow } = await rowRules()
+    const row = newLiteralRow(valueType)
+    expect(row).toEqual({ id: row.id, type: 'literal', variable: '', value_type: valueType, operator })
+    expectNoCompareTo(row)
+  })
+
+  it('gives every new row an id of its own', async () => {
+    const { newLiteralRow } = await rowRules()
+    expect(newLiteralRow().id).not.toBe(newLiteralRow().id)
+  })
+})
+
+describe('dropUnusedCompareTo - the one drop rule for a compare value (REQ-3.5.1.5)', () => {
+  it.each([...UNARY_OPERATORS])(
+    'removes the compare value, the {x} flag and the Template flag under %s',
+    async (operator) => {
+      const { dropUnusedCompareTo } = await rowRules()
+      const held = literalRow({ operator, reference_value: 'ready', reference_is_expression: true, reference_is_template: false })
+      const next = dropUnusedCompareTo(held)
+      expect(next).toEqual(bareRow({ operator }))
+      expectNoCompareTo(next)
+    },
+  )
+
+  it('removes a Template compare value under an operator that takes none', async () => {
+    const { dropUnusedCompareTo } = await rowRules()
+    const held = literalRow({ operator: 'is_not_null', reference_value: '{{ host }}', reference_is_template: true })
+    const next = dropUnusedCompareTo(held)
+    expect(next).toEqual(bareRow({ operator: 'is_not_null' }))
+    expectNoCompareTo(next)
+  })
+
+  it.each(['equals', 'contains', 'length_equals', 'has_key', 'greater_than'])(
+    'keeps the compare value and both flags under %s',
+    async (operator) => {
+      const { dropUnusedCompareTo } = await rowRules()
+      const held = literalRow({ operator, reference_value: 'limit', reference_is_expression: true, reference_is_template: false })
+      expect(dropUnusedCompareTo(held)).toEqual(held)
+    },
+  )
+
+  it('keeps a row under an operator that takes none and holds nothing as it is', async () => {
+    const { dropUnusedCompareTo } = await rowRules()
+    expect(dropUnusedCompareTo(bareRow({ operator: 'is_empty' }))).toEqual(bareRow({ operator: 'is_empty' }))
   })
 })

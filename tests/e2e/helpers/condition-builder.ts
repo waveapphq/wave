@@ -38,6 +38,35 @@ export async function pickConditionVariable(page: Page, body: Locator, path: str
   await expect(anchor).toHaveValue(name)
 }
 
+/** The shared value-loss question a pick asks before it drops a compare value (FIELD-13). */
+export function valueLossQuestion(page: Page): Locator {
+  return page.getByRole('alertdialog').filter({ hasText: 'Change entry type?' })
+}
+
+/** Pick a variable whose compare type cannot keep the row's value: answer the question it asks first. */
+export async function pickConditionVariableAsked(
+  page: Page,
+  body: Locator,
+  path: string,
+  name: string,
+  answer: 'Cancel' | 'Change type',
+): Promise<void> {
+  const anchor = body.locator(`[data-testid="assert-variable-${path}"]`)
+  const before = await anchor.inputValue()
+  await anchor.click()
+  const option = page
+    .getByRole('option')
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .first()
+  await expect(option).toBeVisible({ timeout: 5_000 })
+  await option.click()
+  const question = valueLossQuestion(page)
+  await expect(question).toBeVisible()
+  await question.getByRole('button', { name: answer, exact: true }).click()
+  await expect(question).toBeHidden()
+  await expect(anchor).toHaveValue(answer === 'Change type' ? name : before)
+}
+
 /** The operator select of a literal row. */
 export function operatorTrigger(body: Locator, path: string): Locator {
   return body.locator(`[data-testid="assert-operator-${path}"]`)
@@ -64,7 +93,7 @@ export async function operatorOptions(page: Page, body: Locator, path: string): 
 
 /** Type a literal compare-to value into a row's value box. */
 export async function setReference(body: Locator, path: string, text: string): Promise<void> {
-  const box = body.locator(`[data-testid="assert-value-input-${path}"]`)
+  const box = valueBox(body, path)
   await box.fill(text)
   await expect(box).toHaveValue(text)
 }
@@ -83,9 +112,9 @@ export function rowPath(index: number): string {
   return String(index * 2)
 }
 
-/** A literal row's compare-to value box; gone for an operator that takes no compare-to value. */
+/** A literal row's compare-to value box, the code box in {x} and Template; gone for an operator that takes none. */
 export function valueBox(body: Locator, path: string): Locator {
-  return body.locator(`[data-testid="assert-value-input-${path}"]`)
+  return body.locator(`[data-testid="param-input-assert-value-${path}"]`)
 }
 
 /** A literal row's `{}` toggle that makes the compare-to value an expression. */
@@ -119,18 +148,48 @@ export async function openConditionBody(sheet: Locator, block: ConditionBlock, b
   return body
 }
 
+/** A stored condition row with its compare value and both of its mode flags. */
+export interface StoredConditionRow {
+  [key: string]: unknown
+  reference_value?: unknown
+  reference_is_expression?: boolean
+  reference_is_template?: boolean
+}
+
+export type CompareValueMode = 'literal' | 'expression' | 'template'
+
+/** A literal row as the sheet stores it: an operator that takes no compare value keeps none of the value keys (REQ-3.5.1.5). */
+export function sheetLiteralRow(
+  id: string,
+  variable: string,
+  valueType: string,
+  operator: string,
+  reference: string | null = null,
+  mode: CompareValueMode = 'literal',
+): StoredConditionRow {
+  const row: StoredConditionRow = { id, type: 'literal', variable, value_type: valueType, operator }
+  if (reference === null) return row
+  if (mode === 'literal') return { ...row, reference_value: reference }
+  return {
+    ...row,
+    reference_value: reference,
+    reference_is_expression: mode === 'expression',
+    reference_is_template: mode === 'template',
+  }
+}
+
 /** The stored rows (connectors left out) of a check block's condition list, read from its saved `config.values`. */
 export function storedConditionRows(
   values: Record<string, unknown>,
   block: ConditionBlock,
   branch = 'branch_0',
-): Array<Record<string, unknown>> {
+): StoredConditionRow[] {
   let items: unknown
   if (block === 'assert') items = values.assertions
   else if (block === 'if-else' || block === 'switch') {
     items = ((values.branches ?? []) as Array<{ id?: string; conditions?: unknown }>).find((b) => b.id === branch)?.conditions
   } else items = values.conditions
-  return ((items ?? []) as Array<Record<string, unknown>>).filter((item) => item.type !== 'operator')
+  return ((items ?? []) as StoredConditionRow[]).filter((item) => item.type !== 'operator')
 }
 
 /** Flip the n-th top-level AND / OR connector (1-based) of a condition list to `value`. */

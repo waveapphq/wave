@@ -825,8 +825,7 @@ describe('sanitizeNodesForSave', () => {
         disabled: false,
         expressionFields: ['cmd'],
         templateFields: [],
-        variableExpressionKeys: [],
-        variableTypes: {},
+        elementTypes: {},
       },
     })
 
@@ -842,8 +841,7 @@ describe('sanitizeNodesForSave', () => {
       disabled: false,
       expressionFields: ['cmd'],
       templateFields: [],
-      variableExpressionKeys: [],
-      variableTypes: {},
+      elementTypes: {},
     })
   })
 

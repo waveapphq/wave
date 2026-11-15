@@ -62,7 +62,7 @@ test.describe('V-CTRL-ASSERT-03: Expression Uses CodeMirror', () => {
     })
 
     await test.step('Verify expression row contains CodeMirror (not plain input)', async () => {
-      const exprWrapper = modal.locator('[data-testid="assert-expression-input-0"]')
+      const exprWrapper = modal.locator('[data-testid="param-input-assert-expr-0"]')
       await expect(exprWrapper).toBeVisible()
 
       // CodeMirror renders a .cm-editor element
@@ -75,7 +75,7 @@ test.describe('V-CTRL-ASSERT-03: Expression Uses CodeMirror', () => {
     })
 
     await test.step('CodeMirror editor accepts typed text', async () => {
-      const exprWrapper = modal.locator('[data-testid="assert-expression-input-0"]')
+      const exprWrapper = modal.locator('[data-testid="param-input-assert-expr-0"]')
       const cmContent = exprWrapper.locator('.cm-content')
 
       // Click to focus

@@ -113,6 +113,26 @@ describe('ProfileBindingModal', () => {
       await waitForLoad()
     })
 
+    it('is a non-modal dialog named "Profiles"', async () => {
+      const { ProfileBindingModal } = await import(
+        '@/features/workbench/common/element-config/dialogs/profile-binding-modal'
+      )
+      render(
+        <ProfileBindingModal
+          isOpen={true}
+          onClose={vi.fn()}
+          bindings={[]}
+          onDone={vi.fn()}
+        />
+      )
+
+      const sheet = screen.getByTestId('profile-binding-sheet')
+      expect(screen.getByRole('dialog', { name: 'Profiles' })).toBe(sheet)
+      expect(sheet).toHaveAttribute('aria-modal', 'false')
+
+      await waitForLoad()
+    })
+
     it('renders bound profiles with aliases', async () => {
       const bindings = [
         {

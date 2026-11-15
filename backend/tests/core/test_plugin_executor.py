@@ -2296,9 +2296,9 @@ class TestTemplateFillMarkers:
     """Block settings find ``{{ }}`` markers by the one shared marker rule."""
 
     def test_a_second_opening_starts_the_marker_over(self) -> None:
-        from wavecore.core.execution.plugin_executor import _evaluate_template
+        from wavecore.core.execution.plugin_executor import evaluate_template
 
-        assert _evaluate_template("{{ a {{ b }}", {"b": 7}, setting="body") == "{{ a 7"
+        assert evaluate_template("{{ a {{ b }}", {"b": 7}, setting="body") == "{{ a 7"
 
 
 _QUERY_ESCAPE = {
@@ -2734,7 +2734,7 @@ def _fill(template: str, variables: dict[str, Any], **marks: Any) -> str:
     from wavecore.core.execution import plugin_executor
 
     marks.setdefault("setting", "url")
-    return plugin_executor._evaluate_template(template, variables, **marks)
+    return plugin_executor.evaluate_template(template, variables, **marks)
 
 
 class TestTemplateFillNullPieces:
@@ -3298,10 +3298,33 @@ class TestFillFieldDefaultsKeepsWhatTheBlockHolds:
 
         assert _fill_defaults({"note": None}, [field]) == {"note": None}
 
-    def test_a_stored_null_on_a_field_with_a_default_takes_the_default(self) -> None:
-        field = {"name": "timeout", "type": "integer", "default": 30}
+    @pytest.mark.parametrize(
+        "field",
+        [
+            pytest.param({"name": "timeout", "type": "integer", "default": 30}, id="optional"),
+            pytest.param(
+                {"name": "timeout", "type": "integer", "required": True, "default": 30},
+                id="required",
+            ),
+            pytest.param({"name": "timeout", "type": "string", "default": ""}, id="empty-default"),
+            pytest.param(
+                {"name": "timeout", "type": "string", "default": "", "secret": True}, id="secret"
+            ),
+        ],
+    )
+    def test_a_stored_null_on_a_field_with_a_default_fails_naming_it(
+        self, field: dict[str, Any]
+    ) -> None:
+        """A setting given null fails and names it; it never takes the default (REQ-3.1.3.21)."""
+        from wavecore.core.expressions.errors import NullValueError
 
-        assert _fill_defaults({"timeout": None}, [field]) == {"timeout": 30}
+        with pytest.raises(NullValueError, match=r"^'timeout' is null$"):
+            _fill_defaults({"timeout": None}, [field])
+
+    def test_a_stored_null_on_a_field_with_a_default_that_accepts_null_is_kept(self) -> None:
+        field = {"name": "message", "type": "string", "default": "", "accepts_null": True}
+
+        assert _fill_defaults({"message": None}, [field]) == {"message": None}
 
     def test_a_stored_null_on_a_field_with_no_default_stays_null(self) -> None:
         field = {"name": "csv_content", "type": "string"}
@@ -3756,3 +3779,85 @@ class TestAValueGivenToAFunctionInputIsCheckedByItsType:
 
         assert isinstance(given["x"], Decimal)
         assert given["x"] == Decimal(5)
+
+
+def _resolve_setter_rows(
+    rows: dict[str, Any],
+    variables: dict[str, Any],
+    *,
+    expression_fields: set[str] | None = None,
+    template_fields: set[str] | None = None,
+) -> dict[str, Any]:
+    """A Variable Setter's rows resolved by the one run entry, with the Block's own flags."""
+    from wavecore.controls.variable_setter import VariableSetterControl
+    from wavecore.core.execution.plugin_executor import resolve_block_fields
+
+    resolved = resolve_block_fields(
+        {"variables": rows},
+        VariableSetterControl().metadata["parameter_schema"],
+        expression_fields=expression_fields or set(),
+        template_fields=template_fields or set(),
+        element_types={},
+        variables=variables,
+        session_id=None,
+        exact_numbers=False,
+    )
+    return dict(resolved["variables"])
+
+
+class TestTwoLevelEntryFlags:
+    """A flag on an entry of a Setter list or map row resolves that one entry (REQ-3.4.1.14)."""
+
+    def test_a_flagged_item_of_a_list_held_by_a_map_entry_resolves(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"host_list": ["web-1", "web-2", "backup_host"], "greeting": "hi"},
+            {"backup_host": "web-3"},
+            expression_fields={"variables.host_list.2"},
+        )
+
+        assert resolved == {"host_list": ["web-1", "web-2", "web-3"], "greeting": "hi"}
+
+    def test_a_flagged_value_of_a_map_held_by_a_map_entry_resolves(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"limits": {"max": "attempts * 2", "min": "1"}},
+            {"attempts": 3},
+            expression_fields={"variables.limits.max"},
+        )
+
+        assert resolved == {"limits": {"max": 6, "min": "1"}}
+
+    def test_a_template_flagged_value_held_by_a_map_entry_is_filled(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"labels": {"greeting": "Hello {{ name }}", "plain": "{{ kept }}"}},
+            {"name": "Ada"},
+            template_fields={"variables.labels.greeting"},
+        )
+
+        assert resolved == {"labels": {"greeting": "Hello Ada", "plain": "{{ kept }}"}}
+
+    def test_an_exact_key_that_holds_a_dot_still_wins(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"a.b": "x + 1", "a": {"b": "x + 2"}},
+            {"x": 1},
+            expression_fields={"variables.a.b"},
+        )
+
+        assert resolved == {"a.b": 2, "a": {"b": "x + 2"}}
+
+    def test_the_resolve_works_on_a_copy(self) -> None:
+        rows: dict[str, Any] = {
+            "host_list": ["web-1", "backup_host"],
+            "limits": {"max": "attempts * 2"},
+        }
+        flags = {"variables.host_list.1", "variables.limits.max"}
+
+        first = _resolve_setter_rows(
+            rows, {"backup_host": "web-2", "attempts": 3}, expression_fields=flags
+        )
+        second = _resolve_setter_rows(
+            rows, {"backup_host": "web-9", "attempts": 5}, expression_fields=flags
+        )
+
+        assert first == {"host_list": ["web-1", "web-2"], "limits": {"max": 6}}
+        assert second == {"host_list": ["web-1", "web-9"], "limits": {"max": 10}}
+        assert rows == {"host_list": ["web-1", "backup_host"], "limits": {"max": "attempts * 2"}}

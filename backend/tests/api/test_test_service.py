@@ -16,7 +16,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+    WaveException,
+)
 from wavecore.api.services.shared import mask_secret_variables
 from wavecore.api.services.storage_paths import get_test_testdata_path, get_tests_storage_path
 from wavecore.api.services.tests import service as test_service
@@ -1067,7 +1073,10 @@ class TestUpdateTest:
         """Test that update validates ETag when provided."""
         created = test_service.create_test({"name": "ETag Test"})
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        with pytest.raises(
+            PreconditionRequiredException,
+            match=r"^Precondition failed: resource has been modified$",
+        ):
             test_service.update_test(created["id"], {"name": "Updated"}, etag='"wrong-etag"')
 
     def test_update_test_refuses_a_name_another_test_holds(self) -> None:
@@ -1184,7 +1193,10 @@ class TestUpdateTestMetadata:
         """Test that update_test_metadata validates ETag when provided."""
         created = test_service.create_test({"name": "ETag Meta Test"})
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        with pytest.raises(
+            PreconditionRequiredException,
+            match=r"^Precondition failed: resource has been modified$",
+        ):
             test_service.update_test_metadata(
                 created["id"], {"name": "Updated"}, etag='"wrong-etag"'
             )
@@ -1663,6 +1675,7 @@ class TestBatchOperations:
         assert result == {
             "updated": [],
             "failed": [{"index": 0, "error": _FIRST_CHANGING_FINDING}],
+            "repairs": {},
         }
         reloaded = test_service.get_test(created["id"])
         assert reloaded is not None
@@ -1712,8 +1725,10 @@ class TestBatchOperations:
         assert updated["metadata"]["tags"] == ["smoke"]
 
     def test_batch_update_tests_handles_exceptions(self) -> None:
-        """Test batch update handles exceptions during update."""
+        """An unexpected fault fails its item with the generic text; its own text stays out."""
         from unittest.mock import patch
+
+        from tests.api.error_reply_support import INTERNAL_ERROR_MESSAGE
 
         t1 = test_service.create_test({"name": "Test 1"})
 
@@ -1725,9 +1740,11 @@ class TestBatchOperations:
         ):
             result = test_service.batch_update_tests(updates)
 
-        assert len(result["updated"]) == 0
-        assert len(result["failed"]) == 1
-        assert "Update failed" in result["failed"][0]["error"]
+        assert result == {
+            "updated": [],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+            "repairs": {},
+        }
 
     def test_batch_delete_tests_deletes_multiple(self) -> None:
         """Test batch deleting multiple tests."""
@@ -3238,15 +3255,15 @@ class TestValidateTest:
                                 "values": {
                                     "assertions": [
                                         {
+                                            "id": "a1",
                                             "type": "literal",
                                             "variable": "x",
-                                            "compare_type": "integer",
+                                            "value_type": "integer",
                                             "operator": "equals",
-                                            "value": "42",
+                                            "reference_value": "42",
                                         }
                                     ],
                                     "mode": "split",
-                                    "root_operator": "and",
                                 }
                             },
                         ),
@@ -3297,15 +3314,15 @@ class TestValidateTest:
                                 "values": {
                                     "assertions": [
                                         {
+                                            "id": "a1",
                                             "type": "literal",
                                             "variable": "x",
-                                            "compare_type": "integer",
+                                            "value_type": "integer",
                                             "operator": "equals",
-                                            "value": "42",
+                                            "reference_value": "42",
                                         }
                                     ],
                                     "mode": "split",
-                                    "root_operator": "and",
                                 }
                             },
                         ),
@@ -5434,7 +5451,7 @@ class TestSetterExpressionRowSaveCheck:
         register_all_core_controls(_registry)
 
     @staticmethod
-    def _setter_test(name: str, rows: dict[str, Any], expression_keys: list[str]) -> dict[str, Any]:
+    def _setter_test(name: str, rows: dict[str, Any], expression_rows: list[str]) -> dict[str, Any]:
         return {
             "name": name,
             "variables": {
@@ -5453,7 +5470,7 @@ class TestSetterExpressionRowSaveCheck:
                             "version": "1.0.0",
                             "label": "Set Count",
                             "config": {"values": {"variables": rows}},
-                            "variableExpressionKeys": expression_keys,
+                            "expressionFields": [f"variables.{row}" for row in expression_rows],
                         },
                     }
                 ],
@@ -5478,8 +5495,17 @@ class TestSetterExpressionRowSaveCheck:
 
         assert [
             (e["code"], e["message"], e["severity"], e["node_id"], e["node_label"]) for e in errors
-        ] == [("REQUIRED_PARAM_EMPTY", "Expression is required", "error", "setter-1", "Set Count")]
+        ] == [
+            (
+                "REQUIRED_PARAM_EMPTY",
+                "'count' in 'variables' is required",
+                "error",
+                "setter-1",
+                "Set Count",
+            )
+        ]
         assert errors[0]["element_type"] == "variable-setter"
+        assert errors[0]["path"] == "nodes[0].data.config.values.variables.count"
 
     def test_saving_an_empty_expression_row_is_refused(self) -> None:
         from wavecore.api.services.tests.service import SaveValidationError
@@ -5490,12 +5516,12 @@ class TestSetterExpressionRowSaveCheck:
             test_service.create_test(data)
 
         assert [(e["code"], e["message"]) for e in exc_info.value.errors] == [
-            ("REQUIRED_PARAM_EMPTY", "Expression is required")
+            ("REQUIRED_PARAM_EMPTY", "'count' in 'variables' is required")
         ]
         assert [t["name"] for t in test_service._list_all_tests()] == []
 
     @pytest.mark.parametrize(
-        ("rows", "expression_keys"),
+        ("rows", "expression_rows"),
         [
             pytest.param({"note": ""}, [], id="empty-text-row"),
             pytest.param({"count": None}, [], id="literal-null-row"),
@@ -5504,9 +5530,9 @@ class TestSetterExpressionRowSaveCheck:
         ],
     )
     def test_a_row_with_a_value_is_not_an_issue(
-        self, rows: dict[str, Any], expression_keys: list[str]
+        self, rows: dict[str, Any], expression_rows: list[str]
     ) -> None:
-        data = self._setter_test("Row With A Value", rows, expression_keys)
+        data = self._setter_test("Row With A Value", rows, expression_rows)
 
         assert test_service.validate_test_data_for_create(data) == []
 
@@ -6792,6 +6818,7 @@ class TestFixTest:
         created = test_service.create_test(
             {
                 "name": "Fix Assert IDs",
+                "variables": {"x": {"type": "string", "value": "hi"}},
                 "workflow": {
                     "nodes": [
                         {
@@ -8090,7 +8117,9 @@ class TestRestoreVersion:
         """Test that restore raises error when version not found."""
         created = test_service.create_test({"name": "Restore Test"})
 
-        with pytest.raises(ValidationException, match="not found"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Version '99.0.0' not found for test '{created['id']}'$"
+        ):
             test_service.restore_test_version(created["id"], "99.0.0")
 
     @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
@@ -9058,12 +9087,11 @@ def _repair_nodes() -> list[dict[str, Any]]:
             "data": {
                 "elementType": "variable-setter",
                 "nodeType": "control",
-                "variableExpressionKeys": ["bad-name"],
-                "variableTemplateKeys": ["keep"],
-                "variableTypes": {"bad-name": "string", "keep": "string"},
-                "variableElementTypes": {"bad-name": []},
+                "expressionFields": ["variables.bad-name"],
+                "templateFields": ["variables.keep"],
+                "elementTypes": {"variables.bad-name": []},
                 "config": {
-                    "variableSecretKeys": ["bad-name"],
+                    "secretFields": ["variables.bad-name"],
                     "values": {"variables": {"bad-name": "'v'", "keep": "k"}},
                 },
             },
@@ -9113,11 +9141,19 @@ class TestInvalidVariableRepairRewritesEverySite:
         }
         assert say["config"]["outputBindings"] == {"line": fixed}
         assert setter["config"]["values"]["variables"] == {fixed: "'v'", "keep": "k"}
-        assert setter["variableExpressionKeys"] == [fixed]
-        assert setter["variableTemplateKeys"] == ["keep"]
-        assert setter["variableTypes"] == {fixed: "string", "keep": "string"}
-        assert setter["variableElementTypes"] == {fixed: []}
-        assert setter["config"]["variableSecretKeys"] == [fixed]
+        assert setter["expressionFields"] == [f"variables.{fixed}"]
+        assert setter["templateFields"] == ["variables.keep"]
+        # No row type is stored on the Block: a row's type is its variable's declared type.
+        assert set(setter) == {
+            "elementType",
+            "nodeType",
+            "expressionFields",
+            "templateFields",
+            "elementTypes",
+            "config",
+        }
+        assert setter["elementTypes"] == {f"variables.{fixed}": []}
+        assert setter["config"]["secretFields"] == [f"variables.{fixed}"]
         # Only the entry flagged as an expression is a read; the other item is text.
         assert function_block["config"]["values"] == {
             "x": fixed,
@@ -9181,3 +9217,844 @@ class TestConflictingBindingsRemoval:
         test_service._remove_conflicting_bindings(test_service._sites_naming(nodes, "v"))
 
         assert nodes[0]["data"]["config"] == {"values": {"message": "v"}, "outputBindings": {}}
+
+
+# ----------------------------------------------------------------------------
+# Control Blocks on the one save check (REQ-3.5.0.3, REQ-3.5.1.5, REQ-3.1.1.5,
+# REQ-3.4.1.14, REQ-3.1.3.21)
+# ----------------------------------------------------------------------------
+
+_CHECK_LABEL = "Check status"
+
+
+def _control_node(
+    element_type: str,
+    values: dict[str, Any],
+    *,
+    node_id: str = "ctl",
+    label: str = _CHECK_LABEL,
+    **data: Any,
+) -> dict[str, Any]:
+    """One control Block at a fixed place, its values stored under ``config.values``."""
+    return {
+        "id": node_id,
+        "type": "noteNode" if element_type == "note" else "workflowNode",
+        "position": {"x": 100, "y": 200},
+        "data": {
+            "elementType": element_type,
+            "nodeType": "control",
+            "version": "1.0.0",
+            "label": label,
+            "config": {"values": values},
+            **data,
+        },
+    }
+
+
+def _setter_node(rows: dict[str, Any], **data: Any) -> dict[str, Any]:
+    return _control_node("variable-setter", {"variables": rows}, label="Set values", **data)
+
+
+def _literal_row(
+    variable: str = "count",
+    reference: Any = 1,
+    *,
+    row_id: str = "c1",
+    value_type: str = "integer",
+    operator: str = "equals",
+    **flags: Any,
+) -> dict[str, Any]:
+    return {
+        "id": row_id,
+        "type": "literal",
+        "variable": variable,
+        "value_type": value_type,
+        "operator": operator,
+        "reference_value": reference,
+        **flags,
+    }
+
+
+def _if_else(conditions: list[dict[str, Any]], **data: Any) -> dict[str, Any]:
+    branches = [
+        {"id": "b-if", "type": "if", "label": "", "conditions": conditions},
+        {"id": "b-else", "type": "else", "label": "", "conditions": []},
+    ]
+    return _control_node("if-else", {"branches": branches}, **data)
+
+
+def _lanes(*time_limits: Any) -> list[dict[str, Any]]:
+    lanes: list[dict[str, Any]] = []
+    for index, limit in enumerate(time_limits, start=1):
+        lane: dict[str, Any] = {"id": f"lane-{index}", "name": f"Lane {index}"}
+        if limit is not None:
+            lane["time_limit"] = limit
+        lanes.append(lane)
+    return lanes
+
+
+def _workflow_document(
+    name: str, *nodes: dict[str, Any], variables: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "variables": variables or {},
+        "workflow": {"nodes": list(nodes), "edges": []},
+    }
+
+
+def _saved_field(
+    code: str,
+    field: str,
+    message: str,
+    fix: str | None = None,
+    *,
+    element_type: str,
+    node_id: str = "ctl",
+    label: str = _CHECK_LABEL,
+) -> dict[str, Any]:
+    """One save finding of the Block at ``nodes[0]``, as the 422 ``details`` list holds it."""
+    return {
+        "path": f"nodes[0].data.config.values.{field}",
+        "node_id": node_id,
+        "node_label": label,
+        "element_type": element_type,
+        "code": code,
+        "message": message,
+        "severity": "error",
+        "fix_action": fix,
+    }
+
+
+def _undeclared(errors: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return [
+        (e["code"], e["path"], e["node_id"], e["message"])
+        for e in errors
+        if e["code"] == "UNDECLARED_VARIABLE"
+    ]
+
+
+def _ghost_refusal(node_id: str = "ctl") -> tuple[str, str, str, str]:
+    return (
+        "UNDECLARED_VARIABLE",
+        "variables.ghost",
+        node_id,
+        "Variable 'ghost' is used in 1 block(s) but not declared in variable manager",
+    )
+
+
+_COUNT = {"count": {"type": "integer", "value": 0}}
+
+
+@pytest.fixture
+def _core_controls() -> Any:
+    from wavecore.controls.registry import _registry, register_all_core_controls
+
+    _registry.clear()
+    register_all_core_controls(_registry)
+    yield _registry
+    _registry.clear()
+    register_all_core_controls(_registry)
+
+
+@pytest.mark.usefixtures("_core_controls")
+class TestControlSaveCheck:
+    """A control's structure and condition rows are refused by the one save check, on POST
+    and on PUT, with the run's own texts (REQ-3.5.0.3, REQ-3.5.1.5)."""
+
+    @pytest.fixture
+    def client(self) -> Any:
+        from fastapi.testclient import TestClient
+
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @staticmethod
+    def _refusals(client: Any, document: dict[str, Any]) -> tuple[Any, Any]:
+        """The 422 ``details`` of a POST of ``document`` and of a PUT of it onto a stored Test."""
+        posted = client.post("/tests", json=document)
+        assert posted.status_code == 422, posted.json()
+        stored = client.post(
+            "/tests",
+            json={
+                "name": f"{document['name']} stored",
+                "variables": document["variables"],
+                "workflow": {"nodes": [], "edges": []},
+            },
+        )
+        assert stored.status_code == 201, stored.json()
+        put = client.put(
+            f"/tests/{stored.json()['data']['id']}",
+            json={"workflow": document["workflow"], "variables": document["variables"]},
+        )
+        assert put.status_code == 422, put.json()
+        for response in (posted, put):
+            error = response.json()["error"]
+            assert error["code"] == "VALIDATION_ERROR"
+            assert error["message"] == f"Test has {len(error['details'])} validation error(s)"
+        return posted.json()["error"]["details"], put.json()["error"]["details"]
+
+    def _assert_refused(
+        self, client: Any, document: dict[str, Any], expected: dict[str, Any]
+    ) -> None:
+        posted, put = self._refusals(client, document)
+        assert posted == [expected]
+        assert put == [expected]
+
+    def test_an_if_with_no_condition_is_refused(self, client: Any) -> None:
+        self._assert_refused(
+            client,
+            _workflow_document("Empty If", _if_else([])),
+            _saved_field(
+                "REQUIRED_PARAM_EMPTY",
+                "branches.0.conditions",
+                "if branch must have conditions",
+                element_type="if-else",
+            ),
+        )
+
+    def test_a_switch_with_no_case_is_refused(self, client: Any) -> None:
+        branches = [{"id": "b-default", "type": "default", "label": "", "conditions": []}]
+
+        self._assert_refused(
+            client,
+            _workflow_document("No Case", _control_node("switch-case", {"branches": branches})),
+            _saved_field(
+                "INVALID_CONTROL_STRUCTURE",
+                "branches",
+                "at least one case branch is required",
+                element_type="switch-case",
+            ),
+        )
+
+    def test_a_parallel_with_one_lane_is_refused(self, client: Any) -> None:
+        parallel = _control_node("parallel", {"branches": _lanes(None), "join": "all"})
+
+        self._assert_refused(
+            client,
+            _workflow_document("One Lane", parallel),
+            _saved_field(
+                "INVALID_CONTROL_STRUCTURE",
+                "branches",
+                "Parallel requires at least 2 branches",
+                element_type="parallel",
+            ),
+        )
+
+    def test_a_lane_limit_of_zero_is_refused(self, client: Any) -> None:
+        parallel = _control_node("parallel", {"branches": _lanes(5000, 0), "join": "all"})
+
+        self._assert_refused(
+            client,
+            _workflow_document("Zero Lane Limit", parallel),
+            _saved_field(
+                "INVALID_SETTING_VALUE",
+                "branches.1.time_limit",
+                "Parallel branch time limit must be a positive integer",
+                element_type="parallel",
+            ),
+        )
+
+    def test_a_for_step_of_zero_is_refused(self, client: Any) -> None:
+        loop = _control_node("for", {"mode": "count", "count": 3, "step": 0})
+
+        self._assert_refused(
+            client,
+            _workflow_document("Zero Step", loop),
+            _saved_field(
+                "INVALID_SETTING_VALUE", "step", "step must not be zero", element_type="for"
+            ),
+        )
+
+    def test_a_while_max_of_zero_is_refused_by_its_minimum(self, client: Any) -> None:
+        loop = _control_node(
+            "while",
+            {
+                "mode": "while-do",
+                "conditions": [_literal_row(operator="less_than", reference=3)],
+                "max_iterations": 0,
+            },
+        )
+
+        self._assert_refused(
+            client,
+            _workflow_document("Zero Max", loop, variables=_COUNT),
+            _saved_field(
+                "SETTING_BELOW_MINIMUM",
+                "max_iterations",
+                "Setting 'max_iterations' of block 'while' must be at least 1, got 0",
+                "Provide a value of at least 1",
+                element_type="while",
+            ),
+        )
+
+    def test_a_for_count_below_zero_is_refused_by_its_minimum(self, client: Any) -> None:
+        loop = _control_node("for", {"mode": "count", "count": -1, "step": 1})
+
+        self._assert_refused(
+            client,
+            _workflow_document("Negative Count", loop),
+            _saved_field(
+                "SETTING_BELOW_MINIMUM",
+                "count",
+                "Setting 'count' of block 'for' must be at least 0, got -1",
+                "Provide a value of at least 0",
+                element_type="for",
+            ),
+        )
+
+    def test_a_section_time_limit_of_zero_is_refused_by_its_minimum(self, client: Any) -> None:
+        parallel = _control_node(
+            "parallel", {"branches": _lanes(None, None), "join": "all", "time_limit": 0}
+        )
+
+        self._assert_refused(
+            client,
+            _workflow_document("Zero Section Limit", parallel),
+            _saved_field(
+                "SETTING_BELOW_MINIMUM",
+                "time_limit",
+                "Setting 'time_limit' of block 'parallel' must be at least 1, got 0",
+                "Provide a value of at least 1",
+                element_type="parallel",
+            ),
+        )
+
+    def test_a_condition_row_with_no_variable_is_refused(self, client: Any) -> None:
+        row = _literal_row()
+        del row["variable"]
+
+        self._assert_refused(
+            client,
+            _workflow_document("No Variable", _if_else([row])),
+            _saved_field(
+                "REQUIRED_PARAM_MISSING",
+                "branches.0.conditions.0.variable",
+                "Required parameter 'branches.0.conditions.0.variable' is missing",
+                element_type="if-else",
+            ),
+        )
+
+    def test_a_template_on_a_number_compare_to_is_refused(self, client: Any) -> None:
+        row = _literal_row(reference="{{ limit }}", reference_is_template=True)
+
+        self._assert_refused(
+            client,
+            _workflow_document(
+                "Template Number",
+                _if_else([row]),
+                variables={**_COUNT, "limit": {"type": "integer", "value": 3}},
+            ),
+            _saved_field(
+                "TEMPLATE_NOT_STRING",
+                "branches.0.conditions.0.reference_value",
+                "The value compared with 'count' is integer; "
+                "a template builds text, so it needs type string",
+                element_type="if-else",
+            ),
+        )
+
+    def test_a_note_color_outside_the_list_is_refused(self, client: Any) -> None:
+        note = _control_node("note", {"text": "Check the logs", "color": "purple"})
+
+        self._assert_refused(
+            client,
+            _workflow_document("Purple Note", note),
+            _saved_field(
+                "INVALID_ENUM_VALUE",
+                "color",
+                "Setting 'color' of block 'note' must be one of: blue, green, pink, slate, yellow",
+                "Use one of the listed values",
+                element_type="note",
+            ),
+        )
+
+    def test_a_disabled_control_gets_no_row_condition_or_structure_finding(
+        self, client: Any
+    ) -> None:
+        no_variable = _literal_row(row_id="c2")
+        del no_variable["variable"]
+        branches = [
+            {"id": "b-if", "type": "if", "label": "", "conditions": []},
+            {
+                "id": "b-else-if",
+                "type": "else_if",
+                "label": "",
+                "conditions": [
+                    _literal_row(reference="abc"),
+                    {"type": "operator", "value": "and"},
+                    no_variable,
+                ],
+            },
+            {"id": "b-else", "type": "else", "label": "", "conditions": []},
+        ]
+        blocks = [
+            _control_node("if-else", {"branches": branches}),
+            _setter_node({"count": "abc"}, node_id="set"),
+        ]
+        enabled = _workflow_document("Enabled Controls", *copy.deepcopy(blocks), variables=_COUNT)
+        disabled = _workflow_document("Disabled Controls", *blocks, variables=_COUNT)
+        for node in disabled["workflow"]["nodes"]:
+            node["data"]["disabled"] = True
+
+        refused = client.post("/tests", json=enabled)
+        posted = client.post("/tests", json=disabled)
+        assert refused.status_code == 422, refused.json()
+        assert posted.status_code == 201, posted.json()
+        put = client.put(
+            f"/tests/{posted.json()['data']['id']}",
+            json={"workflow": disabled["workflow"], "variables": disabled["variables"]},
+        )
+
+        assert put.status_code == 200, put.json()
+        assert posted.json()["repairs"] == put.json()["repairs"] == []
+
+
+@pytest.mark.usefixtures("_core_controls")
+class TestUndeclaredNamesInEveryRead:
+    """Every name a condition row, a filter, a Setter row or entry and a variable picked by
+    name reads must be declared; a filter's cell never is a variable (REQ-3.5.1.5,
+    REQ-3.4.1.14, REQ-3.4.1.12)."""
+
+    @pytest.fixture(autouse=True)
+    def _csv_parser(self) -> Any:
+        from wavecore.core.plugin_registry import clear_registry, register_plugin
+        from wavecore.plugins.csv_parser import CSVParserPlugin
+
+        clear_registry()
+        register_plugin(CSVParserPlugin())
+        yield
+        clear_registry()
+
+    @staticmethod
+    def _parser(conditions: list[dict[str, Any]]) -> dict[str, Any]:
+        filters = [
+            {
+                "id": "flt-1",
+                "column": {"mode": "name", "value": "amount"},
+                "asType": "integer",
+                "conditions": conditions,
+            }
+        ]
+        return {
+            "id": "parse",
+            "type": "workflowNode",
+            "position": {"x": 100, "y": 200},
+            "data": {
+                "elementType": "csv-parser",
+                "nodeType": "plugin",
+                "version": "1.0.0",
+                "label": "Parse rows",
+                "config": {"values": {"csv_content": "amount\n1\n", "filters": filters}},
+            },
+        }
+
+    @staticmethod
+    def _errors(*nodes: dict[str, Any], variables: dict[str, Any] | None = None) -> Any:
+        document = _workflow_document(f"Reads {uuid.uuid4()}", *nodes, variables=variables)
+        return test_service.validate_test_data_for_create(document)
+
+    def test_an_undeclared_checked_variable_is_refused(self) -> None:
+        errors = self._errors(_if_else([_literal_row("ghost")]))
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    @pytest.mark.parametrize("name", ["suite.base_url", "system.timeout", "regression.env"])
+    def test_a_condition_on_a_namespace_variable_is_never_reported(self, name: str) -> None:
+        errors = self._errors(_if_else([_literal_row(name, "x", value_type="string")]))
+
+        assert _undeclared(errors) == []
+
+    def test_an_undeclared_name_in_a_compare_to_expression_is_refused(self) -> None:
+        row = _literal_row(reference="ghost + 1", reference_is_expression=True)
+
+        errors = self._errors(_if_else([row]), variables=_COUNT)
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    def test_an_undeclared_name_in_an_expression_item_is_refused(self) -> None:
+        item = {"id": "e1", "type": "expression", "expression": "ghost > 1"}
+
+        errors = self._errors(_if_else([item]))
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    def test_an_undeclared_name_in_a_filter_item_is_refused(self) -> None:
+        row = _literal_row("_cell", "ghost", operator="greater_than", reference_is_expression=True)
+
+        errors = self._errors(self._parser([row]))
+
+        assert _undeclared(errors) == [_ghost_refusal("parse")]
+
+    def test_an_undeclared_name_in_a_setter_expression_row_is_refused(self) -> None:
+        setter = _setter_node({"out": "ghost + 1"}, expressionFields=["variables.out"])
+
+        errors = self._errors(setter, variables={"out": {"type": "integer", "value": 0}})
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    def test_an_undeclared_name_in_a_setter_entry_is_refused(self) -> None:
+        setter = _setter_node(
+            {"hosts": ["web-1", "ghost + '-2'"]},
+            expressionFields=["variables.hosts.1"],
+            elementTypes={"variables.hosts": ["string", "string"]},
+        )
+
+        errors = self._errors(setter, variables={"hosts": {"type": "array", "value": []}})
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    def test_an_undeclared_for_each_collection_is_refused(self) -> None:
+        loop = _control_node("for-each", {"collection": "ghost"})
+
+        errors = self._errors(loop)
+
+        assert _undeclared(errors) == [_ghost_refusal()]
+
+    def test_the_cell_of_a_filter_is_never_reported(self) -> None:
+        conditions = [
+            _literal_row("_cell", 5, operator="greater_than"),
+            {"type": "operator", "value": "and"},
+            {"id": "e1", "type": "expression", "expression": "_cell < 100"},
+        ]
+
+        errors = self._errors(self._parser(conditions))
+
+        assert _undeclared(errors) == []
+
+    def test_the_fix_declares_a_condition_variable_with_the_row_type(self) -> None:
+        document = _workflow_document("Fix Row Type", _if_else([_literal_row("ghost")]))
+
+        fixes = [
+            e["fix_action"]
+            for e in test_service.validate_test_data_for_create(document)
+            if e["code"] == "UNDECLARED_VARIABLE"
+        ]
+        stored = _store_unvalidated_test(document)
+        fixed = test_service.fix_test(stored["id"])
+
+        assert fixes == ["Add variable to manager (type: integer)"]
+        assert fixed is not None
+        assert fixed["test"]["variables"]["ghost"] == {"type": "integer", "scope": "test"}
+
+
+@pytest.mark.usefixtures("_core_controls")
+class TestReadOnlyGateAtImport:
+    """An import holding a condition row whose expression or template would change data is
+    refused, as the save refuses it (REQ-3.5.1.5)."""
+
+    @pytest.mark.parametrize(
+        ("item", "field"),
+        [
+            pytest.param(
+                _literal_row(
+                    "status",
+                    "rows.append(9)",
+                    row_id="c2",
+                    value_type="string",
+                    reference_is_expression=True,
+                ),
+                "branches.0.conditions.2.reference_value",
+                id="compare-to-expression",
+            ),
+            pytest.param(
+                _literal_row(
+                    "status",
+                    "{{ rows.append(9) }}",
+                    row_id="c2",
+                    value_type="string",
+                    reference_is_template=True,
+                ),
+                "branches.0.conditions.2.reference_value",
+                id="compare-to-template",
+            ),
+            pytest.param(
+                {"id": "c2", "type": "expression", "expression": "rows.append(9)"},
+                "branches.0.conditions.2.expression",
+                id="expression-item",
+            ),
+        ],
+    )
+    def test_an_import_holding_a_changing_condition_expression_is_refused(
+        self, item: dict[str, Any], field: str
+    ) -> None:
+        conditions = [
+            _literal_row("status", "ok", value_type="string"),
+            {"type": "operator", "value": "and"},
+            item,
+        ]
+        document = _workflow_document(
+            "Changing Condition",
+            _if_else(conditions),
+            variables={
+                "status": {"type": "string", "value": "ok"},
+                "rows": {"type": "array", "value": [1]},
+            },
+        )
+
+        with pytest.raises(test_service.ReadOnlyExpressionImportError) as exc_info:
+            test_service.import_tests(yaml.dump(document).encode(), "changing.yaml")
+
+        assert exc_info.value.message == (
+            "Cannot import test 'Changing Condition'. The append method changes data. "
+            "An expression can only read data, not change it. To change a variable, add a "
+            f"Variable Setter Block. Block: {_CHECK_LABEL}. Field: {field}."
+        )
+        assert [e["code"] for e in exc_info.value.errors] == ["EXPRESSION_CHANGES_DATA"]
+        assert test_service._list_all_tests() == []
+
+
+@pytest.mark.usefixtures("_core_controls")
+class TestSetterTypeFromDeclaration:
+    """A Setter row is checked by the type its variable declares, never by a copy stored on
+    the Block (REQ-3.4.1.14, REQ-3.1.3.19)."""
+
+    @staticmethod
+    def _errors(rows: dict[str, Any], variables: dict[str, Any], **data: Any) -> Any:
+        document = _workflow_document(
+            f"Setter {uuid.uuid4()}", _setter_node(rows, **data), variables=variables
+        )
+        return test_service.validate_test_data_for_create(document)
+
+    @staticmethod
+    def _row_finding(code: str, row: str, message: str, fix: str) -> dict[str, Any]:
+        return _saved_field(
+            code,
+            f"variables.{row}",
+            message,
+            fix,
+            element_type="variable-setter",
+            label="Set values",
+        )
+
+    def test_a_literal_row_is_checked_by_the_declared_type(self) -> None:
+        errors = self._errors({"count": "abc"}, _COUNT)
+
+        assert errors == [
+            self._row_finding(
+                "INVALID_VARIABLE_VALUE",
+                "count",
+                "Value for variable 'count' is not a valid integer",
+                "Provide an integer value",
+            )
+        ]
+
+    def test_changing_the_declared_type_rechecks_the_row(self) -> None:
+        from wavecore.api.services.tests.service import SaveValidationError
+
+        created = test_service.create_test(
+            _workflow_document(
+                "Retyped Ratio",
+                _setter_node({"ratio": "2.5"}),
+                variables={"ratio": {"type": "float", "value": 1.5}},
+            )
+        )
+
+        with pytest.raises(SaveValidationError) as exc_info:
+            test_service.update_test(
+                created["id"], {"variables": {"ratio": {"type": "integer", "value": 1}}}
+            )
+
+        assert exc_info.value.errors == [
+            self._row_finding(
+                "INVALID_VARIABLE_VALUE",
+                "ratio",
+                "Value for variable 'ratio' is not a valid integer",
+                "Provide an integer value",
+            )
+        ]
+
+    def test_no_row_type_is_stored(self) -> None:
+        created = test_service.create_test(
+            _workflow_document(
+                "Typed By Declaration",
+                _setter_node(
+                    {"ratio": 2.0, "ports": [80, 443]},
+                    elementTypes={"variables.ports": ["integer", "integer"]},
+                ),
+                variables={
+                    "ratio": {"type": "float", "value": 1.5},
+                    "ports": {"type": "array", "value": []},
+                },
+            )
+        )
+
+        stored = test_service._load_test(created["id"])
+        assert stored is not None
+        data = stored["workflow"]["nodes"][0]["data"]
+        # The float row is written in the number form of the float the variable declares.
+        assert data["config"]["values"]["variables"] == {"ratio": "2.0", "ports": [80, 443]}
+        assert data["elementTypes"] == {"variables.ports": ["integer", "integer"]}
+        assert set(data) == {
+            "elementType",
+            "nodeType",
+            "version",
+            "label",
+            "config",
+            "elementTypes",
+        }
+
+    def test_a_literal_row_that_no_longer_fits_its_retyped_variable_is_refused(self) -> None:
+        ready = {"ready": {"type": "boolean", "value": False}}
+
+        literal = self._errors({"ready": "yes"}, ready)
+        expression = self._errors(
+            {"ready": "status == 'up'"},
+            {**ready, "status": {"type": "string", "value": "up"}},
+            expressionFields=["variables.ready"],
+        )
+
+        assert literal == [
+            self._row_finding(
+                "INVALID_SETTING_TYPE",
+                "ready",
+                "Setting 'variables.ready' of block 'variable-setter' expects boolean, got string",
+                "Provide a boolean value",
+            )
+        ]
+        assert expression == []
+
+    def test_a_literal_row_on_a_variable_retyped_to_integer_keeps_the_number_rule_text(
+        self,
+    ) -> None:
+        errors = self._errors({"retries": "abc"}, {"retries": {"type": "integer", "value": 3}})
+
+        assert errors == [
+            self._row_finding(
+                "INVALID_VARIABLE_VALUE",
+                "retries",
+                "Value for variable 'retries' is not a valid integer",
+                "Provide an integer value",
+            )
+        ]
+        assert [e for e in errors if e["code"] == "INVALID_SETTING_TYPE"] == []
+
+
+class TestSetterTargetRename:
+    """Renaming a Setter target moves its row, its value flags, its entry types and its
+    secret mark with it (REQ-3.4.1.14, REQ-3.1.2.7)."""
+
+    def test_renaming_a_target_rekeys_value_flags_entry_types_and_secret_mark(self) -> None:
+        nodes = [
+            _setter_node(
+                {"bad-name": "1 + 1", "keep": "k"},
+                node_id="whole-expression",
+                expressionFields=["variables.bad-name"],
+                templateFields=["variables.keep"],
+            ),
+            _setter_node(
+                {"bad-name": "id-{{ 'x' }}"},
+                node_id="whole-template",
+                templateFields=["variables.bad-name"],
+            ),
+            _setter_node(
+                {"bad-name": ["{{ 'a' }}", "2 + 2"], "bad-name-copy": "1 + 2"},
+                node_id="entries",
+                expressionFields=["variables.bad-name.1", "variables.bad-name-copy"],
+                templateFields=["variables.bad-name.0"],
+                elementTypes={
+                    "variables.bad-name": ["string", "integer"],
+                    "variables.bad-name-copy": [],
+                },
+            ),
+        ]
+        nodes[0]["data"]["config"]["secretFields"] = ["variables.bad-name"]
+        test: dict[str, Any] = {"variables": {"bad-name": {"type": "string"}}}
+
+        test_service._fix_invalid_variable(
+            {"code": "INVALID_VARIABLE", "path": "variables.bad-name"}, test, nodes
+        )
+
+        (fixed,) = test["variables"]
+        assert fixed.startswith("fixed_")
+        whole_expression, whole_template, entries = (node["data"] for node in nodes)
+        assert whole_expression["config"] == {
+            "values": {"variables": {fixed: "1 + 1", "keep": "k"}},
+            "secretFields": [f"variables.{fixed}"],
+        }
+        assert whole_expression["expressionFields"] == [f"variables.{fixed}"]
+        assert whole_expression["templateFields"] == ["variables.keep"]
+        assert whole_template["config"]["values"]["variables"] == {fixed: "id-{{ 'x' }}"}
+        assert whole_template["templateFields"] == [f"variables.{fixed}"]
+        assert entries["config"]["values"]["variables"] == {
+            fixed: ["{{ 'a' }}", "2 + 2"],
+            "bad-name-copy": "1 + 2",
+        }
+        assert entries["expressionFields"] == [f"variables.{fixed}.1", "variables.bad-name-copy"]
+        assert entries["templateFields"] == [f"variables.{fixed}.0"]
+        assert entries["elementTypes"] == {
+            f"variables.{fixed}": ["string", "integer"],
+            "variables.bad-name-copy": [],
+        }
+        assert {key for data in (whole_expression, whole_template, entries) for key in data} == {
+            "elementType",
+            "nodeType",
+            "version",
+            "label",
+            "config",
+            "expressionFields",
+            "templateFields",
+            "elementTypes",
+        }
+
+
+class TestWaitEdgeCap:
+    """A Wait Until with no stored mode takes the mode its field list declares by default
+    for its connection cap (REQ-3.5.4.3)."""
+
+    def test_the_wait_edge_cap_reads_the_declared_default_mode(self) -> None:
+        from wavecore.controls.registry import _registry, register_all_core_controls
+        from wavecore.controls.timing import WaitUntilControl
+
+        class WatchByDefault(WaitUntilControl):
+            @property
+            def metadata(self) -> dict[str, Any]:
+                metadata = dict(super().metadata)
+                metadata["parameter_schema"] = [
+                    param.model_copy(update={"default": "watch"}) if param.name == "mode" else param
+                    for param in metadata["parameter_schema"]
+                ]
+                return metadata
+
+        def wait(values: dict[str, Any]) -> dict[str, Any]:
+            return _control_node("wait-until", values)["data"]
+
+        _registry.clear()
+        _registry.register(WatchByDefault)
+        register_all_core_controls(_registry)
+        try:
+            unset = test_service._wait_until_max(wait({"conditions": []}))
+            retry = test_service._wait_until_max(wait({"conditions": [], "mode": "retry"}))
+            watch = test_service._wait_until_max(wait({"conditions": [], "mode": "watch"}))
+        finally:
+            _registry.clear()
+            register_all_core_controls(_registry)
+
+        assert (unset, retry, watch) == (1, 2, 1)
+
+
+@pytest.mark.usefixtures("_core_controls")
+class TestForCountNull:
+    """A For count stored as null is a value: the loop runs zero times, so the save takes it;
+    a count left out is still missing (REQ-3.1.3.21, REQ-3.5.1.15)."""
+
+    def test_a_for_count_of_null_saves_clean(self) -> None:
+        null_count = _workflow_document(
+            "Null Count", _control_node("for", {"mode": "count", "count": None, "step": 1})
+        )
+        left_out = _workflow_document(
+            "Count Left Out", _control_node("for", {"mode": "count", "step": 1})
+        )
+
+        assert test_service.validate_test_data_for_create(null_count) == []
+        created = test_service.create_test(null_count)
+        assert created["workflow"]["nodes"][0]["data"]["config"]["values"]["count"] is None
+        assert test_service.validate_test_data_for_create(left_out) == [
+            _saved_field(
+                "REQUIRED_PARAM_MISSING",
+                "count",
+                "Required parameter 'count' is missing",
+                element_type="for",
+            )
+        ]

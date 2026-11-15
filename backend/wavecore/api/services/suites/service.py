@@ -3,6 +3,7 @@
 This module provides the service layer for suite management operations.
 """
 
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -14,6 +15,7 @@ from wavecore.api.services.shared import (
     bump_version_and_record,
     mask_secret_variables,
     read_secret_variables,
+    refuse_repeated_members,
     refuse_unknown_members,
     restore_masked_secrets,
 )
@@ -30,6 +32,7 @@ from wavecore.api.services.suites._storage import (
     _load_suite,
     _load_versions,
     _paginate_suites,
+    _refuse_taken_name,
     _save_suite,
     _save_versions,
     _test_exists,
@@ -38,6 +41,20 @@ from wavecore.api.services.suites._storage import (
 from wavecore.api.services.variable_service import refuse_value_problems
 
 __all__ = ["_list_all_suites"]
+
+# The Regression name rule, so a copy named "<name> (Copy)" or "<name> (2)" is a valid name.
+SUITE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9 ._()-]+$")
+
+
+def name_convention_problem(name: str) -> str | None:
+    """Why a Suite name breaks the naming convention, or None when it keeps it."""
+    if SUITE_NAME_PATTERN.match(name):
+        return None
+    return (
+        f"Suite name '{name}' violates naming convention: must contain only alphanumeric "
+        "characters, spaces, hyphens, underscores, periods, and parentheses"
+    )
+
 
 # ===========================================================================
 # CRUD
@@ -77,15 +94,14 @@ def list_suites(
 def create_suite(data: dict[str, Any]) -> dict[str, Any]:
     """Create a new suite."""
     name = data.get("name", "")
-    for suite in _list_all_suites():
-        if suite.get("name") == name:
-            raise ConflictException(f"Suite with name '{name}' already exists")
+    _refuse_taken_name(name)
 
     suite_id = str(uuid.uuid4())
     now = datetime.now(UTC).isoformat()
 
     tests = data.get("tests", [])
     refuse_unknown_members(tests, (), "Test", _test_exists)
+    refuse_repeated_members(tests, "Test")
     variables = data.get("variables", {})
     refuse_value_problems(variables)
     _check_test_membership_collisions(suite_id, variables, tests)
@@ -271,6 +287,7 @@ def update_suite(
     _validate_suite_update(suite, suite_id, data, etag)
     if "tests" in data:
         refuse_unknown_members(data["tests"], old_tests, "Test", _test_exists)
+        refuse_repeated_members(data["tests"], "Test")
     if "variables" in data:
         refuse_value_problems(data["variables"])
     _check_update_collisions(suite, suite_id, data, old_tests)

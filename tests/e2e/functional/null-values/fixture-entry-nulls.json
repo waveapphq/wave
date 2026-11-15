@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/echo",
@@ -51,7 +50,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["parameters.expr_null"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "database_type": "postgresql",
@@ -88,7 +86,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["token", "ca_cert"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "api_url": "https://127.0.0.1:9460",
@@ -119,7 +116,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -147,7 +143,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["session"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "session": "k8s_session",
@@ -179,7 +174,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'apply-null-caught'",
@@ -205,7 +199,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'entry-nulls-done'",

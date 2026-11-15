@@ -59,7 +59,7 @@ const mocks = (globalThis as any).__test_mocks
 vi.mock('@uiw/react-codemirror', () => {
   const { captured: c, mocks: m } = ensureTestGlobals()
   return {
-    default: React.forwardRef(({ value, onChange, extensions, className, basicSetup, theme }: any, ref: any) => {
+    default: ({ value, onChange, extensions, className, basicSetup, theme, ref }: any) => {
       m.codeMirrorProps({ value, onChange, extensions, className, basicSetup, theme })
       c.extensions = extensions || []
       if (ref) {
@@ -80,7 +80,7 @@ vi.mock('@uiw/react-codemirror', () => {
           className={className}
         />
       )
-    }),
+    },
   }
 })
 
@@ -93,6 +93,7 @@ vi.mock('@codemirror/view', () => {
         return 'editor-theme-mock'
       },
       updateListener: { of: (fn: any) => ({ type: 'updateListener', fn }) },
+      contentAttributes: { of: (attrs: any) => ({ type: 'contentAttributes', attrs }) },
     },
     keymap: {
       of: (bindings: any) => {
@@ -197,6 +198,7 @@ vi.mock('@/lib/utils', () => ({
 // ============================================================================
 
 import { ExpressionInput } from '@/features/workbench/common/element-config/expressions/expression-input'
+import { FieldErrorContext, FieldNoteContext } from '@/components/shared/fields/field-error-context'
 
 // Save the transaction filter captured at module import time (before any
 // beforeEach can reset it). singleLineExtension is module-level code.
@@ -659,6 +661,76 @@ describe('ExpressionInput', () => {
       expect(result).toBe(true)
       expect(mocks.closeCompletion).not.toHaveBeenCalled()
       expect(mockView.contentDOM.blur).toHaveBeenCalled()
+    })
+  })
+
+  // --------------------------------------------------------------------------
+  // The editor content's accessible name, invalid state and description (REQ-3.1.1.5)
+  // --------------------------------------------------------------------------
+
+  describe('accessible name, invalid state and description', () => {
+    /** The attributes the editor content takes, merged across every contentAttributes extension. */
+    function contentAttributes(): Record<string, unknown> {
+      const flat = (captured.extensions as unknown[]).flat(Infinity) as any[]
+      return Object.assign(
+        {},
+        ...flat
+          .filter((ext) => ext && typeof ext === 'object' && ext.type === 'contentAttributes')
+          .map((ext) => (typeof ext.attrs === 'function' ? ext.attrs({}) : ext.attrs)),
+      )
+    }
+
+    function inContexts(errorId: string | undefined, noteId: string | undefined, isInvalid = false) {
+      return (
+        <FieldErrorContext value={errorId}>
+          <FieldNoteContext value={noteId}>
+            <ExpressionInput
+              name="assert-value-0"
+              label="Value"
+              value="limit"
+              onChange={vi.fn()}
+              availableVariables={defaultVariables}
+              isInvalid={isInvalid}
+            />
+          </FieldNoteContext>
+        </FieldErrorContext>
+      )
+    }
+
+    it('names the editor content after the field label', () => {
+      renderInput({ label: 'Value' })
+      expect(contentAttributes()['aria-label']).toBe('Value')
+    })
+
+    it('names the editor content Expression when the field gives no label', () => {
+      renderInput()
+      expect(contentAttributes()['aria-label']).toBe('Expression')
+    })
+
+    it('marks the editor content invalid only while the field has an error, and leaves the attribute off without one', () => {
+      const { rerender } = renderInput({ isInvalid: true })
+      expect(contentAttributes()['aria-invalid']).toBe('true')
+      rerender(
+        <ExpressionInput name="test-param" value="" onChange={vi.fn()} availableVariables={defaultVariables} />,
+      )
+      expect(contentAttributes()['aria-label']).toBe('Expression')
+      expect(contentAttributes()).not.toHaveProperty('aria-invalid')
+    })
+
+    it('points aria-describedby at the error line, then the note', () => {
+      const { rerender } = render(inContexts('value-error', 'value-note', true))
+      expect(contentAttributes()['aria-describedby']).toBe('value-error value-note')
+      expect(contentAttributes()['aria-invalid']).toBe('true')
+      rerender(inContexts('value-error', undefined, true))
+      expect(contentAttributes()['aria-describedby']).toBe('value-error')
+    })
+
+    it('points aria-describedby at the note alone while the field has no error, and at nothing with neither', () => {
+      const { rerender } = render(inContexts(undefined, undefined))
+      expect(contentAttributes()['aria-describedby']).toBeUndefined()
+      rerender(inContexts(undefined, 'value-note'))
+      expect(contentAttributes()['aria-describedby']).toBe('value-note')
+      expect(contentAttributes()).not.toHaveProperty('aria-invalid')
     })
   })
 })

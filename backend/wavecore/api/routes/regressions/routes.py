@@ -19,13 +19,15 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Query, Request, Response
 from fastapi import status as http_status
-from fastapi.responses import JSONResponse
 
 from wavecore import __version__
-from wavecore.api.exceptions import WaveException
+from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.routes.shared import (
+    entity_etag,
     read_json_object,
+    refuse_stale_etag,
     validate_computed_expression,
+    validate_uuid,
     validate_variable_types,
 )
 from wavecore.api.services.regressions import service as regression_service
@@ -37,40 +39,27 @@ router = APIRouter(tags=["Regressions"])
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9 ._()-]+$")
 
 
-def validate_uuid(value: str, field_name: str = "regression_id") -> str:
-    """Validate UUID format."""
-    try:
-        uuid.UUID(value)
-        return value
-    except ValueError as e:
-        id_type = field_name.replace("_id", " ID").replace("_", " ")
-        raise ValueError(f"Invalid {id_type} format: '{value}' is not a valid UUID") from e
-
-
-def validate_regression_name(name: str) -> None:
+def validate_regression_name(name: Any) -> None:
     """Validate regression name format and length."""
+    if not isinstance(name, str):
+        raise ValidationException("Field 'name' must be a string")
     if not name or len(name) > 255:
-        raise ValueError("Regression name must be between 1 and 255 characters")
+        raise ValidationException("Regression name must be between 1 and 255 characters")
 
     if not NAME_PATTERN.match(name):
-        raise ValueError(
+        raise ValidationException(
             f"Regression name '{name}' violates naming convention: must contain only "
             "alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses"
         )
 
 
-def _generate_etag(regression: dict[str, Any]) -> str:
-    """Generate ETag for a regression."""
-    import hashlib
-
-    content = f"{regression.get('id')}{regression.get('version')}{regression.get('updated_at')}"
-    return f'"{hashlib.sha256(content.encode()).hexdigest()}"'
+def regression_not_found(regression_id: str) -> NotFoundException:
+    """The 404 for a regression ID that matches no regression."""
+    return NotFoundException(f"Regression with ID '{regression_id}' not found")
 
 
 # Reusable string constants
 _CACHE_CONTROL_60 = "max-age=60"
-_ERR_ALREADY_EXISTS = "already exists"
-_ERR_PRECONDITION = "Precondition failed"
 
 # Valid status values for filtering
 VALID_STATUS_VALUES = ["passed", "failed", "never_run"]
@@ -86,7 +75,7 @@ def _parse_status_filter(status_param: str | None) -> list[str] | None:
     status_list = [s.strip() for s in status_param.split(",") if s.strip()]
     for s in status_list:
         if s not in VALID_STATUS_VALUES:
-            raise ValueError(
+            raise ValidationException(
                 f"Invalid status filter: '{s}' must be one of: {', '.join(VALID_STATUS_VALUES)}"
             )
     return status_list
@@ -98,16 +87,18 @@ def _parse_sort_param(sort_param: str | None) -> tuple[str | None, str | None]:
         return None, None
     sort_parts = sort_param.split(":")
     if len(sort_parts) > 2:
-        raise ValueError(f"Invalid sort format: '{sort_param}'. Use 'field:direction'")
+        raise ValidationException(f"Invalid sort format: '{sort_param}'. Use 'field:direction'")
     sort_by = sort_parts[0]
     if sort_by not in VALID_SORT_FIELDS:
-        raise ValueError(
+        raise ValidationException(
             f"Invalid sort field: '{sort_by}' must be one of: {', '.join(VALID_SORT_FIELDS)}"
         )
     if len(sort_parts) > 1:
         sort_direction = sort_parts[1]
         if sort_direction not in ("asc", "desc"):
-            raise ValueError(f"Invalid sort direction: '{sort_direction}' must be 'asc' or 'desc'")
+            raise ValidationException(
+                f"Invalid sort direction: '{sort_direction}' must be 'asc' or 'desc'"
+            )
     else:
         sort_direction = "asc"
     return sort_by, sort_direction
@@ -137,140 +128,89 @@ async def list_regressions(
         str | None, Query(description="Filter by tags (comma-separated, all must match)")
     ] = None,
     sort: Annotated[str | None, Query(description="Sort field:direction (e.g., name:asc)")] = None,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """List all regressions with filtering and pagination."""
-    try:
-        status_list = _parse_status_filter(status)
-        tags_list: list[str] | None = (
-            [t.strip() for t in tags.split(",") if t.strip()] if tags else None
-        )
-        sort_by, sort_direction = _parse_sort_param(sort)
+    status_list = _parse_status_filter(status)
+    tags_list: list[str] | None = (
+        [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+    )
+    sort_by, sort_direction = _parse_sort_param(sort)
 
-        response.headers["Cache-Control"] = _CACHE_CONTROL_60
+    response.headers["Cache-Control"] = _CACHE_CONTROL_60
 
-        result = regression_service.list_regressions(
-            page=page,
-            per_page=per_page,
-            search=search,
-            status=status_list,
-            tags=tags_list,
-            sort_by=sort_by,
-            sort_direction=sort_direction,
-        )
+    result = regression_service.list_regressions(
+        page=page,
+        per_page=per_page,
+        search=search,
+        status=status_list,
+        tags=tags_list,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+    )
 
-        from datetime import UTC, datetime
+    from datetime import UTC, datetime
 
-        return {
-            "success": True,
-            "data": result["regressions"],
-            "meta": {
-                "request_id": str(uuid.uuid4()),
-                "path": str(request.url.path),
-                "timestamp": datetime.now(UTC).isoformat(),
-                "version": __version__,
-            },
-            "pagination": {
-                "total": result["total"],
-                "page": result["page"],
-                "per_page": result["per_page"],
-                "total_pages": result["total_pages"],
-            },
-        }
-    except ValueError as e:
-        return JSONResponse(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            content={"success": False, "error": {"message": str(e), "code": "VALIDATION_ERROR"}},
-        )
+    return {
+        "success": True,
+        "data": result["regressions"],
+        "meta": {
+            "request_id": str(uuid.uuid4()),
+            "path": str(request.url.path),
+            "timestamp": datetime.now(UTC).isoformat(),
+            "version": __version__,
+        },
+        "pagination": {
+            "total": result["total"],
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total_pages": result["total_pages"],
+        },
+    }
 
 
 @router.post("/regressions", status_code=http_status.HTTP_201_CREATED, response_model=None)
-async def create_regression(request: Request, response: Response) -> dict[str, Any] | JSONResponse:
+async def create_regression(request: Request, response: Response) -> dict[str, Any]:
     """Create a new regression."""
-    try:
-        body = await read_json_object(request)
-        if "name" not in body:
-            raise ValueError("Field 'name' is required")
-        validate_regression_name(body["name"])
+    body = await read_json_object(request)
+    if "name" not in body:
+        raise ValidationException("Field 'name' is required")
+    validate_regression_name(body["name"])
 
-        if "variables" in body:
-            validate_variable_types(body["variables"])
-            for var_name, var_info in body["variables"].items():
-                if isinstance(var_info, dict) and var_info.get("computed"):
-                    expression = var_info.get("expression", "")
-                    validate_computed_expression(var_name, expression)
+    if "variables" in body:
+        validate_variable_types(body["variables"])
+        for var_name, var_info in body["variables"].items():
+            if isinstance(var_info, dict) and var_info.get("computed"):
+                expression = var_info.get("expression", "")
+                validate_computed_expression(var_name, expression)
 
-        regression = regression_service.create_regression(body)
-        response.headers["X-Cache-Invalidated"] = "regressions_list"
-        return {"success": True, "data": regression}
-
-    except ValueError as e:
-        error_message = str(e)
-        if _ERR_ALREADY_EXISTS in error_message:
-            status_code = http_status.HTTP_409_CONFLICT
-        else:
-            status_code = http_status.HTTP_400_BAD_REQUEST
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
-    except WaveException:
-        raise
-    except Exception:
-        correlation_id = str(uuid.uuid4())
-        return JSONResponse(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "success": False,
-                "error": {
-                    "message": "Internal server error",
-                    "code": "INTERNAL_ERROR",
-                    "correlation_id": correlation_id,
-                },
-            },
-        )
+    regression = regression_service.create_regression(body)
+    response.headers["X-Cache-Invalidated"] = "regressions_list"
+    return {"success": True, "data": regression}
 
 
 @router.get("/regressions/{regression_id}", response_model=None)
 async def get_regression(
     regression_id: str, request: Request, response: Response
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Get regression by ID."""
-    try:
-        validate_uuid(regression_id, "regression_id")
-        regression = regression_service.get_regression(regression_id)
-        if regression is None:
-            return JSONResponse(
-                status_code=http_status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Regression with ID '{regression_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-        response.headers["ETag"] = _generate_etag(regression)
-        response.headers["Cache-Control"] = _CACHE_CONTROL_60
+    validate_uuid(regression_id, "regression_id")
+    regression = regression_service.get_regression(regression_id)
+    if regression is None:
+        raise regression_not_found(regression_id)
+    response.headers["ETag"] = entity_etag(regression)
+    response.headers["Cache-Control"] = _CACHE_CONTROL_60
 
-        from datetime import UTC, datetime
+    from datetime import UTC, datetime
 
-        return {
-            "success": True,
-            "data": regression,
-            "meta": {
-                "request_id": str(uuid.uuid4()),
-                "path": str(request.url.path),
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        }
-    except ValueError as e:
-        return JSONResponse(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            content={"success": False, "error": {"message": str(e), "code": "INVALID_PARAMETER"}},
-        )
+    return {
+        "success": True,
+        "data": regression,
+        "meta": {
+            "request_id": str(uuid.uuid4()),
+            "path": str(request.url.path),
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
+    }
 
 
 @router.put("/regressions/{regression_id}", response_model=None)
@@ -279,49 +219,19 @@ async def update_regression(
     request: Request,
     response: Response,
     if_match: Annotated[str | None, Header()] = None,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Update regression."""
-    try:
-        validate_uuid(regression_id, "regression_id")
-        if if_match:
-            existing = regression_service.get_regression(regression_id)
-            if existing:
-                current_etag = _generate_etag(existing)
-                if if_match != current_etag:
-                    raise ValueError("Precondition failed: resource has been modified")
-        body = await read_json_object(request)
-        if "name" in body:
-            validate_regression_name(body["name"])
-        result = regression_service.update_regression(regression_id, body)
-        if result is None:
-            return JSONResponse(
-                status_code=http_status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Regression with ID '{regression_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-        response.headers["ETag"] = _generate_etag(result)
-        response.headers["X-Cache-Invalidated"] = f"regression_{regression_id},regressions_list"
-        return {"success": True, "data": result}
-    except ValueError as e:
-        error_message = str(e)
-        if _ERR_PRECONDITION in error_message:
-            status_code = http_status.HTTP_412_PRECONDITION_FAILED
-        elif _ERR_ALREADY_EXISTS in error_message:
-            status_code = http_status.HTTP_409_CONFLICT
-        else:
-            status_code = http_status.HTTP_400_BAD_REQUEST
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+    validate_uuid(regression_id, "regression_id")
+    refuse_stale_etag(if_match, regression_service.get_regression, regression_id)
+    body = await read_json_object(request)
+    if "name" in body:
+        validate_regression_name(body["name"])
+    result = regression_service.update_regression(regression_id, body)
+    if result is None:
+        raise regression_not_found(regression_id)
+    response.headers["ETag"] = entity_etag(result)
+    response.headers["X-Cache-Invalidated"] = f"regression_{regression_id},regressions_list"
+    return {"success": True, "data": result}
 
 
 @router.delete("/regressions/{regression_id}", status_code=http_status.HTTP_204_NO_CONTENT)
@@ -331,37 +241,12 @@ async def delete_regression(
     if_match: Annotated[str | None, Header()] = None,
 ) -> Response:
     """Delete regression."""
-    try:
-        if if_match:
-            regression = regression_service.get_regression(regression_id)
-            if regression:
-                current_etag = _generate_etag(regression)
-                if if_match != current_etag:
-                    raise ValueError("Precondition failed: resource has been modified")
-        deleted = regression_service.delete_regression(regression_id)
-        if not deleted:
-            return JSONResponse(
-                status_code=http_status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Regression with ID '{regression_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-        response.headers["X-Cache-Invalidated"] = "regressions_list"
-        return Response(
-            status_code=http_status.HTTP_204_NO_CONTENT,
-            headers={"X-Cache-Invalidated": "regressions_list"},
-        )
-    except ValueError as e:
-        error_message = str(e)
-        if _ERR_PRECONDITION in error_message:
-            status_code = http_status.HTTP_412_PRECONDITION_FAILED
-        else:
-            status_code = http_status.HTTP_400_BAD_REQUEST
-        return JSONResponse(
-            status_code=status_code,
-            content={"success": False, "error": {"message": error_message, "code": "CONFLICT"}},
-        )
+    validate_uuid(regression_id, "regression_id")
+    refuse_stale_etag(if_match, regression_service.get_regression, regression_id)
+    if not regression_service.delete_regression(regression_id):
+        raise regression_not_found(regression_id)
+    response.headers["X-Cache-Invalidated"] = "regressions_list"
+    return Response(
+        status_code=http_status.HTTP_204_NO_CONTENT,
+        headers={"X-Cache-Invalidated": "regressions_list"},
+    )

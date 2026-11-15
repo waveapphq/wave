@@ -22,7 +22,7 @@ run at the same time. The lanes dead-end; the flow leaves the section through th
 ### Branches
 - Two at minimum - one branch is a sequence, which the canvas already expresses.
 - Each carries an optional name used by lane tooltips, the run log and reports.
-- Each carries an optional time limit in milliseconds.
+- Each carries an optional time limit in milliseconds, at least 1, typed as a number or written as an expression.
 - A lane with nothing wired to it is legal and finishes immediately.
 
 ### Join Mode

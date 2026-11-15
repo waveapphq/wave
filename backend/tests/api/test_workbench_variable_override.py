@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 
 from wavecore.api.exceptions import (
     ConflictException,
+    NotFoundException,
     UnprocessableEntityException,
     ValidationException,
 )
@@ -32,9 +33,6 @@ from wavecore.api.services.workbench.functions import staged_values
 from wavecore.api.services.workbench.lazy_variables import LazyVariables
 
 _ALLOWED_STATUSES = ["paused", "stopped", "passed", "failed", "skipped"]
-
-# Both map to a 400 VALIDATION_ERROR at the route.
-_REFUSED = (ValueError, ValidationException)
 
 
 @pytest.fixture(autouse=True)
@@ -147,7 +145,9 @@ class TestSetVariableOverrideServiceLiteral:
             session_id, variables=LazyVariables({"count": 1}), variable_types={"count": "integer"}
         )
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'fresh' is not declared by this test$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'fresh' is not declared by this test$"
+        ):
             workbench_service.set_variable_override(
                 session_id, "fresh", value="hello", value_given=True, declared_type="string"
             )
@@ -252,9 +252,11 @@ class TestSetVariableOverrideServiceExpression:
 class TestSetVariableOverrideServiceGates:
     """Run-state gate, request-shape validation, and coercion failure."""
 
-    def test_unknown_session_raises_lookup_error_exact_message(self) -> None:
+    def test_unknown_session_raises_not_found_exact_message(self) -> None:
         unknown_id = str(uuid.uuid4())
-        with pytest.raises(LookupError, match=rf"^Workbench session '{unknown_id}' not found$"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Workbench session '{unknown_id}' not found$"
+        ):
             workbench_service.set_variable_override(
                 unknown_id, "count", value="1", declared_type="integer"
             )
@@ -300,12 +302,12 @@ class TestSetVariableOverrideServiceGates:
                 session_id, "count", value="not-a-number", value_given=True, declared_type="integer"
             )
 
-    def test_neither_value_nor_expression_raises_value_error(self) -> None:
+    def test_neither_value_nor_expression_raises_validation_exception(self) -> None:
         session_id = str(uuid.uuid4())
         _seed_session(session_id, variables=LazyVariables({}))
 
         with pytest.raises(
-            ValueError,
+            ValidationException,
             match=(
                 r"^Override request must provide exactly one of "
                 r"'value', 'expression', or 'template'$"
@@ -313,12 +315,12 @@ class TestSetVariableOverrideServiceGates:
         ):
             workbench_service.set_variable_override(session_id, "count", declared_type="integer")
 
-    def test_both_value_and_expression_raises_value_error(self) -> None:
+    def test_both_value_and_expression_raises_validation_exception(self) -> None:
         session_id = str(uuid.uuid4())
         _seed_session(session_id, variables=LazyVariables({}))
 
         with pytest.raises(
-            ValueError,
+            ValidationException,
             match=(
                 r"^Override request must provide exactly one of "
                 r"'value', 'expression', or 'template'$"
@@ -748,7 +750,7 @@ class TestSetVariableOverrideNull:
         session_id = str(uuid.uuid4())
         session = _seed_declared_session(session_id)
 
-        with pytest.raises(ValueError, match=_EXACTLY_ONE_RE):
+        with pytest.raises(ValidationException, match=_EXACTLY_ONE_RE):
             workbench_service.set_variable_override(
                 session_id,
                 "n",
@@ -764,7 +766,7 @@ class TestSetVariableOverrideNull:
         session_id = str(uuid.uuid4())
         session = _seed_declared_session(session_id)
 
-        with pytest.raises(ValueError, match=_EXACTLY_ONE_RE):
+        with pytest.raises(ValidationException, match=_EXACTLY_ONE_RE):
             workbench_service.set_variable_override(
                 session_id, "n", value=None, value_given=False, declared_type="integer"
             )
@@ -791,7 +793,9 @@ class TestSetVariableOverrideDeclaredTestScope:
         session_id = str(uuid.uuid4())
         session = _seed_declared_session(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'fresh' is not declared by this test$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'fresh' is not declared by this test$"
+        ):
             workbench_service.set_variable_override(
                 session_id, "fresh", expression="1 + 1", declared_type="integer"
             )
@@ -802,7 +806,9 @@ class TestSetVariableOverrideDeclaredTestScope:
         session_id = str(uuid.uuid4())
         session = _seed_declared_session(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'fresh' is not declared by this test$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'fresh' is not declared by this test$"
+        ):
             workbench_service.set_variable_override(
                 session_id, "fresh", template="Hi {{n}}", declared_type="string"
             )
@@ -813,7 +819,9 @@ class TestSetVariableOverrideDeclaredTestScope:
         session_id = str(uuid.uuid4())
         session = _seed_declared_session(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'fresh' is not declared by this test$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'fresh' is not declared by this test$"
+        ):
             workbench_service.set_variable_override(
                 session_id, "fresh", value=None, value_given=True, declared_type="string"
             )
@@ -826,7 +834,8 @@ class TestSetVariableOverrideDeclaredTestScope:
         session = _seed_declared_session(session_id)
 
         with pytest.raises(
-            _REFUSED, match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$"
+            ValidationException,
+            match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$",
         ):
             workbench_service.set_variable_override(
                 session_id, "n", value="5", value_given=True, declared_type="string"
@@ -840,7 +849,8 @@ class TestSetVariableOverrideDeclaredTestScope:
         session = _seed_declared_session(session_id)
 
         with pytest.raises(
-            _REFUSED, match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$"
+            ValidationException,
+            match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$",
         ):
             workbench_service.set_variable_override(
                 session_id, "n", expression="'five'", declared_type="string"
@@ -854,7 +864,8 @@ class TestSetVariableOverrideDeclaredTestScope:
         session = _seed_declared_session(session_id)
 
         with pytest.raises(
-            _REFUSED, match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$"
+            ValidationException,
+            match=r"^Type mismatch for variable 'n': expected 'integer', got 'string'$",
         ):
             workbench_service.set_variable_override(
                 session_id, "n", value=None, value_given=True, declared_type="string"
@@ -881,7 +892,9 @@ class TestSetVariableOverrideRefusalOrder:
     def test_an_unknown_session_is_refused_first(self) -> None:
         unknown_id = str(uuid.uuid4())
 
-        with pytest.raises(LookupError, match=rf"^Workbench session '{unknown_id}' not found$"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Workbench session '{unknown_id}' not found$"
+        ):
             workbench_service.set_variable_override(
                 unknown_id, "ghost", declared_type="string", function_path=("fn-9",)
             )
@@ -901,7 +914,7 @@ class TestSetVariableOverrideRefusalOrder:
         session_id = str(uuid.uuid4())
         _seed_scoped_session(session_id)
 
-        with pytest.raises(ValueError, match=_EXACTLY_ONE_RE):
+        with pytest.raises(ValidationException, match=_EXACTLY_ONE_RE):
             workbench_service.set_variable_override(
                 session_id,
                 "ghost",
@@ -917,7 +930,7 @@ class TestSetVariableOverrideRefusalOrder:
         _seed_scoped_session(session_id)
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.set_variable_override(
                 session_id,
@@ -932,7 +945,9 @@ class TestSetVariableOverrideRefusalOrder:
         session_id = str(uuid.uuid4())
         _seed_declared_session(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'fresh' is not declared by this test$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'fresh' is not declared by this test$"
+        ):
             workbench_service.set_variable_override(
                 session_id, "fresh", value="not-a-number", value_given=True, declared_type="integer"
             )
@@ -942,7 +957,8 @@ class TestSetVariableOverrideRefusalOrder:
         _seed_declared_session(session_id)
 
         with pytest.raises(
-            _REFUSED, match=r"^Type mismatch for variable 'n': expected 'integer', got 'boolean'$"
+            ValidationException,
+            match=r"^Type mismatch for variable 'n': expected 'integer', got 'boolean'$",
         ):
             workbench_service.set_variable_override(
                 session_id, "n", value="xyz", value_given=True, declared_type="boolean"
@@ -1143,7 +1159,9 @@ class TestSetVariableOverrideFunctionScope:
         session_id = str(uuid.uuid4())
         session = _seed_function_without_x(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'x' is not declared by this Function$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'x' is not declared by this Function$"
+        ):
             workbench_service.set_variable_override(
                 session_id,
                 "x",
@@ -1160,7 +1178,9 @@ class TestSetVariableOverrideFunctionScope:
         session_id = str(uuid.uuid4())
         session = _seed_function_without_x(session_id)
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'x' is not declared by this Function$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'x' is not declared by this Function$"
+        ):
             workbench_service.set_variable_override(
                 session_id,
                 "x",
@@ -1176,7 +1196,8 @@ class TestSetVariableOverrideFunctionScope:
         session = _seed_scoped_session(session_id)
 
         with pytest.raises(
-            _REFUSED, match=r"^Type mismatch for variable 'x': expected 'integer', got 'string'$"
+            ValidationException,
+            match=r"^Type mismatch for variable 'x': expected 'integer', got 'string'$",
         ):
             workbench_service.set_variable_override(
                 session_id,
@@ -1207,12 +1228,12 @@ class TestSetVariableOverrideFunctionScope:
 
         assert _scope(session, "fn-1")["x"] == 10
 
-    def test_unknown_path_raises_lookup_error_exact_message(self) -> None:
+    def test_unknown_path_raises_not_found_exact_message(self) -> None:
         session_id = str(uuid.uuid4())
         session = _seed_scoped_session(session_id)
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.set_variable_override(
                 session_id,
@@ -1232,7 +1253,7 @@ class TestSetVariableOverrideFunctionScope:
         del session["function_scope_types"][("fn-1", "fn-2")]
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-1/fn-2', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-1/fn-2', session_id))}$"
         ):
             workbench_service.set_variable_override(
                 session_id,
@@ -1309,7 +1330,9 @@ class TestSetVariableOverrideStandaloneSession:
     async def test_an_undeclared_name_is_refused_as_not_declared_by_this_function(self) -> None:
         session = await _finished_standalone_session()
 
-        with pytest.raises(_REFUSED, match=r"^Variable 'ghost' is not declared by this Function$"):
+        with pytest.raises(
+            ValidationException, match=r"^Variable 'ghost' is not declared by this Function$"
+        ):
             workbench_service.set_variable_override(
                 session["session_id"], "ghost", value="1", value_given=True, declared_type="string"
             )
@@ -1322,7 +1345,7 @@ class TestSetVariableOverrideStandaloneSession:
         session_id = session["session_id"]
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.set_variable_override(
                 session_id,
@@ -1387,7 +1410,7 @@ class TestScopeAt:
         session = _seed_scoped_session(session_id)
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-1/fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-1/fn-9', session_id))}$"
         ):
             workbench_service._scope_at(session, ("fn-1", "fn-9"))
 
@@ -2056,7 +2079,7 @@ class TestSetVariableOverrideUnstartedFunction:
         _seed_unstarted_session(session_id)
 
         with pytest.raises(
-            LookupError, match=f"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=f"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.set_variable_override(
                 session_id,

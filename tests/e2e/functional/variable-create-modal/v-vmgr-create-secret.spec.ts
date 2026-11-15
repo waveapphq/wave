@@ -33,7 +33,7 @@ import {
 const NAME = 'api_key'
 const VALUE = 'sk-secret-123'
 
-const watcher = (page: Page) => page.locator(`section[aria-label="Inspect variable ${NAME}"]`)
+const watcher = (page: Page) => page.getByRole('dialog', { name: NAME, exact: true, includeHidden: true })
 const expandBtn = (page: Page) =>
   variableRow(page, NAME).locator('[data-testid^="expand-button-"]')
 const maskedField = (win: Locator) =>

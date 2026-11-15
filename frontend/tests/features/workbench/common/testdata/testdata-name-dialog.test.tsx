@@ -64,6 +64,15 @@ describe('TestDataNameDialog - shell', () => {
     expect(screen.getByTestId('testdata-name-dialog')).toBeInTheDocument()
     expect(screen.getAllByRole('textbox')).toHaveLength(1)
   })
+
+  it.each<[string, Partial<DialogProps>]>([
+    ['folder', {}],
+    ['rename', { mode: 'rename', initialName: 'users.csv' }],
+  ])('puts the cursor in Name when it opens in %s mode', (_mode, props) => {
+    renderDialog(props)
+
+    expect(nameInput()).toHaveFocus()
+  })
 })
 
 describe('TestDataNameDialog - folder mode', () => {

@@ -181,12 +181,22 @@ def temp_storage_path(fresh_folder: Callable[[str], Path]) -> Generator[Path, No
     storage_paths.set_base_path(str(base_path))
     # Clear test cache so it reloads from the new temp path
     _clear_in_memory_cache()
+    _forget_system_variables()
 
     yield base_path
 
     # Reset after test
     storage_paths.reset_path_cache()
     _clear_in_memory_cache()
+    _forget_system_variables()
+
+
+def _forget_system_variables() -> None:
+    """System variables live in the data folder, so a fresh folder starts with none in memory."""
+    from wavecore.api.services import variable_service
+
+    variable_service._variable_storage.pop("system", None)
+    variable_service._system_cache_loaded = False
 
 
 @pytest.fixture(autouse=True)

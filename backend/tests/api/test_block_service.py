@@ -5,13 +5,19 @@ for block management operations including CRUD, versioning, dependencies,
 validation, and import/export.
 """
 
+import re
 import uuid
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.blocks import _storage as _block_storage
 from wavecore.api.services.blocks import service as block_service
 from wavecore.api.services.blocks import version_service as _block_version_svc
@@ -665,7 +671,14 @@ class TestVersionOperations:
                 }
             )
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        stored = _block_storage._load_block(created["id"])
+        assert stored is not None
+        current = _block_storage._generate_etag(stored)
+        message = (
+            "Precondition failed: resource has been modified. "
+            f"Expected ETag 'wrong-etag', current ETag '{current}'"
+        )
+        with pytest.raises(PreconditionRequiredException, match=f"^{re.escape(message)}$"):
             _block_version_svc.update_block_version(created["id"], "1.0.0", {}, etag="wrong-etag")
 
     def test_update_block_version_returns_none_for_missing_block(self) -> None:
@@ -1209,8 +1222,10 @@ class TestHistoryOperations:
                 }
             )
 
-        with pytest.raises(ValidationException, match="not found"):
+        with pytest.raises(NotFoundException) as exc_info:
             _block_version_svc.restore_block_version(created["id"], "99.0.0")
+
+        assert exc_info.value.message == f"Version '99.0.0' not found for block '{created['id']}'"
 
     @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)
     def test_restore_block_version_refuses_a_stored_version_that_is_not_semantic(

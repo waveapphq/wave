@@ -12,14 +12,11 @@ import { pythonInputVariableDoc } from '@/features/workbench/lib/python-input-va
 import { resolveOutputType } from '@/features/workbench/lib/node-parameters/output-type'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import type { ProfileBinding } from './dialogs/profile-binding-modal'
-import type { AssertionItem } from '../config/assertion-builder'
-import type { ConditionBranch } from '../config/condition-branch-editor'
-import type { CaseBranch } from '../config/case-branch-editor'
-import type { ParallelBranch } from '../config/parallel-branch-editor'
-import { compareToValuesValid } from '../config/assertion-builder/tree-helpers'
-import type { TableFilterBlock } from '../config/table-transform/types'
 import type { SecretMaskingSetting } from '@/features/workbench/lib/node-parameters/secret-reveal'
 import type { InputParam } from '@/features/workbench/lib/node-parameters/types'
+import { blankEntryMessage } from '@/features/workbench/lib/node-parameters/field-modes'
+import { controlFieldMessages, controlProblems } from '@/features/workbench/lib/validation/control-checks'
+import { isValueNonEmpty } from '@/features/workbench/lib/validation/compute-node-issues'
 import type { ElementData, SaveData, OutputTableParameter } from './types'
 import {
   assembleSaveData,
@@ -29,47 +26,65 @@ import {
   type SaveContext,
 } from './save-logic'
 import { replayListWrite, replayRecordWrite } from '@/lib/child-editors'
-import { followRecord } from '@/lib/draft-follow'
+import { followRecord, followValue, sameStored } from '@/lib/draft-follow'
 import { useStoredFollow } from '@/hooks/use-stored-follow'
-import { isParameterVisible, type Parameter } from './parameters/parameter-table-types'
+import { isParameterRequired, isParameterVisible, type Parameter } from './parameters/parameter-table-types'
 import type { AvailableVariable } from './expressions/expression-field'
 import { useEnrichedVariables } from './use-enriched-variables'
 import { useOutputList } from './use-output-list'
 import type { ElementTypes } from '@/lib/variable-validation'
 
 const NO_ELEMENT_TYPES: Record<string, ElementTypes> = {}
+const NO_FIELDS: string[] = []
 
-/** Parameters managed by custom editors (excluded from generic required-field checks). */
-function getManagedParamNames(
-  isAssert: boolean,
-  isIfElse: boolean,
-  isWhile: boolean,
-  isSwitch: boolean,
-  isWaitUntil: boolean,
-  isParallel: boolean,
-): Set<string> {
-  const names = new Set<string>()
-  if (isAssert) { names.add('assertions'); names.add('mode') }
-  if (isIfElse || isSwitch || isParallel) names.add('branches')
-  if (isWhile) names.add('conditions')
-  if (isWaitUntil) { names.add('conditions'); names.add('mode') }
-  if (isParallel) names.add('join')
-  return names
+/** The fields each Block draws outside the parameter table, in its own section or editor. */
+const DRAWN_OUTSIDE_TABLE: Readonly<Partial<Record<string, readonly string[]>>> = {
+  assert: ['assertions', 'mode', 'fail_current_scope'],
+  'if-else': ['branches'],
+  'switch-case': ['branches'],
+  parallel: ['branches', 'join'],
+  while: ['conditions'],
+  'wait-until': ['conditions', 'mode', 'fail_current_scope'],
+  'for-each': ['collection_type'],
+  'variable-setter': ['variables'],
 }
 
-/** True when a visible required parameter outside the managed set has neither a value nor a default. */
+const TRANSFORM_FIELDS = ['sorts', 'filters']
+const QUERY_PARSER_FIELDS = ['queries', 'query_output_types', 'output_mode']
+
+/** The windows that open wide, so a condition row, a Setter row or a lane row fits (REQ-3.1.1.5, FIELD-16). */
+const WIDE_WINDOW_TYPES = new Set(['if-else', 'switch-case', 'assert', 'while', 'wait-until', 'variable-setter', 'parallel'])
+
+/** A field value holds something, as the canvas required rule reads it; blank text never does. */
+function fillsField(value: unknown, type: string): boolean {
+  if (typeof value === 'string' && value.trim() === '') return false
+  return isValueNonEmpty(value, type)
+}
+
+/** True when a visible required field holds nothing: an explicit null fills a field that takes null (REQ-3.1.3.21). */
 function hasEmptyRequiredValue(
+  checked: Parameter[],
   parameters: Parameter[],
   values: Record<string, unknown>,
-  managed: Set<string>,
+  asWritten: ReadonlySet<string>,
 ): boolean {
-  const requiredParams = parameters.filter(
-    (p) => p.required && isParameterVisible(p, values, parameters) && !managed.has(p.name)
-  )
-  return requiredParams.some((param) => {
-    const effectiveValue = values[param.name] ?? param.defaultValue
-    return effectiveValue === undefined || effectiveValue === null || effectiveValue === ''
+  return checked.some((param) => {
+    if (!isParameterVisible(param, values, parameters) || !isParameterRequired(param, values, parameters)) return false
+    const value = values[param.name]
+    if (value === null && param.acceptsNull) return false
+    if (value === undefined || value === null) {
+      return param.defaultValue === undefined || param.defaultValue === null || !fillsField(param.defaultValue, param.type)
+    }
+    // An {x} or Template field holds its text, whatever the field's type.
+    return !fillsField(value, asWritten.has(param.name) ? 'string' : param.type)
   })
+}
+
+/** The values a control check reads: a hidden Transform's filters hold nothing back. */
+function checkedControlValues(values: Record<string, unknown>, transformShown: boolean): Record<string, unknown> {
+  if (transformShown || !Object.hasOwn(values, 'filters')) return values
+  const { filters: _hidden, ...rest } = values
+  return rest
 }
 
 function asText(value: unknown): string {
@@ -182,11 +197,6 @@ function initialTemplateFields(element: ElementData): string[] {
   return [...new Set([...saved, ...seeded])]
 }
 
-/** The text a blank {x} entry shows: a list row counted from 1, a map key by name (FIELD-13). */
-function blankEntryMessage(setting: string, held: unknown, key: string): string {
-  return Array.isArray(held) ? `Row ${Number(key) + 1} in '${setting}' is required` : `'${key}' in '${setting}' is required`
-}
-
 /** The text an entry flag names: a list row (or a field of its record row), else a map value by its whole key. */
 function entryText(held: unknown, entry: readonly string[]): unknown {
   if (Array.isArray(held)) {
@@ -214,20 +224,6 @@ function blankEntryErrors(
   return errors
 }
 
-/** Branch rows as the editor holds them: storage writes `time_limit`. */
-function toEditorBranches(stored: unknown): ParallelBranch[] {
-  if (!Array.isArray(stored)) return []
-  return stored.map((entry) => {
-    const branch = entry as Record<string, unknown>
-    const limit = branch.time_limit ?? branch.timeLimit
-    return {
-      id: asText(branch.id),
-      name: asText(branch.name),
-      ...(typeof limit === 'number' || typeof limit === 'string' ? { timeLimit: limit } : {}),
-    }
-  })
-}
-
 export function useConfigModalState(
   element: ElementData,
   onSave: (data: SaveData) => void,
@@ -249,11 +245,6 @@ export function useConfigModalState(
   const [outputBindings, setOutputBindings] = useState<Record<string, string>>(
     element.outputBindings
   )
-  // The Block changed on the canvas under the open sheet (a deleted variable's binding cleared): untouched fields follow.
-  useStoredFollow({ values: element.currentValues, outputBindings: element.outputBindings }, (base, next) => {
-    setValues((draft) => followRecord(base.values, draft, next.values))
-    setOutputBindings((draft) => followRecord(base.outputBindings, draft, next.outputBindings))
-  })
   const [fieldErrorNames, setFieldErrorNames] = useState<string[]>([])
   const [showChangelog, setShowChangelog] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
@@ -282,28 +273,19 @@ export function useConfigModalState(
     element.expressionFields ?? []
   )
   // The seeded kinds are the baseline, so opening a blank templateByDefault row is not a change.
-  const [openedTemplateFields] = useState(() => initialTemplateFields(element))
+  const storedTemplateFields = useMemo(() => initialTemplateFields(element), [element])
   const [templateFields, setTemplateFields] = useReplayedField(
     replayRef,
     'templateFields',
     replayListWrite,
-    openedTemplateFields
+    storedTemplateFields
   )
-  const [variableExpressionKeys, setVariableExpressionKeys] = useState<string[]>(
-    element.variableExpressionKeys ?? []
-  )
-  const [variableTemplateKeys, setVariableTemplateKeys] = useState<string[]>(
-    element.variableTemplateKeys ?? []
-  )
-  const [variableSecretKeys, setVariableSecretKeys] = useState<string[]>(
-    element.variableSecretKeys ?? []
-  )
-  const [variableTypes, setVariableTypes] = useState<Record<string, string>>(
-    element.variableTypes ?? {}
-  )
-  const [variableElementTypes, setVariableElementTypes] = useState<Record<string, ElementTypes>>(
-    element.variableElementTypes ?? NO_ELEMENT_TYPES
-  )
+  // The Variable Setter rows marked secret, `variables.<row>`, stored under config (REQ-3.4.1.14).
+  const [secretFields, setSecretFields] = useState<string[]>(element.secretFields ?? [])
+  // The type each Setter row picked: the canvas declares a new target with it; never stored.
+  const [setterRowTypes, setSetterRowTypes] = useState<Record<string, string>>({})
+  // Bumped when the canvas changes the stored Setter, so its editor rebuilds its rows.
+  const [setterRevision, setSetterRevision] = useState(0)
   const [settingElementTypesRecord, setSettingElementTypesRecord] = useState<
     Record<string, ElementTypes>
   >(element.elementTypes ?? NO_ELEMENT_TYPES)
@@ -320,6 +302,40 @@ export function useConfigModalState(
   const isVariableSetter = element.elementType === 'variable-setter'
   const [varSetterValid, setVarSetterValid] = useState(true)
 
+  // The Block changed on the canvas under the open window: untouched fields, control lists, Setter rows and their flags follow.
+  useStoredFollow(
+    {
+      values: element.currentValues,
+      outputBindings: element.outputBindings,
+      expressionFields: element.expressionFields ?? NO_FIELDS,
+      templateFields: storedTemplateFields,
+      elementTypes: element.elementTypes ?? NO_ELEMENT_TYPES,
+      secretFields: element.secretFields ?? NO_FIELDS,
+    },
+    (base, next) => {
+      if (isVariableSetter) {
+        // The Setter's marks name its rows, so rows and marks follow together or not at all.
+        const draft = {
+          values, outputBindings, expressionFields, templateFields, elementTypes: settingElementTypesRecord, secretFields,
+        }
+        if (!sameStored(draft, base)) return
+        setValues(next.values)
+        setExpressionFields(next.expressionFields)
+        setTemplateFields(next.templateFields)
+        setSettingElementTypesRecord(next.elementTypes)
+        setSecretFields(next.secretFields)
+        setSetterRevision((revision) => revision + 1)
+        return
+      }
+      setValues((draft) => followRecord(base.values, draft, next.values))
+      setOutputBindings((draft) => followRecord(base.outputBindings, draft, next.outputBindings))
+      setExpressionFields((draft) => followValue(base.expressionFields, draft, next.expressionFields))
+      setTemplateFields((draft) => followValue(base.templateFields, draft, next.templateFields))
+      setSettingElementTypesRecord((draft) => followRecord(base.elementTypes, draft, next.elementTypes))
+      setSecretFields((draft) => followValue(base.secretFields, draft, next.secretFields))
+    },
+  )
+
   const isXmlParser = element.elementType === 'xml-parser'
   const [xmlQueryValid, setXmlQueryValid] = useState(true)
 
@@ -327,59 +343,13 @@ export function useConfigModalState(
   const [jsonQueryValid, setJsonQueryValid] = useState(true)
 
   const isAssert = element.elementType === 'assert'
-  const [assertValid, setAssertValid] = useState(true)
-  const [assertAssertions, setAssertAssertions] = useState<AssertionItem[]>(
-    () =>
-      (values.assertions as AssertionItem[] | undefined) ??
-      []
-  )
-  const [assertMode, setAssertMode] = useState<'single' | 'split'>(
-    () => (values.mode as 'single' | 'split' | undefined) ?? 'split'
-  )
-  const [assertFailCurrentScope, setAssertFailCurrentScope] = useState<boolean>(
-    () => (values.fail_current_scope as boolean | undefined) ?? false
-  )
-
   const isIfElse = element.elementType === 'if-else'
-  const [ifElseBranches, setIfElseBranches] = useState<ConditionBranch[]>(
-    () => (values.branches as ConditionBranch[] | undefined) ?? []
-  )
-  const [ifElseValid, setIfElseValid] = useState(true)
-
   const isSwitch = element.elementType === 'switch-case'
-  const [switchBranches, setSwitchBranches] = useState<CaseBranch[]>(
-    () => (values.branches as CaseBranch[] | undefined) ?? []
-  )
-  const [switchValid, setSwitchValid] = useState(true)
-
   const isBreakOrContinue = element.elementType === 'break' || element.elementType === 'continue'
-
   const isWhile = element.elementType === 'while'
-  const [whileConditions, setWhileConditions] = useState<AssertionItem[]>(
-    () => (values.conditions as AssertionItem[] | undefined) ?? []
-  )
-  const [whileValid, setWhileValid] = useState(true)
-
   const isWaitUntil = element.elementType === 'wait-until'
-  const [waitConditions, setWaitConditions] = useState<AssertionItem[]>(
-    () => (values.conditions as AssertionItem[] | undefined) ?? []
-  )
-  const [waitMode, setWaitMode] = useState<'retry' | 'watch'>(
-    () => (values.mode as 'retry' | 'watch' | undefined) ?? 'retry'
-  )
-  const [waitFailCurrentScope, setWaitFailCurrentScope] = useState<boolean>(
-    () => (values.fail_current_scope as boolean | undefined) ?? false
-  )
-  const [waitValid, setWaitValid] = useState(true)
-
   const isParallel = element.elementType === 'parallel'
-  const [parallelBranches, setParallelBranches] = useState<ParallelBranch[]>(
-    () => toEditorBranches(values.branches)
-  )
-  const [parallelJoin, setParallelJoin] = useState<'all' | 'first'>(
-    () => (values.join as 'all' | 'first' | undefined) ?? 'all'
-  )
-  const [parallelValid, setParallelValid] = useState(true)
+  const wideWindow = WIDE_WINDOW_TYPES.has(element.elementType)
 
   // Get available variables enriched with output source info + profile bindings
   const enrichedVariables = useEnrichedVariables(profileBindings)
@@ -415,37 +385,16 @@ export function useConfigModalState(
     [versionParameters, values]
   )
 
-  // Filter parameters for display (exclude editor-managed params)
+  // The table leaves out every field the window draws in its own section or editor.
   const displayParameters = useMemo(() => {
+    const outside = new Set([
+      ...(DRAWN_OUTSIDE_TABLE[element.elementType] ?? []),
+      ...(transformParameter ? TRANSFORM_FIELDS : []),
+      ...(isXmlParser || isJsonParser ? QUERY_PARSER_FIELDS : []),
+    ])
     // An output list is edited under Output Variables, never in the input table.
-    const tableParameters = versionParameters.filter((p) => p.outputList === undefined)
-    if (isAssert) {
-      return tableParameters.filter(
-        (p) => p.name !== 'assertions' && p.name !== 'mode' && p.name !== 'fail_current_scope'
-      )
-    }
-    if (isIfElse || isSwitch || isParallel) {
-      return tableParameters.filter((p) => p.name !== 'branches' && p.name !== 'join')
-    }
-    if (isWhile) {
-      return tableParameters.filter((p) => p.name !== 'conditions')
-    }
-    if (isWaitUntil) {
-      return tableParameters.filter(
-        (p) => p.name !== 'conditions' && p.name !== 'mode' && p.name !== 'fail_current_scope'
-      )
-    }
-    if (transformParameter) {
-      // sorts / filters render in the Transform sections, not the table.
-      return tableParameters.filter((p) => p.name !== 'sorts' && p.name !== 'filters')
-    }
-    if (!isXmlParser && !isJsonParser) return tableParameters
-    // output_mode renders as the Output Mode radio section, queries as the Queries
-    // section - none belongs in the Input Parameters table.
-    return tableParameters.filter(
-      (p) => p.name !== 'queries' && p.name !== 'query_output_types' && p.name !== 'output_mode'
-    )
-  }, [isAssert, isIfElse, isSwitch, isParallel, isWhile, isWaitUntil, transformParameter, isXmlParser, isJsonParser, versionParameters])
+    return versionParameters.filter((p) => p.outputList === undefined && !outside.has(p.name))
+  }, [element.elementType, transformParameter, isXmlParser, isJsonParser, versionParameters])
 
   // Get version-specific outputs
   const versionOutputs = useMemo(
@@ -503,46 +452,44 @@ export function useConfigModalState(
   )
   const outputBindingsValid = Object.keys(outputErrors).length === 0
 
-  // A blank {x} entry of a shown row holds the Save, naming the entry (FIELD-13).
+  // A blank {x} entry of a shown row holds the Save, naming the entry (FIELD-13); so do the
+  // control lines the field list cannot say (a For step of 0, a blank {x} lane limit).
   const entryErrors = useMemo(() => {
     const shown = new Set(
       displayParameters.filter((p) => isParameterVisible(p, values, versionParameters)).map((p) => p.name),
     )
-    return blankEntryErrors(values, expressionFields, shown)
-  }, [displayParameters, values, versionParameters, expressionFields])
+    return {
+      ...blankEntryErrors(values, expressionFields, shown),
+      ...controlFieldMessages(element.elementType, values, expressionFields),
+    }
+  }, [displayParameters, values, versionParameters, expressionFields, element.elementType])
 
-  // A filter whose compare-to value its as Type refuses holds the Save (REQ-3.1.3.14).
-  const filtersValid = useMemo(
+  // Condition rows, branches and lanes the shared control check refuses hold the Save (REQ-3.5.0.3).
+  const controlValid = useMemo(
     () =>
-      ((values.filters as TableFilterBlock[] | undefined) ?? []).every((block) =>
-        compareToValuesValid(block.conditions ?? []),
-      ),
-    [values.filters],
+      controlProblems(
+        element.elementType,
+        checkedControlValues(values, showTransformSections),
+        expressionFields,
+      ).length === 0,
+    [element.elementType, values, showTransformSections, expressionFields],
   )
 
   // Required fields filled and every field-level check passing, optionally setting one field aside.
   const isFormValidBesides = useCallback((besides?: string) => {
     if (fieldErrorNames.some((field) => field !== besides)) return false
     if (Object.keys(entryErrors).some((field) => field !== besides)) return false
-    if (!outputBindingsValid) return false
-    if (!outputList.valid) return false
+    if (!outputBindingsValid || !outputList.valid || !controlValid) return false
     const editorChecks = [
       isVariableSetter && !varSetterValid,
       isXmlParser && !xmlQueryValid,
       isJsonParser && !jsonQueryValid,
-      isAssert && !assertValid,
-      isIfElse && !ifElseValid,
-      isSwitch && !switchValid,
-      isWhile && !whileValid,
-      isWaitUntil && !waitValid,
-      isParallel && !parallelValid,
-      showTransformSections && !filtersValid,
     ]
     if (editorChecks.some(Boolean)) return false
-    const managed = getManagedParamNames(isAssert, isIfElse, isWhile, isSwitch, isWaitUntil, isParallel)
     const checked = versionParameters.filter((p) => p.name !== besides)
-    return !hasEmptyRequiredValue(checked, values, managed)
-  }, [versionParameters, values, fieldErrorNames, entryErrors, outputBindingsValid, outputList.valid, isVariableSetter, varSetterValid, isXmlParser, xmlQueryValid, isJsonParser, jsonQueryValid, isAssert, assertValid, isIfElse, ifElseValid, isSwitch, switchValid, isWhile, whileValid, isWaitUntil, waitValid, isParallel, parallelValid, showTransformSections, filtersValid])
+    const asWritten = new Set([...expressionFields, ...templateFields])
+    return !hasEmptyRequiredValue(checked, versionParameters, values, asWritten)
+  }, [versionParameters, values, expressionFields, templateFields, fieldErrorNames, entryErrors, outputBindingsValid, outputList.valid, controlValid, isVariableSetter, varSetterValid, isXmlParser, xmlQueryValid, isJsonParser, jsonQueryValid])
   const isFormValid = isFormValidBesides()
 
   // Get details for the currently selected version
@@ -571,41 +518,26 @@ export function useConfigModalState(
     outputBindings: mergedBindings, elementOutputBindings: element.outputBindings,
     profileBindings, elementProfileBindings: element.profileBindings,
     expressionFields, elementExpressionFields: element.expressionFields,
-    templateFields, elementTemplateFields: openedTemplateFields,
+    templateFields, elementTemplateFields: storedTemplateFields,
+    secretFields, elementSecretFields: element.secretFields,
     outputSecretFields: mergedSecretFields, elementOutputSecretFields: element.outputSecretFields ?? schemaSecretOutputNames(element),
     unmaskedSecretFields, elementUnmaskedSecretFields: element.unmaskedSecretFields,
     secretMasking, elementSecretMasking: element.secretMasking,
-    variableExpressionKeys, elementVariableExpressionKeys: element.variableExpressionKeys,
-    variableTemplateKeys, elementVariableTemplateKeys: element.variableTemplateKeys,
-    variableSecretKeys, elementVariableSecretKeys: element.variableSecretKeys,
-    variableTypes, elementVariableTypes: element.variableTypes,
-    variableElementTypes, elementVariableElementTypes: element.variableElementTypes,
     settingElementTypes: settingElementTypesRecord, elementSettingElementTypes: element.elementTypes,
-    isAssert, assertAssertions, assertMode, assertFailCurrentScope,
-    isIfElse, ifElseBranches,
-    isSwitch, switchBranches,
-    isWhile, whileConditions,
-    isWaitUntil, waitConditions, waitMode, waitFailCurrentScope,
-    isParallel, parallelBranches, parallelJoin,
-  }), [selectedVersion, element.version, name, element.name, description, element.description, mergedValues, element.currentValues, mergedBindings, element.outputBindings, profileBindings, element.profileBindings, expressionFields, element.expressionFields, templateFields, openedTemplateFields, mergedSecretFields, element.outputSecretFields, unmaskedSecretFields, element.unmaskedSecretFields, secretMasking, element.secretMasking, variableExpressionKeys, element.variableExpressionKeys, variableTemplateKeys, element.variableTemplateKeys, variableSecretKeys, element.variableSecretKeys, variableTypes, element.variableTypes, variableElementTypes, element.variableElementTypes, settingElementTypesRecord, element.elementTypes, isAssert, assertAssertions, assertMode, assertFailCurrentScope, isIfElse, ifElseBranches, isSwitch, switchBranches, isWhile, whileConditions, isWaitUntil, waitConditions, waitMode, waitFailCurrentScope, isParallel, parallelBranches, parallelJoin])
+  }), [selectedVersion, element, name, description, mergedValues, mergedBindings, profileBindings, expressionFields, templateFields, storedTemplateFields, secretFields, mergedSecretFields, unmaskedSecretFields, secretMasking, settingElementTypesRecord])
 
   const saveContextFor = useCallback((fields: ChildWrittenFields): SaveContext => {
     const merged = mergeOutputList(fields.values)
     return {
-      elementId: element.id, selectedVersion, values: merged.values, outputBindings: merged.outputBindings,
-      outputParameters: bindingParameters, versionParameters, name, description, profileBindings: fields.profileBindings,
-      expressionFields: fields.expressionFields, templateFields: fields.templateFields, outputSecretFields: merged.outputSecretFields,
-      seededOutputSecretFields: seededSecretFields(element), unmaskedSecretFields, secretMasking, variables: enrichedVariables,
-      isVariableSetter, isXmlParser, isJsonParser, isAssert, isIfElse, isSwitch, isWhile, isWaitUntil, isParallel,
-      assertAssertions, assertMode, assertFailCurrentScope, ifElseBranches,
-      switchBranches, whileConditions,
-      waitConditions, waitMode, waitFailCurrentScope,
-      parallelBranches, parallelJoin,
-      variableExpressionKeys, variableTemplateKeys, variableSecretKeys, variableTypes,
-      variableElementTypes, settingElementTypes: settingElementTypesRecord,
-      runsOnRemoteHost,
+      elementId: element.id, elementType: element.elementType, selectedVersion, values: merged.values,
+      outputBindings: merged.outputBindings, outputParameters: bindingParameters, versionParameters, name, description,
+      profileBindings: fields.profileBindings, expressionFields: fields.expressionFields, templateFields: fields.templateFields,
+      outputSecretFields: merged.outputSecretFields, seededOutputSecretFields: seededSecretFields(element),
+      unmaskedSecretFields, secretMasking, variables: enrichedVariables, secretFields,
+      newTargetTypes: isVariableSetter ? setterRowTypes : undefined,
+      settingElementTypes: settingElementTypesRecord, runsOnRemoteHost,
     }
-  }, [element, versionParameters, mergeOutputList, bindingParameters, selectedVersion, name, description, enrichedVariables, unmaskedSecretFields, secretMasking, isVariableSetter, isXmlParser, isJsonParser, variableExpressionKeys, variableTemplateKeys, variableSecretKeys, variableTypes, variableElementTypes, settingElementTypesRecord, runsOnRemoteHost, isAssert, assertAssertions, assertMode, assertFailCurrentScope, isIfElse, ifElseBranches, isSwitch, switchBranches, isWhile, whileConditions, isWaitUntil, waitConditions, waitMode, waitFailCurrentScope, isParallel, parallelBranches, parallelJoin])
+  }, [element, versionParameters, mergeOutputList, bindingParameters, selectedVersion, name, description, enrichedVariables, unmaskedSecretFields, secretMasking, secretFields, isVariableSetter, setterRowTypes, settingElementTypesRecord, runsOnRemoteHost])
 
   const handleSave = useCallback(() => {
     const result = buildSaveData(saveContextFor({ values, templateFields, expressionFields, profileBindings }))
@@ -728,28 +660,15 @@ export function useConfigModalState(
     profileBindings, setProfileBindings,
     expressionFields, setExpressionFields,
     templateFields, setTemplateFields,
+    secretFields, setSecretFields,
+    setterRowTypes, setSetterRowTypes, setterRevision,
     outputSecretFields, setOutputSecretFields,
     unmaskedSecretFields, setUnmaskedSecretFields,
     secretMasking, setSecretMasking,
-    variableExpressionKeys, setVariableExpressionKeys,
-    variableTemplateKeys, setVariableTemplateKeys,
-    variableSecretKeys, setVariableSecretKeys,
-    variableTypes, setVariableTypes,
-    variableElementTypes, setVariableElementTypes,
     settingElementTypes: settingElementTypesRecord, setSettingElementTypes,
     isVariableSetter, isXmlParser, isJsonParser, showTransformSections, transformOnBoundTable, isAssert, isIfElse, isBreakOrContinue, isWhile, isSwitch, isWaitUntil, isParallel,
-    setVarSetterValid, setXmlQueryValid, setJsonQueryValid, setAssertValid, setIfElseValid, setWhileValid, setSwitchValid, setWaitValid, setParallelValid,
-    assertAssertions, setAssertAssertions,
-    assertMode, setAssertMode,
-    assertFailCurrentScope, setAssertFailCurrentScope,
-    ifElseBranches, setIfElseBranches,
-    switchBranches, setSwitchBranches,
-    parallelBranches, setParallelBranches,
-    parallelJoin, setParallelJoin,
-    whileConditions, setWhileConditions,
-    waitConditions, setWaitConditions,
-    waitMode, setWaitMode,
-    waitFailCurrentScope, setWaitFailCurrentScope,
+    wideWindow,
+    setVarSetterValid, setXmlQueryValid, setJsonQueryValid,
     enrichedVariables, displayParameters, outputParameters,
     outputList: outputListState,
     selectedVersionDetails, versionParameters,

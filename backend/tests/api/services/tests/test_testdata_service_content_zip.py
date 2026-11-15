@@ -163,6 +163,13 @@ class TestZipSubfolder:
         with pytest.raises(ValidationException, match=r"^Invalid test data path: \.\./out$"):
             testdata_service.zip_entry(test_id, "../out", io.BytesIO())
 
+    def test_a_dot_is_refused_so_no_entry_name_starts_with_it(self, test_id: str) -> None:
+        """The whole folder is zipped through the empty path only."""
+        _seed_tree(test_id)
+
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            testdata_service.zip_entry(test_id, ".", io.BytesIO())
+
     def test_an_unknown_test_is_not_found(self) -> None:
         """The message names the test id."""
         with pytest.raises(NotFoundException, match=r"^Test not found: no-such-test$"):

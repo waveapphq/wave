@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, cast
 
-from wavecore.core.execution.plugin_executor import VALUE_TYPE_CHECKS
+from wavecore.core.execution.plugin_executor import VALUE_TYPE_CHECKS, refuses_null
 from wavecore.core.number_rule import (
     NumberType,
     is_number_value,
@@ -24,7 +24,7 @@ from wavecore.core.secrets.cipher import is_secret_envelope
 from wavecore.core.secrets.masking import MASK_PLACEHOLDER
 from wavecore.core.table import Table
 from wavecore.core.table_values import as_table
-from wavecore.core.variables.element_types import realize_declared_value
+from wavecore.core.variables.element_types import element_types_problem, realize_declared_value
 from wavecore.core.variables.value_checks import (
     NUMBER_TYPES,
     NumberForm,
@@ -44,6 +44,12 @@ class FieldFinding:
     message: str
     fix: str | None
     field: str
+
+
+def both_marks_finding(subject: str, place: str, code: str) -> FieldFinding:
+    """A place marked both expression and template; the two marks exclude each other."""
+    message = f"{subject} cannot be both an expression and a template"
+    return FieldFinding(code, message, None, place)
 
 
 def is_blank_expression(text: Any) -> bool:
@@ -112,12 +118,29 @@ def _is_empty(value: Any, declared: Sequence[str]) -> bool:
 
 
 def _is_skipped(field: Any, value: Any) -> bool:
-    """Null, a picked variable name, a sealed secret and the mask are not literals to check."""
-    if value is None:
-        return True
+    """A picked variable name, a sealed secret and the mask are not literals to check."""
     if isinstance(value, str) and get_param_attr(field, "variable_ref", False):
         return True
     return is_secret_envelope(value) or value == MASK_PLACEHOLDER
+
+
+def _null_findings(field: Any, name: str, block_id: str) -> list[FieldFinding]:
+    """A null on a setting with a default, which the run refuses naming it (REQ-3.1.3.21); a
+    Required one with no default is missing, and a secret holding null is owed."""
+    if (
+        get_param_attr(field, "default") is None
+        or get_param_attr(field, "secret", False)
+        or not refuses_null(field)
+    ):
+        return []
+    return [
+        FieldFinding(
+            "INVALID_SETTING_VALUE",
+            f"Setting '{name}' of block '{block_id}' cannot be null",
+            "Leave the setting out to use its default",
+            name,
+        )
+    ]
 
 
 def _allowed_value_finding(
@@ -182,6 +205,16 @@ def _bound_findings(
             f"Provide a value of at most {maximum}",
             name,
         )
+
+
+def setting_type_finding(name: str, block_id: str, expected: str, value: Any) -> FieldFinding:
+    """A setting whose value is not of its declared type."""
+    return FieldFinding(
+        "INVALID_SETTING_TYPE",
+        f"Setting '{name}' of block '{block_id}' expects {expected}, got {type_name(value)}",
+        f"Provide {'an' if expected[0] in 'aeiou' else 'a'} {expected} value",
+        name,
+    )
 
 
 def _setting_finding(problem: ValueProblem, name: str, block_id: str) -> FieldFinding:
@@ -253,6 +286,8 @@ def check_field_value(
     entry_sources: Collection[str] = (),
 ) -> list[FieldFinding]:
     """Type, allowed values, bounds and typed entries of one literal value."""
+    if value is None:
+        return _null_findings(field, name, block_id)
     if _is_skipped(field, value):
         return []
     declared = _declared_types(field)
@@ -264,16 +299,7 @@ def check_field_value(
         too_many_digits = _digit_cap_finding(name, value, declared, block_id)
         if too_many_digits is not None:
             return [too_many_digits]
-        expected = " or ".join(declared)
-        return [
-            FieldFinding(
-                "INVALID_SETTING_TYPE",
-                f"Setting '{name}' of block '{block_id}' expects {expected}, "
-                f"got {type_name(value)}",
-                f"Provide {'an' if expected[0] in 'aeiou' else 'a'} {expected} value",
-                name,
-            )
-        ]
+        return [setting_type_finding(name, block_id, " or ".join(declared), value)]
     findings: list[FieldFinding] = []
     not_allowed = _allowed_value_finding(field, name, value, declared, block_id)
     if not_allowed is not None:
@@ -302,6 +328,9 @@ def _required_finding(
     if not is_param_required(field, values, fields):
         return None
     value = values.get(name)
+    if value is None and name in values and get_param_attr(field, "accepts_null", False):
+        # A stored null is the value of a field that takes null (REQ-3.1.3.21).
+        return None
     is_expression = name in expression_fields
     unset = value is None or (is_expression and is_blank_expression(value))
     if unset and get_param_attr(field, "default") is not None:
@@ -322,15 +351,27 @@ def _required_finding(
 
 
 def _entry_slots(name: str, value: Any) -> Iterator[tuple[str, Any, str]]:
-    """Each map value or list row of a field: its flag key, its text and how it is named."""
+    """Each map value or list row of a field, and each entry of a list or map a map value holds:
+    its flag key, its text and how it is named."""
     if isinstance(value, dict):
         for key, entry in value.items():
             yield f"{name}.{key}", entry, f"'{key}' in '{name}'"
+            yield from _nested_slots(f"{name}.{key}", entry)
     elif isinstance(value, list):
         for index, item in enumerate(value):
             is_row = isinstance(item, dict)
             key = f"{name}.{index}.value" if is_row else f"{name}.{index}"
             yield key, item.get("value") if is_row else item, f"Row {index + 1} in '{name}'"
+
+
+def _nested_slots(name: str, value: Any) -> Iterator[tuple[str, Any, str]]:
+    """The entries of a list or map held by a map value (a Variable Setter row)."""
+    if isinstance(value, dict):
+        for key, entry in value.items():
+            yield f"{name}.{key}", entry, f"'{key}' in '{name}'"
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield f"{name}.{index}", item, f"Row {index + 1} in '{name}'"
 
 
 def _blank_entry_findings(
@@ -421,6 +462,60 @@ def _name_findings(field: Any, name: str, value: Any) -> Iterator[FieldFinding]:
         yield FieldFinding("INVALID_NAME", message, None, name)
 
 
+def _place_value(
+    fields_by_name: Mapping[str, Any], values: Mapping[str, Any], place: str
+) -> tuple[bool, Any, Any]:
+    """Whether an element-type place names a setting or a map entry, its value and its field."""
+    if place in fields_by_name:
+        return True, values.get(place), fields_by_name[place]
+    setting, _, key = place.partition(".")
+    holder = values.get(setting)
+    if isinstance(holder, Mapping) and key in holder:
+        return True, holder[key], None
+    return False, None, None
+
+
+def _element_kind(field: Any, value: Any) -> str | None:
+    """The shape element types describe at a place: the literal's own, else the setting's single
+    declared array or map type."""
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "map"
+    if field is None:
+        return None
+    kinds = [item for item in _declared_types(field) if item in ("array", "map")]
+    return kinds[0] if len(kinds) == 1 else None
+
+
+def _is_sealed(value: Any) -> bool:
+    return is_secret_envelope(value) or value == MASK_PLACEHOLDER
+
+
+def _element_type_findings(
+    fields: Sequence[Any],
+    values: Mapping[str, Any],
+    element_types: Any,
+    *,
+    block_id: str,
+    sources: Collection[str],
+) -> Iterator[FieldFinding]:
+    """Each place of the element-type record that names a type outside the six (REQ-3.1.3.19)."""
+    fields_by_name = {str(get_param_attr(field, "name", "")): field for field in fields}
+    for place, types in _element_type_map(element_types).items():
+        if place in sources or place.partition(".")[0] in sources or _is_sealed(types):
+            continue
+        found, value, field = _place_value(fields_by_name, values, place)
+        if not found or _is_sealed(value):
+            continue
+        problem = element_types_problem(_element_kind(field, value), types)
+        if problem is not None:
+            message = (
+                f"Invalid element types for setting '{place}' of block '{block_id}': {problem}"
+            )
+            yield FieldFinding("INVALID_ELEMENT_TYPES", message, None, place)
+
+
 def check_block_fields(
     fields: Sequence[Any],
     values: Mapping[str, Any],
@@ -432,7 +527,12 @@ def check_block_fields(
     element_types: Any = None,
 ) -> list[FieldFinding]:
     """Every field problem of one Block's stored values against its declared fields."""
-    findings: list[FieldFinding] = []
+    findings: list[FieldFinding] = [
+        both_marks_finding(
+            f"Setting '{place}' of block '{block_id}'", str(place), "INVALID_SETTING_VALUE"
+        )
+        for place in sorted(set(expression_fields) & set(template_fields), key=str)
+    ]
     declared_names: list[str] = []
     types = _element_type_map(element_types)
     sources = {*expression_fields, *template_fields}
@@ -462,6 +562,9 @@ def check_block_fields(
     findings.extend(unknown_field_findings(fields, values, block_id=block_id))
     for name in declared_names:
         findings.extend(_blank_entry_findings(name, values.get(name), expression_fields))
+    findings.extend(
+        _element_type_findings(fields, values, types, block_id=block_id, sources=sources)
+    )
     return findings
 
 

@@ -22,10 +22,11 @@
  *    compare-to value, the same shape the generated checks of V-NULL-CHECK-ASSERT use.
  * 4. A row the variable pick lands on is true (boolean) or is null (table) shows no value box and
  *    is saved with no compare-to value; a pasted copy of its block is saved the same way.
- * 5. A row switched from is null back to not equals, its box left empty, is saved with the empty
- *    compare-to value a new row has, and the run compares with it: no null compare-to failure.
- * 6. A CSV filter row switched from String to Boolean lands on is true, shows no value box and is
- *    saved with no compare-to value.
+ * 5. A row switched from is null back to not equals starts with no compare-to value, as a new row does:
+ *    its box is empty with `Value is required` under it and the sheet's Save is held; with `xyz` typed it
+ *    saves that value and the run compares with it: no null compare-to failure.
+ * 6. A CSV filter row on equals `yes` switched from String to Boolean asks `Change entry type?` first;
+ *    Change type lands it on is true, shows no value box and saves it with no compare-to value.
  *
  * Tests 6-8 seed a blank zz- Test (test 6 with `v_boolean` and `v_table`, test 7 with `v_string`);
  * the Asserts, the copy, the CSV block, its filter and its rows are built through the UI.
@@ -42,6 +43,8 @@ import {
   pickOperator,
   referenceToggle,
   rowPath,
+  setReference,
+  sheetLiteralRow,
   storedConditionRows,
   valueBox,
   type ConditionBlock,
@@ -49,9 +52,9 @@ import {
 import { ensureEnvironment } from '../../helpers/config'
 import { getTest } from '../../helpers/element-types'
 import { createValidTest, openTest } from '../../helpers/fn-seed'
-import { literalCondition, type CheckValueType } from '../../helpers/nesting-graph'
+import type { CheckValueType } from '../../helpers/nesting-graph'
 import { setStringParam } from '../../helpers/param-config'
-import { addFilterBlock, addFilterLiteral, setFilterAsType } from '../../helpers/table-transform'
+import { addFilterBlock, addFilterLiteral, setFilterAsTypeAsked } from '../../helpers/table-transform'
 import { expectNodeStatus } from '../../helpers/k8s-run'
 import { formatEntries } from '../../helpers/log-reader'
 import {
@@ -210,8 +213,8 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
         for (const [index, row] of TYPES.entries()) {
           const saved = rows[index]
           // Per REQ-3.1.3.25: is null and not null take no compare-to value.
-          expect.soft({ ...saved, reference_value: saved.reference_value ?? null }, `${name} row ${index}`).toEqual(
-            literalCondition(String(saved.id), row.variable, row.type, unaryPick(index).wire, null),
+          expect.soft(saved, `${name} row ${index}`).toEqual(
+            sheetLiteralRow(String(saved.id), row.variable, row.type, unaryPick(index).wire),
           )
         }
       })
@@ -276,13 +279,13 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
         const rows = storedConditionRows(node?.data.config?.values ?? {}, 'assert')
         // Per REQ-3.1.3.25: an operator that takes no compare-to value stores none.
         expect(rows, `the rows of ${id}`).toEqual(
-          landings.map((l, index) => literalCondition(String(rows[index]?.id), l.variable, l.type, l.wire, null)),
+          landings.map((l, index) => sheetLiteralRow(String(rows[index]?.id), l.variable, l.type, l.wire)),
         )
       }
     })
   })
 
-  test('a row switched from is null back to not equals stores the empty value a new row has and runs', async ({
+  test('a row switched from is null back to not equals starts with no compare-to value as a new row does and runs', async ({
     page,
     request,
   }) => {
@@ -295,7 +298,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
     await openTest(page, testId)
     const assertId = await dropBelowStart(page, CHECK_BLOCK_PALETTE.assert)
 
-    await test.step('v_string is null, then not equals with the box left empty', async () => {
+    await test.step('v_string is null, then not equals: the box is empty and holds Save until a value is typed', async () => {
       const sheet = await openBlockSheet(page, assertId)
       const single = sheet.getByRole('radio', { name: 'Single', exact: true })
       await single.click()
@@ -306,18 +309,24 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
       await expect(valueBox(sheet, '0')).toHaveCount(0)
       await pickOperator(page, sheet, '0', 'not equals')
       await expect(valueBox(sheet, '0')).toHaveValue('')
+      await expect(sheet.locator('[data-testid="param-error-assert-value-0"]')).toHaveText('Value is required')
+      const save = sheet.getByRole('button', { name: 'Save', exact: true })
+      await expect(save).toBeDisabled()
+      await setReference(sheet, '0', 'xyz')
+      await expect(sheet.locator('[data-testid="param-error-assert-value-0"]')).toHaveCount(0)
+      await expect(save).toBeEnabled()
       await saveBlockSheet(sheet)
       await saveTest(page)
     })
 
-    await test.step('the stored row holds the empty compare-to value', async () => {
+    await test.step('the stored row holds the typed compare-to value only', async () => {
       const stored = await getTest(request, testId!)
       const node = (stored.workflow.nodes as Array<Record<string, any>>).find((n) => n.id === assertId)
       const [row] = storedConditionRows(node?.data.config?.values ?? {}, 'assert')
-      expect(row).toEqual(literalCondition(String(row?.id), 'v_string', 'string', 'not_equals', ''))
+      expect(row).toEqual(sheetLiteralRow(String(row?.id), 'v_string', 'string', 'not_equals', 'xyz'))
     })
 
-    await test.step("Run: 'abc' not equals '' holds and nothing names a null compare-to value", async () => {
+    await test.step("Run: 'abc' not equals 'xyz' holds and nothing names a null compare-to value", async () => {
       await selectEnvironment(page)
       const run = await runToEnd(page)
       expect(run.verdict, formatEntries(run.entries)).toBe('passed')
@@ -343,9 +352,10 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
       await setStringParam(sheet, page, 'csv_content', 'flag')
       const block = await addFilterBlock(page, sheet, 'flag', 'string')
       const operator = await addFilterLiteral(page, block, 'equals', 'yes')
-      await setFilterAsType(page, block, 'boolean')
+      // The text value yes cannot stay on a Boolean row, so the switch asks first (FIELD-13).
+      await setFilterAsTypeAsked(page, block, 'boolean', 'Change type')
       await expect(operator).toHaveText('is true')
-      await expect(block.locator('[data-testid^="filter-condition-value-"]')).toHaveCount(0)
+      await expect(block.locator('[data-testid^="param-input-filter-condition-value-"]')).toHaveCount(0)
       await saveBlockSheet(sheet)
       await saveTest(page)
     })
@@ -355,7 +365,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
       const node = (stored.workflow.nodes as Array<Record<string, any>>).find((n) => n.id === csvId)
       const filters = (node?.data.config?.values?.filters ?? []) as Array<{ conditions: Array<Record<string, unknown>> }>
       const row = filters[0]?.conditions?.[0]
-      expect(row, JSON.stringify(filters)).toEqual(literalCondition(String(row?.id), '_cell', 'boolean', 'is_true', null))
+      expect(row, JSON.stringify(filters)).toEqual(sheetLiteralRow(String(row?.id), '_cell', 'boolean', 'is_true'))
     })
   })
 })

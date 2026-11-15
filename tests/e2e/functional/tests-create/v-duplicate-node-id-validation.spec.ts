@@ -34,7 +34,6 @@ function buildFixtureWithDuplicateNodeId(): Record<string, unknown> {
       hasNewerVersion: false,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: {
           message: "'duplicate-id test'",

@@ -524,7 +524,9 @@ class TestGetRunReportTool:
             "build_execution_report",
             side_effect=RuntimeError("disk full"),
         ):
-            with pytest.raises(InternalServerException, match=r"^disk full$"):
+            with pytest.raises(
+                InternalServerException, match=r"^An internal server error occurred$"
+            ):
                 await report_tools.get_run_report(seeded["execution_id"], format="json")
 
     async def test_running_execution_is_rejected(self) -> None:
@@ -546,6 +548,23 @@ class TestGetRunReportTool:
 
         with pytest.raises(NotFoundException, match=r"^Execution with ID 'ghost' not found$"):
             await report_tools.get_run_report("ghost", format="json")
+
+    async def test_the_listed_description_says_what_the_report_holds(self) -> None:
+        """REQ-5.2.7.11: the description names the per-Block timeline and both formats."""
+        import inspect
+
+        from wavecore.mcp import server as mcp_server
+
+        server = mcp_server._build_server()
+        listed = {tool.name: tool.description for tool in await server.list_tools()}
+
+        assert inspect.cleandoc(listed["get_run_report"] or "") == (
+            "Full report of a finished execution: per-Block timeline, errors, variables and logs."
+            "\n\n"
+            "A Test execution's timeline holds each Block's path, status and timing; a Suite or\n"
+            "Regression execution's holds one row per Test run. "
+            "`format` is `json` (the default) or `html`."
+        )
 
 
 LOCALE_TEXT = "Grüße 測試"
@@ -709,10 +728,9 @@ class TestPendingActionItemsOfEveryHolder:
                 "elementType": "variable-setter",
                 "nodeType": "control",
                 "version": "1.0.0",
-                "variableTypes": {"api_tok": "string"},
                 "config": {
                     "values": {"variables": {"api_tok": MASK_PLACEHOLDER}},
-                    "variableSecretKeys": ["api_tok"],
+                    "secretFields": ["variables.api_tok"],
                 },
             },
         }

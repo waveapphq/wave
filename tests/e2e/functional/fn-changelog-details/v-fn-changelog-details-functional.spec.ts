@@ -110,7 +110,6 @@ test.describe('V-FN-CHANGELOG-DETAILS (functional)', () => {
                 hasNewerVersion: false,
                 expressionFields: [],
                 templateFields: [],
-                variableExpressionKeys: [],
                 config: { values: {}, outputBindings: {}, profileBindings: [] },
               },
             },

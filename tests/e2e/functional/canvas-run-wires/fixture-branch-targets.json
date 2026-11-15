@@ -1,0 +1,366 @@
+{
+  "name": "Run Wires Branch Targets",
+  "description": "",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "data": {
+          "label": "Route",
+          "recipeKey": "flow[0]",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "if",
+                  "label": "Ready",
+                  "conditions": [
+                    {
+                      "id": "cond-1",
+                      "type": "literal",
+                      "variable": "status",
+                      "operator": "equals",
+                      "value_type": "string",
+                      "reference_value": "ready"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "else_if",
+                  "label": "Busy",
+                  "conditions": [
+                    {
+                      "id": "cond-2",
+                      "type": "expression",
+                      "expression": "status == 'busy'"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_2",
+                  "type": "else",
+                  "label": "Other"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 224,
+        "position": {
+          "x": -112,
+          "y": 140
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "data": {
+          "label": "Took if",
+          "recipeKey": "flow[0].if.then[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "took-if",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 160,
+        "position": {
+          "x": -400,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-3",
+        "type": "workflowNode",
+        "data": {
+          "label": "Took else if",
+          "recipeKey": "flow[0].if.elif[0].then[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "took-else-if",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 178,
+        "position": {
+          "x": -89,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-4",
+        "type": "workflowNode",
+        "data": {
+          "label": "Took else",
+          "recipeKey": "flow[0].if.else[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "took-else",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 160,
+        "position": {
+          "x": 240,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-5",
+        "type": "workflowNode",
+        "data": {
+          "label": "Gate",
+          "recipeKey": "flow[1]",
+          "elementType": "assert",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "mode": "split",
+              "assertions": [
+                {
+                  "id": "cond-3",
+                  "type": "literal",
+                  "variable": "status",
+                  "operator": "equals",
+                  "value_type": "string",
+                  "reference_value": "ready"
+                }
+              ],
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 240,
+        "position": {
+          "x": -120,
+          "y": 420
+        }
+      },
+      {
+        "id": "node-6",
+        "type": "workflowNode",
+        "data": {
+          "label": "Guard",
+          "recipeKey": "flow[2]",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 224,
+        "position": {
+          "x": -112,
+          "y": 560
+        }
+      },
+      {
+        "id": "node-7",
+        "type": "workflowNode",
+        "data": {
+          "label": "In try",
+          "recipeKey": "flow[2].try.steps[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "in-try",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 160,
+        "position": {
+          "x": -560,
+          "y": 700
+        }
+      },
+      {
+        "id": "node-8",
+        "type": "workflowNode",
+        "data": {
+          "label": "In catch",
+          "recipeKey": "flow[2].try.catch[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "in-catch",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 160,
+        "position": {
+          "x": -240,
+          "y": 700
+        }
+      },
+      {
+        "id": "node-9",
+        "type": "workflowNode",
+        "data": {
+          "label": "Done",
+          "recipeKey": "flow[3]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "run-wires-done",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 160,
+        "position": {
+          "x": -80,
+          "y": 840
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-node-node-1",
+        "source": "start-node",
+        "target": "node-1"
+      },
+      {
+        "id": "edge-node-1-branch_0-node-2",
+        "source": "node-1",
+        "target": "node-2",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "edge-node-1-branch_1-node-3",
+        "source": "node-1",
+        "target": "node-3",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "edge-node-1-branch_2-node-4",
+        "source": "node-1",
+        "target": "node-4",
+        "sourceHandle": "branch_2"
+      },
+      {
+        "id": "edge-node-2-node-5",
+        "source": "node-2",
+        "target": "node-5"
+      },
+      {
+        "id": "edge-node-3-node-5-ingress_1",
+        "source": "node-3",
+        "target": "node-5",
+        "targetHandle": "ingress_1"
+      },
+      {
+        "id": "edge-node-4-node-5-ingress_2",
+        "source": "node-4",
+        "target": "node-5",
+        "targetHandle": "ingress_2"
+      },
+      {
+        "id": "edge-node-5-pass-node-6",
+        "source": "node-5",
+        "target": "node-6",
+        "sourceHandle": "pass"
+      },
+      {
+        "id": "edge-node-5-fail-node-6-ingress_1",
+        "source": "node-5",
+        "target": "node-6",
+        "sourceHandle": "fail",
+        "targetHandle": "ingress_1"
+      },
+      {
+        "id": "edge-node-6-try-node-7",
+        "source": "node-6",
+        "target": "node-7",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "edge-node-6-catch-node-8",
+        "source": "node-6",
+        "target": "node-8",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "edge-node-6-then-node-9",
+        "source": "node-6",
+        "target": "node-9",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "status": {
+      "type": "string",
+      "value": "ready"
+    }
+  },
+  "metadata": {
+    "tags": []
+  }
+}

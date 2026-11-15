@@ -573,8 +573,7 @@ class TestFunctionFlowOnTheEngine:
                         "elementType": "variable-setter",
                         "nodeType": "control",
                         "version": "1.0.0",
-                        "variableExpressionKeys": ["run_time"],
-                        "variableTypes": {"run_time": "float"},
+                        "expressionFields": ["variables.run_time"],
                         "config": {
                             "values": {"variables": {"run_time": "3.14"}},
                             "outputBindings": {},
@@ -1840,7 +1839,6 @@ def _shell_script_node(
             "displayName": node_id,
             "expressionFields": expression_fields or [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

@@ -10,7 +10,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from wavecore.core.execution.plugin_executor import realized_default
 from wavecore.core.functions.block_fields import function_block_fields, function_block_outputs
+from wavecore.models.plugins import get_param_attr
 
 BlockKind = Literal["plugin", "control", "function"]
 FunctionRegistry = Mapping[str, Mapping[str, Any]]
@@ -39,6 +41,14 @@ def block_schema(
     if node_type == "control" or _is_control_id(element_type):
         return _control_schema(element_type, version)
     return _plugin_schema(element_type, version)
+
+
+def field_default(data: Mapping[str, Any], name: str) -> Any:
+    """The declared default of one field of the Block, or None when it declares none."""
+    for item in block_schema(data).fields:
+        if get_param_attr(item, "name") == name:
+            return realized_default(item)
+    return None
 
 
 def _is_control_id(element_type: str) -> bool:

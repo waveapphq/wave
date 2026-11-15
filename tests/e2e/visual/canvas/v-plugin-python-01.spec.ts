@@ -252,7 +252,7 @@ test.describe('V-PLUGIN-PYTHON-01: Python block config sheet', () => {
     await modal.locator('[data-testid="param-expand-script"]').click()
     const sheet = page.locator('[data-testid="value-editor-sheet"]')
     await expect(sheet).toBeVisible()
-    await expect(sheet).toHaveAttribute('aria-label', 'Edit value')
+    await expect(sheet).toHaveAccessibleName('Edit value')
 
     // Python mode: the script keys, the Run button and the maximize control.
     await expect(sheet.locator('[data-testid="value-editor-help-chip"]')).toHaveCount(1)

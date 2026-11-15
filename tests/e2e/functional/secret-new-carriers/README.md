@@ -10,8 +10,8 @@ mask on every runtime surface and compute on the real bytes.
   config file is a copy of `backend/config/config.example.yaml` with a
   throwaway encryption key the harness writes into it
 - Shared E2E environment (created by the import helper if missing)
-- Fixture: `fixture.json` (a Var Setter with a secret literal keyed by
-  `config.variableSecretKeys`, a JSON Parser whose `secret_q` output binds to a
+- Fixture: `fixture.json` (a Var Setter with a secret literal marked in
+  `data.config.secretFields`, a JSON Parser whose `secret_q` output binds to a
   secret variable, and Log nodes that slice-prove and directly print each)
 
 ## Steps

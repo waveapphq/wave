@@ -27,7 +27,9 @@ def restore_zone_write_permission() -> Generator[None, None, None]:
     if not zone.exists():
         return
     for path in [zone, *zone.rglob("*")]:
-        os.chmod(path, 0o755 if path.is_dir() else 0o644)
+        # A link has no mode of its own, and one to nothing cannot be followed.
+        if not path.is_symlink():
+            os.chmod(path, 0o755 if path.is_dir() else 0o644)
 
 
 @pytest.fixture

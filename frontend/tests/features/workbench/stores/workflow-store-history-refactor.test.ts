@@ -64,10 +64,14 @@ function makeNote(
     type: 'noteNode',
     position: { x: 0, y: 0 },
     data: {
-      label: text,
-      config: { color },
+      label: 'Note',
+      config: { values: { text, color } },
     },
   }
+}
+
+function noteValues(node: NodeType): { text: string; color: string } {
+  return (node.data.config as { values: { text: string; color: string } }).values
 }
 
 function makeEdge(id: string, source: string, target: string): EdgeType {
@@ -576,17 +580,17 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
 
       useWorkflowStore.getState().updateNode('note-1', {
-        data: { label: 'Edited note', config: { color: 'yellow' } },
+        data: { label: 'Note', config: { values: { text: 'Edited note', color: 'yellow' } } },
       })
       useWorkflowStore.getState().commitHistory('Edit note text')
 
       expect(useWorkflowStore.getState().history.length).toBe(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
-      expect(useWorkflowStore.getState().nodes[0].data.label).toBe('Edited note')
+      expect(noteValues(useWorkflowStore.getState().nodes[0]).text).toBe('Edited note')
 
       useWorkflowStore.getState().undo()
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
-      expect(useWorkflowStore.getState().nodes[0].data.label).toBe('Original note')
+      expect(noteValues(useWorkflowStore.getState().nodes[0]).text).toBe('Original note')
     })
   })
 
@@ -608,20 +612,16 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
 
       useWorkflowStore.getState().updateNode('note-1', {
-        data: { label: 'My note', config: { color: 'pink' } },
+        data: { label: 'Note', config: { values: { text: 'My note', color: 'pink' } } },
       })
       useWorkflowStore.getState().commitHistory('Change note color')
 
       expect(useWorkflowStore.getState().history.length).toBe(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
-      expect(
-        (useWorkflowStore.getState().nodes[0].data.config as { color: string }).color,
-      ).toBe('pink')
+      expect(noteValues(useWorkflowStore.getState().nodes[0]).color).toBe('pink')
 
       useWorkflowStore.getState().undo()
-      expect(
-        (useWorkflowStore.getState().nodes[0].data.config as { color: string }).color,
-      ).toBe('yellow')
+      expect(noteValues(useWorkflowStore.getState().nodes[0]).color).toBe('yellow')
     })
   })
 

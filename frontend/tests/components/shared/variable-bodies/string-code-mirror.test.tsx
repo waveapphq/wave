@@ -20,18 +20,21 @@ vi.mock('@uiw/react-codemirror', () => ({
     extensions,
     editable,
     readOnly,
+    autoFocus,
   }: {
     value: string
     onChange?: (value: string) => void
     extensions: unknown[]
     editable?: boolean
     readOnly?: boolean
+    autoFocus?: boolean
   }) => (
     <textarea
       data-testid="cm"
       data-extensions={JSON.stringify(extensions)}
       data-editable={String(editable)}
       data-readonly={String(readOnly)}
+      autoFocus={autoFocus}
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
     />
@@ -80,6 +83,18 @@ describe('StringCodeMirror - controlled value', () => {
     fireEvent.change(getEditor(), { target: { value: 'updated' } })
     expect(onChange).toHaveBeenLastCalledWith('updated')
     expect(getEditor()).toHaveValue('updated')
+  })
+})
+
+describe('StringCodeMirror - the cursor', () => {
+  it('takes the cursor once built when its host asks for it', () => {
+    render(<StringCodeMirror value="hi" onChange={vi.fn()} autoFocus />)
+    expect(getEditor()).toHaveFocus()
+  })
+
+  it('leaves the cursor where it is when its host does not ask', () => {
+    render(<StringCodeMirror value="hi" onChange={vi.fn()} />)
+    expect(getEditor()).not.toHaveFocus()
   })
 })
 

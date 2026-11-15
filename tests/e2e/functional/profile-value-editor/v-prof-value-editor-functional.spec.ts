@@ -316,7 +316,7 @@ test.describe('V-PROF-VALUE-EDITOR: profile value editing mirrors the Variable S
 
     // Secret integer clear-and-edit: confirm clears the value and edits INLINE.
     await snumMask.click()
-    const editConfirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    const editConfirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
     await expect(editConfirm).toBeVisible()
     await editConfirm.getByRole('button', { name: /Delete & Edit/i }).click()
     const snumInput = paramRow(dialog, 0).locator('[data-testid="scalar-edit-input"]')
@@ -327,7 +327,7 @@ test.describe('V-PROF-VALUE-EDITOR: profile value editing mirrors the Variable S
 
     // Secret string clear-and-edit: confirm clears the value and opens the SHEET.
     await sstrMask.click()
-    const editConfirm2 = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    const editConfirm2 = page.getByRole('dialog', { name: 'Edit Protected Value?' })
     await expect(editConfirm2).toBeVisible()
     await editConfirm2.getByRole('button', { name: /Delete & Edit/i }).click()
     const sheet = valueSheet(page)

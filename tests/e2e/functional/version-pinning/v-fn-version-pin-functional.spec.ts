@@ -54,7 +54,6 @@ async function seedLibraryWithTwoVersions(request: APIRequestContext): Promise<S
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: { message: "'v1-line'", level: 'INFO' },
                 outputBindings: {},
@@ -102,7 +101,6 @@ async function seedLibraryWithTwoVersions(request: APIRequestContext): Promise<S
                 version: '1.0.0',
                 expressionFields: ['message'],
                 templateFields: [],
-                variableExpressionKeys: [],
                 config: {
                   values: { message: "'v2-line'", level: 'INFO' },
                   outputBindings: {},
@@ -149,7 +147,6 @@ function buildTwoInstanceTest(fn: SeededFunction): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
           },
           measured: { width: 120, height: 62 },
@@ -171,7 +168,6 @@ function buildTwoInstanceTest(fn: SeededFunction): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
           },
           measured: { width: 120, height: 62 },

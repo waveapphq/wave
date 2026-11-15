@@ -10,40 +10,42 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, NamedTuple
 
-from wavecore.controls.assertion_evaluator import UNARY_OPERATORS
+from wavecore.controls.assertion_evaluator import UNARY_OPERATORS, drop_unused_compare_to
 from wavecore.core.layout.dimensions import fit_node_width
 from wavecore.core.layout.engine import ingress_counts, layout_workflow
 from wavecore.core.number_rule import is_integer_value, wire_number
-from wavecore.core.recipes.model import STEP_KEYWORDS, RecipeDoc, child_sections, finding
+from wavecore.core.recipes.model import (
+    CONDITION_MARKERS,
+    CONTROL_FIELDS,
+    STEP_KEYWORDS,
+    RecipeDoc,
+    child_sections,
+    finding,
+    recipe_fields,
+)
 from wavecore.core.recipes.parser import parse_recipe
 from wavecore.core.recipes.typed_elements import stored_elements
 from wavecore.core.recipes.validator import (
+    BLOCK_FORM_CONTROLS,
     BlockEntry,
     FunctionContract,
     function_block_entry,
     is_choice_field,
-    is_expr_value,
     is_template_value,
     load_block_catalog,
     remote_execution_entry,
     resolve_function_contract,
     validate_recipe_doc,
+    value_form,
     written_word,
 )
 from wavecore.core.variables.decimal_value import decimal_to_str
 from wavecore.models.plugins import resolve_output_type
 from wavecore.plugins.sql_client import tls_on
 
-_SUGAR_CONTROL_IDS = {
-    "set": "variable-setter",
-    "delay": "delay",
-    "halt": "halt",
-    "note": "note",
-    "break": "break",
-    "continue": "continue",
-}
-
 _TERMINATING_KEYWORDS = {"halt", "break", "continue"}
+
+_SETTER_PLACE = "variables"
 
 _PY_TO_VALUE_TYPE: list[tuple[type, str]] = [
     (bool, "boolean"),
@@ -84,16 +86,51 @@ def _stored_numbers(value: Any) -> Any:
     return value
 
 
+def _form(raw: Any, *, template_place: bool) -> tuple[str, Any]:
+    """A written value's form and inner value; a `{{ }}` string is a template only where a
+    template is allowed, plain text elsewhere."""
+    kind, inner = value_form(raw)
+    if kind == "plain" and template_place and is_template_value(inner):
+        return "template", inner
+    return kind, inner
+
+
+def _as_written(value: Any) -> Any:
+    """Plain data with each `{literal: ...}` inside it unwrapped; value modes never reach this
+    deep, so only the literal form is read."""
+    kind, inner = value_form(value)
+    if kind == "literal":
+        return inner
+    if isinstance(value, dict):
+        return {key: _as_written(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_as_written(item) for item in value]
+    return value
+
+
+class _SplitEntry(NamedTuple):
+    """One entry of a setting or a Setter row: its stored value and the mode it holds."""
+
+    value: Any
+    kind: str
+
+
+def _split_entry(raw: Any, *, template_place: bool) -> _SplitEntry:
+    kind, inner = _form(raw, template_place=template_place)
+    if kind in ("expr", "template"):
+        return _SplitEntry(inner, kind)
+    return _SplitEntry(_as_written(inner), "plain")
+
+
 def _split_map_entries(prefix: str, raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Stores each {expr} entry as bare text, tracked as '<prefix>.<key>'."""
     values: dict[str, Any] = {}
     fields: list[str] = []
     for key, entry in raw.items():
-        if is_expr_value(entry):
-            values[key] = entry["expr"]
+        split = _split_entry(entry, template_place=False)
+        values[key] = split.value
+        if split.kind == "expr":
             fields.append(f"{prefix}.{key}")
-        else:
-            values[key] = entry
     return values, fields
 
 
@@ -102,18 +139,23 @@ def _split_row_fields(name: str, raw: list[Any]) -> tuple[list[Any], list[str]]:
     rows: list[Any] = []
     fields: list[str] = []
     for index, row in enumerate(raw):
-        if isinstance(row, dict):
+        if isinstance(row, dict) and value_form(row)[0] == "plain":
             row, nested = _split_map_entries(f"{name}.{index}", row)
             fields.extend(nested)
-        rows.append(row)
+            rows.append(row)
+            continue
+        split = _split_entry(row, template_place=False)
+        rows.append(split.value)
+        if split.kind == "expr":
+            fields.append(f"{name}.{index}")
     return rows, fields
 
 
 def _typed_map_entries(
-    raw: dict[str, Any], split: dict[str, Any], declared: Any
+    split: dict[str, Any], expression_keys: set[str], declared: Any
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """A typed map setting's literal entries in their stored form; {expr} entries stay source."""
-    literal = {key: item for key, item in raw.items() if not is_expr_value(item)}
+    """A typed map's literal entries in their stored form; {expr} entries stay source text."""
+    literal = {key: item for key, item in split.items() if key not in expression_keys}
     stored, types = stored_elements(literal, declared)
     return {key: stored.get(key, split[key]) for key in split}, types
 
@@ -123,18 +165,12 @@ def _typed_list_items(name: str, raw: list[Any], declared: Any) -> tuple[list[An
     items: list[Any] = []
     fields: list[str] = []
     for index, item in enumerate(raw):
-        if is_expr_value(item):
-            items.append(item["expr"])
+        split = _split_entry(item, template_place=False)
+        items.append(split.value)
+        if split.kind == "expr":
             fields.append(f"{name}.{index}")
-        else:
-            items.append(item)
     stored, types = stored_elements(items, declared)
     return stored, fields, types
-
-
-def _compare_to_value(operator: Any, value: Any) -> Any:
-    """An operator that takes no compare-to value stores none (REQ-3.1.3.25)."""
-    return None if str(operator) in UNARY_OPERATORS else value
 
 
 def _stored_condition_item(item: Any) -> Any:
@@ -146,12 +182,9 @@ def _stored_condition_item(item: Any) -> Any:
             **item,
             "items": [_stored_condition_item(child) for child in item.get("items") or []],
         }
-    if item.get("type") != "literal":
-        return item
-    return {
-        **item,
-        "reference_value": _compare_to_value(item.get("operator"), item.get("reference_value")),
-    }
+    stored = dict(item)
+    drop_unused_compare_to(stored)
+    return stored
 
 
 def _stored_filters(filters: Any) -> Any:
@@ -220,21 +253,31 @@ class _BlockFields:
 def _split_setting(name: str, raw: Any, param: Mapping[str, Any], declared: Any) -> _SplitSetting:
     """One block setting in its stored form, its expression fields, template flag, element types."""
     param_type = param.get("type")
-    if is_expr_value(raw):
-        return _SplitSetting(raw["expr"], [name])
+    kind, inner = _form(raw, template_place=True)
+    if kind == "expr":
+        return _SplitSetting(inner, [name])
+    if kind == "template":
+        return _SplitSetting(inner, [], template=True)
+    typed = bool(param.get("typed_values")) and isinstance(inner, list | dict)
+    if kind == "literal":
+        if not typed:
+            return _SplitSetting(inner, [])
+        stored, types = stored_elements(inner, declared)
+        return _SplitSetting(stored, [], element_types=types)
     if param_type == "map" and isinstance(raw, dict):
         split, nested = _split_map_entries(name, raw)
-        if not param.get("typed_values"):
+        if not typed:
             return _SplitSetting(split, nested)
-        stored, types = _typed_map_entries(raw, split, declared)
+        expression_keys = {field.removeprefix(f"{name}.") for field in nested}
+        stored, types = _typed_map_entries(split, expression_keys, declared)
         return _SplitSetting(stored, nested, element_types=types)
     if param_type == "array" and isinstance(raw, list):
-        if param.get("typed_values"):
+        if typed:
             items, item_fields, types = _typed_list_items(name, raw, declared)
             return _SplitSetting(items, item_fields, element_types=types)
         rows, nested_rows = _split_row_fields(name, raw)
         return _SplitSetting(rows, nested_rows)
-    return _SplitSetting(written_word(param, raw), [], template=is_template_value(raw))
+    return _SplitSetting(written_word(param, _as_written(raw)), [])
 
 
 _RECIPE_KIND_KEYS = {"expr": "isExpression", "template": "isTemplate"}
@@ -352,6 +395,52 @@ def _made_secret_finding(step_path: str, output: str, variable: str) -> dict[str
 
 
 @dataclass
+class _SetterRows:
+    """A Setter's rows as stored, with the shared flags and entry types they hold."""
+
+    values: dict[str, Any] = field(default_factory=dict)
+    expression_fields: list[str] = field(default_factory=list)
+    template_fields: list[str] = field(default_factory=list)
+    element_types: dict[str, Any] = field(default_factory=dict)
+
+    def flag(self, kind: str, place: str) -> None:
+        target = self.expression_fields if kind == "expr" else self.template_fields
+        target.append(place)
+
+    def store_whole(
+        self, name: str, place: str, kind: str, inner: Any, row_type: str, declared_types: Any
+    ) -> None:
+        """A row stored as one value: a literal as given, plain data as written."""
+        value = _as_written(inner) if kind == "plain" else inner
+        self.values[name] = value
+        if row_type in ("array", "map") and isinstance(value, list | dict):
+            self.values[name], self.element_types[place] = stored_elements(value, declared_types)
+
+    def store_entries(
+        self, name: str, place: str, inner: Any, row_type: str, declared_types: Any
+    ) -> None:
+        """A plain list or map row, each first-level entry in the mode it is written in."""
+        entries = list(inner.items()) if isinstance(inner, dict) else list(enumerate(inner))
+        split = {key: _split_entry(entry, template_place=True) for key, entry in entries}
+        for key, entry in split.items():
+            if entry.kind != "plain":
+                self.flag(entry.kind, f"{place}.{key}")
+        if isinstance(inner, dict):
+            stored = {key: entry.value for key, entry in split.items()}
+            expression_keys = {key for key, entry in split.items() if entry.kind == "expr"}
+            if row_type == "map":
+                stored, self.element_types[place] = _typed_map_entries(
+                    stored, expression_keys, declared_types
+                )
+            self.values[name] = stored
+            return
+        items = [entry.value for entry in split.values()]
+        if row_type == "array":
+            items, self.element_types[place] = stored_elements(items, declared_types)
+        self.values[name] = items
+
+
+@dataclass
 class _Workflow:
     nodes: list[dict[str, Any]] = field(default_factory=list)
     edges: list[dict[str, Any]] = field(default_factory=list)
@@ -365,7 +454,8 @@ class _Scope:
     # Declares a capture target; True when a marked capture promotes a declared plain variable.
     declare_capture: Callable[[str, str, bool], bool]
     variable_type: Callable[[str], str | None]
-    loop_stack: list[tuple[str, str | None]] = field(default_factory=list)
+    # Each enclosing loop's node id and its label, else its block name.
+    loop_stack: list[tuple[str, str]] = field(default_factory=list)
 
 
 class _FunctionLocals:
@@ -422,6 +512,9 @@ class _Emitter:
         self._pending_key: str | None = None
         # Implicit if fall-through handles; pruned when nothing attaches to them.
         self._implicit_else: list[tuple[str, str]] = []
+        # The Notes a `notes:` list places beside a flow: never wired, never reached.
+        self.side_notes: set[str] = set()
+        self.local_workflows: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------
     # Small helpers
@@ -443,20 +536,22 @@ class _Emitter:
             self._profiles_by_name = {str(row.get("name") or ""): row for row in rows}
         return self._profiles_by_name[name]
 
-    def _condition_item(self, condition: Any, scope: _Scope) -> dict[str, Any]:
-        if isinstance(condition, str):
-            return {
-                "id": self._next_condition_id(),
-                "type": "expression",
-                "expression": condition,
-            }
+    def _comparison_item(self, condition: dict[str, Any], scope: _Scope) -> dict[str, Any]:
         operator = condition.get("operator")
         variable = condition.get("variable")
-        value = _compare_to_value(operator, condition.get("value"))
-        # A valueless check (is_null, is_empty) takes the checked name's declared type.
-        value_type = condition.get("value_type") or (
-            _infer_value_type(value) if value is not None else scope.variable_type(str(variable))
-        )
+        kind, value = "plain", None
+        # An operator that takes no value stores none and no mode, whatever was written.
+        compared = "value" in condition and str(operator) not in UNARY_OPERATORS
+        if compared:
+            kind, value = _form(condition["value"], template_place=True)
+            if kind == "plain":
+                value = _as_written(value)
+        value_type = condition.get("value_type")
+        if not value_type:
+            if value is None or kind == "expr":
+                value_type = scope.variable_type(str(variable))
+            else:
+                value_type = "string" if kind == "template" else _infer_value_type(value)
         item: dict[str, Any] = {
             "id": self._next_condition_id(),
             "type": "literal",
@@ -465,15 +560,45 @@ class _Emitter:
         }
         if value_type:
             item["value_type"] = value_type
-        item["reference_value"] = value
+        if compared:
+            item["reference_value"] = value
+        if kind == "expr":
+            item["reference_is_expression"] = True
+        elif kind == "template":
+            item["reference_is_template"] = True
         return item
 
-    def _condition_items(self, conditions: list[Any], scope: _Scope) -> list[dict[str, Any]]:
+    def _condition_item(self, condition: Any, scope: _Scope) -> dict[str, Any]:
+        if isinstance(condition, str):
+            return {
+                "id": self._next_condition_id(),
+                "type": "expression",
+                "expression": condition,
+            }
+        if "group" in condition:
+            # The group takes its id before its items, so ids run in reading order.
+            group_id = self._next_condition_id()
+            return {
+                "id": group_id,
+                "type": "group",
+                "items": self._condition_items(condition["group"], scope),
+            }
+        return self._comparison_item(condition, scope)
+
+    def _condition_items(self, conditions: Any, scope: _Scope) -> list[dict[str, Any]]:
+        """A recipe condition list as stored items: side by side is `and` (REQ-3.5.1.5)."""
+        written = conditions if isinstance(conditions, list) else [conditions]
         items: list[dict[str, Any]] = []
-        for condition in conditions:
-            if items:
+        joined = True
+        for condition in written:
+            if isinstance(condition, str) and condition in CONDITION_MARKERS:
+                items.append({"type": "operator", "value": condition})
+                joined = True
+                continue
+            if not joined:
                 items.append({"type": "operator", "value": "and"})
             items.append(self._condition_item(condition, scope))
+            joined = False
         return items
 
     def _declare_top_capture(self, name: str, output_type: str, secret: bool = False) -> bool:
@@ -500,15 +625,18 @@ class _Emitter:
 
     def _attach(self, node_id: str, pending: _Pending, workflow: _Workflow) -> None:
         for index, (source, handle) in enumerate(pending):
+            target_handle = f"ingress_{index}" if index else None
+            # The id names both handles, so wires between the same two Blocks stay apart.
+            parts = [source, handle, node_id, target_handle]
             edge: dict[str, Any] = {
-                "id": f"edge-{source}-{node_id}",
+                "id": "-".join(["edge", *(part for part in parts if part is not None)]),
                 "source": source,
                 "target": node_id,
             }
             if handle is not None:
                 edge["sourceHandle"] = handle
-            if index:
-                edge["targetHandle"] = f"ingress_{index}"
+            if target_handle is not None:
+                edge["targetHandle"] = target_handle
             workflow.edges.append(edge)
 
     def _emit_node(
@@ -521,8 +649,8 @@ class _Emitter:
         node_type: str,
         version: str,
         label: str,
+        identity: Mapping[str, Any],
         values: dict[str, Any] | None = None,
-        config: dict[str, Any] | None = None,
         output_bindings: dict[str, Any] | None = None,
         profile_bindings: list[dict[str, Any]] | None = None,
         data_extras: dict[str, Any] | None = None,
@@ -536,21 +664,17 @@ class _Emitter:
             "elementType": element_type,
             "nodeType": node_type,
             "version": version,
-            "config": (
-                config
-                if config is not None
-                else {
-                    "values": values or {},
-                    "outputBindings": output_bindings or {},
-                    "profileBindings": profile_bindings or [],
-                }
-            ),
+            "config": {
+                "values": values or {},
+                "outputBindings": output_bindings or {},
+                "profileBindings": profile_bindings or [],
+            },
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         }
         if data_extras:
             data.update(data_extras)
+        data.update(_identity(identity))
         node = {
             "id": node_id,
             "type": "noteNode" if element_type == "note" else "workflowNode",
@@ -573,6 +697,13 @@ class _Emitter:
             keyword = next(key for key in step if key in _KEYWORDS)
             pending = self._emit_step(keyword, step, step_path, pending, scope)
         return pending
+
+    def emit_notes(self, steps: list[Any], path_prefix: str, scope: _Scope) -> None:
+        """The Notes beside a flow, with no connection in or out."""
+        for index, step in enumerate(steps):
+            self._pending_key = step.get("key")
+            self._emit_sugar("note", step, step["note"], f"{path_prefix}[{index}]", [], scope)
+            self.side_notes.add(scope.workflow.nodes[-1]["id"])
 
     def _emit_step(
         self,
@@ -659,7 +790,12 @@ class _Emitter:
     def _emit_block(
         self, step: dict[str, Any], step_path: str, pending: _Pending, scope: _Scope
     ) -> _Pending:
-        entry = self.catalog[str(step["block"])]
+        block_id = str(step["block"])
+        if block_id in BLOCK_FORM_CONTROLS:
+            settings = step.get("settings")
+            value = settings if isinstance(settings, dict) else {}
+            return self._emit_sugar(block_id, step, value, step_path, pending, scope)
+        entry = self.catalog[block_id]
         fields = _BlockFields.of(step, entry)
         if "filters" in fields.values:
             fields.values["filters"] = _stored_filters(fields.values["filters"])
@@ -733,41 +869,44 @@ class _Emitter:
                 "templateFields": fields.template_fields,
                 **({"elementTypes": fields.element_types} if fields.element_types else {}),
             },
+            identity=step,
         )
         if isinstance(given, list):
             scope.workflow.nodes[-1]["data"]["config"]["outputSecretFields"] = marks.names
         return node_id
 
+    def _set_row(
+        self, name: str, raw: Any, scope: _Scope, declared_types: Any, rows: _SetterRows
+    ) -> None:
+        """One Setter row on the shared stored shape: `variables.<row>` flags, entry flags one
+        level down, entry types at the row's place; the row's own type is its variable's."""
+        place = f"{_SETTER_PLACE}.{name}"
+        kind, inner = _form(raw, template_place=True)
+        if kind in ("expr", "template"):
+            rows.values[name] = inner
+            rows.flag(kind, place)
+            return
+        row_type = scope.variable_type(name) or _infer_value_type(inner)
+        if kind == "literal" or not isinstance(inner, list | dict):
+            rows.store_whole(name, place, kind, inner, row_type, declared_types)
+        else:
+            rows.store_entries(name, place, inner, row_type, declared_types)
+
     def _set_payload(
         self, value: dict[str, Any], scope: _Scope, declared_element_types: Any
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        assignments: dict[str, Any] = {}
-        expression_keys: list[str] = []
-        variable_types: dict[str, str] = {}
-        element_types: dict[str, Any] = {}
         declared = declared_element_types if isinstance(declared_element_types, dict) else {}
+        rows = _SetterRows()
         for name, assigned in value.items():
             key = str(name)
-            if is_expr_value(assigned):
-                assignments[key] = assigned["expr"]
-                expression_keys.append(key)
-                row_type = scope.variable_type(key) or None
-            else:
-                assignments[key] = assigned
-                row_type = scope.variable_type(key) or _infer_value_type(assigned)
-                if row_type in ("array", "map") and isinstance(assigned, list | dict):
-                    assignments[key], element_types[key] = stored_elements(
-                        assigned, declared.get(key)
-                    )
-            if row_type is not None:
-                variable_types[key] = row_type
+            self._set_row(key, assigned, scope, declared.get(key), rows)
         extras: dict[str, Any] = {
-            "variableExpressionKeys": expression_keys,
-            "variableTypes": variable_types,
+            "expressionFields": rows.expression_fields,
+            "templateFields": rows.template_fields,
         }
-        if element_types:
-            extras["variableElementTypes"] = element_types
-        return {"variables": assignments}, extras
+        if rows.element_types:
+            extras["elementTypes"] = rows.element_types
+        return {_SETTER_PLACE: rows.values}, extras
 
     def _sugar_payload(
         self, keyword: str, value: Any, scope: _Scope, element_types: Any = None
@@ -775,11 +914,17 @@ class _Emitter:
         if keyword == "set":
             return self._set_payload(value, scope, element_types)
         if keyword == "delay" and not isinstance(value, dict):
-            return {"duration": value}, {}
+            value = {"duration": value}
+        if keyword == "note":
+            # A note's text is stored as written, never read as a template.
+            return (value if isinstance(value, dict) else {"text": value}), {}
         if keyword in ("break", "continue"):
             return {"target_loop": self._resolve_loop_target(value, scope)}, {}
         settings = value if isinstance(value, dict) else {}
-        values, expression_fields, template_fields, _types = _split_settings(settings)
+        entry = self.catalog[CONTROL_FIELDS[keyword].control_id]
+        values, expression_fields, template_fields, _types = _split_settings(
+            settings, entry.parameters
+        )
         return values, {
             "expressionFields": expression_fields,
             "templateFields": template_fields,
@@ -794,23 +939,8 @@ class _Emitter:
         pending: _Pending,
         scope: _Scope,
     ) -> _Pending:
-        entry = self.catalog[_SUGAR_CONTROL_IDS[keyword]]
+        entry = self.catalog[CONTROL_FIELDS[keyword].control_id]
         label = str(step.get("label") or entry.name)
-        if keyword == "note":
-            settings = value if isinstance(value, dict) else {"text": value}
-            # A note is a free-floating annotation: nothing wires into or out
-            # of it, and the chain passes it by untouched.
-            self._emit_node(
-                scope,
-                [],
-                step_path,
-                element_type=entry.id,
-                node_type=entry.kind,
-                version=entry.version,
-                label=label,
-                config=self._created(entry, settings),
-            )
-            return pending
         values, data_extras = self._sugar_payload(keyword, value, scope, step.get("element_types"))
         node_id = self._emit_node(
             scope,
@@ -822,12 +952,27 @@ class _Emitter:
             label=label,
             values=self._created(entry, values),
             data_extras=data_extras,
+            identity=step,
         )
+        if keyword == "set":
+            self._mark_secret_rows(scope, step.get("secret_rows"), values[_SETTER_PLACE])
         if keyword in _TERMINATING_KEYWORDS:
             return []
         return [(node_id, None)]
 
-    def _resolve_loop_target(self, value: Any, scope: _Scope) -> str:
+    @staticmethod
+    def _mark_secret_rows(scope: _Scope, given: Any, rows: Mapping[str, Any]) -> None:
+        """A Setter's Secret rows in row order, marked the way Secret outputs are (REQ-3.4.1.14)."""
+        if not isinstance(given, list):
+            return
+        marked = {str(name) for name in given}
+        config = scope.workflow.nodes[-1]["data"]["config"]
+        config["secretFields"] = [f"{_SETTER_PLACE}.{name}" for name in rows if name in marked]
+
+    @staticmethod
+    def _resolve_loop_target(value: Any, scope: _Scope) -> str:
+        """The innermost loop, or the nearest enclosing one whose label (else block name) is
+        the one given."""
         label = value.get("loop") if isinstance(value, dict) else None
         if label is None:
             return scope.loop_stack[-1][0]
@@ -864,7 +1009,9 @@ class _Emitter:
             [("start-node", None)],
             inner_scope,
         )
+        self.emit_notes(declaration.get("notes") or [], f"functions[{name}].notes", inner_scope)
         _apply_layout(workflow)
+        self.local_workflows.append({"nodes": workflow.nodes, "edges": workflow.edges})
         return {
             "name": name,
             "workflow": {"nodes": workflow.nodes, "edges": workflow.edges},
@@ -893,6 +1040,46 @@ class _Emitter:
             tails.append(self.emit_flow(steps, f"{step_path}.{prefix}", [(node_id, handle)], scope))
         return tails
 
+    def _construct_fields(
+        self, keyword: str, value: Mapping[str, Any], entry: BlockEntry
+    ) -> tuple[dict[str, Any], list[str], list[str]]:
+        """A construct's settings, through its control field list, as stored values and flags."""
+        raw = recipe_fields(keyword, value)
+        values, expression_fields, template_fields, _types = _split_settings(raw, entry.parameters)
+        return values, expression_fields, template_fields
+
+    def _emit_control(
+        self,
+        scope: _Scope,
+        pending: _Pending,
+        step_path: str,
+        value: Mapping[str, Any],
+        control_id: str,
+        *,
+        values: dict[str, Any],
+        flags: tuple[list[str], list[str]] = ([], []),
+        output_bindings: dict[str, Any] | None = None,
+    ) -> str:
+        """One control node of a construct: its values, flags, label and identity."""
+        entry_meta = self.catalog[control_id]
+        expression_fields, template_fields = flags
+        return self._emit_node(
+            scope,
+            pending,
+            step_path,
+            element_type=control_id,
+            node_type="control",
+            version=entry_meta.version,
+            label=str(value.get("label") or entry_meta.name),
+            values=self._created(entry_meta, values),
+            output_bindings=output_bindings,
+            data_extras={
+                "expressionFields": expression_fields,
+                "templateFields": template_fields,
+            },
+            identity=value,
+        )
+
     def _emit_if(
         self, value: dict[str, Any], step_path: str, pending: _Pending, scope: _Scope
     ) -> _Pending:
@@ -902,8 +1089,8 @@ class _Emitter:
             {
                 "id": "branch_0",
                 "type": "if",
-                "label": "",
-                "conditions": [self._condition_item(value.get("when"), scope)],
+                "label": str(value.get("if_label") or ""),
+                "conditions": self._condition_items(value.get("when"), scope),
             }
         )
         for index, entry in enumerate(value.get("elif") or []):
@@ -912,24 +1099,22 @@ class _Emitter:
                 {
                     "id": f"branch_{len(branches)}",
                     "type": "else_if",
-                    "label": "",
-                    "conditions": [self._condition_item(entry.get("when"), scope)],
+                    "label": str(entry.get("label") or ""),
+                    "conditions": self._condition_items(entry.get("when"), scope),
                 }
             )
-        if isinstance(value.get("else"), list):
-            sections.append(("if.else", value["else"]))
-            branches.append({"id": f"branch_{len(branches)}", "type": "else", "label": ""})
         has_explicit_else = isinstance(value.get("else"), list)
-        entry_meta = self.catalog["if-else"]
-        node_id = self._emit_node(
-            scope,
-            pending,
-            step_path,
-            element_type="if-else",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
-            values=self._created(entry_meta, {"branches": branches}),
+        if has_explicit_else:
+            sections.append(("if.else", value["else"]))
+            branches.append(
+                {
+                    "id": f"branch_{len(branches)}",
+                    "type": "else",
+                    "label": str(value.get("else_label") or ""),
+                }
+            )
+        node_id = self._emit_control(
+            scope, pending, step_path, value, "if-else", values={"branches": branches}
         )
         tails: list[_Pending] = []
         for (prefix, steps), branch in zip(sections, branches, strict=True):
@@ -951,72 +1136,40 @@ class _Emitter:
         self, value: dict[str, Any], step_path: str, pending: _Pending, scope: _Scope
     ) -> _Pending:
         cases = value.get("cases") or []
-        entry_meta = self.catalog["switch-case"]
         branches: list[dict[str, Any]] = [
             {
                 "id": f"branch_{index}",
                 "type": "case",
-                "label": "",
-                "conditions": [self._condition_item(case.get("when"), scope)],
+                "label": str(case.get("label") or ""),
+                "conditions": self._condition_items(case.get("when"), scope),
                 "break": bool(case.get("break", True)),
             }
             for index, case in enumerate(cases)
         ]
         if isinstance(value.get("default"), list):
-            branches.append({"id": f"branch_{len(branches)}", "type": "default", "label": ""})
-        node_id = self._emit_node(
-            scope,
-            pending,
-            step_path,
-            element_type="switch-case",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
-            values=self._created(entry_meta, {"branches": branches}),
+            branches.append(
+                {
+                    "id": f"branch_{len(branches)}",
+                    "type": "default",
+                    "label": str(value.get("default_label") or ""),
+                }
+            )
+        node_id = self._emit_control(
+            scope, pending, step_path, value, "switch-case", values={"branches": branches}
         )
         handles = [str(branch["id"]) for branch in branches]
         self._child_flows("switch", value, step_path, node_id, handles, scope)
         # Case and default chains dead-end; the flow resumes on the 'then' egress.
         return [(node_id, "then")]
 
-    @staticmethod
-    def _for_values(value: dict[str, Any]) -> dict[str, Any]:
-        settings: dict[str, Any] = {}
-        if "count" in value:
-            settings["mode"] = "count"
-            settings["count"] = value["count"]
-        else:
-            loop_range = value.get("range") or {}
-            settings["mode"] = "range"
-            settings.update(
-                {key: loop_range[key] for key in ("start", "end", "step") if key in loop_range}
-            )
-        if "timeout" in value:
-            settings["timeout"] = value["timeout"]
-        return settings
-
-    @staticmethod
-    def _for_each_values(value: dict[str, Any]) -> dict[str, Any]:
-        settings: dict[str, Any] = {"collection": value.get("collection")}
-        if "timeout" in value:
-            settings["timeout"] = value["timeout"]
-        return settings
-
-    def _while_values(self, value: dict[str, Any], scope: _Scope) -> dict[str, Any]:
-        conditions = value.get("conditions")
-        condition_list = conditions if isinstance(conditions, list) else [conditions]
-        settings: dict[str, Any] = {
-            key: value[key] for key in ("mode", "max_iterations", "timeout") if key in value
-        }
-        settings["conditions"] = self._condition_items(condition_list, scope)
-        return settings
-
-    def _loop_values(self, keyword: str, value: dict[str, Any], scope: _Scope) -> dict[str, Any]:
-        if keyword == "for":
-            return self._for_values(value)
-        if keyword == "for_each":
-            return self._for_each_values(value)
-        return self._while_values(value, scope)
+    def _for_each_type(self, value: Mapping[str, Any], scope: _Scope) -> str | None:
+        """A For Each left without `collection_type` takes the type of the variable a literal
+        `collection` names, as its window does; an expression collection gets none."""
+        kind, collection = value_form(value.get("collection"))
+        if kind != "plain" or not isinstance(collection, str):
+            return None
+        declared = scope.variable_type(collection)
+        return declared if declared in ("array", "map", "table") else None
 
     def _emit_loop(
         self,
@@ -1026,69 +1179,52 @@ class _Emitter:
         pending: _Pending,
         scope: _Scope,
     ) -> _Pending:
-        control_id = {"for": "for", "for_each": "for-each", "while": "while"}[keyword]
+        control_id = CONTROL_FIELDS[keyword].control_id
         entry_meta = self.catalog[control_id]
-        raw_values = self._loop_values(keyword, value, scope)
-        values, expression_fields, template_fields, _types = _split_settings(raw_values)
-        values = self._created(entry_meta, values)
-        node_id = self._emit_node(
+        values, expression_fields, template_fields = self._construct_fields(
+            keyword, value, entry_meta
+        )
+        if keyword == "for_each" and "collection_type" not in values:
+            derived = self._for_each_type(value, scope)
+            if derived is not None:
+                values["collection_type"] = derived
+        elif keyword == "while":
+            values["conditions"] = self._condition_items(value.get("conditions"), scope)
+        node_id = self._emit_control(
             scope,
             pending,
             step_path,
-            element_type=control_id,
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
+            value,
+            control_id,
             values=values,
+            flags=(expression_fields, template_fields),
             output_bindings=self._capture_bindings(value.get("capture"), entry_meta.outputs, scope),
-            data_extras={
-                "expressionFields": expression_fields,
-                "templateFields": template_fields,
-            },
         )
-        scope.loop_stack.append(
-            (node_id, str(value["label"]) if value.get("label") is not None else None)
-        )
+        label = value.get("label")
+        scope.loop_stack.append((node_id, str(label) if label else entry_meta.name))
         self.emit_flow(
             value.get("body") or [], f"{step_path}.{keyword}.body", [(node_id, "body")], scope
         )
         scope.loop_stack.pop()
         return [(node_id, "then")]
 
-    def _wait_until_values(self, value: dict[str, Any], scope: _Scope) -> dict[str, Any]:
-        values: dict[str, Any] = {
-            "conditions": self._condition_items(value.get("that") or [], scope),
-            "timeout": value.get("timeout"),
-            "mode": "retry" if isinstance(value.get("retry"), list) else "watch",
-        }
-        if "interval" in value:
-            values["check_interval"] = value["interval"]
-        for key in ("message", "fail_current_scope"):
-            if key in value:
-                values[key] = value[key]
-        return values
-
     def _emit_wait_until(
         self, value: dict[str, Any], step_path: str, pending: _Pending, scope: _Scope
     ) -> _Pending:
         entry_meta = self.catalog["wait-until"]
-        raw_values = self._wait_until_values(value, scope)
-        values, expression_fields, template_fields, _types = _split_settings(raw_values)
-        values = self._created(entry_meta, values)
-        node_id = self._emit_node(
+        values, expression_fields, template_fields = self._construct_fields(
+            "wait_until", value, entry_meta
+        )
+        values["conditions"] = self._condition_items(value.get("that") or [], scope)
+        node_id = self._emit_control(
             scope,
             pending,
             step_path,
-            element_type="wait-until",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
+            value,
+            "wait-until",
             values=values,
+            flags=(expression_fields, template_fields),
             output_bindings=self._capture_bindings(value.get("capture"), entry_meta.outputs, scope),
-            data_extras={
-                "expressionFields": expression_fields,
-                "templateFields": template_fields,
-            },
         )
         if values["mode"] == "watch":
             return [(node_id, None)]
@@ -1106,17 +1242,13 @@ class _Emitter:
         entry_meta = self.catalog["try-catch-finally"]
         has_catch = isinstance(value.get("catch"), list)
         has_finally = isinstance(value.get("finally"), list)
-        node_id = self._emit_node(
+        node_id = self._emit_control(
             scope,
             pending,
             step_path,
-            element_type="try-catch-finally",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
-            values=self._created(
-                entry_meta, {"enable_catch": has_catch, "enable_finally": has_finally}
-            ),
+            value,
+            "try-catch-finally",
+            values={"enable_catch": has_catch, "enable_finally": has_finally},
             output_bindings=self._capture_bindings(value.get("capture"), entry_meta.outputs, scope),
         )
         handles = ["try"]
@@ -1132,24 +1264,23 @@ class _Emitter:
     ) -> _Pending:
         branches = value.get("branches") or []
         entry_meta = self.catalog["parallel"]
-        values: dict[str, Any] = {
-            "branches": [
-                _parallel_branch_record(branch, index) for index, branch in enumerate(branches)
-            ],
-        }
-        if "join" in value:
-            values["join"] = value["join"]
-        if "time_limit" in value:
-            values["time_limit"] = value["time_limit"]
-        node_id = self._emit_node(
+        values, expression_fields, template_fields = self._construct_fields(
+            "parallel", value, entry_meta
+        )
+        records: list[dict[str, Any]] = []
+        for index, branch in enumerate(branches):
+            record, lane_fields = _parallel_branch_record(branch, index)
+            records.append(record)
+            expression_fields.extend(lane_fields)
+        values["branches"] = records
+        node_id = self._emit_control(
             scope,
             pending,
             step_path,
-            element_type="parallel",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
-            values=self._created(entry_meta, values),
+            value,
+            "parallel",
+            values=values,
+            flags=(expression_fields, template_fields),
             output_bindings={},
         )
         handles = [f"branch_{index + 1}" for index in range(len(branches))]
@@ -1160,26 +1291,25 @@ class _Emitter:
     def _emit_assert(
         self, value: dict[str, Any], step_path: str, pending: _Pending, scope: _Scope
     ) -> _Pending:
-        split = "on_pass" in value or "on_fail" in value
         entry_meta = self.catalog["assert"]
-        values: dict[str, Any] = {
-            "assertions": self._condition_items(value.get("that") or [], scope),
-            "mode": "split" if split else "single",
-        }
-        if "fail_current_scope" in value:
-            values["fail_current_scope"] = value["fail_current_scope"]
-        node_id = self._emit_node(
+        values, expression_fields, template_fields = self._construct_fields(
+            "assert", value, entry_meta
+        )
+        sections = "on_pass" in value or "on_fail" in value
+        # A written mode is honored; left out, the sections pick it.
+        values.setdefault("mode", "split" if sections else "single")
+        values["assertions"] = self._condition_items(value.get("that") or [], scope)
+        node_id = self._emit_control(
             scope,
             pending,
             step_path,
-            element_type="assert",
-            node_type="control",
-            version=entry_meta.version,
-            label=str(value.get("label") or entry_meta.name),
-            values=self._created(entry_meta, values),
+            value,
+            "assert",
+            values=values,
+            flags=(expression_fields, template_fields),
             output_bindings=self._capture_bindings(value.get("capture"), entry_meta.outputs, scope),
         )
-        if not split:
+        if values["mode"] != "split":
             return [(node_id, None)]
         handles: list[str] = []
         if isinstance(value.get("on_pass"), list):
@@ -1194,7 +1324,9 @@ class _Emitter:
     ) -> _Pending:
         raw_settings = value.get("settings")
         settings: dict[str, Any] = raw_settings if isinstance(raw_settings, dict) else {}
-        values, expression_fields, template_fields, _types = _split_settings(settings)
+        values, expression_fields, template_fields, _types = _split_settings(
+            settings, self.remote_entry.parameters
+        )
         node_id = self._emit_node(
             scope,
             pending,
@@ -1207,10 +1339,12 @@ class _Emitter:
             output_bindings=self._capture_bindings(
                 value.get("capture"), self.remote_entry.outputs, scope
             ),
+            profile_bindings=self._profile_bindings(value.get("profiles")),
             data_extras={
                 "expressionFields": expression_fields,
                 "templateFields": template_fields,
             },
+            identity=value,
         )
         self.emit_flow(
             value.get("body") or [], f"{step_path}.remote.body", [(node_id, "body")], scope
@@ -1246,6 +1380,7 @@ class _Emitter:
             variable_type=self._variable_type,
         )
         self.emit_flow(self.doc.flow, "flow", [("start-node", None)], scope)
+        self.emit_notes(self.doc.notes, "notes", scope)
         self._prune_unused_implicit_else(workflow)
         _apply_layout(workflow)
         variables = self._emit_declared_variables()
@@ -1261,16 +1396,28 @@ class _Emitter:
         }
 
 
-def _parallel_branch_record(branch: Any, index: int) -> dict[str, Any]:
-    """One branch lane as the canvas stores it."""
+def _identity(holder: Mapping[str, Any]) -> dict[str, Any]:
+    """The description and disabled mark a step gives its Block, when it gives them."""
+    identity: dict[str, Any] = {}
+    if holder.get("description"):
+        identity["description"] = holder["description"]
+    if holder.get("disabled") is True:
+        identity["disabled"] = True
+    return identity
+
+
+def _parallel_branch_record(branch: Any, index: int) -> tuple[dict[str, Any], list[str]]:
+    """One branch lane as the canvas stores it, and its lane-limit expression flag."""
     source = branch if isinstance(branch, dict) else {}
     record: dict[str, Any] = {
         "id": f"branch_{index + 1}",
         "name": str(source.get("name") or ""),
     }
-    if "time_limit" in source:
-        record["time_limit"] = source["time_limit"]
-    return record
+    if "time_limit" not in source:
+        return record, []
+    split = _split_entry(source["time_limit"], template_place=False)
+    record["time_limit"] = split.value
+    return record, [f"branches.{index}.time_limit"] if split.kind == "expr" else []
 
 
 _KEYWORDS = frozenset(STEP_KEYWORDS)
@@ -1287,8 +1434,8 @@ def _apply_layout(workflow: _Workflow) -> None:
         node["position"] = positions[node["id"]]
 
 
-def _unreachable_flow_nodes(workflow: dict[str, Any]) -> list[str]:
-    """Flow-node ids no edge path from start-node reaches (notes float free)."""
+def _unreachable_flow_nodes(workflow: dict[str, Any], beside: set[str]) -> list[str]:
+    """Flow-node ids no edge path from start-node reaches, the Notes beside the flow aside."""
     adjacency: dict[str, list[str]] = {}
     for edge in workflow["edges"]:
         adjacency.setdefault(edge["source"], []).append(edge["target"])
@@ -1302,7 +1449,7 @@ def _unreachable_flow_nodes(workflow: dict[str, Any]) -> list[str]:
     return [
         node["id"]
         for node in workflow["nodes"]
-        if node["id"] not in seen and node["type"] != "noteNode"
+        if node["id"] not in seen and node["id"] not in beside
     ]
 
 
@@ -1324,12 +1471,17 @@ def compile_recipe(
     findings.extend(emitter.findings)
     # Wiring self-check: an emitted graph must reach every flow node, or the
     # compiler has produced a block that can never execute.
-    orphans = _unreachable_flow_nodes(test_data["workflow"])
+    # One finding per step: a local Function used twice compiles twice.
+    orphans = dict.fromkeys(
+        emitter.step_map.get(node_id, "test")
+        for workflow in (*emitter.local_workflows, test_data["workflow"])
+        for node_id in _unreachable_flow_nodes(workflow, emitter.side_notes)
+    )
     if orphans:
-        for node_id in orphans:
+        for step in orphans:
             findings.append(
                 finding(
-                    emitter.step_map.get(node_id, "test"),
+                    step,
                     "UNREACHABLE_BLOCK",
                     "Compiled block is unreachable from the start of the flow",
                     None,

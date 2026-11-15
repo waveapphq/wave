@@ -187,7 +187,7 @@ export function RegressionsListContainer(): ReactNode {
       createRegression(data)
         .then((created) => {
           setCreateModalOpen(false)
-          navigate(`/regressions/${created.id}`)
+          void navigate(`/regressions/${created.id}`)
         })
         .finally(() => setCreateLoading(false))
         .catch((err: unknown) => {
@@ -199,7 +199,7 @@ export function RegressionsListContainer(): ReactNode {
 
   const handleEditRegression = useCallback(
     (regressionId: string) => {
-      navigate(`/regressions/${regressionId}/edit`)
+      void navigate(`/regressions/${regressionId}/edit`)
     },
     [navigate]
   )
@@ -299,7 +299,7 @@ export function RegressionsListContainer(): ReactNode {
   const handleBulkRun = useCallback(() => {
     if (selectedIds.length === 0) return
     const ids = selectedIds.join(',')
-    navigate(`/executions/new?regressionIds=${ids}`)
+    void navigate(`/executions/new?regressionIds=${ids}`)
   }, [selectedIds, navigate])
 
   const handleFilterChange = useCallback(

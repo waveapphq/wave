@@ -1,0 +1,202 @@
+{
+  "name": "V-CTRL-WAIT-UNTIL-FN-WIRES",
+  "description": "A Function body: a Watch wait holding a retry wire and a next wire, then a Retry wait whose next wire has no lane name. The retry wire lands on the Log after the Retry wait, so every Block stays reached without it.",
+  "variables": [
+    {
+      "name": "ready",
+      "type": "string",
+      "value": "yes"
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fw-watch",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 160
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "fw watch",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes",
+                  "reference_is_expression": false,
+                  "id": "cond-fw-watch"
+                }
+              ],
+              "timeout": 5000,
+              "check_interval": 200,
+              "message": "fw watch gave up",
+              "mode": "watch",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fw-after-watch",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 320
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the Watch wait",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'fw-after-watch-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "fw-retry",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 480
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "fw retry",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes",
+                  "reference_is_expression": false,
+                  "id": "cond-fw-retry"
+                }
+              ],
+              "timeout": 5000,
+              "check_interval": 200,
+              "message": "fw retry gave up",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "fw-after-retry",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 640
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the Retry wait",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'fw-after-retry-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-fw-start",
+        "source": "start-node",
+        "target": "fw-watch",
+        "type": "default"
+      },
+      {
+        "id": "e-fw-watch-retry",
+        "source": "fw-watch",
+        "sourceHandle": "retry",
+        "target": "fw-after-retry",
+        "targetHandle": "ingress_1",
+        "type": "default"
+      },
+      {
+        "id": "e-fw-watch-next",
+        "source": "fw-watch",
+        "sourceHandle": "then",
+        "target": "fw-after-watch",
+        "type": "default"
+      },
+      {
+        "id": "e-fw-after-watch",
+        "source": "fw-after-watch",
+        "target": "fw-retry",
+        "type": "default"
+      },
+      {
+        "id": "e-fw-retry-next",
+        "source": "fw-retry",
+        "target": "fw-after-retry",
+        "type": "default"
+      }
+    ]
+  }
+}

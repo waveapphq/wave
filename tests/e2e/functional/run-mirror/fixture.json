@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'runm-line-1-start'", "level": "INFO" },
             "outputBindings": {},
@@ -63,7 +62,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'runm-line-2-early'", "level": "INFO" },
             "outputBindings": {},
@@ -106,10 +104,8 @@
           "version": "1.0.0",
           "description": "Mark Halfway",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.runm_progress"],
           "templateFields": [],
-          "variableExpressionKeys": ["runm_progress"],
-          "variableTypes": { "runm_progress": "string" },
           "config": {
             "values": { "variables": { "runm_progress": "'halfway'" } },
             "outputBindings": {},
@@ -132,7 +128,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'runm-line-3-midpoint'", "level": "WARN" },
             "outputBindings": {},
@@ -177,7 +172,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'runm-line-4-late'", "level": "INFO" },
             "outputBindings": {},
@@ -222,7 +216,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'runm-line-5-final'", "level": "INFO" },
             "outputBindings": {},

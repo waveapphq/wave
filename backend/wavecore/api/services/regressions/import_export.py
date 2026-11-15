@@ -8,23 +8,28 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, NotFoundException
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.regressions import _storage
 from wavecore.api.services.regressions import service as regression_service
 from wavecore.api.services.regressions.variable_validation import (
     check_variable_collisions_for_regression,
 )
 from wavecore.api.services.shared import (
+    ImportMembers,
     apply_secrets_mode_to_variables,
     check_foreign_envelopes,
     check_masked_secrets,
     determine_import_item_status,
     export_file_stem,
     first_free_name,
+    member_list_error,
     parse_file,
     parse_zip_file,
+    record_import_fixes,
+    refuse_import_collisions,
     refuse_unimportable_items,
     settle_imported_secret_variables,
+    strip_import_members,
     variable_value_errors,
 )
 
@@ -115,16 +120,9 @@ def _get_existing_names_map() -> dict[str, str]:
     return {r["name"]: r["id"] for r in _storage._list_all_regressions()}
 
 
-def _check_unresolvable_suites(suite_ids: list[str]) -> list[dict[str, str]]:
-    """Check for suite IDs that don't exist in the system."""
-    return [
-        {
-            "code": "UNRESOLVABLE_SUITE",
-            "message": f"Suite '{suite_id}' not found, will be stripped",
-        }
-        for suite_id in suite_ids
-        if not _storage._suite_exists(suite_id)
-    ]
+def _import_suites(item: dict[str, Any]) -> ImportMembers:
+    """The suites an imported regression keeps, and each one stripped as a fix."""
+    return strip_import_members(item, _storage._suite_exists, "Suite")
 
 
 def _validate_single_import_item(
@@ -145,32 +143,35 @@ def _validate_single_import_item(
         fatal_errors.extend(value_errors)
         has_fatal = True
 
-    # Check variable type collisions between regression vars and suite vars
-    suite_ids = item.get("suites", [])
-    proposed_vars = item.get("variables", {})
-    if suite_ids and proposed_vars and not has_fatal:
-        existing_suite_ids = [sid for sid in suite_ids if _storage._suite_exists(sid)]
-        if existing_suite_ids:
-            collisions = check_variable_collisions_for_regression(
-                suite_ids=existing_suite_ids,
-                variable_names_to_check=list(proposed_vars.keys()),
-                proposed_variables=proposed_vars,
-            )
-            if collisions:
-                collision_desc = "; ".join(
-                    f"'{c['variable']}' is '{c['this_type']}' here but "
-                    f"'{c['other_type']}' in suite '{c['other_suite']}'"
-                    for c in collisions
-                )
-                fatal_errors.append(
-                    {
-                        "code": "VARIABLE_TYPE_COLLISION",
-                        "message": f"Variable type collision: {collision_desc}",
-                    }
-                )
-                has_fatal = True
+    member_error = member_list_error(item, "Suite")
+    if member_error:
+        fatal_errors.append(member_error)
+        has_fatal = True
 
-    fixable_errors = _check_unresolvable_suites(suite_ids)
+    # Check variable type collisions between regression vars and suite vars
+    members = _import_suites(item)
+    proposed_vars = item.get("variables", {})
+    if members.kept and proposed_vars and not has_fatal:
+        collisions = check_variable_collisions_for_regression(
+            suite_ids=members.kept,
+            variable_names_to_check=list(proposed_vars.keys()),
+            proposed_variables=proposed_vars,
+        )
+        if collisions:
+            collision_desc = "; ".join(
+                f"'{c['variable']}' is '{c['this_type']}' here but "
+                f"'{c['other_type']}' in suite '{c['other_suite']}'"
+                for c in collisions
+            )
+            fatal_errors.append(
+                {
+                    "code": "VARIABLE_TYPE_COLLISION",
+                    "message": f"Variable type collision: {collision_desc}",
+                }
+            )
+            has_fatal = True
+
+    fixable_errors = members.findings
     variables = item.get("variables", {})
     warnings = [*check_masked_secrets(variables), *check_foreign_envelopes(variables)]
 
@@ -204,18 +205,6 @@ def validate_regression_import(content: bytes, filename: str) -> dict[str, Any]:
         "importable": importable,
         "blocked": blocked,
     }
-
-
-def _resolve_suite_references(suite_ids: list[str]) -> tuple[list[str], list[str]]:
-    """Filter suite IDs to only valid ones, returning (valid_ids, fix_descriptions)."""
-    valid: list[str] = []
-    fixes: list[str] = []
-    for suite_id in suite_ids:
-        if _storage._suite_exists(suite_id):
-            valid.append(suite_id)
-        else:
-            fixes.append(f"Stripped unresolvable suite '{suite_id}'")
-    return valid, fixes
 
 
 def _build_import_regression_data(
@@ -288,41 +277,17 @@ def _import_existing_item(
     return {"name": new_name, "id": new_id, "action": "renamed"}, None
 
 
-def _record_fixes(
-    fixes_applied: list[dict[str, Any]],
-    item_fixes: list[str],
-    result_name: str,
-) -> None:
-    """Record applied fixes if any exist."""
-    if item_fixes:
-        fixes_applied.append({"name": result_name, "fixes": item_fixes})
-
-
-def _check_import_collisions(items: list[dict[str, Any]]) -> None:
-    """Raise ConflictException if any import item has variable type collisions."""
-    for item in items:
-        suite_ids = item.get("suites", [])
-        variables = item.get("variables", {})
-        if not suite_ids or not variables:
-            continue
-        existing_suite_ids = [sid for sid in suite_ids if _storage._suite_exists(sid)]
-        if not existing_suite_ids:
-            continue
-        collisions = check_variable_collisions_for_regression(
-            suite_ids=existing_suite_ids,
-            variable_names_to_check=list(variables.keys()),
+def _check_import_collisions(items: list[dict[str, Any]], members: list[ImportMembers]) -> None:
+    """Refuse the import when an item's variables collide in type with its Suites' variables."""
+    refuse_import_collisions(
+        items,
+        members,
+        lambda suite_ids, variables: check_variable_collisions_for_regression(
+            suite_ids=suite_ids,
+            variable_names_to_check=list(variables),
             proposed_variables=variables,
-        )
-        if collisions:
-            collision_details = "; ".join(
-                f"variable '{c['variable']}' is '{c['this_type']}' here but "
-                f"'{c['other_type']}' in suite '{c['other_suite']}'"
-                for c in collisions
-            )
-            raise ConflictException(
-                f"Variable type collision: {collision_details}",
-                details={"collisions": collisions},
-            )
+        ),
+    )
 
 
 def import_regressions(
@@ -334,8 +299,9 @@ def import_regressions(
     resolutions = conflict_resolutions or {}
 
     items = _parse_import_items(content, filename)
-    refuse_unimportable_items(items)
-    _check_import_collisions(items)
+    refuse_unimportable_items(items, "Suite")
+    members = [_import_suites(item) for item in items]
+    _check_import_collisions(items, members)
 
     existing_names = _get_existing_names_map()
 
@@ -343,11 +309,10 @@ def import_regressions(
     skipped: list[dict[str, Any]] = []
     fixes_applied: list[dict[str, Any]] = []
 
-    for item in items:
+    for item, item_members in zip(items, members, strict=True):
         name = item["name"]
 
-        resolved_suites, suite_fixes = _resolve_suite_references(item.get("suites", []))
-        item_fixes = suite_fixes
+        resolved_suites, item_fixes = item_members.kept, item_members.fixes
         now = _now_iso()
 
         if name in existing_names:
@@ -362,11 +327,11 @@ def import_regressions(
             )
             if skipped_entry:
                 skipped.append(skipped_entry)
-                _record_fixes(fixes_applied, item_fixes, name)
+                record_import_fixes(fixes_applied, item_fixes, name)
                 continue
             if imported_entry:
                 imported.append(imported_entry)
-                _record_fixes(fixes_applied, item_fixes, imported_entry["name"])
+                record_import_fixes(fixes_applied, item_fixes, imported_entry["name"])
                 continue
 
         new_id = str(uuid.uuid4())
@@ -376,7 +341,7 @@ def import_regressions(
         )
         existing_names[name] = new_id
         imported.append({"name": name, "id": new_id, "action": "created"})
-        _record_fixes(fixes_applied, item_fixes, name)
+        record_import_fixes(fixes_applied, item_fixes, name)
 
     return {
         "imported": imported,

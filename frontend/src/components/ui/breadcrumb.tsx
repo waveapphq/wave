@@ -299,7 +299,7 @@ export const BreadcrumbEllipsis = forwardRef<HTMLButtonElement, BreadcrumbEllips
 
     // Handle menu item click
     const handleItemClick = (href: string) => {
-      navigate(href)
+      void navigate(href)
       setIsOpen(false)
     }
 

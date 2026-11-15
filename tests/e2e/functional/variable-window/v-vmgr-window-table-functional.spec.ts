@@ -22,7 +22,7 @@
  *    format view (`Auto (JSON)`) and Format, and keeps the line breaks Format adds; the window shows the
  *    first line cut with "…"; the saved value keeps its line breaks and reopens on seven lines.
  * 6. A Variable Setter table row saved through the "Edit value" window is stored with its column types,
- *    its row reads `1 rows x 2 col`, and the run reads the set table with its types.
+ *    its row's value field writes the table out on one line, and the run reads the set table with its types.
  * 7. A Suite, a Regression and a System table saved through their own value cells are stored with their
  *    column types and their rows read `1 rows x 2 col`; each editor reopens it with no refusal, shows the
  *    column types and saves a cell edit; a Test in the Suite reads each one with its types.
@@ -166,8 +166,6 @@ function setterNode(id: string, name: string): Rec {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
-      variableTypes: { [name]: 'table' },
       config: { values: { variables: { [name]: [] } }, outputBindings: {}, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },
@@ -294,7 +292,7 @@ test.describe('V-VMGR-WINDOW-TABLE: values edited in the window and the "Edit va
       await setCreateName(page, 'tsheet', win)
       await setCreateType(page, 'table', win)
       const sheet = await openValueEditor(page, win)
-      await expect(sheet).toHaveAttribute('aria-label', 'Edit value')
+      await expect(sheet).toHaveAccessibleName('Edit value')
       await expect(sheet.locator('[data-testid="view-dropdown"]'), 'the sheet opens on Visual').toHaveText('Visual')
       await expect(sheet.locator('[data-testid="table-edit-body"]')).toBeVisible()
       await setValueEditorView(page, sheet, 'Code')
@@ -310,7 +308,7 @@ test.describe('V-VMGR-WINDOW-TABLE: values edited in the window and the "Edit va
 
     await test.step('VMGR-106: a saved table edited in the Edit window\'s "Edit value" Visual grid', async () => {
       const win = await openEditWindow(page, 'tedit')
-      await expect(win).toHaveAttribute('aria-label', 'Edit variable')
+      await expect(win).toHaveAccessibleName('Edit variable')
       await expectWindowValue(win, '[{"zip": "11111", "n": 1}]')
       // VMGR-108: a type change on the saved table asks first and counts its row.
       await setCreateType(page, 'map', win)
@@ -432,7 +430,7 @@ test.describe('V-VMGR-WINDOW-TABLE: values edited in the window and the "Edit va
       await expect(lineInput(win)).toHaveValue(LONG_TEXT)
 
       const sheet = await openValueEditor(page, win)
-      await expect(sheet).toHaveAttribute('aria-label', 'Edit value')
+      await expect(sheet).toHaveAccessibleName('Edit value')
       await expect(valueEditorCode(sheet)).toHaveText(LONG_TEXT)
       await replaceValueEditorCode(page, sheet, COMPACT_JSON)
       await expect(sheet.locator('[data-testid="format-dropdown"]'), 'the string format view is offered').toHaveText(
@@ -488,7 +486,7 @@ test.describe('V-VMGR-WINDOW-TABLE: values edited in the window and the "Edit va
 
     await test.step('REQ-3.4.1.14: the setter row\'s table typed in Code', async () => {
       const config = await openBlockSheet(page, setterId)
-      await config.locator('[data-testid="varset-edit-value-0"]').click()
+      await config.locator('[data-testid="param-expand-varset-value-0"]').click()
       const sheet = valueEditorSheet(page)
       await expect(sheet).toBeVisible()
       await setValueEditorView(page, sheet, 'Code')
@@ -496,8 +494,8 @@ test.describe('V-VMGR-WINDOW-TABLE: values edited in the window and the "Edit va
       await saveValueEditor(sheet)
       await closeValueEditor(page, sheet)
       await expect
-        .soft(config.locator('[data-testid="varset-edit-value-0"]'), 'the row summarizes the saved table')
-        .toContainText(TABLE_PREVIEW)
+        .soft(config.locator('[data-testid="param-input-varset-value-0"]'), 'the row writes the saved table out on one line')
+        .toHaveValue(TABLE_TEXT)
       await saveBlockSheet(config)
       await saveTest(page)
     })

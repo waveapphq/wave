@@ -32,7 +32,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Kbd } from '@/components/ui/kbd'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { cn } from '@/lib/utils'
 import { formatShortcut } from '@/lib/platform'
 import { filterByBlockQuery } from '@/features/workbench/lib/block-search'
@@ -286,9 +286,9 @@ export function QuickAddPopover({
   // (header, heading, footer, blank space) returns it to the input.
   useEffect(() => {
     if (!open) return
-    const section = bodyRef.current?.parentElement
+    const sheet = bodyRef.current?.parentElement
     /* v8 ignore next - COV-V8-003: ref attachment race */
-    if (!section) return
+    if (!sheet) return
     const keepCaret = (event: Event) => {
       const input = inputRef.current
       if (!input || event.target === input) return
@@ -301,11 +301,11 @@ export function QuickAddPopover({
       if (event.type === 'mousedown') event.preventDefault()
       input.focus()
     }
-    section.addEventListener('pointerdown', keepCaret, true)
-    section.addEventListener('mousedown', keepCaret)
+    sheet.addEventListener('pointerdown', keepCaret, true)
+    sheet.addEventListener('mousedown', keepCaret)
     return () => {
-      section.removeEventListener('pointerdown', keepCaret, true)
-      section.removeEventListener('mousedown', keepCaret)
+      sheet.removeEventListener('pointerdown', keepCaret, true)
+      sheet.removeEventListener('mousedown', keepCaret)
     }
   }, [open])
 
@@ -407,15 +407,15 @@ export function QuickAddPopover({
       open={open}
       onClose={() => onOpenChange(false)}
       sheetId="quick-add"
-      ariaLabel="Quick Insert"
       data-testid="quick-add-popover"
       initialOffset={initialOffset}
       initialWidth={560}
       resizable={false}
+      initialFocus={inputRef}
       headerClassName="bg-muted/40 py-2.5"
       header={
         <>
-          <h2 className="text-base font-semibold">Quick Insert</h2>
+          <SheetTitle className="text-base font-semibold">Quick Insert</SheetTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -448,7 +448,6 @@ export function QuickAddPopover({
             }}
             placeholder="Search blocks…"
             aria-label="Search blocks"
-            autoFocus
           />
           <CommandList
             ref={listRef}

@@ -2,36 +2,54 @@
 # Show detailed SonarQube analysis results for the frontend project.
 # Provides actionable detail for all issue categories: bugs, vulnerabilities,
 # code smells, security hotspots, and duplications.
-# Requires SONAR_TOKEN and SONAR_URL environment variables to be set.
+# Requires SONAR_TOKEN. SONAR_URL is optional and defaults to SonarQube Cloud.
+# Usage: sonar-results-frontend.sh [--fix]
+#   --fix  also print each finding's flow and, once per rule, why it is an issue and how to fix it
 set -euo pipefail
 
-if [ -z "${SONAR_TOKEN:-}" ]; then
-  echo "ERROR: SONAR_TOKEN environment variable is not set" >&2
-  exit 1
-fi
+SHOW_FIX=0
+for arg in "$@"; do
+  case "$arg" in
+    --fix) SHOW_FIX=1 ;;
+    *) echo "Usage: $0 [--fix]" >&2; exit 2 ;;
+  esac
+done
+export SONAR_SHOW_FIX="$SHOW_FIX"
 
-if [ -z "${SONAR_URL:-}" ]; then
-  echo "ERROR: SONAR_URL environment variable is not set" >&2
-  exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-SQ_URL="${SONAR_URL}"
-PROJECT_KEY="wave-frontend"
+# shellcheck source=sonar-env.sh
+source "$SCRIPT_DIR/sonar-env.sh"
+
+export PROJECT_KEY="waveapphq_wave-frontend"
+export SONAR_ORGANIZATION="waveapphq"
 
 python3 << 'PYEOF'
-import urllib.request, urllib.parse, json, os, sys, textwrap
+import urllib.request, urllib.parse, json, os, re, sys, textwrap
+from html.parser import HTMLParser
 
-SQ_URL = os.environ.get("SQ_URL", "http://192.168.100.230:9000")
-PROJECT_KEY = os.environ.get("PROJECT_KEY", "wave-frontend")
+SQ_URL = os.environ["SONAR_URL"]
+PROJECT_KEY = os.environ["PROJECT_KEY"]
+BRANCH = os.environ["SONAR_BRANCH"]
 TOKEN = os.environ["SONAR_TOKEN"]
+SHOW_FIX = os.environ["SONAR_SHOW_FIX"] == "1"
+# SonarQube Cloud looks rules up within an organization; another server has none.
+RULE_SCOPE = {"organization": os.environ["SONAR_ORGANIZATION"]} if SQ_URL == "https://sonarcloud.io" else {}
 
 import base64
 AUTH = "Basic " + base64.b64encode(f"{TOKEN}:".encode()).decode()
 SEPARATOR = "-" * 90
+RULE_SECTIONS = (
+    ("root_cause", "Why is this an issue"),
+    ("assess_the_problem", "Assess the risk"),
+    ("how_to_fix", "How to fix"),
+)
 
 
-def api(path):
-    url = f"{SQ_URL}{path}"
+def api(path, params, branch=True):
+    if BRANCH and branch:
+        params = {**params, "branch": BRANCH}
+    url = f"{SQ_URL}{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url)
     req.add_header("Authorization", AUTH)
     with urllib.request.urlopen(req) as resp:
@@ -43,14 +61,13 @@ def fetch_all_issues(issue_type):
     issues = []
     page = 1
     while True:
-        params = urllib.parse.urlencode({
+        d = api("/api/issues/search", {
             "componentKeys": PROJECT_KEY,
             "types": issue_type,
             "statuses": "OPEN,CONFIRMED,REOPENED",
             "ps": 100,
             "p": page,
         })
-        d = api(f"/api/issues/search?{params}")
         issues.extend(d.get("issues", []))
         total = d["paging"]["total"]
         if page * 100 >= total:
@@ -64,13 +81,12 @@ def fetch_all_hotspots():
     hotspots = []
     page = 1
     while True:
-        params = urllib.parse.urlencode({
+        d = api("/api/hotspots/search", {
             "projectKey": PROJECT_KEY,
             "status": "TO_REVIEW",
             "ps": 100,
             "p": page,
         })
-        d = api(f"/api/hotspots/search?{params}")
         hotspots.extend(d.get("hotspots", []))
         total = d["paging"]["total"]
         if page * 100 >= total:
@@ -84,7 +100,7 @@ def fetch_duplicated_files():
     files = []
     page = 1
     while True:
-        params = urllib.parse.urlencode({
+        d = api("/api/measures/component_tree", {
             "component": PROJECT_KEY,
             "metricKeys": "duplicated_blocks,duplicated_lines",
             "qualifiers": "FIL",
@@ -94,7 +110,6 @@ def fetch_duplicated_files():
             "ps": 100,
             "p": page,
         })
-        d = api(f"/api/measures/component_tree?{params}")
         for comp in d.get("components", []):
             measures = {m["metric"]: int(m["value"]) for m in comp.get("measures", [])}
             blocks = measures.get("duplicated_blocks", 0)
@@ -114,8 +129,93 @@ def fetch_duplicated_files():
 
 def fetch_duplication_detail(file_key):
     """Fetch duplication details for a specific file."""
-    params = urllib.parse.urlencode({"key": file_key})
-    return api(f"/api/duplications/show?{params}")
+    return api("/api/duplications/show", {"key": file_key})
+
+
+class RuleText(HTMLParser):
+    """A rule description as plain text lines, with code blocks kept as written."""
+
+    BLOCKS = {"p", "div", "h1", "h2", "h3", "h4", "h5", "li", "tr", "br"}
+
+    def __init__(self):
+        super().__init__()
+        self.lines = []
+        self.buffer = ""
+        self.in_code = False
+
+    def flush(self):
+        if self.in_code:
+            self.lines.extend(("code", line) for line in self.buffer.strip("\n").split("\n"))
+        elif self.buffer.strip() not in ("", "-"):
+            self.lines.append(("text", self.buffer.strip()))
+        self.buffer = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "pre":
+            self.flush()
+            self.in_code = True
+        elif tag in self.BLOCKS and not self.in_code:
+            self.flush()
+            if tag == "li":
+                self.buffer = "- "
+
+    def handle_endtag(self, tag):
+        if tag == "pre":
+            self.flush()
+            self.in_code = False
+        elif tag in self.BLOCKS and not self.in_code:
+            self.flush()
+
+    def handle_data(self, data):
+        self.buffer += data if self.in_code else re.sub(r"\s+", " ", data)
+
+
+def rule_text(html):
+    parser = RuleText()
+    parser.feed(html)
+    parser.close()
+    parser.flush()
+    return parser.lines
+
+
+def print_flows(issue):
+    """Each flow of a finding; a security finding's flow runs from the input to the issue."""
+    for n, flow in enumerate(issue.get("flows", []), 1):
+        print(f"     Flow {n}:")
+        for step in reversed(flow.get("locations", [])):
+            step_file = step["component"].split(":")[-1]
+            step_line = step.get("textRange", {}).get("startLine", "?")
+            print(f"       {step_file}:{step_line}  {step.get('msg', '')}")
+
+
+def print_rule_help(findings):
+    """Once per rule of the open findings: why it is an issue and how to fix it."""
+    contexts = {}
+    for finding in findings:
+        rule = finding.get("rule") or finding.get("ruleKey")
+        context = finding.get("ruleDescriptionContextKey")
+        contexts.setdefault(rule, set()).update({context} if context else set())
+    if not contexts:
+        return
+
+    print(f"\n  How to fix ({len(contexts)} rules):")
+    print(f"  {SEPARATOR}")
+    for rule in sorted(contexts):
+        r = api("/api/rules/show", {"key": rule, **RULE_SCOPE}, branch=False)["rule"]
+        print(f"  {rule}: {r.get('name', '')}")
+        for key, title in RULE_SECTIONS:
+            for section in r.get("descriptionSections", []):
+                context = section.get("context", {})
+                if section["key"] != key or (contexts[rule] and context and context["key"] not in contexts[rule]):
+                    continue
+                print(f"\n    {title}" + (f" ({context['displayName']})" if context else ""))
+                for kind, text in rule_text(section["content"]):
+                    if kind == "code":
+                        print(f"       | {text}")
+                    else:
+                        for wrapped in textwrap.wrap(text, width=82, subsequent_indent="  " if text.startswith("- ") else ""):
+                            print(f"     {wrapped}")
+        print()
 
 
 def print_issues(issues, label):
@@ -141,6 +241,8 @@ def print_issues(issues, label):
             print(f"     {msg_line}")
         if effort:
             print(f"     Effort: {effort}")
+        if SHOW_FIX:
+            print_flows(issue)
         print()
 
 
@@ -218,7 +320,7 @@ try:
     metrics = "ncloc,coverage,duplicated_lines_density,bugs,vulnerabilities,code_smells"
     metrics += ",security_hotspots,security_hotspots_reviewed"
     metrics += ",sqale_rating,reliability_rating,security_rating"
-    d = api(f"/api/measures/component?component={PROJECT_KEY}&metricKeys={metrics}")
+    d = api("/api/measures/component", {"component": PROJECT_KEY, "metricKeys": metrics})
     m = {x["metric"]: x["value"] for x in d["component"]["measures"]}
     ratings = {"1.0": "A", "2.0": "B", "3.0": "C", "4.0": "D", "5.0": "E"}
 
@@ -254,10 +356,14 @@ print_issues(smells, "Code Smells")
 hotspots, _ = fetch_all_hotspots()
 print_hotspots(hotspots)
 
+if SHOW_FIX:
+    print_rule_help(bugs + vulns + smells + hotspots)
+
 # Duplications
 dup_files = fetch_duplicated_files()
 print_duplications(dup_files)
 
-print(f"  Dashboard: {SQ_URL}/dashboard?id={PROJECT_KEY}")
+dashboard = {"id": PROJECT_KEY, "branch": BRANCH} if BRANCH else {"id": PROJECT_KEY}
+print(f"  Dashboard: {SQ_URL}/dashboard?{urllib.parse.urlencode(dashboard)}")
 print()
 PYEOF

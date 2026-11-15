@@ -59,7 +59,7 @@ function creationConfig(id: string): Record<string, unknown> | undefined {
 }
 
 /** Blocks whose config also carries a structural seed, the Settings stamp or a per-dialect default. */
-const SEEDED_OR_STAMPED = new Set(['note', 'if-else', 'switch-case', 'parallel', 'ssh-session-open', 'sql-client'])
+const SEEDED_OR_STAMPED = new Set(['if-else', 'switch-case', 'parallel', 'ssh-session-open', 'sql-client'])
 
 const BLOCKS_WITH_CREATION_VALUES = Object.keys(ALL_INPUTS).filter(
   (id) => !SEEDED_OR_STAMPED.has(id) && Object.keys(creationValues(id)).length > 0,
@@ -70,11 +70,10 @@ function namingNode(label: string, nodeType?: string) {
 }
 
 describe('buildDefaultConfigForPalette', () => {
+  // A new Note holds the color default of its field list under config.values, and no text.
   it('returns the note defaults', () => {
-    expect(buildDefaultConfigForPalette('note')).toEqual({
-      text: '',
-      color: 'slate',
-    })
+    expect(buildDefaultConfigForPalette('note')).toEqual({ values: { color: 'slate' } })
+    expect(buildDefaultConfigForPalette('note')).toEqual(creationConfig('note'))
   })
 
   it('returns the if-else branch defaults', () => {
@@ -100,14 +99,16 @@ describe('buildDefaultConfigForPalette', () => {
   })
 
   // Guard: a section needs at least two branches, so one is never a legal seed.
+  // The join mode is the field list default, not a hand seed.
   it('seeds a parallel with the two-branch minimum', () => {
+    expect(creationValues('parallel')).toEqual({ join: 'all' })
     expect(buildDefaultConfigForPalette('parallel')).toEqual({
       values: {
+        ...creationValues('parallel'),
         branches: [
           { id: 'branch_1', name: '' },
           { id: 'branch_2', name: '' },
         ],
-        join: 'all',
       },
     })
   })
@@ -223,7 +224,7 @@ describe('buildPaletteNode - plugins and controls', () => {
     expect(node.type).toBe('noteNode')
     // Notes keep the palette's raw name - no _N sequencing.
     expect(node.data.label).toBe('Note')
-    expect(node.data.config).toEqual({ text: '', color: 'slate' })
+    expect(node.data.config).toEqual({ values: { color: 'slate' } })
   })
 
   it('stamps the if-else default config on construction', () => {
@@ -352,7 +353,7 @@ describe('SSH Session Open placement stamp (REQ-4.5.14)', () => {
   it('keeps the seeded configs of other blocks unchanged whatever the default', () => {
     setDefaultBlockAction('strict')
 
-    expect(buildDefaultConfigForPalette('note')).toEqual({ text: '', color: 'slate' })
+    expect(buildDefaultConfigForPalette('note')).toEqual({ values: { color: 'slate' } })
     expect(buildDefaultConfigForPalette('if-else')).toEqual({
       values: {
         branches: [

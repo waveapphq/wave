@@ -22,7 +22,12 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.entity_cache import DirectoryCache
 from wavecore.api.services.shared import (
     export_file_stem,
@@ -421,10 +426,7 @@ def _check_etag(env: dict[str, Any], etag: str | None) -> None:
         return
     current_etag = _generate_etag(env)
     if etag != current_etag:
-        exc = ConflictException("Precondition failed: resource has been modified")
-        exc.status_code = 412
-        exc.error_code = "PRECONDITION_FAILED"
-        raise exc
+        raise PreconditionRequiredException("Precondition failed: resource has been modified")
 
 
 def _check_name_conflict(environment_id: str, name: str) -> None:

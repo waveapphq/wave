@@ -1,6 +1,6 @@
 /**
  * V-FIELD-TIME-PICKER: OpenSearch From / To as the one value field, and the time picker its expand opens
- * Design Decisions: FIELD-9, FIELD-1, FIELD-2, FIELD-3, OS-4
+ * Design Decisions: FIELD-9, FIELD-1, FIELD-2, FIELD-3, OS-4, OS-5
  * REQ: REQ-3.3.2.3, REQ-3.1.1.5
  *
  * Phase: no-data. Each test seeds its own `zz-11541-s2-` Test (POST /tests, zero validation errors) holding one
@@ -12,8 +12,8 @@
  *    arrows, `Open editor for <label>`) and the `{ }` toggle in their own columns.
  * 2. From holds `now-15m` in the string color with the reset icon; To is not set and shows `now` in Text Muted
  *    with no reset icon.
- * 3. Query language reads `DQL` and Mode `Search`, both choice lists with no expand and no `{ }`; Query is an
- *    empty field with its `{ }`.
+ * 3. Query language reads `DQL` and Mode `Search`, both choice lists with no expand and no `{ }`; Query, held as
+ *    Template while blank (OS-5), is an empty Template code box with its `{ }`.
  * 4. From's expand opens the picker: Absolute / Relative / Now tabs with Relative pressed in the primary color;
  *    Amount `15`, Unit `minutes ago`, `Round to the minute` unticked; the result line `now-15m`.
  * 5. The footer holds `Cancel` (outlined: a 1 px border) then `Save` (primary fill), right-aligned, 32 px tall.
@@ -44,7 +44,9 @@ import {
   settled,
   storedBlock,
 } from '../../helpers/list-fields'
+import { expressionText } from '../../helpers/default-rule'
 import { toggleTheme } from '../../helpers/theme'
+import { expressionBox } from '../../helpers/value-field'
 import { openBlockSheet, saveBlockSheet, saveTest } from '../../helpers/workbench'
 import { randomUUID } from 'node:crypto'
 
@@ -146,7 +148,8 @@ async function expectRows(sheet: Locator): Promise<void> {
     await expect(fieldExpand(sheet, name), `${text} choice list has no expand`).toHaveCount(0)
     await expect(fieldToggle(sheet, name), `${text} choice list has no {x}`).toHaveCount(0)
   }
-  await expect(fieldBox(sheet, 'query'), 'Query is empty').toHaveValue('')
+  await expect(expressionBox(sheet, 'query'), 'Query shows its Template face').toBeVisible()
+  await expect.poll(() => expressionText(sheet, 'query'), { message: 'Query is empty' }).toBe('')
   await expect(fieldToggle(sheet, 'query'), 'Query keeps its {x}').toBeVisible()
 }
 

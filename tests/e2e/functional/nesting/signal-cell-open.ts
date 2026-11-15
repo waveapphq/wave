@@ -31,9 +31,12 @@ export type SignalCellOptions = {
   rewrite?: (graph: NestingGraph) => NestingGraph
 }
 
+/** The answer of a refused Function publish: its status and body. */
+export type RefusedPublish = { status: number; body: unknown }
+
 export type OpenedSignalCell =
   | { refusal: null; cell: NestCell }
-  | { refusal: string; cell: null }
+  | { refusal: string; cell: null; publish?: RefusedPublish }
 
 /** Per-test teardown for an afterEach hook, for cells opened here: the Test, then every Function, outermost first. */
 export async function deleteSignalCellEntities(request: APIRequestContext, testInfo: TestInfo): Promise<void> {
@@ -135,7 +138,10 @@ export async function openSignalCell(
     const id = body?.data?.id
     const refused = response.ok() && id ? [] : [`${plan.key} answered ${response.status()} ${JSON.stringify(body)}`]
     const refusal = problemsOf(cellId, 'POST /functions is accepted', refused, opts.requireValid)
-    if (refusal !== null || !id) return { refusal: refusal ?? 'POST /functions returned no id', cell: null }
+    if (refusal !== null || !id) {
+      const publish = { status: response.status(), body }
+      return { refusal: refusal ?? 'POST /functions returned no id', cell: null, publish }
+    }
     entry.functionIds.push(id)
     functions[plan.key] = { functionId: id, name: payload.name, version: '1.0.0' }
   }

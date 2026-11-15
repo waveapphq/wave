@@ -258,7 +258,7 @@ export function TestsListContainer(): ReactNode {
       onCancel={() => setRunningSession(null)}
       onViewPendingWorkflow={() => {
         setRunningSession(null)
-        navigate('/workbench')
+        void navigate('/workbench')
       }}
       /* v8 ignore next - COV-BRANCH-177 */
       mode={pendingOpenTestId ? 'switch' : 'create'}

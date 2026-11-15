@@ -145,12 +145,37 @@ class TestStartWorkbenchRun:
             # Must call test_service to resolve the test entity
             mock_get_test.assert_called_once_with(valid_test_id)
 
+    def test_start_workbench_run_answers_no_warnings(
+        self,
+        valid_test_id: str,
+        valid_environment_id: str,
+        mock_test_with_blocks: dict[str, Any],
+        mock_environment: dict[str, Any],
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
+
+        with (
+            patch("wavecore.api.services.workbench.service.test_service.get_test") as mock_get_test,
+            patch(
+                "wavecore.api.services.workbench.service.environment_service.get_environment"
+            ) as mock_get_env,
+        ):
+            mock_get_test.return_value = mock_test_with_blocks
+            mock_get_env.return_value = mock_environment
+
+            result = workbench_service.start_workbench_run(
+                test_id=valid_test_id,
+                environment_id=valid_environment_id,
+            )
+
+        assert result["warnings"] == []
+
     def test_start_workbench_run_raises_when_test_not_found(
         self,
         valid_test_id: str,
         valid_environment_id: str,
     ) -> None:
-        """Test that workbench service raises LookupError when test not found."""
+        """Test that workbench service raises NotFoundException when test not found."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch(
@@ -158,7 +183,7 @@ class TestStartWorkbenchRun:
         ) as mock_get_test:
             mock_get_test.return_value = None
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=valid_test_id,
                     environment_id=valid_environment_id,
@@ -302,7 +327,7 @@ class TestStartWorkbenchRun:
         valid_environment_id: str,
         mock_test_with_blocks: dict[str, Any],
     ) -> None:
-        """Test that workbench service raises LookupError when environment not found."""
+        """Test that workbench service raises NotFoundException when environment not found."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with (
@@ -314,7 +339,7 @@ class TestStartWorkbenchRun:
             mock_get_test.return_value = mock_test_with_blocks
             mock_get_env.return_value = None
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=valid_test_id,
                     environment_id=valid_environment_id,
@@ -333,7 +358,7 @@ class TestStartWorkbenchRun:
         mock_test_empty: dict[str, Any],
         mock_environment: dict[str, Any],
     ) -> None:
-        """Test that workbench service raises ValueError for test with no blocks."""
+        """Test that workbench service raises ValidationException for test with no blocks."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with (
@@ -1014,7 +1039,7 @@ class TestStartWorkbenchRun:
         mock_test_with_blocks: dict[str, Any],
         mock_environment: dict[str, Any],
     ) -> None:
-        """Test that circular dependencies among expression vars raise ValueError."""
+        """Test that circular dependencies among expression vars raise ValidationException."""
         from wavecore.api.services.workbench import service as workbench_service
 
         mock_test_with_blocks["variables"] = {
@@ -1196,73 +1221,6 @@ class TestStartWorkbenchRun:
             assert push_value == 3
 
 
-class TestProfileCompletenessValidation:
-    """Test suite for profile completeness pre-flight validation."""
-
-    @pytest.fixture
-    def valid_environment_id(self) -> str:
-        """Return a valid environment UUID."""
-        return str(uuid.uuid4())
-
-    def test_check_profile_completeness_returns_warnings_for_missing_values(
-        self, valid_environment_id: str
-    ) -> None:
-        """Test that profiles without values for the environment generate warnings."""
-        from wavecore.api.services.workbench import service as workbench_service
-
-        test_id = str(uuid.uuid4())
-        other_env_id = str(uuid.uuid4())
-
-        # Profile has value for different environment, not the selected one
-        profiles = [
-            {
-                "id": str(uuid.uuid4()),
-                "name": "Database Connection",
-                "environment_values": {other_env_id: "connection-string"},
-            },
-        ]
-
-        with patch.object(workbench_service, "_get_test_profiles", return_value=profiles):
-            warnings = workbench_service.check_profile_completeness(
-                test_id=test_id,
-                environment_id=valid_environment_id,
-            )
-
-            assert len(warnings) == 1
-            assert warnings[0]["type"] == "INCOMPLETE_PROFILE"
-            assert warnings[0]["profile_name"] == "Database Connection"
-
-    def test_check_profile_completeness_returns_empty_when_all_profiles_have_values(
-        self, valid_environment_id: str
-    ) -> None:
-        """Test that no warnings when all profiles have values for environment."""
-        from wavecore.api.services.workbench import service as workbench_service
-
-        test_id = str(uuid.uuid4())
-
-        # All profiles have values for the selected environment
-        profiles = [
-            {
-                "id": str(uuid.uuid4()),
-                "name": "Database Connection",
-                "environment_values": {valid_environment_id: "connection-string"},
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "name": "API Key",
-                "environment_values": {valid_environment_id: "secret-key"},
-            },
-        ]
-
-        with patch.object(workbench_service, "_get_test_profiles", return_value=profiles):
-            warnings = workbench_service.check_profile_completeness(
-                test_id=test_id,
-                environment_id=valid_environment_id,
-            )
-
-            assert warnings == []
-
-
 class TestStopWorkbenchRun:
     """Test suite for stop_workbench_run function."""
 
@@ -1292,11 +1250,11 @@ class TestStopWorkbenchRun:
                 mock_terminate.assert_called_once_with(valid_session_id)
 
     def test_stop_workbench_run_raises_when_session_not_found(self, valid_session_id: str) -> None:
-        """Test that stop raises LookupError for non-existent session."""
+        """Test that stop raises NotFoundException for non-existent session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch.object(workbench_service, "_get_session", return_value=None):
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.stop_workbench_run(session_id=valid_session_id)
 
             assert f"Workbench session '{valid_session_id}' not found" in str(exc_info.value)
@@ -1333,11 +1291,11 @@ class TestUpdateSkippedNodes:
     def test_update_skipped_nodes_raises_when_session_not_found(
         self, valid_session_id: str
     ) -> None:
-        """Test that update_skipped_nodes raises LookupError for non-existent session."""
+        """Test that update_skipped_nodes raises NotFoundException for non-existent session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch.object(workbench_service, "_get_session", return_value=None):
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.update_skipped_nodes(
                     session_id=valid_session_id,
                     skipped_node_ids=["node-1"],
@@ -1348,7 +1306,7 @@ class TestUpdateSkippedNodes:
     def test_update_skipped_nodes_raises_when_session_not_running(
         self, valid_session_id: str
     ) -> None:
-        """Test that update_skipped_nodes raises ValueError for non-running session."""
+        """Test that update_skipped_nodes raises ConflictException for non-running session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         session = {
@@ -1913,8 +1871,8 @@ class TestAsyncWorkflowExecution:
             assert result == {"planned_duration_ms": 10}
 
     @pytest.mark.asyncio
-    async def test_execute_control_variable_expression_keys(self) -> None:
-        """Test that variable_expression_keys builds map_expr_keys for resolve_parameters."""
+    async def test_execute_control_setter_row_expression_flag(self) -> None:
+        """A row flagged variables.<row> in expression_fields builds map_expression_keys."""
         from unittest.mock import AsyncMock
 
         from wavecore.api.services.workbench import plugins as _wb_plugins
@@ -1947,8 +1905,7 @@ class TestAsyncWorkflowExecution:
                 version="1.0.0",
                 parameters={"variables": {"x": "1 + 2"}},
                 variables={},
-                expression_fields=set(),
-                setter_rows=_wb_plugins.SetterRows(expression_keys={"x"}),
+                expression_fields={"variables.x"},
             )
             # Verify map_expression_keys was passed to resolve_parameters
             call_kwargs = mock_resolve.call_args
@@ -2002,8 +1959,8 @@ class TestAsyncWorkflowExecution:
             assert "status" in map_keys["variables"]
 
     @pytest.mark.asyncio
-    async def test_execute_control_variable_template_keys(self) -> None:
-        """variable_template_keys builds map_template_keys for resolve_parameters."""
+    async def test_execute_control_setter_row_template_flag(self) -> None:
+        """A row flagged variables.<row> in template_fields builds map_template_keys."""
         from unittest.mock import AsyncMock
 
         from wavecore.api.services.workbench import plugins as _wb_plugins
@@ -2037,7 +1994,7 @@ class TestAsyncWorkflowExecution:
                 parameters={"variables": {"greeting": "Hi {{ name }}"}},
                 variables={"name": "Bob"},
                 expression_fields=set(),
-                setter_rows=_wb_plugins.SetterRows(template_keys={"greeting"}),
+                template_fields={"variables.greeting"},
             )
             # Verify map_template_keys was passed to resolve_parameters
             call_kwargs = mock_resolve.call_args
@@ -2063,9 +2020,14 @@ class TestAsyncWorkflowExecution:
 
         mock_class = lambda: mock_control  # noqa: E731
 
-        with patch(
-            "wavecore.controls.registry.get_control_implementation",
-            return_value=mock_class,
+        from wavecore.core.variables.declared_types import declared_type_scope
+
+        with (
+            patch(
+                "wavecore.controls.registry.get_control_implementation",
+                return_value=mock_class,
+            ),
+            declared_type_scope({"greeting": "string"}),
         ):
             await _wb_plugins._execute_control(
                 control_type="variable-setter",
@@ -2073,9 +2035,7 @@ class TestAsyncWorkflowExecution:
                 parameters={"variables": {"greeting": "Hi {{ name }}"}},
                 variables={"name": "Bob"},
                 expression_fields=set(),
-                setter_rows=_wb_plugins.SetterRows(
-                    template_keys={"greeting"}, types={"greeting": "string"}
-                ),
+                template_fields={"variables.greeting"},
             )
             # The rendered string (not the raw {{ }} template) reaches execute
             call_args = mock_control.execute.call_args[0][0]
@@ -2084,7 +2044,7 @@ class TestAsyncWorkflowExecution:
 
     @pytest.mark.asyncio
     async def test_execute_control_variable_setter_coerces_types(self) -> None:
-        """Test pre-execution type coercion for Variable Setter control."""
+        """Each row is coerced to its variable's declared type before the control runs."""
         from unittest.mock import AsyncMock
 
         from wavecore.api.services.workbench import plugins as _wb_plugins
@@ -2101,9 +2061,14 @@ class TestAsyncWorkflowExecution:
 
         mock_class = lambda: mock_control  # noqa: E731
 
-        with patch(
-            "wavecore.controls.registry.get_control_implementation",
-            return_value=mock_class,
+        from wavecore.core.variables.declared_types import declared_type_scope
+
+        with (
+            patch(
+                "wavecore.controls.registry.get_control_implementation",
+                return_value=mock_class,
+            ),
+            declared_type_scope({"count": "integer", "name": "string"}),
         ):
             await _wb_plugins._execute_control(
                 control_type="variable-setter",
@@ -2111,7 +2076,6 @@ class TestAsyncWorkflowExecution:
                 parameters={"variables": {"count": "42", "name": "hello"}},
                 variables={},
                 expression_fields=set(),
-                setter_rows=_wb_plugins.SetterRows(types={"count": "integer", "name": "string"}),
             )
             # Verify execute was called with coerced parameters
             call_args = mock_control.execute.call_args[0][0]
@@ -2976,8 +2940,8 @@ class TestAsyncWorkflowExecution:
         _wb_common._workbench_sessions.pop(session_id, None)
 
     def test_get_session_snapshot_returns_block_states_and_variables(self) -> None:
-        """get_session_snapshot returns a plain dict with test_id, block_states
-        and variables for an existing session."""
+        """get_session_snapshot returns a plain dict with test_id, block_states,
+        lanes_taken and variables for an existing session."""
         from wavecore.api.services.workbench import _common as _wb_common
 
         session_id = "snapshot-session"
@@ -2992,6 +2956,7 @@ class TestAsyncWorkflowExecution:
             assert snap == {
                 "test_id": "test-1",
                 "block_states": {"b1": "passed", "b2": "failed"},
+                "lanes_taken": {},
                 "variables": {"x": 1, "y": "z"},
             }
         finally:
@@ -5369,8 +5334,6 @@ class TestExecuteNodeUnknownType:
             "expression_fields": set(),
             "template_fields": set(),
             "block_name": "Note",
-            "variable_expression_keys": set(),
-            "variable_types": {},
         }
         result = await _wb_node_helpers._execute_node(node_fields, {}, "test-session", "node-1")
         assert result is None
@@ -5425,7 +5388,6 @@ class TestHandleWorkflowError:
                     "config": {"values": {"message": "'ok'", "level": "INFO"}},
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                 },
             },
         ]
@@ -5454,7 +5416,7 @@ class TestCoerceSetterVariablesNonDict:
 
         processed_params: dict[str, Any] = {"variables": None}
         # Should return without error (no coercion attempted)
-        _wb_plugins._coerce_setter_variables(processed_params, {"x": "integer"})
+        _wb_plugins._coerce_setter_variables(processed_params, sources=set())
         # variables key unchanged
         assert processed_params["variables"] is None
 
@@ -5463,8 +5425,109 @@ class TestCoerceSetterVariablesNonDict:
         from wavecore.api.services.workbench import plugins as _wb_plugins
 
         processed_params: dict[str, Any] = {"other_param": "value"}
-        _wb_plugins._coerce_setter_variables(processed_params, {"x": "integer"})
+        _wb_plugins._coerce_setter_variables(processed_params, sources=set())
         assert "variables" not in processed_params
+
+
+class TestSetterOnSharedFlags:
+    """A Variable Setter stored on the shared field flags runs end to end; each row's
+    type is its variable's declared type (REQ-3.4.1.14, REQ-3.1.3.19)."""
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> Any:
+        from wavecore.api.services.workbench import _common as _wb_common
+        from wavecore.controls.registry import _registry, register_all_core_controls
+
+        _wb_common._clear_sessions_sync()
+        register_all_core_controls(_registry, freeze_after=False)
+        yield
+        _wb_common._clear_sessions_sync()
+
+    @staticmethod
+    async def _run_setter(
+        data: dict[str, Any], variables: dict[str, Any], declared: dict[str, str]
+    ) -> dict[str, Any]:
+        from wavecore.api.services.workbench import _common as _wb_common
+        from wavecore.api.services.workbench import service as workbench_service
+
+        session_id = f"setter-shared-flags-{uuid.uuid4().hex[:8]}"
+        _wb_common._workbench_sessions[session_id] = {
+            "session_id": session_id,
+            "status": "running",
+            "current_block": None,
+            "progress": {"current": 0, "total": 1, "percentage": 0.0},
+            "block_states": {},
+            "variable_types": declared,
+        }
+        node = {
+            "id": "set-1",
+            "type": "workflowNode",
+            "data": {
+                "label": "Set Values",
+                "elementType": "variable-setter",
+                "nodeType": "control",
+                "version": "1.0.0",
+                "templateFields": [],
+                **data,
+            },
+        }
+        edges = [{"source": "start-node", "target": "set-1"}]
+
+        await workbench_service._execute_workflow(session_id, [node], edges, variables)
+
+        return _wb_common._workbench_sessions[session_id]
+
+    @pytest.mark.asyncio
+    async def test_a_row_flagged_in_expression_fields_runs_as_an_expression(self) -> None:
+        variables: dict[str, Any] = {"attempt": 2, "next_attempt": 0}
+
+        session = await self._run_setter(
+            {
+                "config": {"values": {"variables": {"next_attempt": "attempt + 1"}}},
+                "expressionFields": ["variables.next_attempt"],
+            },
+            variables,
+            {"attempt": "integer", "next_attempt": "integer"},
+        )
+
+        assert session["status"] == "passed", session.get("error")
+        assert variables["next_attempt"] == 3
+
+    @pytest.mark.asyncio
+    async def test_a_row_flagged_in_template_fields_is_filled(self) -> None:
+        variables: dict[str, Any] = {"run_id": "r-7", "summary": ""}
+
+        session = await self._run_setter(
+            {
+                "config": {"values": {"variables": {"summary": "Run {{ run_id }} done"}}},
+                "expressionFields": [],
+                "templateFields": ["variables.summary"],
+            },
+            variables,
+            {"run_id": "string", "summary": "string"},
+        )
+
+        assert session["status"] == "passed", session.get("error")
+        assert variables["summary"] == "Run r-7 done"
+
+    @pytest.mark.asyncio
+    async def test_a_flagged_entry_of_a_list_row_resolves(self) -> None:
+        variables: dict[str, Any] = {"host_prefix": "web", "host_list": []}
+
+        session = await self._run_setter(
+            {
+                "config": {
+                    "values": {"variables": {"host_list": ["web-1", "web-2", "host_prefix + '-3'"]}}
+                },
+                "expressionFields": ["variables.host_list.2"],
+                "elementTypes": {"variables.host_list": ["string", "string", "string"]},
+            },
+            variables,
+            {"host_prefix": "string", "host_list": "array"},
+        )
+
+        assert session["status"] == "passed", session.get("error")
+        assert variables["host_list"] == ["web-1", "web-2", "web-3"]
 
 
 class TestTerminalCallbackRegistry:

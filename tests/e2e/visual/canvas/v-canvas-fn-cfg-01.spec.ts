@@ -61,7 +61,6 @@ function buildSeed(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: 'hello' },
               outputBindings: {},
@@ -113,7 +112,6 @@ function emptyLocalFunction(id: string, label: string, y: number): Record<string
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: {}, outputBindings: {}, profileBindings: [] },
       localDefinition: {
         name: label,
@@ -157,7 +155,7 @@ async function seedTwoFunctions(page: Page): Promise<string> {
 
 /** Open a Function Block's sheet; the dispatched double-click reaches a Block an open sheet covers. */
 async function openFunctionSheet(page: Page, nodeId: string, label: string): Promise<Locator> {
-  const sheet = page.locator(`section[aria-label="${label} configuration"]`)
+  const sheet = page.getByRole('dialog', { name: `${label} - Edit Config`, exact: true, includeHidden: true })
   const block = page.locator(`[data-testid="workflow-node-${nodeId}"]`).locator('button').first()
   await expect(async () => {
     if (!(await sheet.isVisible())) await block.dispatchEvent('dblclick')

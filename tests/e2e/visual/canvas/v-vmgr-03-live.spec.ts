@@ -42,7 +42,7 @@ function loadFixture(): Record<string, unknown> {
 }
 
 const modal = (page: Page): Locator =>
-  page.locator('section[aria-label="Inspect variable greeting"]')
+  page.getByRole('dialog', { name: 'greeting', exact: true, includeHidden: true })
 
 async function switchMode(page: Page, label: 'Initial' | 'Current'): Promise<void> {
   const trigger = modal(page).locator('[data-testid="mode-dropdown"]')

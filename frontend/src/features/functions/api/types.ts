@@ -113,10 +113,14 @@ export interface FunctionDependentsResponse {
   functions: FunctionDependentRef[]
 }
 
+/** A field the Function list search can read; the server reads the name alone by default. */
+export type FunctionSearchField = 'name' | 'description' | 'tags'
+
 export interface ListFunctionsParams {
   page?: number
   per_page?: number
   search?: string
+  search_in?: FunctionSearchField[]
   tags?: string[]
   sort_by?: string
   sort_order?: 'asc' | 'desc'

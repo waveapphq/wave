@@ -178,17 +178,21 @@ const SCAFFOLDED_MAP_EDITOR_SIZE: SheetSize = {
   minHeight: 380,
 }
 
+// A list whose items take {x} opens wider by the {x} column and its gap, so its items keep their width (FIELD-6).
+const EXPRESSION_ITEMS_LIST_SIZE: SheetSize = { ...VALUE_EDITOR_SIZES.array, width: VALUE_EDITOR_SIZES.array.width + 40 }
+
 /** The "Edit value" sheet geometry: a script body is a code editor, a scaffolded map
  *  editor opens on its own box, every other value opens by its type. */
 export function getValueEditorSheetSize(
   type: Variable['type'],
   scriptMode: ScriptMode | null = null,
   scaffolded = false,
+  expressionItems = false,
 ): SheetSize {
   if (scriptMode === 'python') return SCRIPT_VALUE_EDITOR_SIZE
   if (scriptMode !== null) return SQL_VALUE_EDITOR_SIZE
   if (scaffolded) return SCAFFOLDED_MAP_EDITOR_SIZE
-  if (type === 'array') return VALUE_EDITOR_SIZES.array
+  if (type === 'array') return expressionItems ? EXPRESSION_ITEMS_LIST_SIZE : VALUE_EDITOR_SIZES.array
   if (type === 'map') return VALUE_EDITOR_SIZES.map
   if (type === 'table') return VALUE_EDITOR_SIZES.table
   return VALUE_EDITOR_SIZES.string

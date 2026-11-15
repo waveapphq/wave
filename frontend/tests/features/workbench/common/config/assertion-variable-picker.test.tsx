@@ -43,11 +43,11 @@ vi.mock('@/features/workbench/common/element-config/expressions/expression-field
 }))
 
 // Import after mocks
-import {
-  AssertionBuilder,
-  type AssertionBuilderProps,
-  type LiteralAssertion,
-} from '@/features/workbench/common/config/assertion-builder'
+import { AssertionBuilder } from '@/features/workbench/common/config/assertion-builder/builder'
+import type {
+  AssertionBuilderProps,
+  LiteralAssertion,
+} from '@/features/workbench/common/config/assertion-builder/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,7 +81,6 @@ function renderRow(overrides: Partial<AssertionBuilderProps> = {}) {
     assertions: [makeLiteral()],
     availableVariables: pickerVariables,
     onAssertionsChange: vi.fn(),
-    onValidChange: vi.fn(),
     ...overrides,
   }
   render(<AssertionBuilder {...props} />)
@@ -258,6 +257,9 @@ describe('assertion row variable picker', () => {
 
       await user.click(screen.getByTestId('assert-variable-0'))
       await user.click(await screen.findByText('flag'))
+      // 'test' would be lost under is_true, so the shared question asks first (FIELD-13).
+      expect(props.onAssertionsChange).not.toHaveBeenCalled()
+      await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Change type' }))
 
       expect(props.onAssertionsChange).toHaveBeenCalledWith([
         expect.objectContaining({ variable: 'flag', value_type: 'boolean', operator: 'is_true' }),

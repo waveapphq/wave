@@ -75,8 +75,6 @@ def _block_node(
             "config": {"values": values, "outputBindings": {}},
             "expressionFields": expression_fields or [],
             "templateFields": [],
-            "variableExpressionKeys": [],
-            "variableTypes": {},
         },
     }
 

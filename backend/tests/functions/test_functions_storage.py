@@ -130,8 +130,11 @@ class TestComputeEtag:
     def test_is_deterministic_for_same_input(self) -> None:
         from wavecore.api.services.functions._storage import compute_etag
 
-        definition = {"id": "abc", "name": "fn", "inputs": [], "outputs": []}
-        assert compute_etag(definition) == compute_etag(definition)
+        expected = "43781823bb55b90d310641476281b82a6b01bbc20cf6bae595086a6d44ca106d"
+        first = compute_etag({"id": "abc", "name": "fn", "inputs": [], "outputs": []})
+        second = compute_etag({"id": "abc", "name": "fn", "inputs": [], "outputs": []})
+
+        assert (first, second) == (expected, expected)
 
     def test_is_independent_of_key_order(self) -> None:
         """Canonical JSON sort_keys=True ensures key permutations produce the same hash."""

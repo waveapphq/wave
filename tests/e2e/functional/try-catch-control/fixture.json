@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'before-all'", "level": "INFO" },
             "outputBindings": {},
@@ -42,7 +41,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "f1_error", "caught": "f1_caught" },
@@ -65,7 +63,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f1-try'", "level": "INFO" },
             "outputBindings": {},
@@ -88,7 +85,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f1-catch'", "level": "WARN" },
             "outputBindings": {},
@@ -112,7 +108,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": false, "enable_finally": false },
             "outputBindings": { "error": "f2_error", "caught": "f2_caught" },
@@ -135,7 +130,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f2-try'", "level": "INFO" },
             "outputBindings": {},
@@ -159,7 +153,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": true },
             "outputBindings": { "error": "f3_error", "caught": "f3_caught" },
@@ -182,7 +175,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f3-try'", "level": "INFO" },
             "outputBindings": {},
@@ -205,7 +197,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f3-catch'", "level": "WARN" },
             "outputBindings": {},
@@ -228,7 +219,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f3-finally'", "level": "INFO" },
             "outputBindings": {},
@@ -252,7 +242,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": false, "enable_finally": true },
             "outputBindings": { "error": "f4_error", "caught": "f4_caught" },
@@ -275,7 +264,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f4-try'", "level": "INFO" },
             "outputBindings": {},
@@ -298,7 +286,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f4-finally'", "level": "INFO" },
             "outputBindings": {},
@@ -322,7 +309,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "f5_error", "caught": "f5_caught" },
@@ -345,7 +331,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "1/0", "level": "INFO" },
             "outputBindings": {},
@@ -368,7 +353,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f5-catch'", "level": "WARN" },
             "outputBindings": {},
@@ -392,7 +376,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": false, "enable_finally": false },
             "outputBindings": { "error": "f6_error", "caught": "f6_caught" },
@@ -415,7 +398,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "1/0", "level": "INFO" },
             "outputBindings": {},
@@ -439,7 +421,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": true },
             "outputBindings": { "error": "f7_error", "caught": "f7_caught" },
@@ -462,7 +443,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "1/0", "level": "INFO" },
             "outputBindings": {},
@@ -485,7 +465,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f7-catch'", "level": "WARN" },
             "outputBindings": {},
@@ -508,7 +487,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f7-finally'", "level": "INFO" },
             "outputBindings": {},
@@ -532,7 +510,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": false, "enable_finally": true },
             "outputBindings": { "error": "f8_error", "caught": "f8_caught" },
@@ -555,7 +532,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "1/0", "level": "INFO" },
             "outputBindings": {},
@@ -578,7 +554,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'f8-finally'", "level": "INFO" },
             "outputBindings": {},
@@ -602,7 +577,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'after-all'", "level": "INFO" },
             "outputBindings": {},

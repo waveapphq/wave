@@ -10,6 +10,7 @@ import {
   inferElementRenderType,
   realizeNestedText,
   isNullValue,
+  isMaskedWhole,
   NULL_LOOK_CLASS,
 } from '@/lib/variable-format'
 import * as variableFormat from '@/lib/variable-format'
@@ -242,6 +243,14 @@ describe('formatValue', () => {
     ])('masks a secret holding %s', (_label, value) => {
       expect(formatValue(value, 'string', true)).toBe('********')
     })
+
+    // An unflagged copy of a secret list, map or table arrives masked whole (REQ-3.1.3.5).
+    it.each(['array', 'map', 'table'] as const)(
+      'shows the bare mask of an unflagged %s as the mask, never as an empty shape',
+      (type) => {
+        expect(formatValue('********', type)).toBe('********')
+      },
+    )
   })
 
   describe('unset values (declared, never given a value)', () => {
@@ -294,6 +303,28 @@ describe('formatValue', () => {
 // ===========================================================================
 // Null values (REQ-3.1.3.20, VMGR-93)
 // ===========================================================================
+
+describe('isMaskedWhole (REQ-3.1.3.5)', () => {
+  it.each(['array', 'map', 'table', 'integer', 'float', 'boolean'] as const)(
+    'the bare mask in a %s row is a value the server masked whole',
+    (type) => {
+      expect(isMaskedWhole('********', type)).toBe(true)
+    },
+  )
+
+  it('the bare mask in a string row is text the row can hold', () => {
+    expect(isMaskedWhole('********', 'string')).toBe(false)
+  })
+
+  it.each([
+    ['other text', 'table', 'x'],
+    ['a longer run of stars', 'map', '*********'],
+    ['null', 'array', null],
+    ['a summary envelope', 'array', { count: 2, changed: true }],
+  ] as const)('%s is not masked whole', (_label, type, value) => {
+    expect(isMaskedWhole(value, type)).toBe(false)
+  })
+})
 
 describe('isNullValue', () => {
   it.each([

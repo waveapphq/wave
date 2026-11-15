@@ -1,15 +1,17 @@
 """Plugin and control execution for workbench sessions."""
 
-from collections.abc import Container, Iterator, Mapping
+from collections.abc import Collection, Container, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
-from dataclasses import field as dataclass_field
 from typing import Any
 
 from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.block_schema import block_schema
-from wavecore.api.services.workbench._common import _add_execution_log, _get_session
+from wavecore.api.services.workbench._common import (
+    _add_execution_log,
+    _get_session,
+    current_instance_path,
+)
 from wavecore.api.services.workbench.block_source import block_source
 from wavecore.connectivity.url_credentials import mask_url_passwords_in
 from wavecore.core.execution.plugin_executor import resolve_block_fields
@@ -39,61 +41,43 @@ def holding_stop_outputs() -> Iterator[dict[str, Any]]:
         _stop_outputs.reset(token)
 
 
-@dataclass(frozen=True)
-class SetterRows:
-    """A Variable Setter's per-row records: expression and template rows, types, element types."""
-
-    expression_keys: set[str] = dataclass_field(default_factory=set)
-    template_keys: set[str] = dataclass_field(default_factory=set)
-    types: dict[str, str] = dataclass_field(default_factory=dict)
-    element_types: Mapping[str, Any] = dataclass_field(default_factory=dict)
-
-
 def _get_session_registry(session_id: str) -> Any:
     """The run's SecretRegistry, or None when the session carries none."""
     return (_get_session(session_id) or {}).get("secret_registry")
 
 
-def _setter_row_flags(keys: set[str]) -> set[str]:
-    """A Variable Setter row's per-row flag as a per-entry flag of its ``variables`` map."""
-    return {f"variables.{key}" for key in keys}
-
-
 def _coerce_setter_variables(
     processed_params: dict[str, Any],
-    variable_types: dict[str, str],
-    variable_element_types: Mapping[str, Any] | None = None,
-    variable_expression_keys: set[str] | None = None,
-    variable_template_keys: set[str] | None = None,
+    sources: Collection[str],
+    element_types: Mapping[str, Any] | None = None,
 ) -> None:
-    """Coerce Variable Setter rows to their declared types; a literal row follows the one
-    number rule (REQ-3.1.3.14, REQ-3.1.3.19, REQ-3.5.5.4)."""
+    """Coerce Variable Setter rows to the types their variables declare; a literal row follows
+    the one number rule (REQ-3.1.3.14, REQ-3.1.3.19, REQ-3.5.5.4). ``sources`` holds the
+    flagged places (`variables.<row>`, `variables.<row>.<entry>`)."""
     from wavecore.controls.variable_setter import _coerce_value
 
     setter_vars = processed_params.get("variables")
     if not isinstance(setter_vars, dict):
         return
-    element_types = variable_element_types or {}
-    expression_keys = variable_expression_keys or set()
-    sources = expression_keys | (variable_template_keys or set())
     for var_name, var_value in setter_vars.items():
-        expected_type = variable_types.get(var_name)
+        expected_type = declared_type(var_name)
         if not expected_type:
             continue
-        if var_name not in sources:
-            _refuse_setter_literal(var_name, var_value, expected_type, element_types)
+        place = f"variables.{var_name}"
+        if place not in sources:
+            entry_types = (element_types or {}).get(place)
+            _refuse_setter_literal(var_name, var_value, expected_type, entry_types)
         coerced = _coerce_value(var_value, expected_type, var_name)
-        typed_literal = var_name in element_types and var_name not in expression_keys
-        if typed_literal or expected_type == "table":
-            coerced = realize_declared_value(coerced, expected_type, element_types.get(var_name))
+        if expected_type == "table":
+            coerced = realize_declared_value(coerced, expected_type)
         setter_vars[var_name] = coerced
 
 
 def _refuse_setter_literal(
-    var_name: str, var_value: Any, expected_type: str, element_types: Mapping[str, Any]
+    var_name: str, var_value: Any, expected_type: str, entry_types: Any
 ) -> None:
     """A literal Setter row that breaks the one number rule stops the Block (REQ-3.1.3.14)."""
-    problem = declared_value_problem(var_value, expected_type, element_types.get(var_name))
+    problem = declared_value_problem(var_value, expected_type, entry_types)
     if problem is not None:
         raise TypeError(problem.describe(f"Value for variable '{var_name}'"))
 
@@ -108,7 +92,7 @@ async def _execute_control(
     block_label: str | None = None,
     expression_fields: set[str] | None = None,
     template_fields: set[str] | None = None,
-    setter_rows: SetterRows | None = None,
+    element_types: Mapping[str, Any] | None = None,
     reveal_secrets: bool = False,
 ) -> Any:
     """Execute a control (e.g., Delay)."""
@@ -127,30 +111,26 @@ async def _execute_control(
     control = control_class()
     control_metadata = control.metadata
 
-    rows = setter_rows or SetterRows()
+    expressions = expression_fields or set()
+    templates = template_fields or set()
     resolved_params = resolve_block_fields(
         parameters,
         control_metadata.get("parameter_schema") or [],
-        expression_fields=(expression_fields or set()) | _setter_row_flags(rows.expression_keys),
-        template_fields=(template_fields or set()) | _setter_row_flags(rows.template_keys),
+        expression_fields=expressions,
+        template_fields=templates,
         element_types={},
         variables=variables,
         session_id=session_id,
         exact_numbers=False,
     )
 
-    if rows.types and control_id == ControlId.VARIABLE_SETTER:
-        _coerce_setter_variables(
-            resolved_params,
-            rows.types,
-            rows.element_types,
-            rows.expression_keys,
-            rows.template_keys,
-        )
+    if control_id == ControlId.VARIABLE_SETTER:
+        _coerce_setter_variables(resolved_params, expressions | templates, element_types)
 
     context: dict[str, Any] = {
         "parameters": resolved_params,
         "variables": variables,
+        "scope": "function" if current_instance_path() else "test",
     }
 
     if session_id:

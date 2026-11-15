@@ -3,7 +3,7 @@
  *
  * Every string param routes through StringInput, which draws the one value field
  * (a text box named by the row label) with its expand to the "Edit value" sheet; the
- * expression box (`param-input-<name>`) shows only in {x} mode. The Literal / Template / Expression kinds stay mutually
+ * expression box shows only in {x} mode. The Literal / Template / Expression kinds stay mutually
  * exclusive: turning the `{}` expression toggle ON removes the param from
  * templateFields, and a param in expression mode renders the ExpressionField, so
  * the Template sheet can never coexist with an expression.
@@ -112,14 +112,14 @@ describe('ParameterRow string value kind routing', () => {
       renderRow({ ...defaultRowProps, parameter: bodyStringParam, value: 'line1\nline2' })
       expect(screen.getByRole('textbox', { name: 'Body' })).toBeInTheDocument()
       expect(screen.getByTestId('param-expand-body')).toBeInTheDocument()
-      expect(screen.queryByTestId('param-input-body')).not.toBeInTheDocument()
+      expect(document.querySelector('.cm-editor')).toBeNull()
     })
 
     it('routes a one-line string value to the one value field and its expand (not the expression box)', () => {
       renderRow({ ...defaultRowProps, parameter: hostStringParam, value: 'example.com' })
       expect(screen.getByRole('textbox', { name: 'Host' })).toBeInTheDocument()
       expect(screen.getByTestId('param-expand-host')).toBeInTheDocument()
-      expect(screen.queryByTestId('param-input-host')).not.toBeInTheDocument()
+      expect(document.querySelector('.cm-editor')).toBeNull()
     })
   })
 
@@ -156,7 +156,7 @@ describe('ParameterRow string value kind routing', () => {
         expressionFields: ['host'],
       })
       // The Template/literal value preview cannot coexist with an expression...
-      expect(screen.queryByRole('textbox', { name: 'Host' })).not.toBeInTheDocument()
+      expect(document.querySelector('input[data-testid="param-input-host"]')).toBeNull()
       // ...the inline expression editor is shown instead.
       expect(screen.getByTestId('param-input-host')).toBeInTheDocument()
     })

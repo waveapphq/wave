@@ -68,7 +68,10 @@ def _setter_block(block_id: str, rows: dict[str, Any], secret: list[str]) -> dic
         "data": {
             "elementType": "variable-setter",
             "nodeType": "control",
-            "config": {"values": {"variables": rows}, "variableSecretKeys": secret},
+            "config": {
+                "values": {"variables": rows},
+                "secretFields": [f"variables.{row}" for row in secret],
+            },
         },
     }
 

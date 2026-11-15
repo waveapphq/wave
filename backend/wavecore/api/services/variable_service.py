@@ -38,7 +38,7 @@ from wavecore.core.functions.declarations import declaration_problems, value_pro
 from wavecore.core.secrets import masking_settings
 from wavecore.core.secrets.masking import masked_declaration
 from wavecore.core.secrets.sealing import seal_variables, unseal_all
-from wavecore.core.variables.declared_values import declared_start
+from wavecore.core.variables.declared_values import DeclaredKindError, declared_start
 from wavecore.core.variables.element_types import realize_declared_value
 from wavecore.core.variables.usage import cycle_message, cycle_path, sources_graph
 from wavecore.core.variables.wire_form import wire_scalar
@@ -294,7 +294,7 @@ def _validate_no_cycles_for_payload(variables: dict[str, Any]) -> None:
             continue
         try:
             start = declared_start(var_info)
-        except ValueError as exc:
+        except DeclaredKindError as exc:
             raise ValidationException(str(exc)) from exc
         if start.kind == "expression":
             expressions[name] = start.value

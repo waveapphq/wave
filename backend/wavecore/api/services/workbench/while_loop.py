@@ -15,6 +15,7 @@ from wavecore.api.services.workbench._common import (
     _push_single_variable_change,
 )
 from wavecore.api.services.workbench.block_source import node_source
+from wavecore.api.services.workbench.block_status import take_lane
 from wavecore.api.services.workbench.for_loop import (
     LoopLanes,
     _consume_if_local_signal,
@@ -29,12 +30,7 @@ def _evaluate_while_condition(
     conditions: list[dict[str, Any]],
     variables: dict[str, Any],
 ) -> bool:
-    """Evaluate the while-loop condition using the assertion evaluator.
-
-    Empty conditions list evaluates to False (loop does not execute).
-    """
-    if not conditions:
-        return False
+    """Evaluate the while-loop condition using the assertion evaluator."""
     result = evaluate_assertions(conditions, variables)
     return result.passed
 
@@ -42,6 +38,21 @@ def _evaluate_while_condition(
 def _should_check_condition(is_do_while: bool, iteration: int) -> bool:
     """Determine if the condition should be checked this iteration."""
     return not is_do_while or iteration > 0
+
+
+def _should_exit_loop(
+    session: dict[str, Any],
+    is_do_while: bool,
+    iteration: int,
+    conditions: list[dict[str, Any]],
+    variables: dict[str, Any],
+) -> bool:
+    """Whether the loop ends before this iteration: the session stopped or the condition failed."""
+    if session.get("status") == WorkbenchStatus.STOPPED.value:
+        return True
+    return _should_check_condition(is_do_while, iteration) and not _evaluate_while_condition(
+        conditions, variables
+    )
 
 
 def _check_max_iterations(
@@ -159,12 +170,8 @@ async def _run_while_iteration_loop(
 
     while True:
         await asyncio.sleep(0.001)
-        if session.get("status") == WorkbenchStatus.STOPPED.value:
+        if _should_exit_loop(session, is_do_while, iteration, conditions, variables):
             break
-
-        if _should_check_condition(is_do_while, iteration):
-            if not _evaluate_while_condition(conditions, variables):
-                break
 
         if _check_max_iterations(max_iterations, iteration, session, session_id, node_id):
             return True
@@ -188,6 +195,8 @@ async def _run_while_iteration_loop(
             },
         )
 
+        if body_chain:
+            await take_lane(session, session_id, node_id, "body")
         outcome = await _run_body_and_check(
             body_chain,
             node_map,

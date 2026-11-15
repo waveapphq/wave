@@ -10,10 +10,11 @@
  *   `unmaskedSecretFields` from the element, exposes a setter, folds it into
  *   `hasChanges`, and writes it back through onSave - mirroring the existing
  *   `outputSecretFields` load/save thread.
- * - Switch/Case editor state (REQ-3.5.1.20): the hook owns the case
- *   branch list, keeps `branches` out of the generic parameter table and the
- *   required-field check, and gates Save on the case editor's validity -
- *   mirroring the If/Else thread it sits beside.
+ * - Control fields (REQ-3.5.1.6, REQ-3.2.3.6): mode, join, fail, branches,
+ *   lanes and conditions live in `values`, beside the shared flag lists; Save,
+ *   the change check and the canvas follow read them there. The shared
+ *   required rule and the control check hold the Save. The five condition
+ *   Blocks and the Variable Setter open wide.
  * - Variable-export rows (SHRUN-6, REQ-3.4.1.1): the hook owns the Shell
  *   Script export list, keeps it out of the Input Parameters table, folds its
  *   errors into Save, and merges its rows into the saved values, bindings,
@@ -66,6 +67,25 @@ type ConfigState = ReturnType<typeof useConfigModalState> & {
   setUnmaskedSecretFields: (fields: string[]) => void
 }
 
+/** The window state a control window reads beside `values`. */
+type ControlState = ReturnType<typeof useConfigModalState> & {
+  wideWindow?: boolean
+  secretFields?: string[]
+}
+
+// A condition row the shared check finds complete, and rows it holds the Save on.
+const READY_ROW = {
+  id: 'c-1',
+  type: 'literal',
+  variable: 'status',
+  value_type: 'integer',
+  operator: 'equals',
+  reference_value: '200',
+}
+const NO_VARIABLE_ROW = { ...READY_ROW, id: 'c-2', variable: '' }
+const NO_VALUE_ROW = { id: 'c-3', type: 'literal', variable: 'status', value_type: 'integer', operator: 'equals' }
+const BLANK_EXPRESSION_ROW = { id: 'c-4', type: 'expression', expression: '' }
+
 interface SwitchBranch {
   id: string
   type: 'case' | 'default'
@@ -74,36 +94,26 @@ interface SwitchBranch {
   break?: boolean
 }
 
-type SwitchState = ReturnType<typeof useConfigModalState> & {
-  isSwitch: boolean
-  switchBranches: SwitchBranch[]
-  setSwitchBranches: (branches: SwitchBranch[]) => void
-  setSwitchValid: (valid: boolean) => void
-}
-
 const savedBranches: SwitchBranch[] = [
-  { id: 'branch_0', type: 'case', label: 'Fast', conditions: [], break: true },
-  { id: 'branch_1', type: 'case', label: 'Slow', conditions: [], break: false },
+  { id: 'branch_0', type: 'case', label: 'Fast', conditions: [READY_ROW], break: true },
+  { id: 'branch_1', type: 'case', label: 'Slow', conditions: [READY_ROW], break: false },
   { id: 'branch_2', type: 'default', label: '' },
 ]
 
-interface ParallelBranch {
+const IF_ELSE_BRANCHES = [
+  { id: 'branch_0', type: 'if', label: '', conditions: [READY_ROW] },
+  { id: 'branch_1', type: 'else', label: '' },
+]
+
+/** A Parallel lane as the Block stores it. */
+interface ParallelLane {
   id: string
   name: string
-  timeLimit?: number | string
+  time_limit?: number | string
 }
 
-type ParallelState = ReturnType<typeof useConfigModalState> & {
-  isParallel: boolean
-  parallelBranches: ParallelBranch[]
-  parallelJoin: 'all' | 'first'
-  setParallelBranches: (branches: ParallelBranch[]) => void
-  setParallelJoin: (join: 'all' | 'first') => void
-  setParallelValid: (valid: boolean) => void
-}
-
-const savedParallelBranches: ParallelBranch[] = [
-  { id: 'branch_1', name: 'ingest', timeLimit: 30000 },
+const savedLanes: ParallelLane[] = [
+  { id: 'branch_1', name: 'ingest', time_limit: 30000 },
   { id: 'branch_2', name: 'probe' },
 ]
 
@@ -138,6 +148,19 @@ function renderControl(elementType: string, currentValues: Record<string, unknow
   return renderHook(() =>
     useConfigModalState(makeElement({ elementType, currentValues }), vi.fn(), vi.fn()),
   )
+}
+
+/** A control window and what its Save hands on. */
+function renderSaving(elementType: string, currentValues: Record<string, unknown> = {}) {
+  const onSave = vi.fn()
+  const { result } = renderHook(() =>
+    useConfigModalState(makeElement({ elementType, currentValues }), onSave, vi.fn()),
+  )
+  const save = (): SaveData => {
+    act(() => result.current.handleSave())
+    return onSave.mock.lastCall?.[0] as SaveData
+  }
+  return { result, save }
 }
 
 beforeEach(() => {
@@ -462,6 +485,28 @@ describe('csv-parser transform params and operation-specific outputs', () => {
     expect(taken.result.current.isFormValid).toBe(true)
   })
 
+  it('leaves the filters of a hidden Transform out of the control check', () => {
+    // A schema whose Transform shows only while parsing: the stored filters then hold nothing back.
+    blockFields.inputs = [
+      { name: 'operation', label: 'Operation', type: 'string', required: false, enumValues: ['parse', 'serialize'], defaultValue: 'parse' },
+      { name: 'sorts', label: 'Sorts', type: 'array', required: false, showWhen: { field: 'operation', values: ['parse'] } },
+      { name: 'filters', label: 'Filters', type: 'array', required: false, showWhen: { field: 'operation', values: ['parse'] } },
+    ]
+    const filters = [
+      {
+        id: 'b1',
+        column: { mode: 'name', value: 'score' },
+        asType: 'integer',
+        conditions: [
+          { id: 'c1', type: 'literal', variable: '_cell', value_type: 'integer', operator: 'equals', reference_value: 'abc' },
+        ],
+      },
+    ]
+
+    expect(renderCsv({ operation: 'parse', filters }).result.current.isFormValid).toBe(false)
+    expect(renderCsv({ operation: 'serialize', filters }).result.current.isFormValid).toBe(true)
+  })
+
   it('drops the table outputs in serialize mode', () => {
     const { result } = renderCsv({ operation: 'serialize' })
 
@@ -473,51 +518,47 @@ describe('csv-parser transform params and operation-specific outputs', () => {
   })
 })
 
+// Control fields live in the shared values: Save, the change check and the follow read them there (REQ-3.5.1.20).
 describe('useConfigModalState switch-case state (REQ-3.5.1.20)', () => {
   it('flags a switch-case element as a switch', () => {
     const { result } = renderControl('switch-case')
-    expect((result.current as SwitchState).isSwitch).toBe(true)
+    expect(result.current.isSwitch).toBe(true)
   })
 
   it('leaves other element types unflagged', () => {
     for (const elementType of ['if-else', 'while', 'assert', 'http-client']) {
       const { result } = renderControl(elementType)
-      expect((result.current as SwitchState).isSwitch).toBe(false)
+      expect(result.current.isSwitch).toBe(false)
     }
   })
 
-  it('initializes switchBranches from the element config', () => {
+  it('holds the stored case list in values', () => {
     const { result } = renderControl('switch-case', { branches: savedBranches })
-    expect((result.current as SwitchState).switchBranches).toEqual(savedBranches)
+    expect(result.current.values.branches).toEqual(savedBranches)
   })
 
-  it('defaults switchBranches to an empty array for a fresh switch node', () => {
+  it('holds no case list in values for a fresh switch node', () => {
     const { result } = renderControl('switch-case')
-    expect((result.current as SwitchState).switchBranches).toEqual([])
+    expect(result.current.values).not.toHaveProperty('branches')
   })
 
-  it('setSwitchBranches updates state and marks the form changed', () => {
+  it('marks the form changed once the case list changes in values', () => {
     const { result } = renderControl('switch-case')
     expect(result.current.hasChanges).toBe(false)
 
-    act(() => (result.current as SwitchState).setSwitchBranches(savedBranches))
+    act(() => result.current.handleInputChange('branches', savedBranches))
 
-    expect((result.current as SwitchState).switchBranches).toEqual(savedBranches)
+    expect(result.current.values.branches).toEqual(savedBranches)
     expect(result.current.hasChanges).toBe(true)
   })
 
   // Guard: the hook never threaded the case list into the save path.
   it('carries an edited case list into the saved values', () => {
-    const onSave = vi.fn()
-    const { result } = renderHook(() =>
-      useConfigModalState(makeElement({ elementType: 'switch-case' }), onSave, vi.fn()),
-    )
+    const { result, save } = renderSaving('switch-case')
 
-    act(() => (result.current as SwitchState).setSwitchBranches(savedBranches))
-    act(() => result.current.handleSave())
+    act(() => result.current.handleInputChange('branches', savedBranches))
 
-    expect(onSave).toHaveBeenCalledTimes(1)
-    expect((onSave.mock.calls[0][0] as SaveData).values.branches).toEqual(savedBranches)
+    expect(save().values.branches).toEqual(savedBranches)
   })
 
   it('leaves branches out of the saved values for a non-switch element', () => {
@@ -539,26 +580,27 @@ describe('useConfigModalState switch-case state (REQ-3.5.1.20)', () => {
     expect(names).toEqual([])
   })
 
-  it('reports the form valid for a fresh switch node with no branches configured', () => {
-    const { result } = renderControl('switch-case')
+  it('lets the Save through for a case list whose every case has a complete condition row', () => {
+    const { result } = renderControl('switch-case', { branches: savedBranches })
     expect(result.current.isFormValid).toBe(true)
   })
 
-  it('blocks the form while the case editor reports invalid', () => {
-    const { result } = renderControl('switch-case')
-
-    act(() => (result.current as SwitchState).setSwitchValid(false))
+  it('holds the Save while a case has no condition row', () => {
+    const { result } = renderControl('switch-case', {
+      branches: [{ ...savedBranches[0], conditions: [] }, savedBranches[1], savedBranches[2]],
+    })
 
     expect(result.current.isFormValid).toBe(false)
   })
 
-  it('restores form validity when the case editor reports valid again', () => {
-    const { result } = renderControl('switch-case')
-
-    act(() => (result.current as SwitchState).setSwitchValid(false))
+  it('lets the Save through again once the case gets a complete condition row', () => {
+    const { result } = renderControl('switch-case', {
+      branches: [{ ...savedBranches[0], conditions: [NO_VARIABLE_ROW] }, savedBranches[2]],
+    })
     expect(result.current.isFormValid).toBe(false)
 
-    act(() => (result.current as SwitchState).setSwitchValid(true))
+    act(() => result.current.handleInputChange('branches', savedBranches))
+
     expect(result.current.isFormValid).toBe(true)
   })
 })
@@ -566,109 +608,80 @@ describe('useConfigModalState switch-case state (REQ-3.5.1.20)', () => {
 describe('useConfigModalState parallel state (REQ-3.2.3.6, REQ-3.2.3.7)', () => {
   it('flags a parallel element as a parallel', () => {
     const { result } = renderControl('parallel')
-    expect((result.current as ParallelState).isParallel).toBe(true)
+    expect(result.current.isParallel).toBe(true)
   })
 
   it('leaves other element types unflagged', () => {
     for (const elementType of ['switch-case', 'if-else', 'while', 'http-client']) {
       const { result } = renderControl(elementType)
-      expect((result.current as ParallelState).isParallel).toBe(false)
+      expect(result.current.isParallel).toBe(false)
     }
   })
 
-  it('initializes parallelBranches from the element config', () => {
-    const { result } = renderControl('parallel', { branches: savedParallelBranches })
-    expect((result.current as ParallelState).parallelBranches).toEqual(savedParallelBranches)
+  it('holds the stored lanes in values as they are stored', () => {
+    const { result } = renderControl('parallel', { branches: savedLanes })
+    expect(result.current.values.branches).toEqual(savedLanes)
   })
 
-  it('defaults parallelBranches to an empty array for a fresh node', () => {
+  it('holds no lanes in values for a fresh node', () => {
     const { result } = renderControl('parallel')
-    expect((result.current as ParallelState).parallelBranches).toEqual([])
+    expect(result.current.values).not.toHaveProperty('branches')
   })
 
-  it('reads a branch limit stored in either spelling', () => {
-    // Storage writes `time_limit`; a record still carrying the editor's
-    // `timeLimit` must read back with its limit rather than as unlimited.
-    const { result } = renderControl('parallel', {
-      branches: [
-        { id: 'branch_1', name: 'ingest', timeLimit: 30000 },
-        { id: 'branch_2', name: 'probe', time_limit: 500 },
-      ],
-    })
-
-    expect((result.current as ParallelState).parallelBranches).toEqual([
-      { id: 'branch_1', name: 'ingest', timeLimit: 30000 },
-      { id: 'branch_2', name: 'probe', timeLimit: 500 },
-    ])
-  })
-
-  it('reads a branch limit stored as its exact digit text (REQ-3.1.3.14)', () => {
-    const { result } = renderControl('parallel', {
-      branches: [
-        { id: 'branch_1', name: 'ingest', time_limit: '9007199254740993' },
-        { id: 'branch_2', name: 'probe', time_limit: true },
-      ],
-    })
-
-    expect((result.current as ParallelState).parallelBranches).toEqual([
-      { id: 'branch_1', name: 'ingest', timeLimit: '9007199254740993' },
+  it('keeps a lane limit stored as its exact digit text (REQ-3.1.3.14)', () => {
+    const lanes = [
+      { id: 'branch_1', name: 'ingest', time_limit: '9007199254740993' },
       { id: 'branch_2', name: 'probe' },
-    ])
+    ]
+    const { result } = renderControl('parallel', { branches: lanes })
+
+    expect(result.current.values.branches).toEqual(lanes)
   })
 
-  it('reads a branch record with no id or name as blank rather than dropping it', () => {
+  it('keeps a lane record with no id or name in its place', () => {
     // Guard: a malformed row must still occupy its lane so the count is right.
-    const { result } = renderControl('parallel', {
-      branches: [{ time_limit: 250 }, { id: 'branch_2', name: 'probe' }],
-    })
+    const lanes = [{ time_limit: 250 }, { id: 'branch_2', name: 'probe' }]
+    const { result } = renderControl('parallel', { branches: lanes })
 
-    expect((result.current as ParallelState).parallelBranches).toEqual([
-      { id: '', name: '', timeLimit: 250 },
-      { id: 'branch_2', name: 'probe' },
-    ])
+    expect(result.current.values.branches).toEqual(lanes)
   })
 
-  it('initializes the join mode from the element config', () => {
+  it('holds the stored join mode in values', () => {
     const { result } = renderControl('parallel', { join: 'first' })
-    expect((result.current as ParallelState).parallelJoin).toBe('first')
+    expect(result.current.values.join).toBe('first')
   })
 
-  it('defaults the join mode to all', () => {
-    const { result } = renderControl('parallel')
-    expect((result.current as ParallelState).parallelJoin).toBe('all')
+  it('saves Wait for all for a section whose join mode the person never picked', () => {
+    const { save } = renderSaving('parallel', { branches: savedLanes })
+    expect(save().values.join).toBe('all')
   })
 
-  it('setParallelBranches updates state and marks the form changed', () => {
+  it('marks the form changed once the lanes change in values', () => {
     const { result } = renderControl('parallel')
     expect(result.current.hasChanges).toBe(false)
 
-    act(() => (result.current as ParallelState).setParallelBranches(savedParallelBranches))
+    act(() => result.current.handleInputChange('branches', savedLanes))
 
-    expect((result.current as ParallelState).parallelBranches).toEqual(savedParallelBranches)
+    expect(result.current.values.branches).toEqual(savedLanes)
     expect(result.current.hasChanges).toBe(true)
   })
 
-  it('setParallelJoin updates state and marks the form changed', () => {
+  it('marks the form changed once the join mode changes in values', () => {
     const { result } = renderControl('parallel')
 
-    act(() => (result.current as ParallelState).setParallelJoin('first'))
+    act(() => result.current.handleInputChange('join', 'first'))
 
-    expect((result.current as ParallelState).parallelJoin).toBe('first')
+    expect(result.current.values.join).toBe('first')
     expect(result.current.hasChanges).toBe(true)
   })
 
-  it('carries the branch list and the join mode into the saved values', () => {
-    const onSave = vi.fn()
-    const { result } = renderHook(() =>
-      useConfigModalState(makeElement({ elementType: 'parallel' }), onSave, vi.fn()),
-    )
+  it('carries the lanes and the join mode into the saved values', () => {
+    const { result, save } = renderSaving('parallel')
 
-    act(() => (result.current as ParallelState).setParallelBranches(savedParallelBranches))
-    act(() => (result.current as ParallelState).setParallelJoin('first'))
-    act(() => result.current.handleSave())
+    act(() => result.current.handleInputChange('branches', savedLanes))
+    act(() => result.current.handleInputChange('join', 'first'))
 
-    // Storage spells the branch limit `time_limit`; the editor holds `timeLimit`.
-    const values = (onSave.mock.calls[0][0] as SaveData).values
+    const values = save().values
     expect(values.branches).toEqual([
       { id: 'branch_1', name: 'ingest', time_limit: 30000 },
       { id: 'branch_2', name: 'probe' },
@@ -687,69 +700,128 @@ describe('useConfigModalState parallel state (REQ-3.2.3.6, REQ-3.2.3.7)', () => 
     expect((onSave.mock.calls[0][0] as SaveData).values).not.toHaveProperty('join')
   })
 
-  it('excludes the branches parameter from the displayed input parameters', () => {
+  it('excludes the lanes and the join mode from the displayed input parameters', () => {
     // PARALLEL-5: only the section time limit is a parameter row.
     const { result } = renderControl('parallel')
 
-    expect(result.current.displayParameters.map((p) => p.name)).not.toContain('branches')
+    expect(result.current.displayParameters.map((p) => p.name)).toEqual(['time_limit'])
   })
 
-  it('blocks the form while the branch editor reports invalid', () => {
-    const { result } = renderControl('parallel')
+  it('lets the Save through for two lanes with no limit or a limit of at least 1', () => {
+    const { result } = renderControl('parallel', { branches: savedLanes })
+    expect(result.current.isFormValid).toBe(true)
+  })
 
-    act(() => (result.current as ParallelState).setParallelValid(false))
-
+  it('holds the Save for a section with one lane', () => {
+    const { result } = renderControl('parallel', { branches: [savedLanes[0]] })
     expect(result.current.isFormValid).toBe(false)
   })
 
-  it('restores form validity when the branch editor reports valid again', () => {
-    const { result } = renderControl('parallel')
-
-    act(() => (result.current as ParallelState).setParallelValid(false))
+  it('holds the Save while a lane limit is below 1, and lets it through once the limit is 1', () => {
+    const { result } = renderControl('parallel', {
+      branches: [{ ...savedLanes[0], time_limit: 0 }, savedLanes[1]],
+    })
     expect(result.current.isFormValid).toBe(false)
 
-    act(() => (result.current as ParallelState).setParallelValid(true))
+    act(() =>
+      result.current.handleInputChange('branches', [
+        { ...savedLanes[0], time_limit: 1 },
+        savedLanes[1],
+      ]),
+    )
+
+    expect(result.current.isFormValid).toBe(true)
+  })
+
+  it('holds the Save while an {x} lane limit is blank, and lets it through once it holds an expression', () => {
+    const { result } = renderHook(() =>
+      useConfigModalState(
+        makeElement({
+          elementType: 'parallel',
+          currentValues: { branches: [{ id: 'branch_1', name: 'ingest' }, savedLanes[1]] },
+          expressionFields: ['branches.0.time_limit'],
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    )
+    expect(result.current.isFormValid).toBe(false)
+
+    act(() =>
+      result.current.handleInputChange('branches', [
+        { id: 'branch_1', name: 'ingest', time_limit: 'slow_ms' },
+        savedLanes[1],
+      ]),
+    )
+
     expect(result.current.isFormValid).toBe(true)
   })
 })
 
-describe('useConfigModalState sibling control editors stay unchanged', () => {
-  it('keeps the if-else branches parameter managed and out of the table', () => {
-    const { result } = renderControl('if-else')
+describe('useConfigModalState sibling control editors', () => {
+  it('keeps the if-else branches out of the table and lets a complete branch list through', () => {
+    const { result } = renderControl('if-else', { branches: IF_ELSE_BRANCHES })
 
     expect(result.current.isIfElse).toBe(true)
     expect(result.current.displayParameters.map((p) => p.name)).toEqual([])
     expect(result.current.isFormValid).toBe(true)
-    expect((result.current as SwitchState).isSwitch).toBe(false)
+    expect(result.current.isSwitch).toBe(false)
   })
 
-  it('blocks the form while the if-else editor reports invalid', () => {
-    const { result } = renderControl('if-else')
-
-    act(() => result.current.setIfElseValid(false))
+  it('holds the Save while the if branch has no condition row', () => {
+    const { result } = renderControl('if-else', {
+      branches: [{ ...IF_ELSE_BRANCHES[0], conditions: [] }, IF_ELSE_BRANCHES[1]],
+    })
 
     expect(result.current.isFormValid).toBe(false)
   })
 
-  it('keeps the assert parameters managed and out of the table', () => {
-    const { result } = renderControl('assert')
+  it('carries an edited if-else branch list into the saved values', () => {
+    const { result, save } = renderSaving('if-else')
+
+    act(() => result.current.handleInputChange('branches', IF_ELSE_BRANCHES))
+
+    expect(save().values.branches).toEqual(IF_ELSE_BRANCHES)
+  })
+
+  it('keeps the assert fields out of the table and lets a complete assertion list through', () => {
+    const { result } = renderControl('assert', { assertions: [READY_ROW] })
 
     expect(result.current.isAssert).toBe(true)
     expect(result.current.displayParameters.map((p) => p.name)).toEqual([])
     expect(result.current.isFormValid).toBe(true)
-    expect((result.current as SwitchState).isSwitch).toBe(false)
+    expect(result.current.isSwitch).toBe(false)
   })
 
-  it('blocks the form while the assert editor reports invalid', () => {
-    const { result } = renderControl('assert')
-
-    act(() => result.current.setAssertValid(false))
+  it('holds the Save while an assertion has no variable', () => {
+    const { result } = renderControl('assert', { assertions: [READY_ROW, NO_VARIABLE_ROW] })
 
     expect(result.current.isFormValid).toBe(false)
   })
 
-  it('keeps the while conditions managed and out of the table', () => {
-    const { result } = renderControl('while')
+  it('carries the assertion list, the mode and the fail choice into the saved values', () => {
+    const { result, save } = renderSaving('assert', { assertions: [READY_ROW] })
+
+    act(() => result.current.handleInputChange('assertions', [READY_ROW, { ...READY_ROW, id: 'c-9' }]))
+    act(() => result.current.handleInputChange('mode', 'single'))
+    act(() => result.current.handleInputChange('fail_current_scope', true))
+
+    const values = save().values
+    expect(values.assertions).toEqual([READY_ROW, { ...READY_ROW, id: 'c-9' }])
+    expect(values.mode).toBe('single')
+    expect(values.fail_current_scope).toBe(true)
+  })
+
+  it('saves Split and fail current scope off for an Assert whose choices the person never touched', () => {
+    const { save } = renderSaving('assert', { assertions: [READY_ROW] })
+
+    const values = save().values
+    expect(values.mode).toBe('split')
+    expect(values.fail_current_scope).toBe(false)
+  })
+
+  it('keeps the while conditions out of the table and lets a complete condition list through', () => {
+    const { result } = renderControl('while', { conditions: [READY_ROW] })
 
     expect(result.current.isWhile).toBe(true)
     expect(result.current.displayParameters.map((p) => p.name)).toEqual([
@@ -758,36 +830,34 @@ describe('useConfigModalState sibling control editors stay unchanged', () => {
       'timeout',
     ])
     expect(result.current.isFormValid).toBe(true)
-    expect((result.current as SwitchState).isSwitch).toBe(false)
+    expect(result.current.isSwitch).toBe(false)
   })
 
-  it('blocks the form while the while editor reports invalid', () => {
-    const { result } = renderControl('while')
-
-    act(() => result.current.setWhileValid(false))
+  it('holds the Save while a while condition has no compare value', () => {
+    const { result } = renderControl('while', { conditions: [NO_VALUE_ROW] })
 
     expect(result.current.isFormValid).toBe(false)
+  })
+
+  it('carries edited while conditions into the saved values', () => {
+    const { result, save } = renderSaving('while')
+
+    act(() => result.current.handleInputChange('conditions', [READY_ROW]))
+
+    expect(save().values.conditions).toEqual([READY_ROW])
+  })
+
+  it('keeps the For Each collection type out of the table, where the collection row draws it', () => {
+    const { result } = renderControl('for-each')
+
+    expect(result.current.displayParameters.map((p) => p.name)).toEqual(['collection', 'timeout'])
   })
 })
 
 describe('useConfigModalState wait-until state (REQ-3.5.4.3)', () => {
   const savedConditions = [{ id: 'c-1', type: 'expression', expression: 'ready' }]
 
-  type WaitState = ReturnType<typeof useConfigModalState> & {
-    isWaitUntil: boolean
-    waitConditions: unknown[]
-    waitMode: 'retry' | 'watch'
-    waitFailCurrentScope: boolean
-    setWaitConditions: (items: unknown[]) => void
-    setWaitMode: (mode: 'retry' | 'watch') => void
-    setWaitFailCurrentScope: (value: boolean) => void
-    setWaitValid: (valid: boolean) => void
-  }
-
-  const renderWait = (currentValues: Record<string, unknown> = {}) => {
-    const { result } = renderControl('wait-until', currentValues)
-    return { result: result as unknown as { current: WaitState } }
-  }
+  const renderWait = (currentValues: Record<string, unknown> = {}) => renderControl('wait-until', currentValues)
 
   it('flags a wait-until element as a wait', () => {
     expect(renderWait().result.current.isWaitUntil).toBe(true)
@@ -796,7 +866,7 @@ describe('useConfigModalState wait-until state (REQ-3.5.4.3)', () => {
   it('leaves other element types unflagged', () => {
     for (const elementType of ['while', 'assert', 'delay', 'http-client']) {
       const { result } = renderControl(elementType)
-      expect((result.current as WaitState).isWaitUntil).toBe(false)
+      expect(result.current.isWaitUntil).toBe(false)
     }
   })
 
@@ -808,80 +878,71 @@ describe('useConfigModalState wait-until state (REQ-3.5.4.3)', () => {
     expect(names).toEqual(['timeout', 'check_interval', 'message'])
   })
 
-  it('initializes the conditions from the element config', () => {
-    expect(renderWait({ conditions: savedConditions }).result.current.waitConditions).toEqual(
+  it('holds the stored conditions in values', () => {
+    expect(renderWait({ conditions: savedConditions }).result.current.values.conditions).toEqual(
       savedConditions,
     )
   })
 
-  it('defaults a fresh wait to no conditions', () => {
-    expect(renderWait().result.current.waitConditions).toEqual([])
+  it('holds no conditions in values for a fresh wait', () => {
+    expect(renderWait().result.current.values).not.toHaveProperty('conditions')
   })
 
-  it('defaults a fresh wait to Retry mode', () => {
-    expect(renderWait().result.current.waitMode).toBe('retry')
+  it('saves Retry and fail current scope off for a wait whose choices the person never touched', () => {
+    const { save } = renderSaving('wait-until', { timeout: 30000, conditions: savedConditions })
+
+    const values = save().values
+    expect(values.mode).toBe('retry')
+    expect(values.fail_current_scope).toBe(false)
   })
 
-  it('initializes the mode from the element config', () => {
-    expect(renderWait({ mode: 'watch' }).result.current.waitMode).toBe('watch')
+  it('holds the stored mode in values', () => {
+    expect(renderWait({ mode: 'watch' }).result.current.values.mode).toBe('watch')
   })
 
-  it('defaults fail current scope to off', () => {
-    expect(renderWait().result.current.waitFailCurrentScope).toBe(false)
-  })
-
-  it('initializes fail current scope from the element config', () => {
-    expect(renderWait({ fail_current_scope: true }).result.current.waitFailCurrentScope).toBe(true)
+  it('holds the stored fail current scope in values', () => {
+    expect(renderWait({ fail_current_scope: true }).result.current.values.fail_current_scope).toBe(true)
   })
 
   it('marks the form changed once a condition is added', () => {
     const { result } = renderWait()
     expect(result.current.hasChanges).toBe(false)
 
-    act(() => result.current.setWaitConditions(savedConditions))
+    act(() => result.current.handleInputChange('conditions', savedConditions))
 
-    expect(result.current.waitConditions).toEqual(savedConditions)
+    expect(result.current.values.conditions).toEqual(savedConditions)
     expect(result.current.hasChanges).toBe(true)
   })
 
   it('marks the form changed once the mode is switched', () => {
     const { result } = renderWait()
 
-    act(() => result.current.setWaitMode('watch'))
+    act(() => result.current.handleInputChange('mode', 'watch'))
 
     expect(result.current.hasChanges).toBe(true)
   })
 
-  it('carries the wait editors into the saved values', () => {
-    const onSave = vi.fn()
-    const rendered = renderHook(() =>
-      useConfigModalState(makeElement({ elementType: 'wait-until' }), onSave, vi.fn()),
-    )
-    const result = rendered.result as unknown as { current: WaitState }
+  it('carries the wait fields into the saved values', () => {
+    const { result, save } = renderSaving('wait-until', { timeout: 30000 })
 
-    act(() => result.current.setWaitConditions(savedConditions))
-    act(() => result.current.setWaitMode('watch'))
-    act(() => result.current.setWaitFailCurrentScope(true))
-    act(() => result.current.handleSave())
+    act(() => result.current.handleInputChange('conditions', savedConditions))
+    act(() => result.current.handleInputChange('mode', 'watch'))
+    act(() => result.current.handleInputChange('fail_current_scope', true))
 
-    const saved = (onSave.mock.calls[0][0] as SaveData).values
+    const saved = save().values
     expect(saved.conditions).toEqual(savedConditions)
     expect(saved.mode).toBe('watch')
     expect(saved.fail_current_scope).toBe(true)
   })
 
-  it('blocks the form while the condition editor reports invalid', () => {
-    const { result } = renderWait()
-
-    act(() => result.current.setWaitValid(false))
+  it('holds the Save while a condition row is blank', () => {
+    const { result } = renderWait({ timeout: 30000, conditions: [BLANK_EXPRESSION_ROW] })
 
     expect(result.current.isFormValid).toBe(false)
   })
 
-  it('does not block the form on the managed parameters alone', () => {
-    // `conditions` and `mode` are required in the schema but edited outside the
-    // table, so the generic required-field check must skip them.
-    const { result } = renderWait({ timeout: 30000 })
+  it('does not hold the Save on an unset mode, which takes its default', () => {
+    const { result } = renderWait({ timeout: 30000, conditions: savedConditions })
 
     expect(result.current.isFormValid).toBe(true)
   })
@@ -890,6 +951,298 @@ describe('useConfigModalState wait-until state (REQ-3.5.4.3)', () => {
     const { result } = renderWait()
 
     expect(result.current.isFormValid).toBe(false)
+  })
+})
+
+// An empty top-level list fails the shared required rule, as the canvas flags it (REQ-3.5.0.3).
+describe('an empty required control list holds the Save', () => {
+  it.each([
+    ['assert', 'assertions', {}],
+    ['while', 'conditions', {}],
+    ['wait-until', 'conditions', { timeout: 30000 }],
+    ['if-else', 'branches', {}],
+    ['switch-case', 'branches', {}],
+    ['parallel', 'branches', {}],
+  ])('holds the Save of %s while %s is empty', (elementType, name, rest) => {
+    expect(renderControl(elementType, { ...rest, [name]: [] }).result.current.isFormValid).toBe(false)
+  })
+
+  it.each([
+    ['assert', {}],
+    ['while', {}],
+    ['wait-until', { timeout: 30000 }],
+    ['if-else', {}],
+    ['switch-case', {}],
+    ['parallel', {}],
+  ])('holds the Save of a fresh %s that holds no list yet', (elementType, rest) => {
+    expect(renderControl(elementType, rest).result.current.isFormValid).toBe(false)
+  })
+})
+
+// Structure rules the field list cannot say hold the Save in the window (REQ-3.5.1.15).
+describe('the control check holds the Save', () => {
+  it('holds the Save for a For step of 0 and lets it through for a step of 1', () => {
+    const { result } = renderControl('for', { mode: 'count', count: 3, step: 0 })
+    expect(result.current.isFormValid).toBe(false)
+
+    act(() => result.current.handleInputChange('step', 1))
+
+    expect(result.current.isFormValid).toBe(true)
+  })
+
+  it('leaves an {x} For step to the run', () => {
+    const { result } = renderHook(() =>
+      useConfigModalState(
+        makeElement({
+          elementType: 'for',
+          currentValues: { mode: 'count', count: 3, step: 'stride' },
+          expressionFields: ['step'],
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    )
+
+    expect(result.current.isFormValid).toBe(true)
+  })
+
+  // The window message map the table and the lanes draw holds the lines the field list cannot say (FIELDERR-1).
+  it('puts the For step line in the window message map, under the Step row', () => {
+    const { result } = renderControl('for', { mode: 'count', count: 3, step: 0 })
+
+    expect(result.current.entryErrors).toEqual({ step: 'Step must not be zero' })
+  })
+
+  it('puts the blank {x} lane limit line in the window message map, keyed by the lane place', () => {
+    const { result } = renderHook(() =>
+      useConfigModalState(
+        makeElement({
+          elementType: 'parallel',
+          currentValues: { branches: [savedLanes[0], { id: 'branch_2', name: 'probe', time_limit: '' }] },
+          expressionFields: ['branches.1.time_limit'],
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    )
+
+    expect(result.current.entryErrors).toEqual({ 'branches.1.time_limit': 'Time Limit is required' })
+  })
+})
+
+// A null a field takes is a value, not a blank (REQ-3.1.3.21).
+describe('a required field that takes null', () => {
+  const LIMIT = { name: 'limit', label: 'Limit', type: 'integer', required: true }
+
+  function renderProbe(currentValues: Record<string, unknown>) {
+    return renderHook(() =>
+      useConfigModalState(
+        makeElement({ elementType: 'null-probe', currentValues }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    )
+  }
+
+  it('lets an explicit null For Count through and saves it', () => {
+    const { result, save } = renderSaving('for', { mode: 'count', count: null, step: 1 })
+
+    expect(result.current.isFormValid).toBe(true)
+    expect(save().values.count).toBeNull()
+  })
+
+  // For Count is required while the loop counts, as the canvas required rule reads it (REQ-3.1.3.21).
+  it('holds the Save while For Count is not set in count mode, and not in range mode', () => {
+    expect(renderControl('for', { mode: 'count', step: 1 }).result.current.isFormValid).toBe(false)
+    expect(renderControl('for', { mode: 'range', start: 0, end: 3, step: 1 }).result.current.isFormValid).toBe(true)
+  })
+
+  it('takes an explicit null as filled on a required field that takes null', () => {
+    blockFields.inputs = [{ ...LIMIT, acceptsNull: true }]
+
+    expect(renderProbe({ limit: null }).result.current.isFormValid).toBe(true)
+    expect(renderProbe({}).result.current.isFormValid).toBe(false)
+  })
+
+  it('still holds the Save for null on a required field that takes no null', () => {
+    blockFields.inputs = [LIMIT]
+
+    expect(renderProbe({ limit: null }).result.current.isFormValid).toBe(false)
+  })
+
+  it('holds the Save while a required field whose default is null holds nothing', () => {
+    blockFields.inputs = [{ ...LIMIT, defaultValue: null }]
+
+    expect(renderProbe({}).result.current.isFormValid).toBe(false)
+    expect(renderProbe({ limit: 5 }).result.current.isFormValid).toBe(true)
+  })
+})
+
+// A field required only while every one of its conditions holds (requiredWhenAll), as the canvas reads it.
+describe('a field required while all of its conditions hold', () => {
+  const FIELDS = [
+    { name: 'auth', label: 'Auth', type: 'string', required: false, enumValues: ['none', 'basic'], defaultValue: 'none' },
+    { name: 'scope', label: 'Scope', type: 'string', required: false, enumValues: ['local', 'remote'], defaultValue: 'local' },
+    {
+      name: 'password',
+      label: 'Password',
+      type: 'string',
+      required: false,
+      requiredWhenAll: [
+        { field: 'auth', values: ['basic'] },
+        { field: 'scope', values: ['remote'] },
+      ],
+    },
+  ]
+
+  function renderProbe(currentValues: Record<string, unknown>) {
+    blockFields.inputs = FIELDS
+    return renderHook(() =>
+      useConfigModalState(makeElement({ elementType: 'required-probe', currentValues }), vi.fn(), vi.fn()),
+    )
+  }
+
+  it('holds the Save while every condition holds and the field is empty', () => {
+    expect(renderProbe({ auth: 'basic', scope: 'remote' }).result.current.isFormValid).toBe(false)
+  })
+
+  it.each<[string, Record<string, unknown>]>([
+    ['one condition does not hold', { auth: 'basic', scope: 'local' }],
+    ['a condition reads the field default', { auth: 'basic' }],
+    ['no condition holds', {}],
+  ])('takes the Save with the field empty while %s', (_case, values) => {
+    expect(renderProbe(values).result.current.isFormValid).toBe(true)
+  })
+
+  it('takes the Save once the required field holds a value', () => {
+    expect(renderProbe({ auth: 'basic', scope: 'remote', password: 'swordfish' }).result.current.isFormValid).toBe(true)
+  })
+})
+
+// The five condition Blocks, the Variable Setter and Parallel open 880 px wide; every other window keeps its width (REQ-3.1.1.5).
+describe('the window width', () => {
+  it.each(['if-else', 'switch-case', 'assert', 'while', 'wait-until', 'variable-setter', 'parallel'])(
+    'opens %s wide',
+    (elementType) => {
+      expect((renderControl(elementType).result.current as ControlState).wideWindow).toBe(true)
+    },
+  )
+
+  it.each([
+    'csv-parser',
+    'excel-parser',
+    'for',
+    'for-each',
+    'try-catch-finally',
+    'delay',
+    'halt',
+    'break',
+    'continue',
+    'http-client',
+    'function',
+  ])('opens %s at the usual width', (elementType) => {
+    expect((renderControl(elementType).result.current as ControlState).wideWindow).toBe(false)
+  })
+})
+
+// An open control window follows its Block changed on the canvas: untouched lists take the change (REQ-3.5.1.6).
+describe('an open control window follows its Block changed on the canvas', () => {
+  function renderOpenWindow(element: ElementData) {
+    const onSave = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ block }: { block: ElementData }) => useConfigModalState(block, onSave, vi.fn()),
+      { initialProps: { block: element } },
+    )
+    return {
+      result: result as unknown as { current: ControlState },
+      storeChanges: (block: ElementData) => rerender({ block }),
+      save: (): SaveData => {
+        act(() => result.current.handleSave())
+        return onSave.mock.lastCall?.[0] as SaveData
+      },
+    }
+  }
+
+  const ASSERT = makeElement({ elementType: 'assert', currentValues: { assertions: [READY_ROW] } })
+  const RENAMED_ROW = { ...READY_ROW, variable: 'http_status' }
+
+  it('takes a canvas change into an untouched condition list and saves it', () => {
+    const { result, storeChanges, save } = renderOpenWindow(ASSERT)
+
+    storeChanges({ ...ASSERT, currentValues: { assertions: [RENAMED_ROW] } })
+
+    expect(result.current.values.assertions).toEqual([RENAMED_ROW])
+    expect(result.current.hasChanges).toBe(false)
+    expect(save().values.assertions).toEqual([RENAMED_ROW])
+  })
+
+  it('keeps a condition list the person changed when the canvas changes the stored one', () => {
+    const { result, storeChanges, save } = renderOpenWindow(ASSERT)
+    const edited = [READY_ROW, { ...READY_ROW, id: 'c-9', reference_value: '404' }]
+    act(() => result.current.handleInputChange('assertions', edited))
+
+    storeChanges({ ...ASSERT, currentValues: { assertions: [RENAMED_ROW] } })
+
+    expect(result.current.values.assertions).toEqual(edited)
+    expect(save().values.assertions).toEqual(edited)
+  })
+
+  it('takes a canvas change into untouched lanes and their {x} flags', () => {
+    const parallel = makeElement({ elementType: 'parallel', currentValues: { branches: savedLanes } })
+    const { result, storeChanges } = renderOpenWindow(parallel)
+    const moved = [savedLanes[1], { ...savedLanes[0], time_limit: 'slow_ms' }]
+
+    storeChanges({ ...parallel, currentValues: { branches: moved }, expressionFields: ['branches.1.time_limit'] })
+
+    expect(result.current.values.branches).toEqual(moved)
+    expect(result.current.expressionFields).toEqual(['branches.1.time_limit'])
+    expect(result.current.hasChanges).toBe(false)
+  })
+
+  const SETTER = makeElement({
+    elementType: 'variable-setter',
+    currentValues: {
+      variables: { next_attempt: 'attempt + 1', hosts: ['web-1', 'peer()'], token: 'abc', greeting: 'Hi {{ name }}' },
+    },
+    expressionFields: ['variables.next_attempt', 'variables.hosts.1'],
+    templateFields: ['variables.greeting'],
+    elementTypes: { 'variables.hosts': ['string', 'string'] },
+    secretFields: ['variables.token'],
+  } as Partial<ElementData>)
+
+  // A Setter target renamed on the canvas re-keys the row, its flags, its entry types and its secret mark.
+  const RENAMED_SETTER = {
+    ...SETTER,
+    currentValues: {
+      variables: { retry_at: 'attempt + 1', servers: ['web-1', 'peer()'], api_token: 'abc', salutation: 'Hi {{ name }}' },
+    },
+    expressionFields: ['variables.retry_at', 'variables.servers.1'],
+    templateFields: ['variables.salutation'],
+    elementTypes: { 'variables.servers': ['string', 'string'] },
+    secretFields: ['variables.api_token'],
+  } as ElementData
+
+  it('takes a renamed Setter row with its flags, entry types and secret mark', () => {
+    const { result, storeChanges } = renderOpenWindow(SETTER)
+
+    storeChanges(RENAMED_SETTER)
+
+    expect(result.current.values.variables).toEqual(RENAMED_SETTER.currentValues.variables)
+    expect(result.current.expressionFields).toEqual(['variables.retry_at', 'variables.servers.1'])
+    expect(result.current.templateFields).toEqual(['variables.salutation'])
+    expect(result.current.settingElementTypes).toEqual({ 'variables.servers': ['string', 'string'] })
+    expect(result.current.secretFields).toEqual(['variables.api_token'])
+    expect(result.current.hasChanges).toBe(false)
+  })
+
+  it('keeps the Setter flags the person changed when the canvas changes the stored ones', () => {
+    const { result, storeChanges } = renderOpenWindow(SETTER)
+    act(() => result.current.setExpressionFields(['variables.next_attempt']))
+
+    storeChanges(RENAMED_SETTER)
+
+    expect(result.current.expressionFields).toEqual(['variables.next_attempt'])
+    expect(result.current.hasChanges).toBe(true)
   })
 })
 
@@ -1440,15 +1793,16 @@ describe('useConfigModalState element types (REQ-3.1.3.19)', () => {
     const { result } = renderHook(() =>
       useConfigModalState(
         makeElement({
-          elementTypes: { driver_options: { n: 'integer' } },
-          variableElementTypes: { m: ['float'] },
+          elementTypes: { driver_options: { n: 'integer' }, 'variables.m': ['float'] },
         }),
         vi.fn(),
         vi.fn(),
       ),
     )
-    expect(result.current.settingElementTypes).toEqual({ driver_options: { n: 'integer' } })
-    expect(result.current.variableElementTypes).toEqual({ m: ['float'] })
+    expect(result.current.settingElementTypes).toEqual({
+      driver_options: { n: 'integer' },
+      'variables.m': ['float'],
+    })
     expect(result.current.hasChanges).toBe(false)
   })
 

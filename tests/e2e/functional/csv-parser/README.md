@@ -17,7 +17,7 @@ errors), then runs it in the workbench. No real service - CSV content is inline.
 | `parse-schema` | S1-S3b | schema mapping by header name + by position; on_mismatch skip_row / replace_default (errors + row/column) |
 | `parse-mismatch-fail` | S4 | on_mismatch=fail aborts the run |
 | `transform` | T1-T8, T10-T12 | sort (single/multi-key), filter (literal, expression `_cell`, AND/OR, two blocks, index ref, workflow-var + reference-expression), sort+filter combined |
-| `transform-unknown-op` | T9 | unknown filter operator aborts |
+| `transform-unknown-op` | T9 | unknown filter operator refused at save |
 | `serialize` | Z1-Z6, Z8 | table->text with header/delimiter/None/bool/float; parse->serialize round-trip |
 | `serialize-wrong-type` | Z7 | serialize a non-table aborts |
 | `expr-methods` | - | `Table.filter().order_by()` chaining in the expression sandbox |
@@ -37,7 +37,9 @@ plugin), which the spec asserts verbatim.
 - **Aborting fixtures:** run reaches `failed`; the failing node shows
   `data-execution-status="failed"`; the console carries the exact error
   (`Type mismatch in column 'age': 'abc' is not a valid integer`,
-  `Unknown filter operator: 'bogus'`, `Parameter 'table' expects table, got str`).
+  `Parameter 'table' expects table, got str`).
+- **Unknown filter operator:** `POST /tests` answers 422 with `INVALID_CONDITION`
+  `Unknown filter operator: 'bogus'`, the text the run gives, and stores nothing.
 - **Variable_ref regression:** serialize (`table`) and schema (`schema_source`) use the
   UI-faithful literal form (bare variable name, no `expressionFields`), so they regress
   the backend fix that resolves plugin `variable_ref` inputs at execution.

@@ -312,4 +312,4 @@ class QueryParserBase(PluginBase):
             return {"type": "array", "value": value}
 
         # Fallback for unexpected types
-        return {"type": "string", "value": str(value)}  # pragma: no cover
+        return {"type": "string", "value": str(value)}  # pragma: no cover - BCOV-TYPE-001

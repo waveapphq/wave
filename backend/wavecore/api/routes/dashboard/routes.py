@@ -14,12 +14,15 @@ Performance and Caching:
 - Cache invalidation on entity or execution state changes
 """
 
+import logging
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypeVar
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
+from wavecore.api.exceptions import WaveException
 from wavecore.api.routes.dashboard.helpers import (
     get_execution_statistics,
     get_recent_activity,
@@ -29,6 +32,22 @@ from wavecore.api.routes.dashboard.helpers import (
     get_test_count,
 )
 from wavecore.api.services.entity_cache import reconcile_once
+
+logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
+
+# The six sections the dashboard fetches; all six failing means storage is unavailable.
+_SECTION_COUNT = 6
+
+
+class StorageUnavailableException(WaveException):
+    """Every dashboard section failed to read storage."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    error_code = "SERVICE_UNAVAILABLE"
+    message = "Storage unavailable"
+
 
 # Cache configuration
 CACHE_TTL_SECONDS = 5
@@ -111,64 +130,34 @@ async def get_dashboard() -> dict[str, Any]:
         return _build_dashboard()
 
 
+def _section(label: str, fetch: Callable[[], _T], errors: list[str]) -> _T | None:
+    """One section's data, or None with its failure named in errors and its cause in the log."""
+    try:
+        return fetch()
+    except OSError:
+        logger.warning("Dashboard could not fetch %s", label, exc_info=True)
+        errors.append(f"Failed to fetch {label}")
+        return None
+
+
 def _build_dashboard() -> dict[str, Any]:
     """Assemble one dashboard response from the entity and execution services."""
     errors: list[str] = []
-    all_failed = True
 
-    tests_count: int | None = None
-    suites_count: int | None = None
-    regressions_count: int | None = None
-    execution_stats: dict[str, Any] | None = None
+    tests_count = _section("tests count", get_test_count, errors)
+    suites_count = _section("suites count", get_suite_count, errors)
+    regressions_count = _section("regressions count", get_regression_count, errors)
+    execution_stats = _section(
+        "execution statistics", lambda: get_execution_statistics(time_window_hours=24), errors
+    )
+    recent_activity = _section("recentActivity", get_recent_activity, errors)
+    # All executions within the time window, not just running ones.
+    recent_executions = _section(
+        "recentExecutions", lambda: get_recent_executions(time_window_hours=24), errors
+    )
 
-    try:
-        tests_count = get_test_count()
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch tests count: {e}")
-
-    try:
-        suites_count = get_suite_count()
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch suites count: {e}")
-
-    try:
-        regressions_count = get_regression_count()
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch regressions count: {e}")
-
-    try:
-        execution_stats = get_execution_statistics(time_window_hours=24)
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch execution statistics: {e}")
-
-    # Get recent activity
-    recent_activity: list[dict[str, Any]] | None = None
-    try:
-        recent_activity = get_recent_activity()
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch recentActivity: {e}")
-        recent_activity = None
-
-    # Get recent executions (all executions within time window, not just running)
-    recent_executions: list[dict[str, Any]] | None = None
-    try:
-        recent_executions = get_recent_executions(time_window_hours=24)
-        all_failed = False
-    except OSError as e:
-        errors.append(f"Failed to fetch recentExecutions: {e}")
-        recent_executions = None
-
-    # If all operations failed, return 503
-    if all_failed:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Storage unavailable",
-        )
+    if len(errors) == _SECTION_COUNT:
+        raise StorageUnavailableException()
 
     # Build metrics object - entity counts as objects with count property
     metrics: dict[str, Any] = {

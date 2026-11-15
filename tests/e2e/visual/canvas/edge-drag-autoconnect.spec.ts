@@ -134,7 +134,6 @@ test.describe('Edge Drag: Auto-Connect', () => {
               description: 'wide switch',
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: {
                   branches: [
@@ -161,7 +160,6 @@ test.describe('Edge Drag: Auto-Connect', () => {
               description: 'unlinked block',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: { message: "'auto-connect'", level: 'INFO' },
                 outputBindings: {},

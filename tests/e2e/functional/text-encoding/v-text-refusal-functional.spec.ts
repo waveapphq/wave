@@ -68,6 +68,18 @@ function fileRefusal(where: string): string {
   return `The file has a character at ${where} that cannot be encoded as UTF-8, so it was not imported: remove or replace it`
 }
 
+type Answer = { status(): number; json(): Promise<unknown>; headers(): Record<string, string> }
+
+async function expectBadRequest(response: Answer, message: string, what: string): Promise<void> {
+  expect(response.status(), what).toBe(400)
+  const answer = (await response.json()) as Json
+  expect(answer.success).toBe(false)
+  expect(answer.error.code).toBe('VALIDATION_ERROR')
+  expect(answer.error.message).toBe(message)
+  expect(answer.meta.request_id, 'the answer carries the request id').toMatch(UUID)
+  expect(response.headers()['x-request-id']).toBe(answer.meta.request_id)
+}
+
 function runToken(): string {
   return randomBytes(5).toString('hex')
 }
@@ -231,9 +243,7 @@ test.describe('V-TEXT-REFUSAL-FUNCTIONAL: text that cannot be written as UTF-8 i
         const dialog = await openImportDialog(page, '/tests', file)
         const answered = page.waitForResponse((response) => response.url().includes('/tests/import/validate'))
         await dialog.locator('[data-testid="validate-button"]').click()
-        const response = await answered
-        expect(response.status(), `the dry run of the ${format} file answered`).toBe(400)
-        expect(await response.json()).toEqual({ success: false, error: { message, code: 'PARSE_ERROR' } })
+        await expectBadRequest(await answered, message, `the dry run of the ${format} file answered`)
 
         const shown = dialog.locator('[data-testid="import-dialog-error"]')
         await expect(shown).toHaveText(message)
@@ -246,8 +256,7 @@ test.describe('V-TEXT-REFUSAL-FUNCTIONAL: text that cannot be written as UTF-8 i
         const response = await request.post(`${BACKEND_URL}/tests/import`, {
           multipart: { file, conflict_resolutions: '{}' },
         })
-        expect(response.status(), `the import of the ${format} file answered`).toBe(400)
-        expect(await response.json()).toEqual({ success: false, error: { message, code: 'PARSE_ERROR' } })
+        await expectBadRequest(response, message, `the import of the ${format} file answered`)
       })
     }
 

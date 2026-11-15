@@ -11,7 +11,7 @@ Endpoints:
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from wavecore.api.services import log_level
@@ -73,12 +73,9 @@ async def set_log_level_endpoint(request: Request, body: LogLevelRequest) -> Log
         LogLevelResponse with the new level.
 
     Raises:
-        HTTPException 400: If level is invalid.
+        ValidationException 400: If level is invalid.
     """
-    try:
-        new_level = log_level.save(body.level)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    new_level = log_level.save(body.level)
 
     timestamp = datetime.now(UTC).isoformat().replace(_TZ_UTC_SUFFIX, "Z")
 

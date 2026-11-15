@@ -39,7 +39,7 @@ None - the spec seeds its own `zz-` Tests through `POST /tests` and its library 
 - **Held default:** every free-entry field kind shows its default in gray (a table as its rows' JSON
   without quotes), Local and library; the true / false input shows its default as a value, never
   gray
-- **Secret input:** `Edit protected value` with the pencil and eight dots, the lock with the
+- **Secret input:** `api_key: Edit protected value` with the pencil and eight dots, the lock with the
   literal tooltip, the expression button; the stored literal never shows
 - **Enum input:** a select showing `2`, options `1`, `2`, `10` in order, required star,
   expression button; its trigger draws exactly as the Log block's Level select

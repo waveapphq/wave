@@ -268,7 +268,7 @@ test.describe('V-VMGR-WINDOW-PAUSED: the variable window around a run', () => {
 
     await test.step('the pencil opens Edit variable on the saved value; Current shows the live value', async () => {
       const win = await openEditWindow(page, 'count')
-      await expect(win).toHaveAttribute('aria-label', 'Edit variable')
+      await expect(win).toHaveAccessibleName('Edit variable')
       await expect(valueSwitch(win)).toHaveText('Initial')
       await expectWindowValue(win, 3)
       await setValueView(page, win, 'Current')

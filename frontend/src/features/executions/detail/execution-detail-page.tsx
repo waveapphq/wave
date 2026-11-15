@@ -123,7 +123,7 @@ export function ExecutionDetailPage() {
           // access so someone pasting `/executions/:id` for a test run
           // still lands on the Canvas instead of an empty Components table.
           if (data.entity_type === 'test') {
-            navigate(`/executions/history/${executionId}`, { replace: true })
+            void navigate(`/executions/history/${executionId}`, { replace: true })
             return
           }
           setExecution(data)
@@ -208,11 +208,11 @@ export function ExecutionDetailPage() {
       <DetailHeader
         name={execution.name}
         entityType="execution"
-        onBack={() => { navigate('/executions') }}
+        onBack={() => { void navigate('/executions') }}
         actions={
           <ExecutionToolbar
             execution={execution}
-            onDeleted={() => { navigate('/executions') }}
+            onDeleted={() => { void navigate('/executions') }}
             onExport={() => handleExport(execution.id, execution.name)}
           />
         }

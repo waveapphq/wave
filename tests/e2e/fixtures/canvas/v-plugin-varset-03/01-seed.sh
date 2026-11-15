@@ -53,7 +53,6 @@ _bulk tests "[{
             \"hasNewerVersion\": false,
             \"expressionFields\": [],
             \"templateFields\": [],
-            \"variableExpressionKeys\": [],
             \"config\": {
               \"values\": {
                 \"variables\": {

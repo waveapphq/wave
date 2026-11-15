@@ -4,29 +4,13 @@
 # Output is also saved to /tmp/ci-backend.log for post-run analysis
 #
 # Runs ALL checks and reports ALL failures in a single pass.
-# SonarQube runs even if tests/linting fail, so you see everything at once.
+# SonarQube runs even if linting fails, so you see everything at once.
 #
-# Usage: ./scripts/ci-backend-local.sh [--no-sonar]
-#   --no-sonar  Skip SonarQube analysis (used in GitHub Actions CI)
+# Usage: ./scripts/ci-backend-local.sh
 
 # No set -e: we track failures manually so all checks run regardless
 
-SKIP_SONAR=false
-for arg in "$@"; do
-  case "$arg" in
-    --no-sonar) SKIP_SONAR=true ;;
-  esac
-done
-
 CI_PYTEST_WORKERS="${CI_PYTEST_WORKERS:-16}"
-
-# --no-sonar is reserved for GitHub Actions. Local runs must always include SonarQube.
-if [ "$SKIP_SONAR" = true ] && [ "${GITHUB_ACTIONS:-}" != "true" ]; then
-  echo "❌ --no-sonar is only allowed inside GitHub Actions."
-  echo "   Local CI runs must include the SonarQube Quality Gate."
-  echo "   Rerun without --no-sonar."
-  exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -69,23 +53,15 @@ echo "Log file: $LOG_FILE"
 echo ""
 
 # Validate prerequisites upfront - these are hard blockers
-if [ "$SKIP_SONAR" = false ]; then
-  if ! command -v sonar-scanner &> /dev/null; then
-    echo "❌ sonar-scanner binary not found in PATH"
-    echo "   Install it or add its location to your PATH"
-    exit 1
-  fi
-
-  if [ -z "${SONAR_TOKEN:-}" ]; then
-    echo "❌ SONAR_TOKEN environment variable is not set"
-    exit 1
-  fi
-
-  if [ -z "${SONAR_URL:-}" ]; then
-    echo "❌ SONAR_URL environment variable is not set"
-    exit 1
-  fi
+if ! command -v sonar-scanner &> /dev/null; then
+  echo "❌ sonar-scanner binary not found in PATH"
+  echo "   Install it or add its location to your PATH"
+  exit 1
 fi
+
+# Checks SONAR_TOKEN and resolves the SonarQube host and the branch to analyze.
+# shellcheck source=sonar-env.sh
+source "$SCRIPT_DIR/sonar-env.sh"
 
 if ! podman image exists "$IMAGE_NAME"; then
   echo "❌ CI image not found: $IMAGE_NAME"
@@ -116,40 +92,35 @@ rm -f "$COVERAGE_MARKER"
 SQ_EXIT_FILE=$(mktemp)
 echo "SKIPPED" > "$SQ_EXIT_FILE"
 
-if [ "$SKIP_SONAR" = false ]; then
-  (
-    # Poll for marker up to 20 minutes (covers worst-case pytest + safety margin)
-    for _ in $(seq 1 1200); do
-      [ -f "$COVERAGE_MARKER" ] && break
-      sleep 1
-    done
-    if [ ! -f "$COVERAGE_MARKER" ]; then
-      echo "SKIPPED" > "$SQ_EXIT_FILE"
-      exit 0
-    fi
+(
+  # Poll for marker up to 20 minutes (covers worst-case pytest + safety margin)
+  for _ in $(seq 1 1200); do
+    [ -f "$COVERAGE_MARKER" ] && break
+    sleep 1
+  done
+  if [ ! -f "$COVERAGE_MARKER" ]; then
+    echo "SKIPPED" > "$SQ_EXIT_FILE"
+    exit 0
+  fi
 
-    # Fix coverage.xml source paths: container uses /workspace, host uses
-    # actual project root. SonarQube matches paths against the host filesystem.
-    COVERAGE_XML="$PROJECT_ROOT/backend/coverage.xml"
-    if [ -f "$COVERAGE_XML" ]; then
-      sed -i "s|/workspace/backend|$PROJECT_ROOT/backend|g" "$COVERAGE_XML"
-    fi
+  # Fix coverage.xml source paths: container uses /workspace, host uses
+  # actual project root. SonarQube matches paths against the host filesystem.
+  COVERAGE_XML="$PROJECT_ROOT/backend/coverage.xml"
+  if [ -f "$COVERAGE_XML" ]; then
+    sed -i "s|/workspace/backend|$PROJECT_ROOT/backend|g" "$COVERAGE_XML"
+  fi
 
-    echo ""
-    echo "================================"
-    echo "📡 Running SonarQube Analysis (parallel with mypy/black/ruff)"
-    echo "================================"
-    SQ_EXIT=0
-    SQ_START=$(date +%s)
-    (cd "$PROJECT_ROOT/backend" && set -o pipefail && sonar-scanner \
-      -Dsonar.host.url="$SONAR_URL" \
-      -Dsonar.token="$SONAR_TOKEN" \
-      -Dsonar.qualitygate.wait=true 2>&1 | tail -20) || SQ_EXIT=$?
-    printf "%-32s %ds\n" "SonarQube (scan+wait)" "$(( $(date +%s) - SQ_START ))" >> "$HOST_STEP_LOG"
-    echo "$SQ_EXIT" > "$SQ_EXIT_FILE"
-  ) &
-  SQ_WATCHER_PID=$!
-fi
+  echo ""
+  echo "================================"
+  echo "📡 Running SonarQube Analysis (parallel with mypy/black/ruff)"
+  echo "================================"
+  SQ_EXIT=0
+  SQ_START=$(date +%s)
+  (set -o pipefail && "$SCRIPT_DIR/sonar-scan-backend.sh" 2>&1 | tail -20) || SQ_EXIT=$?
+  printf "%-32s %ds\n" "SonarQube (scan+wait)" "$(( $(date +%s) - SQ_START ))" >> "$HOST_STEP_LOG"
+  echo "$SQ_EXIT" > "$SQ_EXIT_FILE"
+) &
+SQ_WATCHER_PID=$!
 
 # Run backend tests, linting, and type checking in container
 # --userns=keep-id maps the host user to ciuser in container for proper permissions
@@ -221,45 +192,46 @@ fi
 # Collect the SonarQube watcher result (it was started before the container
 # and ran in parallel with mypy/black/ruff once coverage.xml appeared).
 # Path fixing is handled inside the watcher after the marker appears.
-if [ "$SKIP_SONAR" = false ]; then
-  if [ ! -f "$COVERAGE_MARKER" ]; then
-    kill "$SQ_WATCHER_PID" 2>/dev/null || true
-  fi
-  wait "$SQ_WATCHER_PID" 2>/dev/null || true
-  SQ_EXIT=$(cat "$SQ_EXIT_FILE" 2>/dev/null || echo "SKIPPED")
-  rm -f "$SQ_EXIT_FILE" "$COVERAGE_MARKER"
+if [ ! -f "$COVERAGE_MARKER" ]; then
+  kill "$SQ_WATCHER_PID" 2>/dev/null || true
+fi
+wait "$SQ_WATCHER_PID" 2>/dev/null || true
+SQ_EXIT=$(cat "$SQ_EXIT_FILE" 2>/dev/null || echo "SKIPPED")
+rm -f "$SQ_EXIT_FILE" "$COVERAGE_MARKER"
 
-  if [ "$SQ_EXIT" = "SKIPPED" ]; then
-    FAILED+=("SonarQube Quality Gate (did not run)")
-    echo ""
-    echo "❌ SonarQube did not run (no coverage marker). A gate that does not run is not a pass."
-  elif [ "$SQ_EXIT" != "0" ]; then
-    FAILED+=("SonarQube Quality Gate")
-    echo ""
-    echo "❌ SonarQube Quality Gate FAILED!"
-    echo ""
-    echo "Quality Gate details:"
-    python3 -c "
-import urllib.request, json, os, base64
+if [ "$SQ_EXIT" = "SKIPPED" ]; then
+  FAILED+=("SonarQube Quality Gate (did not run)")
+  echo ""
+  echo "❌ SonarQube did not run (no coverage marker). A gate that does not run is not a pass."
+elif [ "$SQ_EXIT" != "0" ]; then
+  FAILED+=("SonarQube Quality Gate")
+  echo ""
+  echo "❌ SonarQube Quality Gate FAILED!"
+  echo ""
+  echo "Quality Gate details:"
+  # The gate of this scan's analysis, found through the task id the scanner wrote.
+  REPORT_TASK="$PROJECT_ROOT/backend/.scannerwork/report-task.txt" python3 -c "
+import urllib.request, urllib.parse, json, os, base64
 token = os.environ['SONAR_TOKEN']
 sq_url = os.environ['SONAR_URL']
 auth = 'Basic ' + base64.b64encode(f'{token}:'.encode()).decode()
-req = urllib.request.Request(f'{sq_url}/api/qualitygates/project_status?projectKey=wave-backend')
-req.add_header('Authorization', auth)
-with urllib.request.urlopen(req) as resp:
-    d = json.load(resp)
+def api(path, params):
+    req = urllib.request.Request(f'{sq_url}{path}?{urllib.parse.urlencode(params)}')
+    req.add_header('Authorization', auth)
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp)
+with open(os.environ['REPORT_TASK'], encoding='utf-8') as f:
+    task = dict(line.rstrip('\n').split('=', 1) for line in f if '=' in line)
+analysis_id = api('/api/ce/task', {'id': task['ceTaskId']})['task']['analysisId']
+d = api('/api/qualitygates/project_status', {'analysisId': analysis_id})
 status = d['projectStatus']['status']
 print(f'  Status: {status}')
 for c in d['projectStatus'].get('conditions', []):
     icon = '❌' if c['status'] == 'ERROR' else '✅'
     print(f'  {icon} {c[\"metricKey\"]}: {c.get(\"actualValue\", \"?\")} (threshold: {c.get(\"errorThreshold\", \"?\")})')
 " 2>/dev/null || true
-  else
-    echo "✅ SonarQube Quality Gate passed"
-  fi
 else
-  echo ""
-  echo "⏭️  SonarQube analysis skipped (--no-sonar)"
+  echo "✅ SonarQube Quality Gate passed"
 fi
 
 # Final summary

@@ -81,7 +81,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"PROFILE app={profile_rows[0]['app']} app_is_text={type(profile_rows[0]['app']) == str} sp={profile_rows[0]['sp']}\"",

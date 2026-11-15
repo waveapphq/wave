@@ -5,6 +5,8 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from wavecore.core.logging.log_safe import log_safe
+
 logger = logging.getLogger(__name__)
 
 # Strong refs keep scheduled broadcasts alive until they complete.
@@ -37,4 +39,4 @@ async def broadcast(topic: str, event: dict[str, Any]) -> None:
             }
             await ws_manager.broadcast_to_topic(topic, envelope)
     except Exception as e:
-        logger.warning("Failed to broadcast %s event: %s", topic, e)
+        logger.warning("Failed to broadcast %s event: %s", log_safe(topic), e)

@@ -2,7 +2,7 @@
 
 Contract:
 - POST /functions/batch -> `{"created": [...], "failed": [{"index": int, "errors": [str, ...]},
-  ...]}`
+  ...], "repairs": {<created id>: [<repair>, ...], ...}}`
 - DELETE /functions/batch -> `{"deleted": [str, ...], "failed": [{"id": str, "errors": [...]},
   ...]}`
 
@@ -56,6 +56,7 @@ class TestBatchCreate:
         data = body["data"]
         assert len(data["created"]) == 3
         assert data["failed"] == []
+        assert data["repairs"] == {definition["id"]: [] for definition in data["created"]}
 
     def test_invalid_items_return_in_failed_with_index(self, client: TestClient) -> None:
         items = [

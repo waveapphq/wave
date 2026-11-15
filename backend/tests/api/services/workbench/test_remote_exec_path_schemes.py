@@ -103,7 +103,6 @@ def _node(
             "displayName": node_id,
             "expressionFields": expressions,
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

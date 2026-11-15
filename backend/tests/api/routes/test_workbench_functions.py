@@ -5,7 +5,7 @@ Contract:
     POST /tests/{test_id}/functions/publish
         201 created; 400 validation; 404 Test or node not found; 409 name
         collision; 422 cycle. Optimistic concurrency via If-Match. Stale
-        ETag returns 412 with code "STALE_ETAG".
+        ETag returns 412 with code "PRECONDITION_REQUIRED".
 
     POST /tests/{test_id}/functions/detach
         200; 404 Test/node/library entry not found; 409 already local.
@@ -23,6 +23,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
 from wavecore.api.services.functions import service as functions_service
 from wavecore.api.services.tests import service as test_service
 
@@ -35,7 +36,11 @@ NODE_NOT_FOUND_RE = re.compile(r"^Block '.+' not found in Test '.+'$")
 NODE_NOT_LOCAL_RE = re.compile(r"^Block '.+' is not a local Function$")
 NOT_PUBLISHED_REF_RE = re.compile(r"^Block '.+' is not a published Function reference$")
 LIBRARY_MISSING_RE = re.compile(r"^Library entry '.+' does not exist$")
-STALE_ETAG_RE = re.compile(r"^Test '.+' was modified concurrently; reload and retry$")
+_INTERNAL_TEXT = "internal lifecycle route fault"
+
+
+def _stale_message(test_id: str) -> str:
+    return f"Test '{test_id}' was modified concurrently; reload and retry"
 
 
 # ---------------------------------------------------------------------------
@@ -333,10 +338,7 @@ class TestPublishRouteStaleEtag:
             json={"node_id": "fn-1", "name": "Greet", "description": "", "tags": []},
             headers={"If-Match": '"stale-etag-not-matching"'},
         )
-        assert response.status_code == 412
-        body = response.json()
-        assert body["error"]["code"] == "STALE_ETAG"
-        assert any(STALE_ETAG_RE.match(m) for m in _all_error_messages(body))
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _stale_message(test_id))
 
 
 # ---------------------------------------------------------------------------
@@ -478,10 +480,7 @@ class TestDetachRouteStaleEtag:
             json={"node_id": node_id},
             headers={"If-Match": '"stale-etag-not-matching"'},
         )
-        assert response.status_code == 412
-        body = response.json()
-        assert body["error"]["code"] == "STALE_ETAG"
-        assert any(STALE_ETAG_RE.match(m) for m in _all_error_messages(body))
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _stale_message(test_id))
 
 
 # ---------------------------------------------------------------------------
@@ -522,9 +521,9 @@ class TestPublishRouteInvalidInputs:
             "/tests/not-a-uuid/functions/publish",
             json={"node_id": "fn-1", "name": "Greet", "description": "", "tags": []},
         )
-        assert response.status_code == 400
-        body = response.json()
-        assert body["error"]["code"] == "INVALID_PARAMETER"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for test_id: 'not-a-uuid'"
+        )
 
     def test_unparsable_body_treated_as_empty(self, client: TestClient) -> None:
         test_id = _seed_test_with_local_function()
@@ -563,9 +562,9 @@ class TestDetachRouteInvalidInputs:
             "/tests/not-a-uuid/functions/detach",
             json={"node_id": "fn-1"},
         )
-        assert response.status_code == 400
-        body = response.json()
-        assert body["error"]["code"] == "INVALID_PARAMETER"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for test_id: 'not-a-uuid'"
+        )
 
     def test_unparsable_body_treated_as_empty(self, client: TestClient) -> None:
         test_id, _node_id = _seed_test_with_shared_function(client)
@@ -720,7 +719,7 @@ class TestPublishRouteServiceErrors:
         etag = _get_test_etag(client, test_id)
         original = wfunctions._functions_service.create_function
 
-        def _raise_other(payload):
+        def _raise_other(payload, **_kwargs):
             raise ValidationException(
                 message="Some other validation error",
                 details={"errors": [{"message": "Some other validation error"}]},
@@ -733,37 +732,51 @@ class TestPublishRouteServiceErrors:
                 json={"node_id": "fn-1", "name": "Greet", "description": "", "tags": []},
                 headers={"If-Match": etag},
             )
-            assert response.status_code == 400
-            assert "Some other validation error" in response.json()["error"]["message"]
+            assert_error_reply(response, 400, "VALIDATION_ERROR", "Some other validation error")
         finally:
             monkeypatch.setattr(wfunctions._functions_service, "create_function", original)
 
-    def test_save_validation_error_returns_422_envelope(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+
+class TestAnUnexpectedFaultInAFunctionLifecycleRoute:
+    """A fault below publish or detach answers the generic 500 with a request id, never its text."""
+
+    @pytest.mark.parametrize(
+        ("suffix", "service_call", "fault"),
+        [
+            pytest.param(
+                "publish", "publish_local_function", ValueError(_INTERNAL_TEXT), id="publish"
+            ),
+            pytest.param(
+                "detach", "detach_published_instance", ValueError(_INTERNAL_TEXT), id="detach"
+            ),
+            pytest.param(
+                "publish",
+                "publish_local_function",
+                functions_service.SaveValidationError([{"message": _INTERNAL_TEXT}]),
+                id="publish-save-refusal-the-service-did-not-turn-into-a-422",
+            ),
+        ],
+    )
+    def test_it_answers_the_generic_500(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        suffix: str,
+        service_call: str,
+        fault: Exception,
     ) -> None:
-        """Force `publish_local_function` to raise a SaveValidationError so the
-        route's 422 SaveValidationError branch is exercised. Mocking at the
-        service-internal layer would get wrapped into UnprocessableEntity
-        first, missing this branch entirely."""
-        from wavecore.api.services.functions.service import SaveValidationError
         from wavecore.api.services.workbench import functions as wfunctions
 
-        test_id = _seed_test_with_local_function()
-        etag = _get_test_etag(client, test_id)
+        def _raise(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            raise fault
 
-        def _raise_save(_t, _n, _p):
-            raise SaveValidationError(
-                [{"code": "FOO", "message": "Forced body error", "severity": "error"}]
-            )
-
-        monkeypatch.setattr(wfunctions, "publish_local_function", _raise_save)
+        monkeypatch.setattr(wfunctions, service_call, _raise)
         response = client.post(
-            f"/tests/{test_id}/functions/publish",
-            json={"node_id": "fn-1", "name": "Greet", "description": "", "tags": []},
-            headers={"If-Match": etag},
+            "/tests/5b1f0c2e-7a3d-4c8e-9f10-2d3c4b5a6e7f/functions/" + suffix,
+            json={"node_id": "fn-1"},
         )
-        assert response.status_code == 422
-        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+        assert_internal_error(response, _INTERNAL_TEXT)
 
 
 class TestDetachRouteServiceErrors:
@@ -788,7 +801,10 @@ class TestDetachRouteServiceErrors:
             json={"node_id": "fn-shared"},
             headers={"If-Match": etag},
         )
-        assert response.status_code == 400
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Forced detach validation")
+        assert response.json()["error"]["details"] == {
+            "errors": [{"message": "Forced detach validation"}]
+        }
 
     def test_unprocessable_entity_returns_422(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -811,54 +827,7 @@ class TestDetachRouteServiceErrors:
             json={"node_id": "fn-shared"},
             headers={"If-Match": etag},
         )
-        assert response.status_code == 422
-
-    def test_save_validation_returns_422(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from wavecore.api.services.functions.service import SaveValidationError
-        from wavecore.api.services.workbench import functions as wfunctions
-
-        test_id, _node_id = _seed_test_with_shared_function(client)
-        etag = _get_test_etag(client, test_id)
-
-        def _raise(_t, _n):
-            raise SaveValidationError(
-                [{"code": "FOO", "message": "Forced detach body", "severity": "error"}]
-            )
-
-        monkeypatch.setattr(wfunctions, "detach_published_instance", _raise)
-        response = client.post(
-            f"/tests/{test_id}/functions/detach",
-            json={"node_id": "fn-shared"},
-            headers={"If-Match": etag},
-        )
-        assert response.status_code == 422
-
-
-class TestPublishRouteEmptyErrorsEnvelope:
-    def test_save_validation_with_empty_errors_uses_str_fallback(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Cover `_save_validation_response`'s fallback when `exc.errors` is empty."""
-        from wavecore.api.services.functions.service import SaveValidationError
-        from wavecore.api.services.workbench import functions as wfunctions
-
-        test_id = _seed_test_with_local_function()
-        etag = _get_test_etag(client, test_id)
-
-        def _raise_empty(_t, _n, _p):
-            err = SaveValidationError([])
-            err.errors = []
-            raise err
-
-        monkeypatch.setattr(wfunctions, "publish_local_function", _raise_empty)
-        response = client.post(
-            f"/tests/{test_id}/functions/publish",
-            json={"node_id": "fn-1", "name": "Greet", "description": "", "tags": []},
-            headers={"If-Match": etag},
-        )
-        assert response.status_code == 422
+        assert_error_reply(response, 422, "UNPROCESSABLE_ENTITY", "Forced unprocessable")
 
 
 pytestmark = pytest.mark.usefixtures("temp_storage_path")

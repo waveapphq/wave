@@ -27,7 +27,7 @@ from typing import Any
 from wavecore.api.services.network import certificates
 from wavecore.api.services.workbench._common import _add_execution_log, _get_session
 from wavecore.api.services.workbench.block_source import block_source
-from wavecore.api.services.workbench.block_status import skip_lane_never_run
+from wavecore.api.services.workbench.block_status import skip_lane_never_run, take_lane
 from wavecore.api.services.workbench.for_loop import (
     _execute_body_chain_iteration,
     _trace_body_chain,
@@ -702,6 +702,8 @@ async def _walk_remote_body(
 
     failures: list[Exception] = []
     async with _held_body_worker(session, record, session_ref) as (remote_session_id, body_worker):
+        if body_chain:
+            await take_lane(session, session_id, node_id, "body")
         outcome = await _execute_body_chain_iteration(
             body_chain,
             node_map,

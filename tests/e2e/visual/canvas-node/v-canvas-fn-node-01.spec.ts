@@ -45,7 +45,6 @@ function buildFixture(suffix: string) {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             localDefinition: {
               name: 'Function_1',
               workflow: { nodes: [], edges: [] },
@@ -68,7 +67,6 @@ function buildFixture(suffix: string) {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             functionId: '00000000-0000-0000-0000-000000000001',
           },
         },
@@ -85,7 +83,6 @@ function buildFixture(suffix: string) {
             hasNewerVersion: false,
             expressionFields: ['script'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { script: "'echo hi'" },
               outputBindings: {},

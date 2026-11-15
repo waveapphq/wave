@@ -35,7 +35,6 @@ def _make_node(node_id: str, output_bindings: dict[str, str]) -> dict[str, Any]:
             "description": "Assert",
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

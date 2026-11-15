@@ -11,6 +11,7 @@ export const inputs: InputParam[] = [
   }),
   param('max_iterations', 'Max Iterations', 'integer', false, 'Maximum iterations - session fails if reached', {
     group: 'Advanced',
+    minimum: 1,
   }),
   param('timeout', 'Timeout', 'float', false, 'Max execution time in seconds - session fails if reached', {
     group: 'Advanced',

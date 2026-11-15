@@ -20,14 +20,17 @@ Endpoints:
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Query, Request, Response, status
-from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import (
-    ConflictException,
     NotFoundException,
     ValidationException,
 )
-from wavecore.api.routes.shared import build_response_meta, read_json_object, validate_uuid
+from wavecore.api.routes.shared import (
+    build_response_meta,
+    read_json_object,
+    refuse_stale_etag,
+    validate_uuid,
+)
 from wavecore.api.services.profiles import service as profile_service
 
 # Create router for profile endpoints
@@ -465,31 +468,12 @@ async def delete_profile(
         Empty response with 204 status code
     """
     validate_uuid(profile_id, "profile_id")
-
-    # Check ETag if provided
-    if if_match:
-        profile = profile_service.get_profile(profile_id)
-        if profile:
-            current_etag = _generate_etag(profile)
-            if if_match != current_etag:
-                exc = ConflictException("Precondition failed: resource has been modified")
-                exc.status_code = 412
-                exc.error_code = "PRECONDITION_FAILED"
-                raise exc
+    refuse_stale_etag(if_match, profile_service.get_profile, profile_id, _generate_etag)
 
     deleted = profile_service.delete_profile(profile_id)
 
     if not deleted:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Profile with ID '{profile_id}' not found",
-                    "code": "NOT_FOUND",
-                },
-            },
-        )
+        raise NotFoundException(f"Profile with ID '{profile_id}' not found")
 
     # Set cache invalidation header on the response object and return it
     response.status_code = status.HTTP_204_NO_CONTENT

@@ -36,6 +36,7 @@ from tests.api.body_shape_support import (
     send_text,
 )
 from tests.api.download_name_helpers import EXPORT_STEM, assert_whole_name
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 
 # Valid execution states as defined in OpenAPI spec
@@ -401,7 +402,7 @@ class TestStartExecutionEndpoint:
         with patch(
             "wavecore.api.routes.executions.routes.execution_service.start_execution"
         ) as mock_start:
-            mock_start.side_effect = LookupError(f"Test with ID '{entity_id}' not found")
+            mock_start.side_effect = NotFoundException(f"Test with ID '{entity_id}' not found")
 
             response = client.post(
                 "/executions",
@@ -412,10 +413,7 @@ class TestStartExecutionEndpoint:
                 },
             )
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert "not found" in data["error"]["message"].lower()
+            assert_error_reply(response, 404, "NOT_FOUND", f"Test with ID '{entity_id}' not found")
 
     def test_start_execution_accepts_optional_version(self, client: TestClient) -> None:
         """Test that POST /executions accepts optional version parameter."""
@@ -569,7 +567,9 @@ class TestStartExecutionEndpoint:
         with patch(
             "wavecore.api.routes.executions.routes.execution_service.start_execution"
         ) as mock_start:
-            mock_start.side_effect = LookupError(f"Environment with ID '{bad_env_id}' not found")
+            mock_start.side_effect = NotFoundException(
+                f"Environment with ID '{bad_env_id}' not found"
+            )
 
             response = client.post(
                 "/executions",
@@ -580,10 +580,9 @@ class TestStartExecutionEndpoint:
                 },
             )
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert "not found" in data["error"]["message"].lower()
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Environment with ID '{bad_env_id}' not found"
+            )
 
     def test_start_execution_environment_id_in_response(self, client: TestClient) -> None:
         """Test that environment_id is included in execution detail response."""
@@ -828,15 +827,16 @@ class TestDeleteExecutionEndpoint:
             assert data["error"]["code"] == "CONFLICT"
             assert "running" in data["error"]["message"]
 
-    def test_delete_execution_with_invalid_uuid_returns_404(self, client: TestClient) -> None:
-        """Test that DELETE /executions/{execution_id} with invalid UUID returns 404 (not found)."""
-        # Delete skips UUID validation so invalid IDs can be cleaned up; unknown IDs get 404.
+    def test_delete_execution_with_invalid_uuid_returns_400(self, client: TestClient) -> None:
+        """Test that DELETE /executions/{execution_id} with an ID that is not a UUID returns 400."""
         response = client.delete("/executions/not-a-valid-uuid")
 
-        assert response.status_code == 404
-        data = response.json()
-        assert data["success"] is False
-        assert "not found" in data["error"]["message"].lower()
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid UUID format for execution_id: 'not-a-valid-uuid'",
+        )
 
 
 class TestPauseExecutionEndpoint:
@@ -1824,15 +1824,13 @@ class TestUUIDValidation:
         assert data["success"] is False
         assert "uuid" in data["error"]["message"].lower()
 
-    def test_delete_execution_with_invalid_uuid_returns_404(self, client: TestClient) -> None:
-        """Test that DELETE /executions/{id} with invalid UUID returns 404 (not found)."""
-        # Delete skips UUID validation so invalid IDs can be cleaned up; unknown IDs get 404.
+    def test_delete_execution_with_invalid_uuid_returns_400(self, client: TestClient) -> None:
+        """Test that DELETE /executions/{id} with an ID that is not a UUID returns 400."""
         response = client.delete("/executions/not-a-uuid")
 
-        assert response.status_code == 404
-        data = response.json()
-        assert data["success"] is False
-        assert "not found" in data["error"]["message"].lower()
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for execution_id: 'not-a-uuid'"
+        )
 
     def test_pause_execution_with_invalid_uuid_returns_400(self, client: TestClient) -> None:
         """Test that PUT /executions/{id}/pause with invalid UUID returns 400."""
@@ -1993,6 +1991,7 @@ class TestHistoricalTestCanvasEndpoint:
         self,
         test_id: str,
         status: str = "passed",
+        registry: Any = None,
     ) -> str:
         from wavecore.api.services.executions import _storage as store
 
@@ -2044,6 +2043,7 @@ class TestHistoricalTestCanvasEndpoint:
                     "edges": [{"id": "e1", "source": "node-start", "target": "node-log"}],
                 },
             },
+            registry=registry,
         )
         store._append_log(
             execution_id,
@@ -2134,6 +2134,21 @@ class TestHistoricalTestCanvasEndpoint:
         # FE has nothing to render in the eye-OFF view (it then collapses
         # to the runtime snapshot, see HistoryVariableManager).
         assert data["variable_definitions"] == {}
+        assert data["lanes_taken"] == {}
+
+    def test_returns_the_lanes_each_block_took(self, client: TestClient) -> None:
+        """The history canvas paints the lane wires from the lanes the run stored."""
+        from wavecore.api.services.executions import _storage as store
+
+        store._clear_storage()
+        execution_id = self._seed_test_execution(str(uuid.uuid4()))
+        snapshot = store._load_snapshot(execution_id, execution_id) or {}
+        snapshot["lanes_taken"] = {"node-route": ["branch_1"]}
+        store._save_snapshot(execution_id, execution_id, snapshot)
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["lanes_taken"] == {"node-route": ["branch_1"]}
 
     def test_returns_variable_definitions_when_source_test_exists(self, client: TestClient) -> None:
         """The source test's declarations come back under ``variable_definitions``."""
@@ -2181,6 +2196,32 @@ class TestHistoricalTestCanvasEndpoint:
         # The runtime snapshot remains the eye-ON view.
         assert data["variables"]["x"] == 42
         assert data["variables"]["password"] == "hunter2"
+
+    def test_names_the_variables_the_run_held_secret(self, client: TestClient) -> None:
+        """A deleted test leaves no declarations, so the run itself says which names were secret."""
+        from wavecore.api.services.executions import _storage as store
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        store._clear_storage()
+        registry = SecretRegistry()
+        registry.register("password", "hunter2", "declared")
+        execution_id = self._seed_test_execution(str(uuid.uuid4()), registry=registry)
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["variable_definitions"] == {}
+        assert data["secret_variables"] == ["password"]
+        assert data["variables"] == {"x": 42, "password": "********"}
+
+    def test_a_run_stored_without_a_registry_names_no_secret(self, client: TestClient) -> None:
+        from wavecore.api.services.executions import _storage as store
+
+        store._clear_storage()
+        execution_id = self._seed_test_execution(str(uuid.uuid4()))
+
+        data = client.get(f"/executions/history/{execution_id}").json()["data"]
+
+        assert data["secret_variables"] == []
 
     def test_returns_per_run_payload_for_suite_child(self, client: TestClient) -> None:
         from wavecore.api.services.executions import _storage as store
@@ -2257,15 +2298,16 @@ class TestExportExecutionEndpoint:
 
     def test_export_rejects_invalid_execution_uuid(self, client: TestClient) -> None:
         response = client.get("/executions/not-a-uuid/export")
-        assert response.status_code == 400
-        body = response.json()
-        assert body["error"]["code"] == "INVALID_UUID"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for execution_id: 'not-a-uuid'"
+        )
 
     def test_export_rejects_invalid_format(self, client: TestClient) -> None:
         execution_id = str(uuid.uuid4())
         response = client.get(f"/executions/{execution_id}/export?format=xml")
-        assert response.status_code == 400
-        assert response.json()["error"]["code"] == "INVALID_PARAMETER"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid format: 'xml'. Must be 'yaml' or 'json'"
+        )
 
     def test_export_rejects_invalid_test_id_csv_entry(self, client: TestClient) -> None:
         """A malformed element inside ``test_ids`` returns 400 with the
@@ -2273,10 +2315,7 @@ class TestExportExecutionEndpoint:
         execution_id = str(uuid.uuid4())
         good = str(uuid.uuid4())
         response = client.get(f"/executions/{execution_id}/export?test_ids={good},not-uuid")
-        assert response.status_code == 400
-        body = response.json()
-        assert body["error"]["code"] == "INVALID_UUID"
-        assert "not-uuid" in body["error"]["message"]
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Invalid test_id: 'not-uuid'")
 
     def test_export_passes_parsed_test_ids_to_service(self, client: TestClient) -> None:
         execution_id = str(uuid.uuid4())
@@ -2543,3 +2582,132 @@ class TestAnExecutionExportBodyThatIsNotAJsonObject:
     @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
     def test_it_is_refused(self, client: TestClient, text: str, message: str) -> None:
         assert_refused(send_text(client, "POST", "/executions/export", text), message)
+
+
+_EXECUTION_ID = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b"
+_TEST_ID = "0b1c2d3e-4f50-4617-8829-3a4b5c6d7e8f"
+_START_BODY = {"type": "test", "id": _TEST_ID, "environment_id": TEST_ENVIRONMENT_ID}
+
+# (method, path, service attribute the route calls, the deeper fault)
+_UNEXPECTED_FAULTS = [
+    ("POST", "/executions", "start_execution", KeyError("internal start key")),
+    ("POST", "/executions", "start_execution", LookupError("internal start lookup")),
+    ("POST", "/executions", "start_execution", ValueError("internal start value")),
+    ("GET", f"/executions/{_EXECUTION_ID}/export", "export_execution", ValueError("export text")),
+    ("GET", f"/executions/{_EXECUTION_ID}/export", "export_execution", KeyError("export key")),
+]
+
+
+class TestExecutionErrorReplies:
+    """Every refusal answers the shared envelope; an unexpected fault answers the generic 500."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(("method", "path", "attribute", "fault"), _UNEXPECTED_FAULTS)
+    def test_an_unexpected_fault_answers_the_generic_500(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        method: str,
+        path: str,
+        attribute: str,
+        fault: Exception,
+    ) -> None:
+        from wavecore.api.services.executions import service as execution_service
+
+        def _fail(*_args: Any, **_kwargs: Any) -> Any:
+            raise fault
+
+        monkeypatch.setattr(execution_service, attribute, _fail)
+
+        response = client.request(method, path, json=_START_BODY if method == "POST" else None)
+
+        assert_internal_error(response, str(fault.args[0]))
+
+    @pytest.mark.parametrize(
+        ("query", "message"),
+        [
+            ("format=xml", "Invalid format: 'xml'. Must be 'yaml' or 'json'"),
+            (f"test_ids={_TEST_ID},not-uuid", "Invalid test_id: 'not-uuid'"),
+            (f"test_ids={_TEST_ID},,{_TEST_ID}", "Invalid test_id: ''"),
+        ],
+    )
+    def test_an_export_with_a_bad_query_is_refused(
+        self, client: TestClient, query: str, message: str
+    ) -> None:
+        response = client.get(f"/executions/{_EXECUTION_ID}/export?{query}")
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+
+    def test_an_export_of_a_bad_execution_id_is_refused(self, client: TestClient) -> None:
+        response = client.get("/executions/not-a-uuid/export")
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for execution_id: 'not-a-uuid'"
+        )
+
+    def test_an_export_of_an_unknown_execution_is_not_found(self, client: TestClient) -> None:
+        response = client.get(f"/executions/{_EXECUTION_ID}/export")
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Execution not found: {_EXECUTION_ID}")
+
+    def test_an_export_of_an_unknown_test_is_not_found(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services.executions import service as execution_service
+
+        def _missing_test(*_args: Any) -> Any:
+            raise NotFoundException(f"Test not found in execution: {_TEST_ID}")
+
+        monkeypatch.setattr(execution_service, "export_execution", _missing_test)
+
+        response = client.get(f"/executions/{_EXECUTION_ID}/export?test_ids={_TEST_ID}")
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Test not found in execution: {_TEST_ID}")
+
+    def test_a_start_of_an_unknown_test_is_not_found(self, client: TestClient) -> None:
+        response = client.post("/executions", json=_START_BODY)
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Test with ID '{_TEST_ID}' not found")
+
+    def test_a_start_in_an_unknown_environment_is_not_found(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services.executions import service as execution_service
+
+        monkeypatch.setattr(execution_service, "_get_entity", lambda *_args: {"id": _TEST_ID})
+        body = {**_START_BODY, "environment_id": "env-unknown"}
+
+        response = client.post("/executions", json=body)
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", "Environment with ID 'env-unknown' not found"
+        )
+
+    def test_a_malformed_log_cursor_is_refused(self, client: TestClient) -> None:
+        response = client.get(f"/executions/{_EXECUTION_ID}/logs?before=garbage")
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid cursor 'garbage'. Expected '<chronology_index>:<child_seq|x>'.",
+        )
+
+    @pytest.mark.parametrize("path", ["/executions", "/executions/statistics"])
+    @pytest.mark.parametrize("param", ["from_date", "to_date"])
+    def test_a_date_filter_that_is_not_a_datetime_is_refused(
+        self, client: TestClient, path: str, param: str
+    ) -> None:
+        response = client.get(f"{path}?{param}=yesterday")
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            f"Invalid {param} 'yesterday': expected an ISO 8601 datetime",
+        )

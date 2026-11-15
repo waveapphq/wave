@@ -252,14 +252,14 @@ class LazyVariables(MutableMapping[str, Any]):
     def _evaluate_template_var(self, name: str) -> str:
         self._enter(name)
         try:
-            from wavecore.core.execution.plugin_executor import _evaluate_template
+            from wavecore.core.execution.plugin_executor import evaluate_template
 
             source = self._tmpl_map[name]
             # ``self`` is a MutableMapping, not a dict; the cast is for the type
             # checker only - ``{{ }}`` marker lookups still route through
             # __getitem__ so referenced computed vars realize lazily.
             # A null piece names this variable as its setting (REQ-3.1.3.15).
-            result = _evaluate_template(source, cast(dict[str, Any], self), setting=name)
+            result = evaluate_template(source, cast(dict[str, Any], self), setting=name)
             del self._tmpl_map[name]
             self._data[name] = result
             self._evaluated[name] = source

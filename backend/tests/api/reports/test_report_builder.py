@@ -14,13 +14,18 @@ from tests.api.reports.conftest import (
     REGRESSION_EXEC_NAME,
     SUITE_EXEC_NAME,
     TEST_EXEC_NAME,
+    control_node,
     iso,
     log_entry,
     make_function_test_execution,
     make_regression_execution,
     make_suite_execution,
     make_test_execution,
+    make_workflow_execution,
+    note_node,
+    plugin_node,
     ts,
+    wire,
 )
 from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.executions import _storage as exec_storage
@@ -446,6 +451,273 @@ class TestFunctionBlockTimeline:
         blocks = _build(execution_id)["timeline"]["blocks"]
 
         assert [block["block_id"] for block in blocks] == ["node-fn-shared", "node-fn-bodyless"]
+
+
+def _rows(workflow: dict[str, Any]) -> list[tuple[str, str]]:
+    """(block_id, block_path) per timeline row of a stored run of ``workflow``."""
+    execution_id = make_workflow_execution(workflow)
+    blocks = _build(execution_id)["timeline"]["blocks"]
+    return [(block["block_id"], block["block_path"]) for block in blocks]
+
+
+def _if_with_no_else_workflow() -> dict[str, Any]:
+    """An `if` whose then branch holds one Block, its implicit else wired to the next Block."""
+    return {
+        "nodes": [
+            control_node("gate-if", "Check_Gate", "if-else"),
+            plugin_node("inside", "Say_Inside"),
+            plugin_node("after", "Say_After"),
+        ],
+        "edges": [
+            wire("start-node", "gate-if"),
+            wire("gate-if", "inside", "branch_0"),
+            wire("inside", "after"),
+            wire("gate-if", "after", "branch_1"),
+        ],
+    }
+
+
+class TestBlockPathsFollowContainers:
+    """REPORT-10: a path names the containers a Block sits in; an If/Else or a split
+    Assert hands its branch to the flow it is on and adds no level."""
+
+    def test_empty_if_else_branches_join_a_block_that_stands_after_it(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("route", "Route_By_Health", "if-else"),
+                control_node("pick", "Pick_Path", "switch-case"),
+                plugin_node("picked", "Say_Picked"),
+                plugin_node("end", "Log_End"),
+            ],
+            "edges": [
+                wire("start-node", "route"),
+                wire("route", "pick", "branch_0"),
+                wire("route", "pick", "branch_1"),
+                wire("route", "pick", "branch_2"),
+                wire("pick", "picked", "branch_0"),
+                wire("pick", "end", "then"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("route", "Route_By_Health"),
+            ("pick", "Pick_Path"),
+            ("picked", "Pick_Path / Say_Picked"),
+            ("end", "Log_End"),
+        ]
+
+    def test_blocks_in_and_after_an_if_with_no_else_carry_no_if_else_name(self) -> None:
+        assert _rows(_if_with_no_else_workflow()) == [
+            ("gate-if", "Check_Gate"),
+            ("inside", "Say_Inside"),
+            ("after", "Say_After"),
+        ]
+
+    def test_every_block_of_a_loop_body_carries_the_loop(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("outer", "Outer", "for"),
+                plugin_node("first", "Say_First"),
+                plugin_node("second", "Say_Second"),
+                plugin_node("done", "Say_Done"),
+            ],
+            "edges": [
+                wire("start-node", "outer"),
+                wire("outer", "first", "body"),
+                wire("first", "second"),
+                wire("outer", "done", "then"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("outer", "Outer"),
+            ("first", "Outer / Say_First"),
+            ("second", "Outer / Say_Second"),
+            ("done", "Say_Done"),
+        ]
+
+    def test_a_block_after_a_nested_container_carries_the_outer_container(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("outer", "Outer", "for"),
+                control_node("inner", "Inner", "while"),
+                plugin_node("poll", "Poll_Once"),
+                plugin_node("next", "Say_Next"),
+            ],
+            "edges": [
+                wire("start-node", "outer"),
+                wire("outer", "inner", "body"),
+                wire("inner", "poll", "body"),
+                wire("inner", "next", "then"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("outer", "Outer"),
+            ("inner", "Outer / Inner"),
+            ("poll", "Outer / Inner / Poll_Once"),
+            ("next", "Outer / Say_Next"),
+        ]
+
+    def test_an_if_else_in_a_loop_body_leaves_its_blocks_in_the_loop(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("outer", "Outer", "for-each"),
+                control_node("choose", "Choose", "if-else"),
+                plugin_node("left", "Go_Left"),
+                plugin_node("right", "Go_Right"),
+                plugin_node("join", "Settle"),
+            ],
+            "edges": [
+                wire("start-node", "outer"),
+                wire("outer", "choose", "body"),
+                wire("choose", "left", "branch_0"),
+                wire("choose", "right", "branch_1"),
+                wire("left", "join"),
+                wire("right", "join"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("outer", "Outer"),
+            ("choose", "Outer / Choose"),
+            ("left", "Outer / Go_Left"),
+            ("right", "Outer / Go_Right"),
+            ("join", "Outer / Settle"),
+        ]
+
+    @pytest.mark.parametrize("values", [{"mode": "split"}, {}], ids=["split", "mode-left-out"])
+    def test_split_assert_branches_carry_no_assert_name(self, values: dict[str, Any]) -> None:
+        workflow = {
+            "nodes": [
+                control_node("gate", "Gate", "assert", **values),
+                plugin_node("pass", "Say_Pass"),
+                plugin_node("fail", "Say_Fail"),
+                plugin_node("join", "Say_Join"),
+            ],
+            "edges": [
+                wire("start-node", "gate"),
+                wire("gate", "pass", "pass"),
+                wire("gate", "fail", "fail"),
+                wire("pass", "join"),
+                wire("fail", "join"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("gate", "Gate"),
+            ("pass", "Say_Pass"),
+            ("fail", "Say_Fail"),
+            ("join", "Say_Join"),
+        ]
+
+    def test_a_note_in_a_lane_passes_the_container_on(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("outer", "Outer", "while"),
+                note_node("note"),
+                plugin_node("after-note", "Say_After_Note"),
+            ],
+            "edges": [
+                wire("start-node", "outer"),
+                wire("outer", "note", "body"),
+                wire("note", "after-note"),
+            ],
+        }
+
+        assert _rows(workflow) == [
+            ("outer", "Outer"),
+            ("after-note", "Outer / Say_After_Note"),
+        ]
+
+    def test_failure_report_names_a_failed_block_in_a_branch_by_its_own_path(self) -> None:
+        from wavecore.api.services.reports import builder
+
+        execution_id = make_workflow_execution(
+            _if_with_no_else_workflow(),
+            {"gate-if": "passed", "inside": "failed"},
+            [log_entry("ERROR", "Assertion failed", block_id="inside", at=0.5)],
+            status="failed",
+        )
+
+        failed_test = builder.build_failure_report(execution_id)["failed_tests"][0]
+        errors = _build(execution_id)["errors"]
+
+        assert [(b["label"], b["path"]) for b in failed_test["failed_blocks"]] == [
+            ("Say_Inside", "Say_Inside")
+        ]
+        assert [error["block_path"] for error in errors] == ["Say_Inside"]
+
+    def test_workbench_session_report_names_blocks_the_same_way(self) -> None:
+        workflow = _if_with_no_else_workflow()
+        adjacency: dict[str, list[tuple[str, str | None]]] = {}
+        for edge in workflow["edges"]:
+            adjacency.setdefault(edge["source"], []).append((edge["target"], edge["sourceHandle"]))
+        session = {
+            "status": "passed",
+            "block_states": {},
+            "_node_map": {node["id"]: node for node in workflow["nodes"]},
+            "_adj": adjacency,
+        }
+
+        blocks = _build_session(session, [])["timeline"]["blocks"]
+
+        assert [block["block_path"] for block in blocks] == [
+            "Check_Gate",
+            "Say_Inside",
+            "Say_After",
+        ]
+
+
+class TestBlockOrder:
+    """REQ-3.7.2.3: rows follow the flow, and a Block where branches rejoin comes
+    after every branch."""
+
+    def test_rejoined_branches_each_come_before_the_join(self) -> None:
+        workflow = {
+            "nodes": [
+                control_node("side", "Choose_Side", "if-else"),
+                plugin_node("left-1", "Left_One"),
+                plugin_node("left-2", "Left_Two"),
+                plugin_node("right-1", "Right_One"),
+                plugin_node("join", "Join_Step"),
+                plugin_node("final", "Final_Step"),
+            ],
+            "edges": [
+                wire("start-node", "side"),
+                wire("side", "left-1", "branch_0"),
+                wire("left-1", "left-2"),
+                wire("side", "right-1", "branch_1"),
+                wire("left-2", "join"),
+                wire("right-1", "join"),
+                wire("join", "final"),
+            ],
+        }
+
+        assert [block_id for block_id, _path in _rows(workflow)] == [
+            "side",
+            "left-1",
+            "left-2",
+            "right-1",
+            "join",
+            "final",
+        ]
+
+    def test_the_virtual_start_wire_leaves_the_first_block_a_root(self) -> None:
+        workflow = {
+            "nodes": [
+                plugin_node("third", "Third"),
+                plugin_node("second", "Second"),
+                plugin_node("first", "First"),
+            ],
+            "edges": [
+                wire("start-node", "first"),
+                wire("first", "second"),
+                wire("second", "third"),
+            ],
+        }
+
+        assert [block_id for block_id, _path in _rows(workflow)] == ["first", "second", "third"]
 
 
 class TestErrors:

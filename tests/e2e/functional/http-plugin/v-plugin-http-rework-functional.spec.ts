@@ -548,7 +548,6 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
           outputBindings: {},
           profileBindings: [],
         },
-        variableExpressionKeys: [],
       },
       measured: { width: 120, height: 62 },
     })

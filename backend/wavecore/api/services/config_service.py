@@ -208,7 +208,7 @@ def _validate_key_path(key: str) -> None:
         key: Configuration key path.
 
     Raises:
-        ValueError: If key path is invalid.
+        ValidationException: If key path is invalid.
     """
     if not key:
         raise ValidationException("Invalid key path format: key cannot be empty")
@@ -219,7 +219,7 @@ def _validate_key_path(key: str) -> None:
     if ".." in key:
         raise ValidationException("Invalid key path format: empty segment in path")
 
-    if not re.match(r"^[a-zA-Z][a-zA-Z0-9_.]*$", key):
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_.]*", key):
         raise ValidationException("Invalid key path format: invalid characters in key")
 
 
@@ -273,7 +273,7 @@ def get_config_value(key: str) -> dict[str, Any] | None:
         Dictionary with key, value, type, and mutable flag, or None if not found.
 
     Raises:
-        ValueError: If key path format is invalid.
+        ValidationException: If key path format is invalid.
     """
     _validate_key_path(key)
 

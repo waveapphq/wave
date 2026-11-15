@@ -23,7 +23,7 @@ interface SheetStubProps {
 
 // The larger editor is a real floating sheet whose body only records what it was opened with.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
-  const { DraggableSheet } = await vi.importActual<typeof import('@/components/shared/draggable-sheet')>(
+  const { DraggableSheet, SheetTitle } = await vi.importActual<typeof import('@/components/shared/draggable-sheet')>(
     '@/components/shared/draggable-sheet',
   )
   function ValueEditorSheetStub(props: Readonly<SheetStubProps>) {
@@ -32,9 +32,8 @@ vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-edit
       <DraggableSheet
         open
         onClose={props.onClose}
-        ariaLabel="Edit value"
         data-testid="value-editor-sheet"
-        header={<span>Edit value</span>}
+        header={<SheetTitle>Edit value</SheetTitle>}
       >
         <button
           type="button"
@@ -654,6 +653,11 @@ describe('WindowValueField - secret value', () => {
       expect(openEditor()).not.toBeInTheDocument()
     },
   )
+
+  it('names the pencil after its caption', () => {
+    renderField({ type: 'string', value: MASK_PLACEHOLDER, secret: 'masked', label: 'Value' })
+    expect(screen.getByRole('button', { name: 'Value: Edit protected value' })).toBeInTheDocument()
+  })
 
   it('asks the host to clear a masked secret from its pencil', async () => {
     const user = userEvent.setup()

@@ -12,6 +12,7 @@ import pytest
 
 from wavecore.controls.assertion_evaluator import evaluate_assertions
 from wavecore.controls.conditional import SwitchCaseControl
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.models.controls.metadata import CORE_CONTROLS
 from wavecore.models.enums import ControlId
 
@@ -440,6 +441,19 @@ class TestSwitchCaseControlValidation:
         ]
         asyncio.run(control.validate({"branches": branches}))
 
+    def test_validate_rejects_case_conditions_side_by_side_with_the_save_text(self) -> None:
+        """The run refuses a case whose conditions have no and / or between them."""
+        one = _literal_condition("x", "integer", "equals", 1)
+        branches = [
+            {"type": "case", "conditions": [one, _expression_condition("x > 2")]},
+            {"type": "default"},
+        ]
+        with pytest.raises(
+            ValueError,
+            match=r"^Condition items in 'branches\.0\.conditions' must be joined by 'and' or 'or'$",
+        ):
+            asyncio.run(SwitchCaseControl().validate({"branches": branches}))
+
 
 # =============================================================================
 # Validation Tests - Rule Ordering
@@ -496,6 +510,204 @@ class TestSwitchCaseControlValidationOrdering:
         ]
         with pytest.raises(ValueError, match="^invalid branch type: 'loop'$"):
             asyncio.run(control.validate({"branches": branches}))
+
+
+# =============================================================================
+# Structure Problems - every rule reported with its place (REQ-3.5.0.3)
+# =============================================================================
+
+
+def _structure(code: str, message: str, field: str) -> FieldFinding:
+    """A structure problem as the save check reports it: no fix."""
+    return FieldFinding(code, message, None, field)
+
+
+def _problems(branches: object) -> list[FieldFinding]:
+    """The Switch/Case structure problems of a branch list."""
+    return SwitchCaseControl().structure_problems({"branches": branches})
+
+
+def _case(branch_id: str) -> dict[str, object]:
+    """A case branch with one condition."""
+    return {
+        "type": "case",
+        "id": branch_id,
+        "conditions": [_literal_condition("x", "integer", "equals", 1)],
+    }
+
+
+class TestSwitchStructureProblems:
+    """Switch/Case structure rules as save findings (REQ-3.5.1.20, REQ-3.5.0.3)."""
+
+    def test_a_valid_case_list_has_no_problems(self) -> None:
+        """Cases with and without break, then one trailing default, report nothing."""
+        branches = [
+            {**_case("c1"), "break": True},
+            {**_case("c2"), "break": False},
+            _case("c3"),
+            {"type": "default", "id": "d"},
+        ]
+        assert _problems(branches) == []
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            pytest.param({}, id="missing"),
+            pytest.param({"branches": None}, id="null"),
+            pytest.param({"branches": "not a list"}, id="text"),
+            pytest.param({"branches": {"a": 1}}, id="map"),
+            pytest.param({"branches": []}, id="empty"),
+        ],
+    )
+    def test_a_branch_list_that_is_missing_not_a_list_or_empty_is_left_to_the_shared_checks(
+        self, values: dict[str, object]
+    ) -> None:
+        """The shared required and type checks own a branches value that is no branch list."""
+        assert SwitchCaseControl().structure_problems(values) == []
+
+    def test_an_unknown_branch_type_is_reported(self) -> None:
+        """A branch type other than case or default is reported at its type."""
+        branches = [
+            _case("c1"),
+            {
+                "type": "if",
+                "id": "x",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+        ]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "invalid branch type: 'if'", "branches.1.type"),
+        ]
+
+    def test_two_defaults_are_reported(self) -> None:
+        """A second default is reported once, on the branch list, before any placement rule."""
+        branches = [
+            _case("c1"),
+            {"type": "default", "id": "d1"},
+            {"type": "default", "id": "d2"},
+        ]
+        problems = _problems(branches)
+        two_defaults = _structure(
+            "INVALID_CONTROL_STRUCTURE", "only one default branch allowed", "branches"
+        )
+        assert problems[0] == two_defaults
+        assert problems.count(two_defaults) == 1
+
+    def test_no_case_is_reported(self) -> None:
+        """A default with no case is reported on the branch list."""
+        branches = [{"type": "default", "id": "d"}]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "at least one case branch is required", "branches"
+            ),
+        ]
+
+    def test_a_default_that_is_not_last_is_reported(self) -> None:
+        """A default followed by a case is reported at its type."""
+        branches = [_case("c1"), {"type": "default", "id": "d"}, _case("c2")]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "default branch must be last", "branches.1.type"
+            ),
+        ]
+
+    def test_a_default_with_conditions_is_reported(self) -> None:
+        """A default holding conditions is reported at its conditions."""
+        branches = [
+            _case("c1"),
+            {
+                "type": "default",
+                "id": "d",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE",
+                "default branch must not have conditions",
+                "branches.1.conditions",
+            ),
+        ]
+
+    @pytest.mark.parametrize("break_value", [True, False])
+    def test_a_default_with_break_is_reported(self, break_value: bool) -> None:
+        """A default holding a break key, true or false, is reported at its break."""
+        branches = [_case("c1"), {"type": "default", "id": "d", "break": break_value}]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE",
+                "default branch must not have break",
+                "branches.1.break",
+            ),
+        ]
+
+    @pytest.mark.parametrize(
+        "branch",
+        [
+            pytest.param({"type": "case", "id": "c2"}, id="absent"),
+            pytest.param({"type": "case", "id": "c2", "conditions": []}, id="empty"),
+        ],
+    )
+    def test_a_case_with_no_condition_is_required_param_empty(
+        self, branch: dict[str, object]
+    ) -> None:
+        """A case with no condition is the required-empty finding at its conditions."""
+        assert _problems([_case("c1"), branch]) == [
+            _structure(
+                "REQUIRED_PARAM_EMPTY", "case branch must have conditions", "branches.1.conditions"
+            ),
+        ]
+
+    @pytest.mark.parametrize("break_value", ["true", None, 1])
+    def test_a_break_that_is_not_true_or_false_is_reported(self, break_value: object) -> None:
+        """A case break that is not a boolean is reported at its break."""
+        branches = [{**_case("c1"), "break": break_value}]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "break must be a boolean", "branches.0.break"),
+        ]
+
+    def test_a_case_id_used_twice_is_reported(self) -> None:
+        """The second branch holding a used id is reported at its id."""
+        branches = [_case("c1"), _case("c1")]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "duplicate branch id: 'c1'", "branches.1.id"),
+        ]
+
+    def test_every_problem_is_reported_in_its_order(self) -> None:
+        """Identity per branch comes first, then the case and default mix, then each body."""
+        branches = [
+            {
+                "type": "default",
+                "id": "d",
+                "conditions": [_literal_condition("x", "integer", "equals", 1)],
+            },
+            {
+                "type": "bogus",
+                "id": "b",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+            _case("d"),
+            {"type": "case", "id": "c"},
+            {**_case("e"), "break": "yes"},
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "invalid branch type: 'bogus'", "branches.1.type"
+            ),
+            _structure("INVALID_CONTROL_STRUCTURE", "duplicate branch id: 'd'", "branches.2.id"),
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "default branch must be last", "branches.0.type"
+            ),
+            _structure(
+                "INVALID_CONTROL_STRUCTURE",
+                "default branch must not have conditions",
+                "branches.0.conditions",
+            ),
+            _structure(
+                "REQUIRED_PARAM_EMPTY", "case branch must have conditions", "branches.3.conditions"
+            ),
+            _structure("INVALID_CONTROL_STRUCTURE", "break must be a boolean", "branches.4.break"),
+        ]
 
 
 # =============================================================================

@@ -45,7 +45,6 @@ function buildChainFixture() {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: '"hello"', level: 'INFO' },
         outputBindings: {},

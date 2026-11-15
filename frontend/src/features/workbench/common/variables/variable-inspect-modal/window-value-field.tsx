@@ -654,7 +654,7 @@ export function WindowValueField({
 // The one value field of a Block row (FIELD-1 .. FIELD-6, REQ-3.1.1.5)
 // ---------------------------------------------------------------------------
 
-export type BlockFieldMode = 'literal' | 'expression'
+export type BlockFieldMode = 'literal' | 'expression' | 'template'
 export type BlockFieldIcon = 'clock' | 'lock'
 
 export interface BlockValueFieldProps {
@@ -666,12 +666,16 @@ export interface BlockValueFieldProps {
   mode: BlockFieldMode
   /** The field takes a whole null: the null button shows while it has no default. */
   nullable: boolean
+  /** A required field that takes null stays empty while not set; null shows once chosen or stored (REQ-3.1.3.21). */
+  required?: boolean
   /** The field has a full editor, opened by the expand button. */
   hasEditor: boolean
   /** The name stem of the field's test ids (`param-expand-<testId>`, ...). */
   testId: string
   /** The visible label: names the text box and the null button. */
   label?: string
+  /** What a screen reader hears in place of an empty label: the box, the null button and the expand. */
+  accessibleName?: string
   onChange: (value: unknown, elementTypes?: ElementTypes) => void
   /** Back to not set: the default shows again. */
   onUnset: () => void
@@ -702,6 +706,8 @@ export interface BlockValueFieldProps {
   renderExpandTrigger?: ExpandTrigger
   /** A path: while the box has no focus a long value shows its end, the file name (TDATA-8). */
   showsEnd?: boolean
+  /** The host's handle on the text box, which takes focus back from a sheet opened through Delete & Edit. */
+  boxRef?: RefObject<HTMLInputElement | null>
 }
 
 const DEFAULT_KEY_HINT = 'Not set, so the default is used. Type to use your own value.'
@@ -832,7 +838,8 @@ function blockFaceOf(
   masked: boolean,
   drawnLine: boolean,
 ): BlockFace {
-  if (mode === 'expression') return 'source'
+  // A Template is the source face in template mode, as the variable windows draw it (REQ-3.1.3.15).
+  if (mode !== 'literal') return 'source'
   if (masked) return 'masked'
   if (drawnLine) return 'line'
   return BLOCK_NUMBER_TYPES.has(type) ? 'number' : 'text'
@@ -973,13 +980,15 @@ function blockShowState(field: {
   typedText: string | null
   value: unknown
   nullable: boolean
+  required: boolean
   type: VariableType
   defaultValue: unknown
   placeholder: string | undefined
 }) {
   const notSetDefault = field.literal && !field.isSet && field.hasDefault
   const showsDefault = notSetDefault && field.typedText === null
-  const showsNull = field.literal && !notSetDefault && (field.value === null || (!field.isSet && field.nullable))
+  const nullHeld = field.required ? field.isSet && field.value === null : field.value === null || (!field.isSet && field.nullable)
+  const showsNull = field.literal && !notSetDefault && nullHeld
   const emptyText = field.literal && field.isSet && field.type === 'string' && field.value === ''
   // A gray default of empty text draws as held empty text does (FIELD-4); a declared hint wins (SQL-8).
   const emptyDefault =
@@ -1084,7 +1093,7 @@ function FieldButtons({
   )
 }
 
-/** The {x} face: the expression box, the reset icon kept clear of its text. */
+/** The {x} or Template face: the source box, the reset icon kept clear of its text. */
 function SourceFace({
   testId,
   name,
@@ -1092,6 +1101,8 @@ function SourceFace({
   isSet,
   defaultValue,
   type,
+  template,
+  hint,
   readOnly,
   showsReset,
   invalid,
@@ -1107,6 +1118,9 @@ function SourceFace({
   isSet: boolean
   defaultValue: unknown
   type: VariableType
+  template: boolean
+  /** The hint an empty {x} box shows when no default shows. */
+  hint: string | undefined
   readOnly: boolean
   showsReset: boolean
   invalid: boolean
@@ -1127,7 +1141,8 @@ function SourceFace({
             onChange={(text) => onChange(text)}
             availableVariables={availableVariables}
             isInvalid={invalid}
-            placeholder={!isSet && defaultValue !== undefined ? defaultHint(defaultValue, type) : undefined}
+            placeholder={!isSet && defaultValue !== undefined ? defaultHint(defaultValue, type) : hint}
+            template={template}
             editorOpen={editorOpen}
             onEditorOpenChange={onEditorOpenChange}
           />
@@ -1162,7 +1177,7 @@ function LineOverlay({
   )
 }
 
-/** The value field's own expand, or the read-only window's link to the editor, or the empty column. */
+/** The value field's own expand, or the read-only window's link to the editor, or the empty column that keeps {x} in line. */
 function ExpandColumn({
   shows,
   frozen,
@@ -1210,9 +1225,11 @@ export function BlockValueField({
   defaultValue,
   mode,
   nullable,
+  required = false,
   hasEditor,
   testId,
   label,
+  accessibleName,
   onChange,
   onUnset,
   onNull,
@@ -1231,6 +1248,7 @@ export function BlockValueField({
   onValidation,
   renderExpandTrigger,
   showsEnd = false,
+  boxRef: hostBoxRef,
 }: Readonly<BlockValueFieldProps>) {
   const errorId = use(FieldErrorContext)
   const noteId = use(FieldNoteContext)
@@ -1240,7 +1258,8 @@ export function BlockValueField({
   const [keyHint, setKeyHint] = useState<string | null>(null)
   const [expressionEditorOpen, setExpressionEditorOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
-  const boxRef = useRef<HTMLInputElement>(null)
+  const ownBoxRef = useRef<HTMLInputElement>(null)
+  const boxRef = hostBoxRef ?? ownBoxRef
   // Set by the key or paste that replaces the gray default; any other edit of the default is refused.
   const replacingDefault = useRef(false)
   // Held from a keydown to its keyup: an input inside a key press follows the key's own rule.
@@ -1248,6 +1267,7 @@ export function BlockValueField({
   // Text typed over the gray default that does not read as a value yet: drawn as typed, never gray (FIELD-2).
   const [typedText, setTypedText] = useState<string | null>(null)
   const name = label ?? testId
+  const heardName = accessibleName ?? name
   const hasDefault = defaultValue !== undefined
   const { literal, masked, segments, face } = blockFaceState({
     mode,
@@ -1265,6 +1285,7 @@ export function BlockValueField({
     typedText,
     value,
     nullable,
+    required,
     type,
     defaultValue,
     placeholder,
@@ -1437,8 +1458,9 @@ export function BlockValueField({
     event.clipboardData.setData('text/plain', text)
   }
 
+  // {x} opens its own expression editor; a literal or a Template asks the host for its Edit value sheet.
   const expand = () => {
-    if (!literal) setExpressionEditorOpen(true)
+    if (mode === 'expression') setExpressionEditorOpen(true)
     onExpand()
   }
 
@@ -1452,7 +1474,7 @@ export function BlockValueField({
       showsReset={showsReset}
       showsNullButton={showsNullButton}
       showsNull={showsNull}
-      name={name}
+      name={heardName}
       testId={testId}
       onUnset={onUnset}
       onNull={onNull}
@@ -1470,6 +1492,8 @@ export function BlockValueField({
         isSet={isSet}
         defaultValue={defaultValue}
         type={type}
+        template={mode === 'template'}
+        hint={mode === 'expression' ? placeholder : undefined}
         readOnly={readOnly}
         showsReset={showsReset}
         invalid={errorId !== undefined}
@@ -1489,7 +1513,7 @@ export function BlockValueField({
         lineBreak={lineBreak}
         segments={segments}
         revealedText={revealedText}
-        name={name}
+        name={heardName}
         testId={testId}
         readOnly={readOnly}
         placeholder={placeholder}
@@ -1545,7 +1569,7 @@ export function BlockValueField({
         literal={literal}
         testId={testId}
         shellId={shellId}
-        label={label}
+        label={accessibleName ?? label}
         renderExpandTrigger={renderExpandTrigger}
         onExpand={expand}
       />
@@ -1635,10 +1659,12 @@ function FaceBox(props: Readonly<BoxFaceProps & { list: SuggestionList | undefin
     return (
       <MaskedSecretControl
         secretAffordance="field"
+        fieldName={props.name}
         onClick={props.onEditSecret}
         disabled={props.readOnly}
         aria-describedby={props.describedBy}
-        className="!h-full flex-1 rounded-none border-0 bg-transparent shadow-none"
+        // Lock, pencil and dots sit on the box's own fill: the outline look's fill and border give way (SECFLD-1).
+        className="!h-full flex-1 rounded-none !border-0 !bg-transparent shadow-none [&_[data-loading-text]]:gap-0"
       />
     )
   }
@@ -1701,7 +1727,6 @@ function TextBox({
   testId,
   readOnly,
   placeholder,
-  suggestions,
   showsDefault,
   showsNull,
   hideHint,
@@ -1738,7 +1763,7 @@ function TextBox({
         ref={boxRef}
         type="text"
         data-slot="input-group-control"
-        data-testid={suggestions && `param-input-${testId}`}
+        data-testid={`param-input-${testId}`}
         {...combo}
         name={testId}
         aria-label={name}

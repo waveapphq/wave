@@ -36,7 +36,6 @@ def make_log_node(node_id: str = "node-log") -> dict[str, Any]:
             "displayName": "Log",
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

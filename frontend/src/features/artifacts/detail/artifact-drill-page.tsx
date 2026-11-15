@@ -110,7 +110,7 @@ export function ArtifactDrillPage() {
     <div data-testid="artifact-drill-page" className="flex h-full flex-col">
       <DetailHeader
         name={drill.execution?.name ?? executionId ?? 'Artifacts'}
-        onBack={() => { navigate('/artifacts') }}
+        onBack={() => { void navigate('/artifacts') }}
         titleIcon={
           headerType ? (
             <BreadcrumbSegmentIcon

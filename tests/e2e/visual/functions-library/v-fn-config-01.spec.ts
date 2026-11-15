@@ -81,7 +81,6 @@ test.describe('V-FN-CONFIG-01: config modal (FNCFG-1, FNCFG-2, FNCFG-4)', () => 
         hasNewerVersion: false,
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         config: { values: {}, outputBindings: {}, profileBindings: [] },
         localDefinition: {
           name: 'Function_1',
@@ -132,7 +131,6 @@ test.describe('V-FN-CONFIG-01: config modal (FNCFG-1, FNCFG-2, FNCFG-4)', () => 
         hasNewerVersion: false,
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         // The contract lives in resolvedInputs/resolvedOutputs (no localDefinition).
         resolvedInputs: INPUTS,
         resolvedOutputs: OUTPUTS,
@@ -171,7 +169,6 @@ test.describe('V-FN-CONFIG-01: config modal (FNCFG-1, FNCFG-2, FNCFG-4)', () => 
         hasNewerVersion: false,
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         editMode: true,
         upstreamLink: { functionId: lib.functionId, sourceVersion: '1.0.0' },
         resolvedInputs: INPUTS,

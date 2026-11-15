@@ -44,7 +44,6 @@ function buildFixture() {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { script: 'echo hello' },
               outputBindings: {},

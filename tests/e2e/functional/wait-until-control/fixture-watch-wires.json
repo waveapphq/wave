@@ -1,0 +1,147 @@
+{
+  "name": "V-CTRL-WAIT-UNTIL-WIRES",
+  "version": "1.0.0",
+  "description": "One Retry-mode Wait Until whose condition already holds, a Log on its retry lane and a Log after it on the then lane.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ww-wait",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 160
+        },
+        "data": {
+          "label": "Wait Until",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "ww wait",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "type": "literal",
+                  "variable": "ready",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "yes",
+                  "reference_is_expression": false,
+                  "id": "cond-ww"
+                }
+              ],
+              "timeout": 5000,
+              "check_interval": 200,
+              "message": "ww gave up",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "ww-retry-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 40,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "On the retry lane",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ww-retry-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ww-after-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the wait",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ww-after-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-ww-start",
+        "source": "start-node",
+        "target": "ww-wait",
+        "type": "default"
+      },
+      {
+        "id": "e-ww-retry",
+        "source": "ww-wait",
+        "sourceHandle": "retry",
+        "target": "ww-retry-log",
+        "type": "default"
+      },
+      {
+        "id": "e-ww-next",
+        "source": "ww-wait",
+        "sourceHandle": "then",
+        "target": "ww-after-log",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "ready": {
+      "value": "yes",
+      "type": "string",
+      "scope": "test"
+    }
+  },
+  "metadata": {}
+}

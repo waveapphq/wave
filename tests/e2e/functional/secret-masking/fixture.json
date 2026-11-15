@@ -1,7 +1,7 @@
 {
   "name": "Secret Masking E2E",
   "version": "1.0.0",
-  "description": "Runtime secret masking: composed expressions, direct leaks, verbatim copy, byte-transform escape, per-node unmask, full-opacity containers, response credential headers",
+  "description": "Runtime secret masking: composed expressions, direct leaks, verbatim copy, byte-transform escape, per-node unmask, full-opacity containers, writes to secret variables, response credential headers",
   "workflow": {
     "nodes": [
       {
@@ -38,11 +38,8 @@
           "version": "1.0.0",
           "description": "Copy Secret Verbatim",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.leaked_copy"],
           "templateFields": [],
-          "variableExpressionKeys": ["leaked_copy"],
-          "variableTemplateKeys": [],
-          "variableTypes": { "leaked_copy": "string" },
           "config": {
             "values": {
               "variables": { "leaked_copy": "api_token" }
@@ -205,9 +202,36 @@
         "measured": { "width": 120, "height": 62 }
       },
       {
-        "id": "http-cookie",
+        "id": "varset-secrets",
         "type": "workflowNode",
         "position": { "x": 400, "y": 640 },
+        "data": {
+          "label": "Var Setter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Write Secret Map",
+          "hasNewerVersion": false,
+          "expressionFields": ["variables.cred_map", "variables.api_token"],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "variables": {
+                "cred_map": "{'api_key': cred_map['api_key'], 'db_password': cred_map['db_password'], 'region': 'eu-west'}",
+                "api_token": "api_token"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "http-cookie",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 710 },
         "data": {
           "label": "HTTP",
           "elementType": "http-client",
@@ -243,7 +267,7 @@
       {
         "id": "log-resp-headers",
         "type": "workflowNode",
-        "position": { "x": 400, "y": 710 },
+        "position": { "x": 400, "y": 780 },
         "data": {
           "label": "Log",
           "elementType": "log",
@@ -275,8 +299,9 @@
       { "id": "e5", "source": "log-copy", "target": "log-transform", "type": "default" },
       { "id": "e6", "source": "log-transform", "target": "log-unmask", "type": "default" },
       { "id": "e7", "source": "log-unmask", "target": "log-map-whole", "type": "default" },
-      { "id": "e8", "source": "log-map-whole", "target": "http-cookie", "type": "default" },
-      { "id": "e9", "source": "http-cookie", "target": "log-resp-headers", "type": "default" }
+      { "id": "e8", "source": "log-map-whole", "target": "varset-secrets", "type": "default" },
+      { "id": "e9", "source": "http-cookie", "target": "log-resp-headers", "type": "default" },
+      { "id": "e10", "source": "varset-secrets", "target": "http-cookie", "type": "default" }
     ]
   },
   "variables": {

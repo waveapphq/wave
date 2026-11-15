@@ -4,8 +4,20 @@
  * Tests for utility functions including SSR-safe helpers.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { cn, isBrowser, detectTouchDevice, safeStringify } from '@/lib/utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { cn, isBrowser, detectTouchDevice, safeStringify, secureRandomId, secureRandomInt } from '@/lib/utils'
+
+// Each getRandomValues call fills its array from the next queued draws, then zeros.
+function queueRandomDraws(draws: number[]) {
+  let next = 0
+  return vi
+    .spyOn(globalThis.crypto, 'getRandomValues')
+    .mockImplementation(<T extends ArrayBufferView | null>(array: T): T => {
+      const view = array as unknown as Uint8Array | Uint32Array
+      for (let i = 0; i < view.length; i++) view[i] = draws[next++] ?? 0
+      return array
+    })
+}
 
 describe('Utility Functions', () => {
   describe('cn (classNames merger)', () => {
@@ -118,6 +130,51 @@ describe('Utility Functions', () => {
       expect(safeStringify({ a: 1 })).toBe('{"a":1}')
       expect(safeStringify(null)).toBe('')
       expect(safeStringify(undefined)).toBe('')
+    })
+  })
+
+  describe('secureRandomInt', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('redraws a draw at or past the last full multiple of the bound', () => {
+      // 2^32 % 36 is 4, so 4294967292 is the first draw that would favor low results.
+      const getRandomValues = queueRandomDraws([4294967292, 4294967291])
+      expect(secureRandomInt(36)).toBe(35)
+      expect(getRandomValues).toHaveBeenCalledTimes(2)
+    })
+
+    it('takes every draw when the bound divides 2^32', () => {
+      const getRandomValues = queueRandomDraws([0xffffffff])
+      expect(secureRandomInt(16)).toBe(15)
+      expect(getRandomValues).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays within the bound', () => {
+      const results = Array.from({ length: 200 }, () => secureRandomInt(40))
+      expect(results.every((n) => Number.isInteger(n) && n >= 0 && n < 40)).toBe(true)
+    })
+  })
+
+  describe('secureRandomId', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('redraws a draw that would favor the first letters', () => {
+      queueRandomDraws([0xffffffff])
+      expect(secureRandomId(3)).toBe('aaa')
+    })
+
+    it('maps draws onto the lowercase letters, then the digits', () => {
+      queueRandomDraws([0, 25, 26, 35])
+      expect(secureRandomId(4)).toBe('az09')
+    })
+
+    it('makes seven lowercase letters or digits by default', () => {
+      const ids = Array.from({ length: 200 }, () => secureRandomId())
+      expect(ids.every((id) => /^[a-z0-9]{7}$/.test(id))).toBe(true)
     })
   })
 })

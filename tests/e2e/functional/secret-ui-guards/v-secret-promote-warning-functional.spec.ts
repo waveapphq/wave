@@ -85,7 +85,7 @@ interface StoredNode {
       values?: Record<string, unknown>
       outputBindings?: Record<string, string>
       outputSecretFields?: string[]
-      variableSecretKeys?: string[]
+      secretFields?: string[]
     }
   }
 }
@@ -386,9 +386,6 @@ const SETTER: Carrier = {
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
-      variableTemplateKeys: [],
-      variableTypes: Object.fromEntries(rows.map((row) => [row.key, row.type])),
       config: {
         values: {
           variables: Object.fromEntries(rows.map((row) => [row.key, SETTER_LITERALS[row.type]!(row.key)])),
@@ -408,7 +405,7 @@ const SETTER: Carrier = {
     await sheet.getByTestId(`varset-name-input-${index}`).fill(name)
     await add.focus()
     await sheet.getByTestId(`varset-expression-toggle-${index}`).click()
-    const editor = sheet.locator(`[data-testid="param-input-${name}"] .cm-content`)
+    const editor = sheet.locator(`[data-testid="param-input-varset-value-${index}"] .cm-content`)
     await editor.click()
     await page.keyboard.insertText("'fresh'")
     // Focus leaves the editor so its suggestion list closes without an Escape that could close the sheet.
@@ -416,7 +413,11 @@ const SETTER: Carrier = {
     await expect(editor).toHaveText("'fresh'")
     return sheet.locator(`[data-testid="varset-secret-checkbox-${index}"]`)
   },
-  storedSecretKeys: (node) => node.data.config?.variableSecretKeys ?? [],
+  // A Setter row's mark is `variables.<row>`; any other entry never matches a row key.
+  storedSecretKeys: (node) =>
+    (node.data.config?.secretFields ?? []).map((field) =>
+      field.startsWith('variables.') ? field.slice('variables.'.length) : `not a row: ${field}`,
+    ),
   storedLiteral: (node, row) =>
     (node.data.config?.values?.variables as Record<string, unknown> | undefined)?.[row.key],
 }

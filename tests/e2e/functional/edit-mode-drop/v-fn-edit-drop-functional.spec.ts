@@ -55,7 +55,6 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<SeededFu
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: { message: "'SOURCE-line'", level: 'INFO' },
                 outputBindings: {},
@@ -100,7 +99,6 @@ function buildSeedTestWithDraft(fn: SeededFunction): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             editMode: true,
             upstreamLink: { functionId: fn.functionId, sourceVersion: fn.version },
@@ -125,7 +123,6 @@ function buildSeedTestWithDraft(fn: SeededFunction): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'SOURCE-line'", level: 'INFO' },
                         outputBindings: {},
@@ -145,7 +142,6 @@ function buildSeedTestWithDraft(fn: SeededFunction): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'DRAFT-line'", level: 'INFO' },
                         outputBindings: {},

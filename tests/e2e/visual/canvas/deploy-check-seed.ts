@@ -64,7 +64,6 @@ function deployCheckNode(): Record<string, unknown> {
       version: '1.0.0',
       expressionFields: ['targets.1'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: DEPLOY_CHECK_VALUES, outputBindings: {}, profileBindings: [] },
       localDefinition: {
         name: DEPLOY_CHECK,

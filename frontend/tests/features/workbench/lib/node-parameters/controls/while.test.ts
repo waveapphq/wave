@@ -41,6 +41,11 @@ describe('While Loop parameter schema', () => {
       expect(maxIter.group).toBe('Advanced')
     })
 
+    it('max_iterations takes nothing below 1', () => {
+      const maxIter = inputs.find((p) => p.name === 'max_iterations')!
+      expect(maxIter.minimum).toBe(1)
+    })
+
     it('timeout parameter has correct schema', () => {
       const timeout = inputs.find((p) => p.name === 'timeout')!
       expect(timeout).toBeDefined()

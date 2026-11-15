@@ -11,9 +11,9 @@
  * Pass Criteria:
  * 1. A block named `PSQL` fails its run: the engine line reads `Block 'PSQL' failed: ...`, and no
  *    console line holds any block's Description, in its message or in its Source.
- * 2. `Executing '{Name}' ({kind}/{type})`, `Completed '{Name}'`, `Skipping '{Name}' (disabled)` and
- *    `Skipping '{Name}' (skipped)` carry the Name, and every block status event carries the Name
- *    of the block its id names.
+ * 2. `Executing '{Name}' ({kind}/{type})`, `Completed '{Name}' ({n} ms)`,
+ *    `Skipping '{Name}' (disabled)` and `Skipping '{Name}' (skipped)` carry the Name, and every
+ *    block status event carries the Name of the block its id names.
  * 3. A block fails inside a Try / Catch: the Catch path reads `error.node` as that block's Name,
  *    and the error the control binds holds the same Name.
  * 4. A block named `Load rows` writes the variable `rows`: its binding line, the delete
@@ -53,6 +53,7 @@ import {
 import { codesOf, validateTest } from '../../helpers/fn-seed'
 import { finishRun, finishRunAnyVerdict, startRun } from '../../helpers/k8s-run'
 import {
+  escapeRegExp,
   formatEntries,
   getLogCopyTexts,
   getLogEntries,
@@ -150,15 +151,25 @@ function descriptionsOf(fixture: Fixture): string[] {
 const canvasBlock = (page: Page, id: string): Locator =>
   page.locator(`[data-testid="workflow-node-${id}"]`)
 
-/** The engine wrote this line itself: level, Source SYSTEM and the exact message. */
-function expectEngineLine(entries: readonly LogEntry[], level: string, message: string): void {
+/** The engine wrote this line itself: level, Source SYSTEM and the exact message or its pattern. */
+function expectEngineLine(
+  entries: readonly LogEntry[],
+  level: string,
+  message: string | RegExp,
+): void {
+  const matches = (text: string): boolean =>
+    typeof message === 'string' ? text === message : message.test(text)
   expect(
     entries.some(
-      (entry) => entry.level === level && entry.source === 'SYSTEM' && entry.message === message,
+      (entry) => entry.level === level && entry.source === 'SYSTEM' && matches(entry.message),
     ),
-    `the console must carry [${level}] SYSTEM: "${message}".\n${formatEntries(entries)}`,
+    `the console must carry [${level}] SYSTEM: "${String(message)}".\n${formatEntries(entries)}`,
   ).toBe(true)
 }
+
+/** The completion line of a block run, which ends with the time the run took. */
+const completedLine = (name: string): RegExp =>
+  new RegExp(`^Completed '${escapeRegExp(name)}' \\(\\d+ ms\\)$`)
 
 /** No console row shows this text, in its message, in its Source or in what it copies. */
 function expectNowhereInConsole(
@@ -279,13 +290,13 @@ test.describe('V-BLOCK-NAME-FUNCTIONAL: a block is named by its Name (EXEC-26)',
     await test.step('the Executing, Completed and Skipping lines carry the Name', () => {
       descriptionOf(fixture, 'Say hello')
       expectEngineLine(entries, 'DEBUG', "Executing 'Say hello' (plugin/log)")
-      expectEngineLine(entries, 'DEBUG', "Completed 'Say hello'")
+      expectEngineLine(entries, 'DEBUG', completedLine('Say hello'))
       descriptionOf(fixture, 'Muted step')
       expectEngineLine(entries, 'INFO', "Skipping 'Muted step' (disabled)")
       descriptionOf(fixture, 'Skipped step')
       expectEngineLine(entries, 'INFO', "Skipping 'Skipped step' (skipped)")
       expectEngineLine(entries, 'DEBUG', "Executing 'Guard the charge' (control/try-catch-finally)")
-      expectEngineLine(entries, 'DEBUG', "Completed 'Guard the charge'")
+      expectEngineLine(entries, 'DEBUG', completedLine('Guard the charge'))
       expectEngineLine(entries, 'DEBUG', "Executing 'PSQL' (plugin/python)")
       for (const never of ['bn-muted-never', 'bn-skipped-never']) {
         expect(
@@ -548,7 +559,7 @@ test.describe('V-BLOCK-NAME-FUNCTIONAL: a block is named by its Name (EXEC-26)',
         `each block writes under its type name and nothing else does.\n${formatEntries(copied)}`,
       ).toEqual([...blockSources, 'SYSTEM'].sort())
       expectEngineLine(entries, 'DEBUG', "Executing 'For Loop' (control/for)")
-      expectEngineLine(entries, 'DEBUG', "Completed 'For Loop'")
+      expectEngineLine(entries, 'DEBUG', completedLine('For Loop'))
       expectEngineLine(entries, 'DEBUG', "Executing 'Try / Catch' (control/try-catch-finally)")
       expectEngineLine(entries, 'DEBUG', "Executing 'Log' (plugin/log)")
       expectEngineLine(entries, 'DEBUG', "'For Loop' \u2192 pass_index")

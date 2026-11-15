@@ -9,6 +9,7 @@ import { walkActiveSubtree } from '@/features/functions/canvas/inner-workflow'
 import { getFunctionVersion } from '@/features/functions/api/functions-api'
 import { buildEditModeDraft } from '@/features/functions/lib/edit-mode-draft'
 import { canvasFunctionBody } from '@/features/workbench/lib/canonical-workflow'
+import { controlDefault } from '@/features/workbench/lib/node-parameters'
 import { useToast } from '@/components/ui/toast'
 import { reportFunctionBodyFailure } from '@/features/functions/lib/function-body-report'
 import { getBlockMenuGroups, type BlockContextMenuAction } from './menu-groups'
@@ -53,7 +54,7 @@ function disabledPassThroughHandles(
     | Record<string, unknown>
     | undefined
   if (elementType === 'assert') {
-    const mode = (config?.mode as string | undefined) ?? 'split'
+    const mode = config?.mode ?? controlDefault('assert', 'mode')
     return mode === 'split' ? new Set(['pass']) : null
   }
   if (
@@ -137,6 +138,19 @@ function reachableFromStart(
     }
   }
   return visited
+}
+
+/** The wires coming into a node on the canvas shown now; each gets its own input handle. */
+export function useIngressCount(id: string): number {
+  // A count, never an array, keeps the selector stable; a drilled-in Function counts its own edges.
+  return useWorkflowStore((state) => {
+    const active = walkActiveSubtree(state.nodes, state.edges, state.variables, state.drillPath)
+    let count = 0
+    for (const e of active.edges) {
+      if (e.target === id) count++
+    }
+    return count
+  })
 }
 
 export function useNodeActions({ id, disabled, isExecuting, rawExecutionStatus, inspectOnly }: UseNodeActionsParams) {
@@ -237,18 +251,7 @@ export function useNodeActions({ id, disabled, isExecuting, rawExecutionStatus, 
   // Transient pulse flag for the alert icon (set by handleValidationClose)
   const shouldPulse = useWorkflowStore((state) => state.pulseValidationNodeIds.has(id))
 
-  // Dynamic ingress (input) handles - expand as more edges connect
-  // Return primitive count (not array) to avoid infinite re-renders from new array references.
-  // Inside a drilled-in Function the BFS / count must walk the inner subtree;
-  // root edges don't reference inner node ids.
-  const ingressCount = useWorkflowStore((state) => {
-    const active = walkActiveSubtree(state.nodes, state.edges, state.variables, state.drillPath)
-    let count = 0
-    for (const e of active.edges) {
-      if (e.target === id) count++
-    }
-    return count
-  })
+  const ingressCount = useIngressCount(id)
 
   // Unreachable: not reachable from Start via edges (won't execute) AND
   // not behind a disabled control's non-pass-through branch. The second

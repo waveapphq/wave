@@ -83,7 +83,6 @@ def _make_remote_node(
             "displayName": "Remote Execution",
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -115,7 +114,6 @@ def _make_plugin_node(
             "displayName": label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -1785,7 +1783,6 @@ class TestRemoteBodySecretParity:
                 },
                 "expressionFields": [],
                 "templateFields": [],
-                "variableExpressionKeys": [],
             },
         }
 

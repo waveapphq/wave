@@ -245,10 +245,32 @@ class TestStartReportJob:
         client.post(f"/executions/{record['execution_id']}/report")
         _drain_job(client, record["execution_id"])
 
+        response = client.get(f"/executions/{record['execution_id']}/report")
+        data = response.json()["data"]
+        assert data["status"] == "failed"
+        assert data["error"] == "An internal server error occurred"
+        assert "model build exploded" not in response.text
+        assert data["artifact_id"] is None
+
+    def test_a_refusal_during_the_build_keeps_its_message(
+        self, client: TestClient, monkeypatch: Any
+    ) -> None:
+        from wavecore.api.exceptions import NotFoundException
+        from wavecore.api.services.reports import builder
+
+        record = make_suite_execution()
+        missing = f"Execution with ID '{record['execution_id']}' not found"
+
+        def _gone(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            raise NotFoundException(missing)
+
+        monkeypatch.setattr(builder, "build_execution_report", _gone)
+        client.post(f"/executions/{record['execution_id']}/report")
+        _drain_job(client, record["execution_id"])
+
         data = client.get(f"/executions/{record['execution_id']}/report").json()["data"]
         assert data["status"] == "failed"
-        assert "model build exploded" in data["error"]
-        assert data["artifact_id"] is None
+        assert data["error"] == missing
 
 
 class TestStartReportJobErrors:
