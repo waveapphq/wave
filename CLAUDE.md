@@ -26,8 +26,8 @@ This file holds WAVE's code rules. They hold for every change, made by hand or w
 | The design and the requirements in the WAVE docs repo | **VALID - keep** | `REQ-3.1.3.14`, `CANVAS-72`, `LIST-7`, `SHELL-2`, "per the Lifecycle badge location decision" |
 | `tests/exclusions/frontend-coverage.md` | **MANDATORY** | `COV-BRANCH-146` - a `v8 ignore` without its registry ID is a policy violation |
 | `tests/exclusions/backend-coverage.md` | **MANDATORY** | `BCOV-ABSTRACT-001` - a `pragma: no cover` without its ID is a policy violation |
-| `tests/exclusions/sonarqube-cloud.md` | **MANDATORY** | `SQ-HASH-001` - marks the spot of an issue a maintainer marked as a false positive |
-| `tests/exclusions/codeql.md` | **MANDATORY** | `CQL-LOG-001` - marks the spot of an alert a maintainer dismissed |
+| `tests/exclusions/sonarqube-cloud.md` | **MANDATORY** | `SQ-HASH-001` - the spot of an issue a maintainer marked as a false positive |
+| `tests/exclusions/codeql.md` | **MANDATORY** | `CQL-LOG-001` - the spot of an alert a maintainer dismissed |
 | A roadmap, a session handoff, a ticket tracker, a PR, or a past conversation | **FORBIDDEN** | "Roadmap 10.6 #8", "phase 12.6", "D7", "issue #123", "ABC-42", "added for the Y flow", "fix for the Z regression", "session 4 decided" |
 
 Requirements and design are the contracts the code must satisfy; pointing at them is traceability and is wanted. Roadmaps, handoffs and tickets are scheduling and history; they get reordered and deleted, so a pointer to one outlives its referent and becomes dead weight. Never run a sweep that strips `REQ-*`, design-decision IDs, or `COV-*` from source.
