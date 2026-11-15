@@ -2,7 +2,7 @@
 
 <h3 align="center">Open source test automation for backend systems.</h3>
 
-<p align="center"><a href="https://waveapp.dev"><b>Website</b></a> · <a href="#quick-start"><b>Quick Start</b></a> · <a href="https://github.com/waveapphq/wave-docs"><b>Docs</b></a> · <a href="https://github.com/waveapphq/wave-skills"><b>Skills</b></a> · <b>Roadmap (Coming Soon)</b></p>
+<p align="center"><a href="https://waveapp.dev"><b>Website</b></a> · <a href="#quick-start"><b>Quick Start</b></a> · <a href="https://github.com/waveapphq/wave-docs"><b>Docs</b></a> · <a href="https://github.com/waveapphq/wave-skills"><b>Skills</b></a> · <a href="https://waveapp.dev/roadmap"><b>Roadmap</b></a></p>
 
 <p align="center">
   <a href="https://github.com/waveapphq/wave/actions/workflows/ci.yml"><img src="https://github.com/waveapphq/wave/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/backend_tests-45%2C000%2B-brightgreen" alt="backend tests: 44,000+">
   <img src="https://img.shields.io/badge/frontend_tests-34%2C000%2B-brightgreen" alt="frontend tests: 33,000+">
   <img src="https://img.shields.io/badge/playwright_tests-5%2C000%2B-brightgreen" alt="playwright tests: 5,000+">
-  <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="coverage: 100%">
+  <a href="tests/exclusions/README.md"><img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="coverage: 100%"></a>
 </p>
 
 <p align="center">
@@ -293,6 +293,7 @@ An MCP server lets an AI assistant build and run tests. It is off until you turn
 ## Contribute
 
 [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up a clone, run the tests and send a change.
+Every check that WAVE skips, in coverage, SonarQube Cloud or CodeQL, is listed in public with its reason in [tests/exclusions](tests/exclusions/README.md).
 To report a security bug, follow [SECURITY.md](SECURITY.md).
 For anything else, open an issue or write to support@waveapp.dev.
 

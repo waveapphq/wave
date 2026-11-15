@@ -105,8 +105,6 @@ A script stops before its tests when one of these is missing. To scan on another
 
 The scan waits for the quality gate of its project. A failed gate fails the suite, and so does a scan that does not run.
 
-Every check that WAVE skips, such as code left out of coverage, a SonarQube Cloud false positive or a dismissed CodeQL alert, is listed with its reason in [tests/exclusions/README.md](tests/exclusions/README.md).
-
 ### The CodeQL check
 
 GitHub runs CodeQL code scanning on each pull request. To see its findings before you push, run `./scripts/codeql-scan.sh` on the host; it runs the same checks and is not part of the CI scripts. It scans the files your push would carry and the branch your pull request goes into, and fails on every alert that branch does not have. It lists each such alert with its file and line; `--flows` also shows the path from the input to the problem. With `--all` it lists every alert in your files, fails when there is one, and does not scan the other branch. It needs these on the host:
@@ -116,6 +114,12 @@ GitHub runs CodeQL code scanning on each pull request. To see its findings befor
 - A checked-out branch. A `fix/<version>-<name>` or `feature/<version>-<name>` branch is compared with `release/<version>`, any other branch with `master`. Set `CODEQL_BASE` to compare with another branch.
 
 A maintainer dismisses a false alarm on GitHub. With `CODEQL_GITHUB_TOKEN` set to a token that can read code scanning alerts, the scan leaves out the alerts dismissed for your branch or its pull request; without it, the scan lists them too.
+
+### Skipped checks
+
+Every check that WAVE skips is listed in public with its reason in [tests/exclusions/README.md](tests/exclusions/README.md): code left out of coverage, SonarQube Cloud false positives and dismissed CodeQL alerts.
+
+Fix the code first. When your change needs an exclusion, add its entry to the right list and its ID in a comment at the spot, in the same pull request, and say why in the pull request description. A maintainer reviews the reason, then marks the issue or dismisses the alert in SonarQube Cloud or CodeQL.
 
 ### Run a part of the tests
 
@@ -313,6 +317,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `frontend/src/types/` | The shared TypeScript types. |
 | `frontend/tests/` | The frontend tests, which run with Vitest. |
 | `tests/e2e/` | The Playwright specs in `functional/` and `visual/`, their helpers, and the services in `services/` that the specs run against. |
+| `tests/exclusions/` | The public lists of every check that WAVE skips, with the reason for each. |
 | `scripts/` | The scripts that build the test images, run the suites and set the version. |
 | `.github/` | The GitHub workflows, the pull request template and the code owners. |
 | `LICENSES/` | The license texts of the third-party work that `NOTICE` lists. |
