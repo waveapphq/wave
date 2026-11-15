@@ -2,8 +2,10 @@
 # CodeQL scan of the working tree with the checks GitHub's default code scanning runs.
 # Prints the alerts the target branch does not have and fails when there is one.
 #
-# Usage: ./scripts/codeql-scan.sh [--flows] [python] [javascript-typescript] [actions]
+# Usage: ./scripts/codeql-scan.sh [--all] [--flows] [python] [javascript-typescript] [actions]
 #   No language: all three. --flows also prints each alert's path from input to problem.
+#   --all prints every alert of the working tree, fails when there is one, and does not
+#   scan the target branch.
 #
 # Needs the CodeQL CLI on PATH (`codeql`), or CODEQL pointing at it.
 #   CODEQL_BASE      branch to compare with; default: origin/release/<version> for a
@@ -13,7 +15,8 @@
 #   CODEQL_RAM       MB of memory CodeQL may use (default 6000)
 #   CODEQL_GITHUB_TOKEN  a GitHub token that can read code scanning alerts; with it, an
 #                    alert dismissed on GitHub for this branch or its pull request is
-#                    left out, matched by rule, file and the text of its line
+#                    left out: the one result with its rule, file and line text that is
+#                    nearest its line
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,10 +24,12 @@ CODEQL="${CODEQL:-codeql}"
 WORK="${CODEQL_WORK_DIR:-$HOME/.cache/wave-codeql}"
 RAM="${CODEQL_RAM:-6000}"
 FLOWS=false
+ALL=false
 LANGS=()
 for arg in "$@"; do
   case "$arg" in
     --flows) FLOWS=true ;;
+    --all) ALL=true ;;
     python|javascript-typescript|actions) LANGS+=("$arg") ;;
     *) echo "Unknown argument: $arg" >&2; exit 2 ;;
   esac
@@ -36,21 +41,26 @@ cd "$ROOT"
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
 [ "$branch" != "HEAD" ] || { echo "Detached HEAD: check out a branch first" >&2; exit 2; }
-if [ -z "${CODEQL_BASE:-}" ]; then
-  if [[ "$branch" =~ ^(fix|feature)/([0-9]+\.[0-9]+\.[0-9]+(-[a-z]+[0-9]+)?)- ]]; then
-    CODEQL_BASE="origin/release/${BASH_REMATCH[2]}"
-  else
-    CODEQL_BASE="origin/master"
-  fi
-fi
-git fetch --quiet origin
-base_sha="$(git merge-base HEAD "$CODEQL_BASE")"
 version="$("$CODEQL" version --format=terse)"
-echo "CodeQL $version: $branch (working tree) against $CODEQL_BASE (${base_sha:0:7})"
+base_src=""
+if $ALL; then
+  echo "CodeQL $version: $branch (working tree), every alert"
+else
+  if [ -z "${CODEQL_BASE:-}" ]; then
+    if [[ "$branch" =~ ^(fix|feature)/([0-9]+\.[0-9]+\.[0-9]+(-[a-z]+[0-9]+)?)- ]]; then
+      CODEQL_BASE="origin/release/${BASH_REMATCH[2]}"
+    else
+      CODEQL_BASE="origin/master"
+    fi
+  fi
+  git fetch --quiet origin
+  base_sha="$(git merge-base HEAD "$CODEQL_BASE")"
+  echo "CodeQL $version: $branch (working tree) against $CODEQL_BASE (${base_sha:0:7})"
+  base_src="$WORK/src-base-$base_sha"
+fi
 
 mkdir -p "$WORK"
 head_src="$WORK/src-head"
-base_src="$WORK/src-base-$base_sha"
 
 # The files a push would carry: tracked and new, never ignored build output.
 rm -rf "$head_src"; mkdir -p "$head_src"
@@ -73,14 +83,14 @@ scan() { # scan <source dir> <language> <sarif out>; CodeQL's own output goes to
   rm -rf "$db"
 }
 
-# Alerts dismissed on GitHub, as rule, file and line text, so a moved line still matches.
+# Alerts dismissed on GitHub, as rule, file, line text and line, so a moved line still matches.
 dismissed="$WORK/dismissed.json"
 python3 -I - "$dismissed" "$branch" "$(git remote get-url origin)" <<'PY'
 import json, os, re, subprocess, sys, urllib.parse, urllib.request
 
 out, branch, remote = sys.argv[1], sys.argv[2], sys.argv[3]
 token = os.environ.get("CODEQL_GITHUB_TOKEN", "")
-found = []
+found = {}
 if not token:
     print("CODEQL_GITHUB_TOKEN not set: alerts dismissed on GitHub are not left out")
 else:
@@ -118,22 +128,23 @@ else:
                     inst = alert["most_recent_instance"]
                     loc = inst["location"]
                     text = line_text(inst["commit_sha"], loc["path"], loc["start_line"])
-                    if text is not None:
-                        found.append([alert["rule"]["id"], loc["path"], text])
+                    if text is not None:  # by number: a branch and its pull request list the same alert
+                        found[alert["number"]] = [alert["rule"]["id"], loc["path"], text, loc["start_line"]]
                 if len(alerts) < 100:
                     break
                 page += 1
         print(f"{len(found)} alerts dismissed on GitHub are left out")
     except Exception as error:  # a failed read leaves nothing out; the scan still reports
         print(f"Could not read the alerts dismissed on GitHub ({error}); none are left out")
-        found = []
-json.dump(found, open(out, "w"))
+        found = {}
+json.dump(list(found.values()), open(out, "w"))
 PY
 
 status=0
 for lang in "${LANGS[@]}"; do
-  base_sarif="$WORK/base-$base_sha-$lang-$version.sarif"
-  if [ ! -f "$base_sarif" ]; then
+  base_sarif=""
+  $ALL || base_sarif="$WORK/base-$base_sha-$lang-$version.sarif"
+  if [ -n "$base_sarif" ] && [ ! -f "$base_sarif" ]; then
     echo "Scanning $CODEQL_BASE for $lang (kept until that branch moves)..."
     if [ ! -d "$base_src" ]; then
       mkdir -p "$base_src"
@@ -148,7 +159,7 @@ for lang in "${LANGS[@]}"; do
 import json, sys
 
 base_path, head_path, lang, flows = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "true"
-dismissed = {tuple(d) for d in json.load(open(sys.argv[5]))}
+dismissed = json.load(open(sys.argv[5]))
 head_src = sys.argv[6]
 
 def results(path):
@@ -164,25 +175,32 @@ def where(location):
     phys = location["physicalLocation"]
     return f'{phys["artifactLocation"]["uri"]}:{phys.get("region", {}).get("startLine", "?")}'
 
-def is_dismissed(result):
+def spot(result):
     phys = result["locations"][0]["physicalLocation"]
     path, line = phys["artifactLocation"]["uri"], phys.get("region", {}).get("startLine", 0)
     try:
         lines = open(f"{head_src}/{path}", encoding="utf-8", errors="replace").read().splitlines()
     except OSError:
-        return False
+        return None, line
     text = lines[line - 1].strip() if 0 < line <= len(lines) else None
-    return (result["ruleId"], path, text) in dismissed
+    return (result["ruleId"], path, text), line
 
-_, base = results(base_path)
 run, head = results(head_path)
-known = {key(r) for r in base}
-unknown = [r for r in head if key(r) not in known]
-new = [r for r in unknown if not is_dismissed(r)]
-skipped = len(unknown) - len(new)
-print(f"{lang}: {len(head)} alerts, {len(new)} new against the target branch"
+spots = [spot(r) for r in head]
+gone = set()
+for rule, path, text, line in dismissed:  # one result per dismissed alert, so a twin line stays listed
+    hits = [i for i, (k, _) in enumerate(spots) if k == (rule, path, text) and i not in gone]
+    if hits:
+        gone.add(min(hits, key=lambda i: abs(spots[i][1] - line)))
+unknown = range(len(head))
+if base_path:  # empty with --all: every alert counts
+    known = {key(r) for r in results(base_path)[1]}
+    unknown = [i for i in unknown if key(head[i]) not in known]
+listed = [head[i] for i in unknown if i not in gone]
+skipped = len(unknown) - len(listed)
+print(f"{lang}: {len(head)} alerts, {len(listed)} " + ("new against the target branch" if base_path else "listed")
       + (f" ({skipped} more dismissed on GitHub)" if skipped else ""))
-for r in sorted(new, key=lambda r: (r["ruleId"], where(r["locations"][0]))):
+for r in sorted(listed, key=lambda r: (r["ruleId"], where(r["locations"][0]))):
     print(f'  {r.get("level", "warning"):8} {r["ruleId"]}  {where(r["locations"][0])}')
     print(f'           {r["message"]["text"].splitlines()[0]}')
     if flows:
@@ -191,7 +209,7 @@ for r in sorted(new, key=lambda r: (r["ruleId"], where(r["locations"][0]))):
                 loc = step["location"]
                 text = loc.get("message", {}).get("text", "")
                 print(f"             -> {where(loc)}  {text}")
-sys.exit(1 if new else 0)
+sys.exit(1 if listed else 0)
 PY
 done
 

@@ -1826,11 +1826,11 @@ class TestFunctionScopeSkipBadgeAcrossContexts:
 
 
 @pytest.fixture
-def run_session_id(request: pytest.FixtureRequest) -> Any:
+def run_session_id() -> Any:
     """A session id of this test's own; its run log is cleared afterwards."""
     from wavecore.api.services import log_streaming_service
 
-    session_id = f"fn-block-{request.node.name}"
+    session_id = f"fn-block-{uuid.uuid4()}"
     yield session_id
     log_streaming_service._clear_session_logs(session_id)
 

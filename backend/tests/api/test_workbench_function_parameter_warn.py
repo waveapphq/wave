@@ -10,6 +10,7 @@ Function in the root flow and on a drilled-in Run Scope alike.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from collections.abc import Generator
 from typing import Any
 
@@ -40,12 +41,12 @@ def _register_core_plugins_and_controls() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def session_id(request: pytest.FixtureRequest) -> Generator[str, None, None]:
+def session_id() -> Generator[str, None, None]:
     """A live run session of its own, its run log cleared afterwards."""
     from wavecore.api.services import log_streaming_service
     from wavecore.api.services.workbench import _common as _wb_common
 
-    sid = f"param-warn-{request.node.name}"
+    sid = f"param-warn-{uuid.uuid4()}"
     _wb_common._workbench_sessions[sid] = _make_run_session(sid)
     yield sid
     log_streaming_service._clear_session_logs(sid)

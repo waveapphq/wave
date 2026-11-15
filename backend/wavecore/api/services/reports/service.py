@@ -15,7 +15,7 @@ from typing import Any
 from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
 from wavecore.api.services import artifact_service, log_streaming_service
 from wavecore.api.services.executions import _storage
-from wavecore.api.services.storage_paths import get_artifacts_storage_path
+from wavecore.api.services.storage_paths import get_artifacts_storage_path, path_under
 from wavecore.api.services.workbench._common import DEFAULT_USER_ID
 from wavecore.core.artifacts import store
 
@@ -248,7 +248,7 @@ def _find_latest_report(directory: Path, report_format: str) -> Path | None:
     """The unversioned report.<format> in the directory, if present."""
     if not directory.is_dir():
         return None
-    candidate = directory / f"report.{report_format}"
+    candidate = path_under(directory, f"report.{report_format}")
     return candidate if candidate.is_file() else None
 
 

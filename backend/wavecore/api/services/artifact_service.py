@@ -24,7 +24,7 @@ from wavecore.api.exceptions import (
     ValidationException,
 )
 from wavecore.api.services import file_tree, shared
-from wavecore.api.services.storage_paths import get_artifacts_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_artifacts_storage_path
 from wavecore.core.artifacts.store import TOMBSTONE_SUFFIX, parse_artifact_filename
 
 logger = logging.getLogger(__name__)
@@ -477,8 +477,8 @@ def zip_execution_artifacts(execution_id: str, subtree: str | None = None) -> by
 
 
 def session_artifacts_dir(session_id: str) -> Path:
-    """Temporary artifact dir for an ephemeral workbench session."""
-    return get_artifacts_storage_path() / _SESSIONS_DIR_NAME / session_id
+    """Temporary artifact dir for an ephemeral workbench session; the ID must be one plain name."""
+    return entity_dir(get_artifacts_storage_path() / _SESSIONS_DIR_NAME, session_id)
 
 
 def wipe_session_artifacts(session_id: str) -> None:

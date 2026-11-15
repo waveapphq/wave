@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Generator
 from typing import Any
 
@@ -44,11 +45,11 @@ def register_engine_session(session_id: str) -> dict[str, Any]:
 
 
 @pytest.fixture
-def session_id(request: pytest.FixtureRequest) -> Generator[str, None, None]:
+def session_id() -> Generator[str, None, None]:
     """A live run session of the test's own, its run log cleared afterwards."""
     from wavecore.api.services import log_streaming_service
 
-    sid = f"fn-exec-{request.node.name}"
+    sid = f"fn-exec-{uuid.uuid4()}"
     register_engine_session(sid)
     yield sid
     log_streaming_service._clear_session_logs(sid)

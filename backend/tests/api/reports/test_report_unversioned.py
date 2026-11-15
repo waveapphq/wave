@@ -11,6 +11,9 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
+from wavecore.api.exceptions import ValidationException
 from wavecore.api.services.reports import service as reports_service
 
 _REPORT = {"summary": {"total": 1, "passed": 1}}
@@ -65,3 +68,13 @@ class TestFindLatestReportUnversioned:
         (tmp_path / "report.json").write_text("{}")
 
         assert reports_service._find_latest_report(tmp_path, "html") is None
+
+    def test_a_format_that_climbs_out_of_the_folder_is_refused(self, tmp_path: Path) -> None:
+        directory = tmp_path / "execution"
+        (directory / "report.d").mkdir(parents=True)
+        (tmp_path / "outside").write_text("x")
+
+        with pytest.raises(
+            ValidationException, match=r"^Invalid path: 'report\.d/\.\./\.\./outside'$"
+        ):
+            reports_service._find_latest_report(directory, "d/../../outside")

@@ -25,7 +25,7 @@
 import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { numberInput, saveButton } from '../../helpers/config-sheet'
-import { BACKEND_URL } from '../../helpers/config'
+import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { runToken } from '../../helpers/element-types'
 import {
   addLibraryVersion,
@@ -128,6 +128,7 @@ test.describe('V-NUMBER-FUNCTIONS-INPUTS-FUNCTIONAL: Function declarations follo
     request,
   }) => {
     test.setTimeout(240_000)
+    await ensureEnvironment(request)
     const token = runToken()
     const body = {
       nodes: [logNode(BODY_LOG, 'Show N', "f'n={n}'")],
