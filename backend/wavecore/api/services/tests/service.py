@@ -27,8 +27,10 @@ import yaml
 
 from wavecore.api.exceptions import (
     ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    UnprocessableEntityException,
     ValidationException,
-    WaveException,
 )
 from wavecore.api.services import file_tree, shared
 from wavecore.api.services.block_node_checks import (
@@ -97,6 +99,8 @@ from wavecore.models.plugins import (
 )
 
 logger = logging.getLogger(__name__)
+
+ETAG_MISMATCH_MESSAGE = "Precondition failed: resource has been modified"
 
 _TEST_FILENAME = "test.yaml"
 # Each block site naming a variable, with the block it sits in.
@@ -209,16 +213,25 @@ class ReadOnlyExpressionImportError(ValidationException):
         self.errors = errors
 
 
-class VariableValueImportError(ValidationException):
-    """An imported test holds a variable value the number rule refuses (REQ-3.1.3.14)."""
-
-
 class RepeatedEdgeIdImportError(ValidationException):
     """An imported test has two edges that carry one id."""
 
     def __init__(self, message: str, errors: list[dict[str, Any]]) -> None:
         super().__init__(message)
         self.errors = errors
+
+
+class VariableValueImportError(ValidationException):
+    """An imported test holds a variable value the number rule refuses (REQ-3.1.3.14)."""
+
+    error_code = "INVALID_VARIABLE_VALUE"
+
+
+class FatalImportError(UnprocessableEntityException):
+    """An imported test has validation errors no import fix can repair."""
+
+    error_code = "FATAL_VALIDATION"
+    message = "Fatal validation errors prevent import"
 
 
 def _collect_repairs(
@@ -799,11 +812,7 @@ def create_test(data: dict[str, Any]) -> dict[str, Any]:
         ConflictException: If test name already exists
     """
     name = data.get("name", "")
-
-    # Check if test with same name already exists
-    for test in _list_all_tests():
-        if test.get("name") == name:
-            raise ConflictException(f"Test with name '{name}' already exists")
+    _refuse_taken_name(name)
 
     # Generate new test
     test_id = str(uuid.uuid4())
@@ -1019,15 +1028,17 @@ def get_test(test_id: str) -> dict[str, Any] | None:
     return result
 
 
+def _refuse_taken_name(name: Any, own_id: Any = None) -> None:
+    """Raise when a test other than ``own_id`` already holds the name."""
+    if any(t.get("name") == name and t.get("id") != own_id for t in _list_all_tests()):
+        raise ConflictException(f"Test with name '{name}' already exists")
+
+
 def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> None:
     """Raise when the update renames the test onto a name another test holds."""
     if "name" not in data or data["name"] == test.get("name"):
         return
-    if any(
-        existing.get("name") == data["name"] and existing.get("id") != test.get("id")
-        for existing in _list_all_tests()
-    ):
-        raise ConflictException(f"Test with name '{data['name']}' already exists")
+    _refuse_taken_name(data["name"], test.get("id"))
 
 
 def update_test(
@@ -1044,7 +1055,8 @@ def update_test(
         Updated test or None if not found
 
     Raises:
-        ConflictException: If ETag mismatch or the new name is taken
+        PreconditionRequiredException: If the ETag does not match
+        ConflictException: If the new name is taken
         ValidationException: If the stored version is not MAJOR.MINOR.PATCH
         SaveValidationError: If validation errors remain after autofix
     """
@@ -1056,7 +1068,7 @@ def update_test(
     if etag:
         current_etag = _generate_etag(test)
         if etag != current_etag:
-            raise ConflictException("Precondition failed: resource has been modified")
+            raise PreconditionRequiredException(ETAG_MISMATCH_MESSAGE)
 
     _refuse_taken_rename(test, data)
 
@@ -1135,7 +1147,8 @@ def update_test_metadata(
         Updated test or None if not found
 
     Raises:
-        ConflictException: If ETag mismatch or duplicate name
+        PreconditionRequiredException: If the ETag does not match
+        ConflictException: If the new name is taken
     """
     test = _load_test(test_id)
     if test is None:
@@ -1145,7 +1158,7 @@ def update_test_metadata(
     if etag:
         current_etag = _generate_etag(test)
         if etag != current_etag:
-            raise ConflictException("Precondition failed: resource has been modified")
+            raise PreconditionRequiredException(ETAG_MISMATCH_MESSAGE)
 
     _refuse_taken_rename(test, data)
 
@@ -1230,13 +1243,16 @@ def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
     repairs: dict[str, list[dict[str, Any]]] = {}
 
     for idx, test_data in enumerate(tests):
+        if not isinstance(test_data, dict):
+            failed.append({"index": idx, "error": shared.NOT_AN_OBJECT_ITEM})
+            continue
         try:
-            test = create_test(shared.batch_object(test_data))
+            test = create_test(test_data)
         except SaveValidationError as e:
             failed.append({"index": idx, "error": e.errors[0]["message"]})
             continue
-        except (WaveException, ValueError) as e:
-            failed.append({"index": idx, "error": str(e)})
+        except Exception as e:
+            failed.append(shared.batch_failure(idx, e))
             continue
         created.append(test["id"])
         repairs[test["id"]] = test["repairs"]
@@ -1259,24 +1275,29 @@ def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
     repairs: dict[str, list[dict[str, Any]]] = {}
 
     for idx, item in enumerate(updates):
+        problem = shared.batch_update_problem(item)
+        if problem is not None:
+            failed.append({"index": idx, "error": problem})
+            continue
+        test_id = str(item.get("id", ""))
+        # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
+        update_data: dict[str, Any] = item.get("update", {})
+        if not update_data:
+            # If no "update" key, use remaining fields as update data
+            update_data = {k: v for k, v in item.items() if k != "id"}
         try:
-            update = shared.batch_object(item)
-            test_id = str(update.get("id", ""))
-            # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
-            update_data = shared.batch_update_fields(update)
-            if not update_data:
-                # If no "update" key, use remaining fields as update data
-                update_data = {k: v for k, v in update.items() if k != "id"}
             result = update_test(test_id, update_data)
-            if result is None:
-                failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
-            else:
-                updated.append(test_id)
-                repairs[test_id] = result["repairs"]
         except SaveValidationError as e:
             failed.append({"index": idx, "error": e.errors[0]["message"]})
+            continue
         except Exception as e:
-            failed.append({"index": idx, "error": str(e)})
+            failed.append(shared.batch_failure(idx, e))
+            continue
+        if result is None:
+            failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
+        else:
+            updated.append(test_id)
+            repairs[test_id] = result["repairs"]
 
     return {"updated": updated, "failed": failed, "repairs": repairs}
 
@@ -1351,7 +1372,7 @@ def delete_test_version(test_id: str, version: str) -> bool:
         True if deleted, False if not found
 
     Raises:
-        ValueError: If version has dependencies
+        ConflictException: If version has dependencies
     """
     test = _load_test(test_id)
     if test is None:
@@ -1500,7 +1521,7 @@ def update_test_variables(
         Updated variable declarations or None if not found
 
     Raises:
-        ValueError: If type mismatch or invalid expression syntax
+        ValidationException: If type mismatch or invalid expression syntax
     """
     test = _load_test(test_id)
     if test is None:
@@ -4616,7 +4637,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
 def clone_test(
     test_id: str, new_name: str, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a test with a new name.
+    """Clone a test with a new name no other test has.
 
     Args:
         test_id: Source test UUID
@@ -4629,6 +4650,7 @@ def clone_test(
     source = _load_test(test_id)
     if source is None:
         return None
+    _refuse_taken_name(new_name)
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())
@@ -4731,7 +4753,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
         Test with new version created from restore, or None if not found
 
     Raises:
-        ValueError: If version not found
+        NotFoundException: If version not found
     """
     test = _load_test(test_id)
     if test is None:
@@ -4742,7 +4764,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
     # Check version exists
     version_entry = next((v for v in versions if v["version"] == version), None)
     if version_entry is None:
-        raise ValidationException(f"Version '{version}' not found for test '{test_id}'")
+        raise NotFoundException(f"Version '{version}' not found for test '{test_id}'")
 
     now = datetime.now(UTC).isoformat()
 
@@ -4831,23 +4853,28 @@ def _parse_test_file(content: bytes, filename: str) -> dict[str, Any]:
         Parsed test data dict
 
     Raises:
-        ValueError: If the file cannot be parsed
+        ValidationException: If the file cannot be parsed
     """
-    text = content.decode("utf-8")
     lower = filename.lower()
-
     if lower.endswith(_EXT_JSON):
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValidationException(f"Invalid JSON: {exc}") from exc
+        kind = "JSON"
     elif lower.endswith((_EXT_YAML, ".yml")):
-        try:
-            data = load_yaml(text)
-        except yaml.YAMLError as exc:
-            raise ValidationException(f"Invalid YAML: {exc}") from exc
+        kind = "YAML"
     else:
         raise ValidationException(f"Unsupported file format: {filename}")
+
+    unparsable = f"Invalid {kind}: could not parse file"
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValidationException(unparsable) from exc
+    try:
+        data = json.loads(text) if kind == "JSON" else load_yaml(text)
+    except (json.JSONDecodeError, yaml.YAMLError) as exc:
+        raise ValidationException(f"Invalid {kind}: {exc}") from exc
+    except ValueError as exc:
+        # A number too long to read, or a date that does not exist
+        raise ValidationException(unparsable) from exc
 
     shared.refuse_unencodable_file(text, data)
     if not isinstance(data, dict):
@@ -4974,7 +5001,7 @@ def export_tests_batch(
     selected test that has any.
 
     Raises:
-        ValidationException: If any test is not found
+        NotFoundException: If any test is not found
     """
     documents: list[tuple[str, str, str]] = []
     files: list[tuple[str, str, Path]] = []
@@ -4983,7 +5010,7 @@ def export_tests_batch(
     for tid in test_ids:
         test = _load_test(tid)
         if test is None:
-            raise ValidationException(f"Test not found: {tid}")
+            raise NotFoundException(f"Test not found: {tid}")
 
         content, filename = _export_document(test, fmt, secrets)
         base_filename = filename
@@ -5034,7 +5061,7 @@ def validate_test_import(content: bytes, filename: str) -> dict[str, Any]:
         Validation results with per-test status
 
     Raises:
-        ValueError: If file cannot be parsed at all
+        ValidationException: If file cannot be parsed at all
     """
     documents, files_by_id = _parse_import_entries(content, filename)
 
@@ -5240,7 +5267,7 @@ def _validated_import_fixes(test_data: dict[str, Any], name: str) -> list[str]:
     """Validate an imported test and apply its auto-fixes; returns what was fixed."""
     validation = _validate_test_data(test_data, context="import")
     if validation.get("fatal"):
-        raise ValidationException("Fatal validation errors prevent import")
+        raise FatalImportError()
     read_only = _read_only_errors(validation)
     if read_only:
         reasons = " ".join(str(e.get("message", "")) for e in read_only)
@@ -5307,7 +5334,8 @@ def import_tests(
         Import results dict
 
     Raises:
-        ValueError: If file cannot be parsed or has fatal errors
+        ValidationException: If file cannot be parsed or a test refuses to import
+        UnprocessableEntityException: If a test has errors no import fix repairs
     """
     if conflict_resolutions is None:
         conflict_resolutions = {}

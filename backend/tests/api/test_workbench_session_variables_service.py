@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.api.services.workbench._common import DEFAULT_USER_ID
@@ -70,9 +71,11 @@ def _seed_session(
 class TestGetSessionVariables:
     """Direct calls against ``workbench_service.get_session_variables``."""
 
-    def test_raises_lookup_error_for_unknown_session_exact_message(self) -> None:
+    def test_raises_not_found_for_unknown_session_exact_message(self) -> None:
         unknown_id = str(uuid.uuid4())
-        with pytest.raises(LookupError, match=rf"^Workbench session '{unknown_id}' not found$"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Workbench session '{unknown_id}' not found$"
+        ):
             workbench_service.get_session_variables(unknown_id)
 
     def test_returns_all_realized_variables_with_types(self) -> None:
@@ -364,12 +367,12 @@ class TestGetSessionVariablesByScope:
         assert result["variables"]["copy"] == {"value": "********", "type": "string"}
         assert result["variables"]["plain"] == {"value": "open", "type": "string"}
 
-    def test_unknown_path_raises_lookup_error_exact_message(self) -> None:
+    def test_unknown_path_raises_not_found_exact_message(self) -> None:
         session_id = str(uuid.uuid4())
         _seed_scoped_session(session_id)
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.get_session_variables(session_id, function_path=("fn-9",))
 
@@ -378,14 +381,16 @@ class TestGetSessionVariablesByScope:
         _seed_scoped_session(session_id)
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-1/fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-1/fn-9', session_id))}$"
         ):
             workbench_service.get_session_variables(session_id, function_path=("fn-1", "fn-9"))
 
     def test_unknown_session_is_refused_before_the_path(self) -> None:
         unknown_id = str(uuid.uuid4())
 
-        with pytest.raises(LookupError, match=rf"^Workbench session '{unknown_id}' not found$"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Workbench session '{unknown_id}' not found$"
+        ):
             workbench_service.get_session_variables(unknown_id, function_path=("fn-1",))
 
     def test_no_path_keeps_the_test_scope_read(self) -> None:
@@ -422,7 +427,7 @@ class TestGetSessionVariablesByScope:
         session_id = await _finished_standalone_session()
 
         with pytest.raises(
-            LookupError, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
+            NotFoundException, match=rf"^{re.escape(_scope_not_found('fn-9', session_id))}$"
         ):
             workbench_service.get_session_variables(session_id, function_path=("fn-9",))
 

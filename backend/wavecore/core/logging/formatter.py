@@ -597,12 +597,16 @@ def _sync_third_party_levels(python_level: int) -> None:
         logging.getLogger(name).setLevel(stricter)
 
 
+class InvalidLogLevelError(ValueError):
+    """A level name that is neither a WAVE level nor a Python level."""
+
+
 def canonical_level(level: str) -> str:
     """The WAVE name of a level given by its name or its Python name, in any case."""
     name = level.upper()
     name = _LEVEL_ALIASES.get(name, name)
     if name not in VALID_LEVELS:
-        raise ValueError(
+        raise InvalidLogLevelError(
             f"Invalid log level: '{level}'. Must be one of: DEBUG, INFO, WARN, ERROR, FATAL"
         )
     return name
@@ -621,7 +625,7 @@ def set_log_level(level: str) -> str:
         The canonical name of the level that was set.
 
     Raises:
-        ValueError: If level is not a valid log level.
+        InvalidLogLevelError: If level is not a valid log level.
     """
     canonical = canonical_level(level)
     python_level = _level_str_to_python(canonical)

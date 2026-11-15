@@ -15,7 +15,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, NotFoundException
 
 _NOT_FOUND_RE = re.compile(r"^Workbench session '[^']+' not found$")
 _CONFLICT_RE = re.compile(r"^Cannot skip: session is '[^']+', not paused$")
@@ -94,7 +94,7 @@ class TestSkipBlockErrors:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.skip_current_block"
         ) as mock_skip:
-            mock_skip.side_effect = LookupError(f"Workbench session '{session_id}' not found")
+            mock_skip.side_effect = NotFoundException(f"Workbench session '{session_id}' not found")
 
             response = client.post(f"/workbench/{session_id}/skip-block")
 

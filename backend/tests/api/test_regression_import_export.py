@@ -343,7 +343,7 @@ class TestCheckImportCollisionsEdgeCases:
 
         with patch(f"{_STORAGE_MODULE}._suite_exists", return_value=False):
             # Must not raise - the item is skipped because none of its suites exist yet.
-            import_export._check_import_collisions([item])
+            import_export._check_import_collisions([item], [import_export._import_suites(item)])
 
 
 # ============================================================================
@@ -1249,3 +1249,161 @@ class TestExportKeepsTheWholeFileName:
             response = client.post("/regressions/export", json={"regression_ids": [regression_id]})
 
         assert_whole_name(response, name)
+
+
+class TestImportARegressionThatListsASuiteTwice:
+    """A repeated Suite in an imported Regression is stripped as a fix, like an unknown one."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture
+    def member_id(self) -> str:
+        from wavecore.api.services.suites import service as suite_service
+
+        return str(suite_service.create_suite({"name": "Member Suite"})["id"])
+
+    def _file(self, member_id: str) -> dict[str, Any]:
+        suites = [member_id, "gone-suite", member_id]
+        content = yaml.dump({"name": "Twice Regression", "suites": suites}).encode()
+        return {"file": ("regression.yaml", content, "application/x-yaml")}
+
+    def test_validation_names_the_repeat_as_fixable(
+        self, client: TestClient, member_id: str
+    ) -> None:
+        response = client.post("/regressions/import/validate", files=self._file(member_id))
+
+        item = response.json()["data"]["regressions"][0]
+        assert item["status"] == "fixable"
+        assert item["fixable_errors"] == [
+            {
+                "code": "UNRESOLVABLE_SUITE",
+                "message": "Suite 'gone-suite' not found, will be stripped",
+            },
+            {
+                "code": "REPEATED_SUITE",
+                "message": f"Suite '{member_id}' is listed more than once, will be stripped",
+            },
+        ]
+
+    def test_import_keeps_the_suite_once_and_reports_the_fix(
+        self, client: TestClient, member_id: str
+    ) -> None:
+        from wavecore.api.services.regressions import service as regression_service
+
+        response = client.post("/regressions/import", files=self._file(member_id))
+
+        data = response.json()["data"]
+        assert data["fixes_applied"] == [
+            {
+                "name": "Twice Regression",
+                "fixes": [
+                    "Stripped unresolvable suite 'gone-suite'",
+                    f"Stripped repeated suite '{member_id}'",
+                ],
+            }
+        ]
+        stored = regression_service.get_regression(data["imported"][0]["id"])
+        assert stored is not None
+        assert stored["suites"] == [member_id]
+
+
+# Each member that is not an ID string, and the finding and fix it is stripped with
+_NOT_ID_SUITES = [
+    (5, "Suite '5' not found, will be stripped", "Stripped unresolvable suite '5'"),
+    (
+        {"id": "x"},
+        "Suite '{'id': 'x'}' not found, will be stripped",
+        "Stripped unresolvable suite '{'id': 'x'}'",
+    ),
+    (None, "Suite 'None' not found, will be stripped", "Stripped unresolvable suite 'None'"),
+]
+
+_TYPED_VARIABLES = {"env": {"type": "string", "value": "dev"}}
+
+
+class TestImportARegressionWhoseSuitesAreNotIDs:
+    """A Suite list member that is not an ID string is stripped as a fix, like an unknown
+    Suite; a Suite list that is not a list is fatal for the Regression."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.fixture
+    def member_id(self) -> str:
+        from wavecore.api.services.suites import service as suite_service
+
+        return str(suite_service.create_suite({"name": "Member Suite"})["id"])
+
+    @staticmethod
+    def _file(document: dict[str, Any]) -> dict[str, Any]:
+        content = yaml.dump({"name": "Odd Regression", **document}).encode()
+        return {"file": ("regression.yaml", content, "application/x-yaml")}
+
+    @pytest.mark.parametrize("variables", [{}, _TYPED_VARIABLES], ids=["plain", "typed"])
+    def test_validation_names_each_one_as_fixable(
+        self, client: TestClient, member_id: str, variables: dict[str, Any]
+    ) -> None:
+        suites = [member_id, *(member for member, _, _ in _NOT_ID_SUITES)]
+        document = {"suites": suites, "variables": variables}
+
+        response = client.post("/regressions/import/validate", files=self._file(document))
+
+        item = response.json()["data"]["regressions"][0]
+        assert item["status"] == "fixable"
+        assert item["fatal_errors"] == []
+        assert item["fixable_errors"] == [
+            {"code": "UNRESOLVABLE_SUITE", "message": message} for _, message, _ in _NOT_ID_SUITES
+        ]
+
+    @pytest.mark.parametrize("variables", [{}, _TYPED_VARIABLES], ids=["plain", "typed"])
+    def test_import_keeps_the_known_suite_and_reports_each_fix(
+        self, client: TestClient, member_id: str, variables: dict[str, Any]
+    ) -> None:
+        from wavecore.api.services.regressions import service as regression_service
+
+        suites = [member_id, *(member for member, _, _ in _NOT_ID_SUITES)]
+        document = {"suites": suites, "variables": variables}
+
+        response = client.post("/regressions/import", files=self._file(document))
+
+        data = response.json()["data"]
+        assert data["fixes_applied"] == [
+            {"name": "Odd Regression", "fixes": [fix for _, _, fix in _NOT_ID_SUITES]}
+        ]
+        stored = regression_service.get_regression(data["imported"][0]["id"])
+        assert stored is not None
+        assert stored["suites"] == [member_id]
+
+    @pytest.mark.parametrize("suites", ["abc", 5, {"id": "x"}, None])
+    def test_validation_names_a_suite_list_that_is_not_a_list_as_fatal(
+        self, client: TestClient, suites: Any
+    ) -> None:
+        response = client.post("/regressions/import/validate", files=self._file({"suites": suites}))
+
+        data = response.json()["data"]
+        assert data["blocked"] == 1
+        item = data["regressions"][0]
+        assert item["status"] == "fatal"
+        assert item["fatal_errors"] == [
+            {"code": "INVALID_SUITES", "message": "Field 'suites' must be a list"}
+        ]
+        assert item["fixable_errors"] == []
+
+    @pytest.mark.parametrize("suites", ["abc", 5, {"id": "x"}, None])
+    def test_import_refuses_a_suite_list_that_is_not_a_list(
+        self, client: TestClient, suites: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+        from wavecore.api.services.regressions import _storage
+
+        response = client.post("/regressions/import", files=self._file({"suites": suites}))
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Field 'suites' must be a list")
+        assert _storage._list_all_regressions() == []

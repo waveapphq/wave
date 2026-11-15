@@ -148,13 +148,13 @@ class TestStartExecution:
             )
 
     def test_start_execution_raises_when_entity_not_found(self) -> None:
-        """Test that start_execution raises LookupError when entity not found."""
+        """Test that start_execution raises NotFoundException when entity not found."""
         from wavecore.api.services.executions import service as execution_service
 
         entity_id = str(uuid.uuid4())
 
         with patch.object(execution_service, "_get_entity", return_value=None):
-            with pytest.raises(LookupError, match=r"not found"):
+            with pytest.raises(NotFoundException, match=rf"^Test with ID '{entity_id}' not found$"):
                 execution_service.start_execution(
                     entity_type="test",
                     entity_id=entity_id,
@@ -257,7 +257,7 @@ class TestStartExecution:
             assert retrieved["environment_id"] == TEST_ENV_ID
 
     def test_start_execution_raises_when_environment_not_found(self) -> None:
-        """Test that start_execution raises LookupError for non-existent environment."""
+        """Test that start_execution raises NotFoundException for non-existent environment."""
         from wavecore.api.services.executions import service as execution_service
 
         entity_id = str(uuid.uuid4())
@@ -267,7 +267,7 @@ class TestStartExecution:
             execution_service, "_get_entity", return_value={"id": entity_id, "name": "test-1"}
         ):
             with pytest.raises(
-                LookupError, match=r"^Environment with ID 'env-nonexistent-000' not found$"
+                NotFoundException, match=r"^Environment with ID 'env-nonexistent-000' not found$"
             ):
                 execution_service.start_execution(
                     entity_type="test",
@@ -2100,12 +2100,14 @@ class TestGetEntityServiceWiring:
         assert result["status"] == "running"
 
     def test_start_execution_fails_for_nonexistent_entity(self) -> None:
-        """Test that start_execution raises LookupError for non-existent entity."""
+        """Test that start_execution raises NotFoundException for non-existent entity."""
         from wavecore.api.services.executions import service as execution_service
 
         nonexistent_id = str(uuid.uuid4())
 
-        with pytest.raises(LookupError, match=r"not found"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Test with ID '{nonexistent_id}' not found$"
+        ):
             execution_service.start_execution(
                 entity_type="test",
                 entity_id=nonexistent_id,

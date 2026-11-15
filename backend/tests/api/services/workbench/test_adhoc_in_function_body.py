@@ -33,6 +33,7 @@ from tests.api.services.workbench.test_remote_exec_body_contents import (
     rex_node,
 )
 from tests.api.services.workbench.test_variable_push_on_write import _paths, _push_recorder
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.plugins.http_client import HTTPClientPlugin
@@ -291,7 +292,7 @@ class TestRunScopeOnANestedFunction:
         assert run.session["status"] == "passed", log_messages(run.session_id)
 
     async def test_an_unknown_function_on_the_path_is_refused(self) -> None:
-        with _stored(_nested_graph()), pytest.raises(LookupError) as refused:
+        with _stored(_nested_graph()), pytest.raises(NotFoundException) as refused:
             await _run_scope("inner", ("missing",))
 
         assert str(refused.value) == f"Function block 'missing' not found in Test '{TEST_ID}'"
@@ -345,7 +346,7 @@ class TestRunCurrentInsideAFunctionBody:
         ]
 
     async def test_an_unknown_block_in_the_body_is_refused(self) -> None:
-        with _stored(_nested_graph()), pytest.raises(LookupError) as refused:
+        with _stored(_nested_graph()), pytest.raises(NotFoundException) as refused:
             await _run_current("after", ("outer",))
 
         assert str(refused.value) == "block not found in workflow"
@@ -454,7 +455,7 @@ class TestAFailureInsideTheBody:
         missing = function_node("gone", local_definition("Gone", [], []))
         missing["data"] = {**missing["data"], "functionLifecycle": "shared", "functionId": ""}
         graph = ([missing], [edge("start-node", "gone")])
-        with _stored(graph), pytest.raises(LookupError) as refused:
+        with _stored(graph), pytest.raises(NotFoundException) as refused:
             await _run_current("anything", ("gone",))
 
         assert str(refused.value) == "Shared Function block missing functionId"

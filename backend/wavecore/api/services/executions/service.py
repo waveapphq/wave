@@ -256,11 +256,11 @@ def _resolve_start_inputs(
 
     entity = _get_entity(entity_type, entity_id)
     if entity is None:
-        raise LookupError(f"{entity_type.capitalize()} with ID '{entity_id}' not found")
+        raise NotFoundException(f"{entity_type.capitalize()} with ID '{entity_id}' not found")
 
     environment = environment_service.get_environment(environment_id)
     if environment is None:
-        raise LookupError(f"Environment with ID '{environment_id}' not found")
+        raise NotFoundException(f"Environment with ID '{environment_id}' not found")
 
     _check_entity_validation(entity_type, entity_id)
     _check_entity_is_populated(entity_type, entity)
@@ -790,7 +790,7 @@ def stop_execution(execution_id: str) -> dict[str, Any] | None:
 
     try:
         workbench_service.stop_workbench_run(execution_id)
-    except LookupError:
+    except NotFoundException:
         _update_execution_status(execution_id, "stopped")
     return _execution_storage[execution_id]
 

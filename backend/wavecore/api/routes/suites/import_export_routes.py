@@ -10,14 +10,18 @@ Endpoints:
 - GET /suites/{suite_id}/export: Export single suite
 """
 
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import id_list_field, read_json_object, validate_uuid
+from wavecore.api.routes.shared import (
+    id_list_field,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.suites import import_export as suite_import_export
@@ -103,12 +107,7 @@ async def import_suites(
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError as err:
-            raise ValidationException("Invalid JSON in conflict_resolutions") from err
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     # ValidationException from service propagates to middleware
     result = suite_import_export.import_suites(content, filename, resolutions)

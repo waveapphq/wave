@@ -80,6 +80,10 @@ NAME_MAX_LENGTH = 32
 _PARAM_NAME_RE = re.compile(PARAM_NAME_PATTERN)
 
 
+class FunctionNotFoundError(LookupError):
+    """An unknown Function id, or an unknown version of a known one."""
+
+
 def _functions_dir() -> Path:
     return get_functions_storage_path()
 
@@ -263,7 +267,7 @@ def set_index_timestamps(function_id: str, *, created_at: str, updated_at: str) 
     """Set the created and updated times of a Function's index."""
     index = _read_index(function_id)
     if index is None:
-        raise LookupError(f"Function '{function_id}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' not found")
     index["created_at"] = created_at
     index["updated_at"] = updated_at
     _write_index(function_id, index)
@@ -351,10 +355,10 @@ def load_version(function_id: str, version: str) -> dict[str, Any]:
     """Load a specific version's definition (with metadata merged in)."""
     index = _read_index(function_id)
     if index is None:
-        raise LookupError(f"Function '{function_id}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' not found")
     payload = _read_version_payload(function_id, version)
     if payload is None:
-        raise LookupError(f"Function '{function_id}' version '{version}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' version '{version}' not found")
     return _compose_definition(
         function_id=function_id,
         name=index.get("name", ""),
@@ -370,7 +374,7 @@ def list_versions(function_id: str) -> dict[str, Any]:
     """Return ``{versions: [...], latest: str}`` per the GET /versions contract."""
     index = _read_index(function_id)
     if index is None:
-        raise LookupError(f"Function '{function_id}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' not found")
     versions_list: list[dict[str, Any]] = []
     for version in index.get("available_versions") or []:
         payload = _read_version_payload(function_id, version)
@@ -421,11 +425,11 @@ def load_function(function_id: str) -> tuple[dict[str, Any], str]:
     """Read the LATEST version of a Function and return (definition, etag)."""
     index = _read_index(function_id)
     if index is None:
-        raise LookupError(function_id)
+        raise FunctionNotFoundError(function_id)
     latest = index.get("latest_version", "")
     payload = _read_version_payload(function_id, latest)
     if payload is None:
-        raise LookupError(function_id)
+        raise FunctionNotFoundError(function_id)
     definition = _compose_definition(
         function_id=function_id,
         name=index.get("name", ""),
@@ -439,24 +443,24 @@ def load_function(function_id: str) -> tuple[dict[str, Any], str]:
 
 
 def delete_function_file(function_id: str) -> None:
-    """Remove the Function directory; raise LookupError if missing."""
+    """Remove the Function directory; raise FunctionNotFoundError if missing."""
     if not is_entity_id(function_id) or not _function_dir(function_id).exists():
-        raise LookupError(function_id)
+        raise FunctionNotFoundError(function_id)
     shutil.rmtree(_function_dir(function_id))
 
 
 def delete_version(function_id: str, version: str) -> None:
     """Remove a single version yaml from a Function and rewrite the index.
 
-    Raises ``LookupError`` for an unknown function id or version. Removes the
+    Raises ``FunctionNotFoundError`` for an unknown function id or version. Removes the
     function directory entirely if the last version is being deleted.
     """
     index = _read_index(function_id)
     if index is None:
-        raise LookupError(f"Function '{function_id}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' not found")
     available = list(index.get("available_versions") or [])
     if version not in available:
-        raise LookupError(f"Function '{function_id}' version '{version}' not found")
+        raise FunctionNotFoundError(f"Function '{function_id}' version '{version}' not found")
     path = _version_file(function_id, version)
     if path.exists():
         path.unlink()

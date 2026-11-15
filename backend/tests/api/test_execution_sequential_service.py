@@ -162,10 +162,11 @@ def test_stop_active_child_ignores_missing_sessions(tmp_storage: Any) -> None:
     _sequential._child_sessions["c1"] = {"parent_id": exec_id, "run_id": "r1"}
     _sequential._child_sessions["c2"] = {"parent_id": exec_id, "run_id": "r2"}
 
+    from wavecore.api.exceptions import NotFoundException
     from wavecore.api.services.workbench import service as workbench_service
 
     def _raiser(sid: str) -> None:
-        raise LookupError(sid)
+        raise NotFoundException(f"Workbench session '{sid}' not found")
 
     with patch.object(workbench_service, "stop_workbench_run", side_effect=_raiser):
         _sequential.stop_active_child(exec_id)  # must not raise

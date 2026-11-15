@@ -28,7 +28,7 @@ async def get_run_report(execution_id: str, format: str = "json") -> dict[str, A
         job = jobs.get_job(execution_id, format)
         view = jobs.job_view(job) if job is not None else view
     if view["status"] == "failed":
-        raise InternalServerException(view.get("error") or "Report generation failed")
+        raise InternalServerException(view["error"])
 
     artifact_id = str(view["artifact_id"])
     content = (get_artifacts_storage_path() / artifact_id).read_text(encoding="utf-8")

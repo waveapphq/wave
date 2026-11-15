@@ -2,6 +2,8 @@
 
 This document maintains an authoritative registry of all approved coverage exclusions in the frontend codebase. Each exclusion has a unique identifier that is referenced in the source code.
 
+This registry is one of the exclusion lists in [README.md](README.md), which holds the rules for all of them.
+
 **POLICY**: Modifications to this document require explicit authorization. Adding new exclusions or modifying existing ones without approval is strictly forbidden.
 
 ## Correlation Rules

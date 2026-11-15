@@ -29,7 +29,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 
@@ -144,7 +144,9 @@ class TestStepIntoEndpoint:
     ) -> None:
         """404 body matches ``^Workbench session '[^']+' not found$``."""
         with patch("wavecore.api.routes.workbench.workbench_service.step_into") as mock_step_into:
-            mock_step_into.side_effect = LookupError(f"Workbench session '{session_id}' not found")
+            mock_step_into.side_effect = NotFoundException(
+                f"Workbench session '{session_id}' not found"
+            )
 
             response = client.post(f"/workbench/{session_id}/step-into")
 
@@ -201,10 +203,10 @@ class TestStepIntoService:
         yield
         _wb_common._clear_sessions_sync()
 
-    def test_raises_lookup_error_when_session_missing(self) -> None:
-        """Unknown session id raises LookupError with exact message."""
+    def test_raises_not_found_when_session_missing(self) -> None:
+        """Unknown session id raises NotFoundException with exact message."""
         missing = "missing-session-id"
-        with pytest.raises(LookupError) as exc_info:
+        with pytest.raises(NotFoundException) as exc_info:
             workbench_service.step_into(session_id=missing)
         assert f"Workbench session '{missing}' not found" in str(exc_info.value)
 

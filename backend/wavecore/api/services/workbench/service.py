@@ -90,7 +90,7 @@ from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.core.table import Table
 from wavecore.core.table_values import is_table_value
 from wavecore.core.variables.declared_types import types_of_declarations, types_of_function
-from wavecore.core.variables.declared_values import declared_start
+from wavecore.core.variables.declared_values import DeclaredKindError, declared_start
 from wavecore.core.variables.element_types import realize_declared_value, runtime_element_types
 from wavecore.core.variables.usage import (
     block_reads,
@@ -222,7 +222,7 @@ def _validate_run_preconditions(
 
     test = test_service.get_test(test_id)
     if test is None:
-        raise LookupError(f"Test with ID '{test_id}' not found")
+        raise NotFoundException(f"Test with ID '{test_id}' not found")
 
     if in_memory_workflow is not None:
         in_memory_test = test_service.unsaved_test(
@@ -237,7 +237,7 @@ def _validate_run_preconditions(
 
     environment = environment_service.get_environment(environment_id)
     if environment is None:
-        raise LookupError(f"Environment with ID '{environment_id}' not found")
+        raise NotFoundException(f"Environment with ID '{environment_id}' not found")
 
     return test, environment
 
@@ -305,7 +305,7 @@ def _flatten_variables(
             continue
         try:
             start = declared_start(var_entry)
-        except ValueError as exc:
+        except DeclaredKindError as exc:
             raise ValidationException(str(exc)) from exc
         if start.kind == "expression":
             expr_map[var_name] = (start.value, start.var_type)
@@ -366,7 +366,7 @@ def _validate_adhoc_target(
 ) -> None:
     """Validate that any ad-hoc target exists and (for ``single_node_id``) is runnable.
 
-    Raises ``LookupError`` for an unknown node id and
+    Raises ``NotFoundException`` for an unknown node id and
     ``ValidationException`` when ``single_node_id`` points at a Break /
     Continue / Note.
     """
@@ -375,7 +375,7 @@ def _validate_adhoc_target(
         return
     target_node = next((n for n in nodes if n.get("id") == target_node_id), None)
     if target_node is None:
-        raise LookupError("block not found in workflow")
+        raise NotFoundException("block not found in workflow")
     if single_node_id is None:
         return
     element_type = (target_node.get("data", {}) or {}).get("elementType")
@@ -806,7 +806,7 @@ def _instance_definition(
     """The definition of the Function instance at ``path``; None when no instance is there."""
     try:
         return resolve_function_canvases(workflow, path, owner_id)[-1].definition
-    except LookupError:
+    except NotFoundException:
         return None
 
 
@@ -833,7 +833,7 @@ def _checked_entry(
     _check_declared(scope, name, str(entry.get("type")))
     try:
         declared_start(entry)
-    except ValueError as exc:
+    except DeclaredKindError as exc:
         raise ValidationException(str(exc)) from exc
     _refuse_value_problem(name, declared_value_of(entry, "value"))
     return {**entry, "secret": True} if name in secret else dict(entry)
@@ -1348,7 +1348,7 @@ def _place_variables(session: dict[str, Any], path: tuple[str, ...]) -> Any:
     """The scope an ad-hoc place reads; none for an instance the session never entered."""
     try:
         return _scope_at(session, path).variables
-    except LookupError:
+    except NotFoundException:
         return {}
 
 
@@ -1530,11 +1530,11 @@ def _start_scoped_function_run(
 
     test = test_service.get_test(test_id)
     if test is None:
-        raise LookupError(f"Test with ID '{test_id}' not found")
+        raise NotFoundException(f"Test with ID '{test_id}' not found")
 
     environment = environment_service.get_environment(environment_id)
     if environment is None:
-        raise LookupError(f"Environment with ID '{environment_id}' not found")
+        raise NotFoundException(f"Environment with ID '{environment_id}' not found")
 
     source = _run_load_workflow(
         workflow if workflow is not None else (test.get("workflow") or {}),
@@ -1741,7 +1741,7 @@ def update_skipped_nodes(session_id: str, skipped_node_ids: list[str]) -> dict[s
     """Update the skipped node IDs for a running workbench session."""
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     if session.get("status") != WorkbenchStatus.RUNNING.value:
         raise ConflictException(
@@ -1763,7 +1763,7 @@ def update_breakpoints(session_id: str, breakpoints: list[str]) -> dict[str, Any
     """Replace the live breakpoint set on a running or paused session."""
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status not in _LIVE_DEBUG_STATUSES:
@@ -1791,7 +1791,7 @@ def update_debug_options(
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status not in _LIVE_DEBUG_STATUSES:
@@ -1816,7 +1816,7 @@ def continue_session(session_id: str) -> dict[str, Any]:
     """Resume a paused session: the engine runs the paused node, or proceeds from its result."""
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status != WorkbenchStatus.PAUSED.value:
@@ -1844,7 +1844,7 @@ def step_over(session_id: str) -> dict[str, Any]:
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status != WorkbenchStatus.PAUSED.value:
@@ -1875,7 +1875,7 @@ def step_into(session_id: str) -> dict[str, Any]:
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status != WorkbenchStatus.PAUSED.value:
@@ -1917,7 +1917,7 @@ def repeat_step(session_id: str, override: dict[str, Any] | None = None) -> dict
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status != WorkbenchStatus.PAUSED.value:
@@ -1925,7 +1925,7 @@ def repeat_step(session_id: str, override: dict[str, Any] | None = None) -> dict
 
     paused_node_id = session.get("paused_node_id")
     if paused_node_id is None:
-        raise LookupError("Cannot repeat: no currently paused block")
+        raise NotFoundException("Cannot repeat: no currently paused block")
 
     if override is not None and override.get("node_id") != paused_node_id:
         raise ConflictException("Cannot repeat: override targets a block that is not paused")
@@ -1975,7 +1975,7 @@ def skip_current_block(session_id: str) -> dict[str, Any]:
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     current_status = session.get("status")
     if current_status != WorkbenchStatus.PAUSED.value:
@@ -2108,7 +2108,7 @@ def stop_workbench_run(session_id: str) -> dict[str, Any]:
     """
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     session["stop_reason"] = "user"
     return _terminate_session(session_id)
@@ -2146,7 +2146,7 @@ def _scope_at(session: dict[str, Any], path: Sequence[str]) -> ScopeAt:
         return ScopeAt(session.get("variables"), session.get("variable_types") or {}, "test")
     scopes = session.get("function_scopes") or {}
     if full_path not in scopes:
-        raise LookupError(
+        raise NotFoundException(
             f"Function scope '{'/'.join(path)}' not found in workbench session "
             f"'{session.get('session_id')}'"
         )
@@ -2167,7 +2167,7 @@ def get_session_variables(
     """Return one session scope's realized runtime variables, secrets masked (REQ-3.2.2.18)."""
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
     scope = _scope_at(session, function_path)
 
     # dict() over LazyVariables iterates realized entries only - pending
@@ -2363,14 +2363,14 @@ def set_variable_override(
     """Apply a transient runtime override to one session variable (REQ-3.2.1.6)."""
     session = _get_session(session_id)
     if session is None:
-        raise LookupError(f"Workbench session '{session_id}' not found")
+        raise NotFoundException(f"Workbench session '{session_id}' not found")
 
     if session.get("status") == WorkbenchStatus.RUNNING.value:
         raise ConflictException(f"Cannot override variable '{name}' while the session is running")
 
     provided = [value_given, expression is not None, template is not None]
     if sum(provided) != 1:
-        raise ValueError(
+        raise ValidationException(
             "Override request must provide exactly one of 'value', 'expression', or 'template'"
         )
 

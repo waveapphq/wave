@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.regressions._storage import (
     _get_regression_tests_count,
     _list_all_regressions,
@@ -18,6 +18,8 @@ from wavecore.api.services.regressions._storage import (
 from wavecore.api.services.shared import (
     bump_version_and_record,
     mask_secret_variables,
+    refuse_repeated_members,
+    refuse_unknown_members,
 )
 
 
@@ -51,9 +53,8 @@ def add_regression_version(regression_id: str, data: dict[str, Any]) -> dict[str
         return None
 
     if "suites" in data:
-        for suite_id in data["suites"]:
-            if not _suite_exists(suite_id):
-                raise ValidationException(f"Suite with ID '{suite_id}' not found")
+        refuse_unknown_members(data["suites"], (), "Suite", _suite_exists)
+        refuse_repeated_members(data["suites"], "Suite")
 
     if "description" in data:
         regression["description"] = data["description"]

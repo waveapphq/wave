@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_internal_error
 from tests.api.test_workbench_run_current import (  # noqa: F401
     _RUN_SCOPE,
     _create_test_on_disk,
@@ -133,4 +134,79 @@ class TestAStagedValueIsRefusedBeforeTheRun:
 
         assert resp.status_code == 400, resp.text
         assert re.match(message, resp.json()["error"]["message"]), resp.text
+        assert _workbench_sessions == {}
+
+
+_FAULT_TEXT = "engine detail /srv/wave/data/tests/declared.yaml"
+
+
+def _faulty_read(*_args: Any, **_kwargs: Any) -> Any:
+    raise ValueError(_FAULT_TEXT)
+
+
+class TestAFaultWhileAValueIsReadIsNotABadRequest:
+    """A fault inside the value reader answers the generic 500, never its own text."""
+
+    @pytest.mark.parametrize("mode", MODES)
+    def test_a_fault_reading_a_staged_value_answers_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, mode: dict[str, Any]
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
+        from wavecore.api.services.workbench._common import _workbench_sessions
+
+        node = _typed_fn_node()
+        test_id = _create_test_on_disk(client, nodes=[node])
+        env_id = _seed_environment()
+        monkeypatch.setattr(workbench_service, "declared_start", _faulty_read)
+
+        resp = _run(
+            client,
+            test_id,
+            env_id,
+            node,
+            **mode,
+            function_variables=[_seed(["fn-1"], {"n": {"type": "integer", "value": 2}})],
+        )
+
+        assert_internal_error(resp, _FAULT_TEXT)
+        assert _workbench_sessions == {}
+
+    def test_a_fault_reading_a_test_variable_answers_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
+        from wavecore.api.services.workbench._common import _workbench_sessions
+
+        node = _typed_fn_node()
+        test_id = _create_test_on_disk(
+            client, nodes=[node], variables={"count": {"type": "integer", "value": 1}}
+        )
+        env_id = _seed_environment()
+        monkeypatch.setattr(workbench_service, "declared_start", _faulty_read)
+
+        resp = _run(client, test_id, env_id, node)
+
+        assert_internal_error(resp, _FAULT_TEXT)
+        assert _workbench_sessions == {}
+
+    def test_a_fault_loading_a_function_on_the_path_answers_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services.workbench import functions as workbench_functions
+        from wavecore.api.services.workbench._common import _workbench_sessions
+
+        node = _typed_fn_node()
+        test_id = _create_test_on_disk(client, nodes=[node])
+        env_id = _seed_environment()
+
+        def _faulty_load(*_args: Any, **_kwargs: Any) -> Any:
+            raise RuntimeError(_FAULT_TEXT)
+
+        monkeypatch.setattr(workbench_functions, "_load_function_definition", _faulty_load)
+
+        resp = _run(
+            client, test_id, env_id, node, function_path=["fn-1"], single_node_id="typed-log"
+        )
+
+        assert_internal_error(resp, _FAULT_TEXT)
         assert _workbench_sessions == {}

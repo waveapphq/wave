@@ -41,7 +41,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ValidationException
+from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.services.workbench import _common as _wb_common
 
 _MUTUALLY_EXCLUSIVE_RE = r"^start_node_id and single_node_id are mutually exclusive$"
@@ -373,7 +373,7 @@ class TestWorkbenchRunAdhocNodeNotFound:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError("block not found in workflow")
+            mock_run.side_effect = NotFoundException("block not found in workflow")
 
             response = client.post(
                 "/workbench/run",
@@ -397,7 +397,7 @@ class TestWorkbenchRunAdhocNodeNotFound:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError("block not found in workflow")
+            mock_run.side_effect = NotFoundException("block not found in workflow")
 
             response = client.post(
                 "/workbench/run",
@@ -589,7 +589,7 @@ class TestStartWorkbenchRunNodeNotFound:
     def environment_id(self) -> str:
         return str(uuid.uuid4())
 
-    def test_unknown_start_node_id_raises_lookup_error_with_exact_message(
+    def test_unknown_start_node_id_raises_not_found_with_exact_message(
         self, test_id: str, environment_id: str
     ) -> None:
         from wavecore.api.services.workbench import service as workbench_service
@@ -612,7 +612,7 @@ class TestStartWorkbenchRunNodeNotFound:
             mock_get_env.return_value = environment
             mock_validate.return_value = {"fatal": False, "errors": [], "warnings": []}
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=test_id,
                     environment_id=environment_id,
@@ -621,7 +621,7 @@ class TestStartWorkbenchRunNodeNotFound:
 
             assert re.match(_NODE_NOT_FOUND_RE, str(exc_info.value))
 
-    def test_unknown_single_node_id_raises_lookup_error_with_exact_message(
+    def test_unknown_single_node_id_raises_not_found_with_exact_message(
         self, test_id: str, environment_id: str
     ) -> None:
         from wavecore.api.services.workbench import service as workbench_service
@@ -644,7 +644,7 @@ class TestStartWorkbenchRunNodeNotFound:
             mock_get_env.return_value = environment
             mock_validate.return_value = {"fatal": False, "errors": [], "warnings": []}
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=test_id,
                     environment_id=environment_id,

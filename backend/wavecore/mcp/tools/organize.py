@@ -7,7 +7,6 @@ membership and variables change only through explicit add/remove/set, and a
 referenced test or suite is confirmed to exist before the write is accepted.
 """
 
-import re
 from collections.abc import Callable
 from typing import Any
 
@@ -27,7 +26,6 @@ from wavecore.mcp.tools.discover import (
 )
 
 _LIST_ALL = 10_000
-_SUITE_NAME_RE = re.compile(r"^[a-zA-Z0-9 _-]+$")
 
 
 _MEMBER_FIX = "Pass an existing {label} id or unique name"
@@ -163,14 +161,9 @@ def _validate_suite_name(name: str | None) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     if len(name) > 255:
         findings.append(_finding("NAME_LENGTH", "Suite name must be between 1 and 255 characters"))
-    if not _SUITE_NAME_RE.match(name):
-        findings.append(
-            _finding(
-                "NAME_CONVENTION",
-                f"Suite name '{name}' violates naming convention: must contain only "
-                "alphanumeric characters, spaces, hyphens, and underscores",
-            )
-        )
+    problem = suite_service.name_convention_problem(name)
+    if problem:
+        findings.append(_finding("NAME_CONVENTION", problem))
     return findings
 
 
@@ -220,8 +213,8 @@ def create_suite(
         payload["variables"] = variables
     try:
         suite = suite_service.create_suite(payload)
-    except ConflictException as exc:
-        return {"created": False, "findings": [_suite_conflict_finding(exc)]}
+    except (ValidationException, ConflictException) as exc:
+        return {"created": False, "findings": [_suite_refusal_finding(exc)]}
     return {
         "created": True,
         "suite_id": suite["id"],
@@ -231,11 +224,11 @@ def create_suite(
     }
 
 
-def _suite_conflict_finding(exc: ConflictException) -> dict[str, Any]:
-    """A clash of variable types is a validation finding, not a name conflict."""
-    if exc.details and "collisions" in exc.details:
-        return _service_finding(exc)
-    return _finding("NAME_CONFLICT", exc.message)
+def _suite_refusal_finding(exc: ValidationException | ConflictException) -> dict[str, Any]:
+    """A taken name keeps its own code; any other refusal is a validation finding."""
+    if isinstance(exc, ConflictException) and not (exc.details and "collisions" in exc.details):
+        return _finding("NAME_CONFLICT", exc.message)
+    return _service_finding(exc)
 
 
 def _member_change_findings(
@@ -311,8 +304,8 @@ def update_suite(
         }
     try:
         updated = suite_service.update_suite(suite_id, payload)
-    except ConflictException as exc:
-        return {"updated": False, "findings": [_suite_conflict_finding(exc)]}
+    except (ValidationException, ConflictException) as exc:
+        return {"updated": False, "findings": [_suite_refusal_finding(exc)]}
     result = updated or suite
     return {
         "updated": True,

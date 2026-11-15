@@ -44,10 +44,11 @@ import asyncssh
 import pytest
 import yaml
 from cryptography.hazmat.primitives import hashes
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
 from tests.plugins.http.tls_material import make_credential
+from wavecore.api.exceptions import AuthorizationException
 
 
 def _reset_admin_state() -> None:
@@ -267,6 +268,26 @@ class TestSecurityStateMatrixFullyDisabled:
             # Response should be identical to a truly non-existent endpoint
             assert response.status_code == 404, f"Expected 404 for {method} {path}"
 
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            ("POST", "/admin/enable"),
+            ("POST", "/admin/reset"),
+            ("GET", "/admin/workbench/session"),
+            ("POST", "/admin/bulk/tests"),
+        ],
+    )
+    def test_the_gate_answers_exactly_what_an_unknown_route_answers(
+        self, client_admin_disabled: TestClient, method: str, path: str
+    ) -> None:
+        unknown = client_admin_disabled.request(method, "/admin/no-such-route", json={})
+
+        response = client_admin_disabled.request(method, path, json={"reason": "x"})
+
+        assert unknown.status_code == 404
+        assert (response.status_code, response.json()) == (404, unknown.json())
+        assert response.headers["content-type"] == unknown.headers["content-type"]
+
 
 class TestSecurityStateMatrixAllowedButInactive:
     """Test suite for State 2 (Allowed but Inactive): deployment gate allows but admin not
@@ -330,8 +351,7 @@ class TestRequireAdminActiveGuard:
     be enabled first. This creates a clear distinction: 404 means admin is not available
     in this deployment, while 403 means admin is available but not currently activated.
 
-    This class tests the require_admin_active() guard function that will be used by
-    future protected endpoints (e.g., /admin/clear-cache, /admin/seed-data).
+    This class tests the require_admin_active() guard the reset and bulk endpoints use.
     """
 
     def test_require_admin_active_raises_403_when_inactive(self) -> None:
@@ -340,11 +360,11 @@ class TestRequireAdminActiveGuard:
 
         _reset_admin_state()
 
-        with pytest.raises(HTTPException) as exc_info:
-            require_admin_active()
+        with pytest.raises(AuthorizationException) as exc_info:
+            require_admin_active("reset")
 
         assert exc_info.value.status_code == 403
-        assert exc_info.value.detail == "Admin mode must be enabled first"
+        assert exc_info.value.message == "Admin mode must be enabled first"
 
         _reset_admin_state()
 
@@ -359,7 +379,7 @@ class TestRequireAdminActiveGuard:
         _admin_routes._admin_enabled = True
 
         # Should not raise
-        require_admin_active()
+        require_admin_active("reset")
 
         _reset_admin_state()
 
@@ -376,7 +396,7 @@ class TestRequireAdminActiveGuard:
         _admin_routes._admin_reason = None
 
         # Should still pass - only checks _admin_enabled
-        require_admin_active()
+        require_admin_active("reset")
 
         _reset_admin_state()
 
@@ -448,22 +468,25 @@ class TestAdminEnableEndpoint:
         """Test that POST /admin/enable requires a reason parameter."""
         response = client.post("/admin/enable", json={})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Reason is required and cannot be empty"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Reason is required and cannot be empty"
+        )
 
     def test_enable_rejects_empty_reason(self, client: TestClient) -> None:
         """Test that POST /admin/enable rejects empty reason."""
         response = client.post("/admin/enable", json={"reason": ""})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Reason is required and cannot be empty"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Reason is required and cannot be empty"
+        )
 
     def test_enable_rejects_whitespace_only_reason(self, client: TestClient) -> None:
         """Test that POST /admin/enable rejects whitespace-only reason."""
         response = client.post("/admin/enable", json={"reason": "   "})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Reason is required and cannot be empty"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Reason is required and cannot be empty"
+        )
 
     def test_enable_returns_activation_timestamp(self, client: TestClient) -> None:
         """Test that POST /admin/enable returns activation timestamp."""
@@ -1087,8 +1110,9 @@ class TestStateResetSecurityGates:
 
             response = client.post("/admin/reset", json={"confirm": True})
 
-            assert response.status_code == 403
-            assert response.json()["detail"] == "Admin mode must be enabled first"
+            assert_error_reply(
+                response, 403, "AUTHORIZATION_ERROR", "Admin mode must be enabled first"
+            )
 
         _reset_admin_state()
 
@@ -1137,22 +1161,25 @@ class TestStateResetConfirmationParameter:
         """Test that POST /admin/reset returns 400 when confirm parameter is missing."""
         response = client_admin_active.post("/admin/reset", json={})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Confirmation required: set confirm=true"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Confirmation required: set confirm=true"
+        )
 
     def test_reset_requires_confirm_true(self, client_admin_active: TestClient) -> None:
         """Test that POST /admin/reset returns 400 when confirm is not true."""
         response = client_admin_active.post("/admin/reset", json={"confirm": False})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Confirmation required: set confirm=true"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Confirmation required: set confirm=true"
+        )
 
     def test_reset_rejects_confirm_null(self, client_admin_active: TestClient) -> None:
         """Test that POST /admin/reset returns 400 when confirm is null."""
         response = client_admin_active.post("/admin/reset", json={"confirm": None})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Confirmation required: set confirm=true"
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Confirmation required: set confirm=true"
+        )
 
     def test_reset_accepts_confirm_true(self, client_admin_active: TestClient) -> None:
         """Test that POST /admin/reset accepts confirm=true."""
@@ -1241,8 +1268,9 @@ class TestStateResetScopeParameter:
             "/admin/reset", json={"confirm": True, "scope": ["invalid_category"]}
         )
 
-        assert response.status_code == 400
-        assert "Invalid scope category" in response.json()["detail"]
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid scope category: invalid_category"
+        )
 
     def test_reset_rejects_mixed_valid_invalid_scope(self, client_admin_active: TestClient) -> None:
         """Test that POST /admin/reset returns 400 if any scope category is invalid."""
@@ -1251,8 +1279,7 @@ class TestStateResetScopeParameter:
             json={"confirm": True, "scope": ["entities", "invalid", "executions"]},
         )
 
-        assert response.status_code == 400
-        assert "Invalid scope category" in response.json()["detail"]
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Invalid scope category: invalid")
 
     def test_reset_accepts_all_valid_categories(self, client_admin_active: TestClient) -> None:
         """Test that POST /admin/reset accepts all valid category names."""
@@ -1951,8 +1978,7 @@ class TestStateResetNetworkCategories:
             "/admin/reset", json={"confirm": True, "scope": ["network", "ssh-hosts", category]}
         )
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == f"Invalid scope category: {category}"
+        assert_error_reply(response, 400, "VALIDATION_ERROR", f"Invalid scope category: {category}")
         assert hosts_file.read_bytes() == hosts_before
         assert certificates_file.read_bytes() == certificates_before
         assert config_file.read_bytes() == config_before
@@ -2141,25 +2167,20 @@ class TestStateResetErrorHandling:
     def test_reset_storage_error_returns_500_with_partial_results(
         self, client_admin_active: TestClient
     ) -> None:
-        """Test that storage errors return 500 with partial results."""
-        # Mock storage to fail on one category
+        """A storage fault answers 500 with partial results and a fixed error, never its text."""
+        internal_text = "/srv/wave/data/blocks is read-only"
         with patch("wavecore.api.routes.admin.routes.clear_category") as mock_clear:
-            # First call succeeds, second fails
-            mock_clear.side_effect = [
-                {"entities": 5},
-                Exception("Storage error"),
-            ]
+            mock_clear.side_effect = [5, OSError(internal_text)]
 
             response = client_admin_active.post(
                 "/admin/reset", json={"confirm": True, "scope": ["entities", "blocks"]}
             )
 
-            # Should return 500 on storage error
-            assert response.status_code == 500
-            data = response.json()
-            # Should include partial results
-            assert "cleared" in data
-            assert "error" in data
+            assert_error_reply(response, 500, "INTERNAL_ERROR", "Error clearing blocks")
+            details = response.json()["error"]["details"]
+            assert details["cleared"] == {"entities": 5}
+            assert details["timestamp"].endswith("Z")
+            assert internal_text not in response.text
 
     def test_reset_invalid_json_returns_400(self, client_admin_active: TestClient) -> None:
         """Test that invalid JSON returns 400."""
@@ -2314,8 +2335,9 @@ class TestStateResetAuditLogging:
             with patch("wavecore.api.routes.admin.routes.logger") as mock_logger:
                 response = client.post("/admin/reset", json={"confirm": True})
 
-                assert response.status_code == 403
-                assert response.json()["detail"] == "Admin mode must be enabled first"
+                assert_error_reply(
+                    response, 403, "AUTHORIZATION_ERROR", "Admin mode must be enabled first"
+                )
                 # Should log the blocked attempt
                 mock_logger.warning.assert_called()
 
@@ -2591,8 +2613,26 @@ class TestLogLevelEndpoints:
         """PUT /admin/log-level returns 400 for invalid level."""
         response = client.put("/admin/log-level", json={"level": "INVALID"})
 
-        assert response.status_code == 400
-        assert "Invalid log level" in response.json()["detail"]
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid log level: 'INVALID'. Must be one of: DEBUG, INFO, WARN, ERROR, FATAL",
+        )
+
+    def test_an_unexpected_fault_answers_the_generic_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from wavecore.api.services import log_level
+
+        def _fail(_level: str) -> str:
+            raise ValueError("internal log level fault")
+
+        monkeypatch.setattr(log_level, "save", _fail)
+
+        response = client.put("/admin/log-level", json={"level": "DEBUG"})
+
+        assert_internal_error(response, "internal log level fault")
 
     def test_log_level_does_not_require_admin_mode(self, client: TestClient) -> None:
         """Log level endpoints work without admin mode enabled."""
@@ -2725,9 +2765,11 @@ class TestLogLevelStorage:
 
         response = client.put("/admin/log-level", json={"level": "verbose"})
 
-        assert response.status_code == 400
-        assert response.json()["detail"] == (
-            "Invalid log level: 'verbose'. Must be one of: DEBUG, INFO, WARN, ERROR, FATAL"
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid log level: 'verbose'. Must be one of: DEBUG, INFO, WARN, ERROR, FATAL",
         )
         assert config_file.read_bytes() == before
         assert client.get("/admin/log-level").json()["level"] == level_in_force

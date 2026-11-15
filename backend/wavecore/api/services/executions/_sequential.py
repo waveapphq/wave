@@ -24,6 +24,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services import log_streaming_service
 from wavecore.api.services.executions import orchestrator
 from wavecore.api.services.executions._storage import (
@@ -156,7 +157,7 @@ def stop_active_child(execution_id: str) -> None:
     for child_id in child_ids:
         try:
             workbench_service.stop_workbench_run(child_id)
-        except LookupError:
+        except NotFoundException:
             pass
 
 

@@ -8,11 +8,18 @@ is explicit: delete the artifact, then request again.
 """
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    InternalServerException,
+    NotFoundException,
+    ValidationException,
+    WaveException,
+)
 from wavecore.api.services import artifact_service, log_streaming_service
 from wavecore.api.services.executions import _storage
 from wavecore.api.services.storage_paths import get_artifacts_storage_path, path_under
@@ -21,6 +28,8 @@ from wavecore.core.artifacts import store
 
 from . import builder, jobs
 from . import html as report_html
+
+logger = logging.getLogger(__name__)
 
 VALID_REPORT_FORMATS = ("html", "json")
 
@@ -232,9 +241,13 @@ async def _run_report_job(execution_id: str, job: dict[str, Any]) -> None:
         path = _write_report(get_artifacts_storage_path() / artifact_dir, job["format"], report)
         job["artifact_id"] = f"{artifact_dir}/{path.name}"
         job["status"] = "completed"
-    except Exception as exc:
+    except WaveException as exc:
         job["status"] = "failed"
-        job["error"] = str(exc)
+        job["error"] = exc.message
+    except Exception:
+        logger.exception("Report generation failed for execution %s", execution_id)
+        job["status"] = "failed"
+        job["error"] = InternalServerException.message
     job["ended_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 

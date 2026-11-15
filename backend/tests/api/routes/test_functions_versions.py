@@ -31,6 +31,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
+
 # Anchored regex helpers for the error messages.
 FUNCTION_NOT_FOUND_RE = re.compile(r"^Function '[0-9a-fA-F-]+' not found$")
 VERSION_NOT_FOUND_RE = re.compile(r"^Function '[0-9a-fA-F-]+' version '[^']+' not found$")
@@ -447,6 +449,102 @@ class TestListFunctionsLatestVersionField:
         body = response.json()
         row = next(r for r in body["data"] if r["id"] == fn_id)
         assert row["latest_version"] == "2.0.0"
+
+
+# ---------------------------------------------------------------------------
+# Error replies of the Function routes: the shared envelope, the generic 500
+# ---------------------------------------------------------------------------
+
+_BUMPS_BODY = {"draft_definition": {"inputs": [], "outputs": []}, "source_version": "1.0.0"}
+_ADD_VERSION_BODY = {**_BUMPS_BODY, "target_version": "3.0.0", "changelog": "next"}
+
+# (method, path under /functions/{id}, body, storage function the route reaches)
+_STORAGE_FAULTS = [
+    ("GET", "?version=1.0.0", None, "load_version"),
+    ("GET", "/versions/1.0.0", None, "load_version"),
+    ("GET", "/versions", None, "list_versions"),
+    ("POST", "/validate-bumps", _BUMPS_BODY, "load_version"),
+    ("POST", "/versions", _ADD_VERSION_BODY, "load_version"),
+    ("DELETE", "/versions/1.0.0", None, "delete_version"),
+    ("GET", "", None, "load_function"),
+    ("GET", "/dependents", None, "load_function"),
+]
+
+
+class TestFunctionRouteErrorReplies:
+    """Every refusal answers the shared envelope; an unexpected fault answers the generic 500."""
+
+    @pytest.mark.parametrize(("method", "suffix", "body", "attribute"), _STORAGE_FAULTS)
+    def test_an_unexpected_storage_fault_answers_the_generic_500(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        method: str,
+        suffix: str,
+        body: dict[str, Any] | None,
+        attribute: str,
+    ) -> None:
+        from wavecore.api.services.functions import _storage
+
+        fn_id = _seed_two_version_function()
+
+        def _fail(*_args: Any, **_kwargs: Any) -> Any:
+            raise KeyError("internal storage key")
+
+        monkeypatch.setattr(_storage, attribute, _fail)
+
+        response = client.request(method, f"/functions/{fn_id}{suffix}", json=body)
+
+        assert_internal_error(response, "internal storage key")
+
+    @pytest.mark.parametrize(
+        ("method", "suffix", "body"),
+        [
+            ("GET", "?version=1.0.0", None),
+            ("GET", "/versions/1.0.0", None),
+            ("GET", "/versions", None),
+            ("POST", "/validate-bumps", _BUMPS_BODY),
+        ],
+    )
+    def test_an_unknown_function_answers_the_shared_404(
+        self, client: TestClient, method: str, suffix: str, body: dict[str, Any] | None
+    ) -> None:
+        ghost_id = str(uuid.uuid4())
+
+        response = client.request(method, f"/functions/{ghost_id}{suffix}", json=body)
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Function '{ghost_id}' not found")
+
+    @pytest.mark.parametrize(
+        ("method", "suffix", "body"),
+        [
+            ("GET", "?version=9.9.9", None),
+            ("GET", "/versions/9.9.9", None),
+            ("POST", "/validate-bumps", {**_BUMPS_BODY, "source_version": "9.9.9"}),
+        ],
+    )
+    def test_an_unknown_version_answers_the_shared_404(
+        self, client: TestClient, method: str, suffix: str, body: dict[str, Any] | None
+    ) -> None:
+        fn_id = _seed_two_version_function()
+
+        response = client.request(method, f"/functions/{fn_id}{suffix}", json=body)
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", f"Function '{fn_id}' version '9.9.9' not found"
+        )
+
+    def test_an_unknown_source_version_of_a_new_version_is_not_found(
+        self, client: TestClient
+    ) -> None:
+        fn_id = _seed_two_version_function()
+        body = {**_ADD_VERSION_BODY, "source_version": "9.9.9"}
+
+        response = client.post(f"/functions/{fn_id}/versions", json=body)
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", f"Function '{fn_id}' version '9.9.9' not found"
+        )
 
 
 pytestmark = pytest.mark.usefixtures("temp_storage_path")

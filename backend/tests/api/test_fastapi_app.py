@@ -17,6 +17,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply
+
 
 class TestFastAPIApplicationInstance:
     """Test suite for FastAPI application instance creation and configuration."""
@@ -711,3 +713,62 @@ class TestAsyncImportExportEndpointsAnswer404:
         response = client.get("/import/00000000-0000-0000-0000-000000000001/status")
 
         assert response.status_code == 404
+
+
+class TestARequestThatBreaksItsSchema:
+    """A request that breaks its body or query schema answers 400 in the shared error
+    envelope, with the request id and field-level details (REQ-5.2.3.4)."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "kwargs", "message", "field_errors"),
+        [
+            pytest.param(
+                "POST",
+                "/admin/enable",
+                {"json": {"reason": 5}},
+                "Validation error for 'reason': Input should be a valid string",
+                [
+                    {
+                        "field": "body -> reason",
+                        "reason": "Input should be a valid string",
+                        "type": "string_type",
+                    }
+                ],
+                id="body-field-of-the-wrong-type",
+            ),
+            pytest.param(
+                "GET",
+                "/reports",
+                {"params": {"page": 0}},
+                "Validation error for 'page': Input should be greater than or equal to 1",
+                [
+                    {
+                        "field": "query -> page",
+                        "reason": "Input should be greater than or equal to 1",
+                        "type": "greater_than_equal",
+                    }
+                ],
+                id="query-value-out-of-range",
+            ),
+        ],
+    )
+    def test_the_reply_is_the_shared_envelope(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+        message: str,
+        field_errors: list[dict[str, str]],
+    ) -> None:
+        with patch.dict("os.environ", {"WAVE_ADMIN_ALLOWED": "true"}):
+            response = client.request(method, path, **kwargs)
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+        assert response.json()["error"]["details"] == {"validation_errors": field_errors}

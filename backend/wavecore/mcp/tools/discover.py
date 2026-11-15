@@ -11,6 +11,7 @@ from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.services import variable_service
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import service as execution_service
+from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import service as function_service
 from wavecore.api.services.profiles import service as profile_service
 from wavecore.api.services.regressions import service as regression_service
@@ -140,7 +141,7 @@ def get_function(function_id: str, version: str | None = None) -> dict[str, Any]
     if version:
         try:
             definition, _etag = function_service.read_version(function_id, version)
-        except LookupError as exc:
+        except function_storage.FunctionNotFoundError as exc:
             raise NotFoundException(str(exc)) from exc
     else:
         definition, _etag = function_service.get_function(function_id)

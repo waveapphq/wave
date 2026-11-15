@@ -175,7 +175,7 @@ class TestStartWorkbenchRun:
         valid_test_id: str,
         valid_environment_id: str,
     ) -> None:
-        """Test that workbench service raises LookupError when test not found."""
+        """Test that workbench service raises NotFoundException when test not found."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch(
@@ -183,7 +183,7 @@ class TestStartWorkbenchRun:
         ) as mock_get_test:
             mock_get_test.return_value = None
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=valid_test_id,
                     environment_id=valid_environment_id,
@@ -327,7 +327,7 @@ class TestStartWorkbenchRun:
         valid_environment_id: str,
         mock_test_with_blocks: dict[str, Any],
     ) -> None:
-        """Test that workbench service raises LookupError when environment not found."""
+        """Test that workbench service raises NotFoundException when environment not found."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with (
@@ -339,7 +339,7 @@ class TestStartWorkbenchRun:
             mock_get_test.return_value = mock_test_with_blocks
             mock_get_env.return_value = None
 
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.start_workbench_run(
                     test_id=valid_test_id,
                     environment_id=valid_environment_id,
@@ -358,7 +358,7 @@ class TestStartWorkbenchRun:
         mock_test_empty: dict[str, Any],
         mock_environment: dict[str, Any],
     ) -> None:
-        """Test that workbench service raises ValueError for test with no blocks."""
+        """Test that workbench service raises ValidationException for test with no blocks."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with (
@@ -1039,7 +1039,7 @@ class TestStartWorkbenchRun:
         mock_test_with_blocks: dict[str, Any],
         mock_environment: dict[str, Any],
     ) -> None:
-        """Test that circular dependencies among expression vars raise ValueError."""
+        """Test that circular dependencies among expression vars raise ValidationException."""
         from wavecore.api.services.workbench import service as workbench_service
 
         mock_test_with_blocks["variables"] = {
@@ -1250,11 +1250,11 @@ class TestStopWorkbenchRun:
                 mock_terminate.assert_called_once_with(valid_session_id)
 
     def test_stop_workbench_run_raises_when_session_not_found(self, valid_session_id: str) -> None:
-        """Test that stop raises LookupError for non-existent session."""
+        """Test that stop raises NotFoundException for non-existent session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch.object(workbench_service, "_get_session", return_value=None):
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.stop_workbench_run(session_id=valid_session_id)
 
             assert f"Workbench session '{valid_session_id}' not found" in str(exc_info.value)
@@ -1291,11 +1291,11 @@ class TestUpdateSkippedNodes:
     def test_update_skipped_nodes_raises_when_session_not_found(
         self, valid_session_id: str
     ) -> None:
-        """Test that update_skipped_nodes raises LookupError for non-existent session."""
+        """Test that update_skipped_nodes raises NotFoundException for non-existent session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         with patch.object(workbench_service, "_get_session", return_value=None):
-            with pytest.raises(LookupError) as exc_info:
+            with pytest.raises(NotFoundException) as exc_info:
                 workbench_service.update_skipped_nodes(
                     session_id=valid_session_id,
                     skipped_node_ids=["node-1"],
@@ -1306,7 +1306,7 @@ class TestUpdateSkippedNodes:
     def test_update_skipped_nodes_raises_when_session_not_running(
         self, valid_session_id: str
     ) -> None:
-        """Test that update_skipped_nodes raises ValueError for non-running session."""
+        """Test that update_skipped_nodes raises ConflictException for non-running session."""
         from wavecore.api.services.workbench import service as workbench_service
 
         session = {

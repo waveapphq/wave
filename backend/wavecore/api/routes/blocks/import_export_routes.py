@@ -19,9 +19,9 @@ Endpoints:
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Request, UploadFile, status
-from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import ValidationException
+from wavecore.api.routes.blocks.routes import block_not_found, validate_block_name
 from wavecore.api.routes.shared import (
     read_json_array,
     read_json_object,
@@ -85,7 +85,7 @@ async def batch_delete_blocks(request: Request) -> dict[str, Any]:
 async def import_block(
     file: Annotated[UploadFile, File()],
     overwrite: Annotated[str, Form()] = "false",
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Import block from file.
 
     Args:
@@ -95,29 +95,12 @@ async def import_block(
     Returns:
         Imported block data
     """
-    try:
-        content = await file.read()
-        overwrite_bool = overwrite.lower() == "true"
+    content = await file.read()
+    overwrite_bool = overwrite.lower() == "true"
 
-        block = _block_version_svc.import_block(content, file.filename or "", overwrite_bool)
+    block = _block_version_svc.import_block(content, file.filename or "", overwrite_bool)
 
-        return {"success": True, "data": block}
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "already exists" in error_message:
-            status_code = status.HTTP_409_CONFLICT
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": block}
 
 
 @router.post("/validate")
@@ -139,7 +122,7 @@ async def validate_block(request: Request) -> dict[str, Any]:
 
 
 @router.post("/validate-dependencies", response_model=None)
-async def validate_dependencies(request: Request) -> dict[str, Any] | JSONResponse:
+async def validate_dependencies(request: Request) -> dict[str, Any]:
     """Validate block dependencies.
 
     Args:
@@ -151,31 +134,16 @@ async def validate_dependencies(request: Request) -> dict[str, Any] | JSONRespon
     body = await read_json_object(request)
 
     if "block_id" not in body:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": "Field 'block_id' is required", "code": "VALIDATION_ERROR"},
-            },
-        )
+        raise ValidationException("Field 'block_id' is required")
 
     if "dependencies" not in body:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": "Field 'dependencies' is required",
-                    "code": "VALIDATION_ERROR",
-                },
-            },
-        )
+        raise ValidationException("Field 'dependencies' is required")
 
     return _block_version_svc.validate_dependencies(body["block_id"], body["dependencies"])
 
 
 @router.get("/{block_id}/dependencies", response_model=None)
-async def get_block_dependencies(block_id: str) -> dict[str, Any] | JSONResponse:
+async def get_block_dependencies(block_id: str) -> dict[str, Any]:
     """Get block dependencies (what this block depends on).
 
     Args:
@@ -184,37 +152,18 @@ async def get_block_dependencies(block_id: str) -> dict[str, Any] | JSONResponse
     Returns:
         Dependency tree
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_storage.get_block_dependencies(block_id)
+    result = _block_storage.get_block_dependencies(block_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return result
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return result
 
 
 @router.get("/{block_id}/dependents", response_model=None)
-async def get_block_dependents(block_id: str) -> dict[str, Any] | JSONResponse:
+async def get_block_dependents(block_id: str) -> dict[str, Any]:
     """Get what depends on this block.
 
     Args:
@@ -223,37 +172,18 @@ async def get_block_dependents(block_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Dictionary with blocks and tests that depend on this block
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_storage.get_block_dependents(block_id)
+    result = _block_storage.get_block_dependents(block_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return result
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return result
 
 
 @router.get("/{block_id}/usage", response_model=None)
-async def get_block_usage(block_id: str) -> dict[str, Any] | JSONResponse:
+async def get_block_usage(block_id: str) -> dict[str, Any]:
     """Get where this block is used.
 
     Args:
@@ -262,37 +192,18 @@ async def get_block_usage(block_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Usage information
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_storage.get_block_usage(block_id)
+    result = _block_storage.get_block_usage(block_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return result
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return result
 
 
 @router.post("/{block_id}/clone", status_code=status.HTTP_201_CREATED, response_model=None)
-async def clone_block(block_id: str, request: Request) -> dict[str, Any] | JSONResponse:
+async def clone_block(block_id: str, request: Request) -> dict[str, Any]:
     """Clone block with a new name.
 
     Args:
@@ -302,41 +213,23 @@ async def clone_block(block_id: str, request: Request) -> dict[str, Any] | JSONR
     Returns:
         Cloned block
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        body = await read_json_object(request)
+    body = await read_json_object(request)
 
-        if "new_name" not in body:
-            raise ValueError("Field 'new_name' is required")
+    if "new_name" not in body:
+        raise ValidationException("Field 'new_name' is required")
 
-        new_name = body["new_name"]
-        new_version = body.get("new_version")
+    new_name = body["new_name"]
+    validate_block_name(new_name)
+    new_version = body.get("new_version")
 
-        if new_version:
-            validate_semantic_version(new_version)
+    if new_version:
+        validate_semantic_version(new_version)
 
-        result = _block_version_svc.clone_block(block_id, new_name, new_version)
+    result = _block_version_svc.clone_block(block_id, new_name, new_version)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}

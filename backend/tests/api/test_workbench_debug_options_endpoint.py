@@ -18,7 +18,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 
 _NOT_FOUND_RE = re.compile(r"^Workbench session '[^']+' not found$")
@@ -111,7 +111,9 @@ class TestUpdateDebugOptionsEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.update_debug_options"
         ) as mock_update:
-            mock_update.side_effect = LookupError(f"Workbench session '{session_id}' not found")
+            mock_update.side_effect = NotFoundException(
+                f"Workbench session '{session_id}' not found"
+            )
 
             response = client.patch(
                 f"/workbench/{session_id}/debug-options",
@@ -170,10 +172,10 @@ class TestUpdateDebugOptionsService:
         yield
         _wb_common._clear_sessions_sync()
 
-    def test_raises_lookup_error_for_unknown_session(self) -> None:
+    def test_raises_not_found_for_unknown_session(self) -> None:
         from wavecore.api.services.workbench import service as workbench_service
 
-        with pytest.raises(LookupError, match=r"^Workbench session 'missing' not found$"):
+        with pytest.raises(NotFoundException, match=r"^Workbench session 'missing' not found$"):
             workbench_service.update_debug_options("missing", pause_on_errors=True)
 
     def test_raises_conflict_for_idle_session(self) -> None:

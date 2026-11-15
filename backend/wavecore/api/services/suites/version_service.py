@@ -9,10 +9,12 @@ from wavecore.api.services.shared import (
     bump_version_and_record,
     mask_secret_variables,
     next_semantic_version,
+    refuse_repeated_members,
 )
 from wavecore.api.services.suites._storage import (
     _load_suite,
     _load_versions,
+    _refuse_taken_name,
     _save_suite,
     _save_versions,
     _test_exists,
@@ -156,6 +158,7 @@ def add_test_to_suite(
         return None
 
     tests = suite.get("tests", [])
+    refuse_repeated_members([*tests, test_id], "Test")
     if order is not None and 0 <= order <= len(tests):
         tests.insert(order, test_id)
     else:
@@ -235,13 +238,14 @@ def remove_test_from_suite(suite_id: str, test_id: str) -> dict[str, Any] | None
 def clone_suite(
     suite_id: str, new_name: str | None = None, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a suite with a new name."""
+    """Clone a suite with a new name no other suite has."""
     source = _load_suite(suite_id)
     if source is None:
         return None
 
     if new_name is None:
         new_name = f"{source.get('name', 'Suite')} (Copy)"
+    _refuse_taken_name(new_name)
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())

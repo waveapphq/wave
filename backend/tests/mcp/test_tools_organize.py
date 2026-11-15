@@ -25,11 +25,12 @@ SUITE_NAME_REQUIRED = "Field 'name' is required"
 SUITE_NAME_LENGTH = "Suite name must be between 1 and 255 characters"
 SUITE_NAME_CONVENTION = (
     "Suite name '{name}' violates naming convention: must contain only "
-    "alphanumeric characters, spaces, hyphens, and underscores"
+    "alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses"
 )
 SUITE_TYPE_COLLISION = (
     "Variable type collision: variable 'env' is 'string' here but 'integer' in suite 'Typed Suite'"
 )
+SUITE_VALUE_REFUSED = "Value for variable 'count' is not a valid integer"
 # Membership resolves an id or a unique name, so the message names the reference.
 ATTACHED_TEST_MISSING = "Test '{test_id}' not found"
 
@@ -114,6 +115,12 @@ def _get_suite(suite_id: str) -> dict[str, Any]:
     suite = suite_service.get_suite(suite_id)
     assert suite is not None
     return suite
+
+
+def _suite_names() -> list[str]:
+    from wavecore.api.services.suites import service as suite_service
+
+    return [row["name"] for row in suite_service.list_suite_names()]
 
 
 def _write_raw_suite(name: str, tests: list[str] | None = None) -> str:
@@ -280,6 +287,10 @@ class TestCreateSuite:
         assert result["created"] is False
         assert _has_problem(result["findings"], SUITE_NAME_CONVENTION.format(name="Bad@Suite"))
 
+    def test_a_name_with_periods_and_parentheses_is_created(self) -> None:
+        result = organize().create_suite("Smoke (v1.2)")
+        assert result["created"] is True, result
+
     def test_attached_test_must_exist(self) -> None:
         ghost_id = str(uuid.uuid4())
         result = organize().create_suite("Suite With Ghost", tests=[ghost_id])
@@ -318,6 +329,22 @@ class TestCreateSuite:
         )
 
         assert result == {"created": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
+
+    def test_a_repeated_test_is_a_validation_finding(self) -> None:
+        member = create_test_entity("Twice Member")
+
+        result = organize().create_suite("Twice Suite", tests=[member["id"], member["id"]])
+
+        assert result == {
+            "created": False,
+            "findings": [_validation(f"Test with ID '{member['id']}' is listed more than once")],
+        }
+        assert _suite_names() == []
+
+    def test_a_refused_variable_value_is_a_validation_finding(self) -> None:
+        result = organize().create_suite("Valued Suite", variables={"count": _integer_var(1.5)})
+
+        assert result == {"created": False, "findings": [_validation(SUITE_VALUE_REFUSED)]}
 
 
 class TestUpdateSuite:
@@ -398,6 +425,14 @@ class TestUpdateSuite:
         )
 
         assert result == {"updated": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
+
+    def test_a_refused_variable_value_is_a_validation_finding(self) -> None:
+        suite = _make_suite("Valued Suite")
+
+        result = organize().update_suite(suite["id"], set_variables={"count": _integer_var(1.5)})
+
+        assert result == {"updated": False, "findings": [_validation(SUITE_VALUE_REFUSED)]}
+        assert _get_suite(suite["id"])["variables"] == {}
 
 
 # ---------------------------------------------------------------------------

@@ -19,44 +19,17 @@ Endpoints:
 - DELETE /workbench/session: Clear/reset current user's session
 """
 
-import json
-from typing import Annotated, Any, Literal, Never
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from wavecore.api.exceptions import (
-    InternalServerException,
-    NotFoundException,
-    ValidationException,
-    WaveException,
-)
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.exceptions import NotFoundException, ValidationException
+from wavecore.api.routes.shared import read_json, validate_uuid
 from wavecore.api.services import file_tree
 from wavecore.api.services.workbench import ownership
 from wavecore.api.services.workbench import service as workbench_service
-
-
-def _workbench_error_response(e: Exception) -> Never:
-    """Convert workbench exceptions to WaveExceptions and re-raise.
-
-    Args:
-        e: The caught exception.
-
-    Raises:
-        NotFoundException: For LookupError.
-        ValidationException: For ValueError.
-        InternalServerException: For any other exception.
-    """
-    if isinstance(e, WaveException):
-        raise e
-    if isinstance(e, LookupError):
-        raise NotFoundException(str(e)) from e
-    if isinstance(e, ValueError):
-        raise ValidationException(str(e)) from e
-    raise InternalServerException(str(e)) from e
-
 
 # Create router for workbench endpoints
 router = APIRouter(tags=["Workbench"])
@@ -130,16 +103,11 @@ async def get_current_session() -> JSONResponse:
     Returns:
         Session data if exists, null otherwise. Always returns 200 OK.
     """
-    try:
-        result = workbench_service.get_session_for_user()
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except Exception as e:
-        _workbench_error_response(e)
+    result = workbench_service.get_session_for_user()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.delete("/workbench/session")
@@ -153,16 +121,11 @@ async def clear_current_session() -> JSONResponse:
     Returns:
         Dict with 'cleared' boolean indicating if a session was cleared.
     """
-    try:
-        result = workbench_service.clear_session_for_user()
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except Exception as e:
-        _workbench_error_response(e)
+    result = workbench_service.clear_session_for_user()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.get("/workbench/session/artifacts")
@@ -222,38 +185,33 @@ async def start_workbench_run(request: WorkbenchRunRequest) -> JSONResponse:
 
     debug_options_dict = request.debug_options.model_dump() if request.debug_options else None
 
-    try:
-        result = workbench_service.start_workbench_run(
-            test_id=request.test_id,
-            environment_id=request.environment_id,
-            session_id=request.session_id,
-            skipped_node_ids=request.skipped_node_ids,
-            debug=workbench_service.DebugRunOptions(
-                breakpoints=request.breakpoints,
-                options=debug_options_dict,
-            ),
-            target=workbench_service.RunTarget(
-                start_node_id=request.start_node_id,
-                single_node_id=request.single_node_id,
-                block_draft=request.block_draft,
-            ),
-            scope=workbench_service.ScopedRunOptions(
-                mode=request.scope_mode,
-                function_node_id=request.scoped_function_node_id,
-                function_path=tuple(request.function_path or ()),
-            ),
-            workflow=request.workflow,
-            variables=request.variables,
-            function_variables=[entry.model_dump() for entry in request.function_variables or []],
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.start_workbench_run(
+        test_id=request.test_id,
+        environment_id=request.environment_id,
+        session_id=request.session_id,
+        skipped_node_ids=request.skipped_node_ids,
+        debug=workbench_service.DebugRunOptions(
+            breakpoints=request.breakpoints,
+            options=debug_options_dict,
+        ),
+        target=workbench_service.RunTarget(
+            start_node_id=request.start_node_id,
+            single_node_id=request.single_node_id,
+            block_draft=request.block_draft,
+        ),
+        scope=workbench_service.ScopedRunOptions(
+            mode=request.scope_mode,
+            function_node_id=request.scoped_function_node_id,
+            function_path=tuple(request.function_path or ()),
+        ),
+        workflow=request.workflow,
+        variables=request.variables,
+        function_variables=[entry.model_dump() for entry in request.function_variables or []],
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class WorkbenchSkipUpdateRequest(BaseModel):
@@ -280,19 +238,14 @@ async def update_skipped_nodes(
         Updated skip state.
     """
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.update_skipped_nodes(
-            session_id=session_id,
-            skipped_node_ids=request.skipped_node_ids,
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.update_skipped_nodes(
+        session_id=session_id,
+        skipped_node_ids=request.skipped_node_ids,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.post("/workbench/{session_id}/stop")
@@ -308,16 +261,11 @@ async def stop_workbench_run(session_id: str) -> JSONResponse:
     # Validate UUID format
     validate_uuid(session_id, "session_id")
 
-    try:
-        result = workbench_service.stop_workbench_run(session_id=session_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.stop_workbench_run(session_id=session_id)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.get("/workbench/{session_id}/status")
@@ -333,19 +281,14 @@ async def get_workbench_status(session_id: str) -> JSONResponse:
     # Validate UUID format
     validate_uuid(session_id, "session_id")
 
-    try:
-        result = workbench_service.get_workbench_status(session_id=session_id)
-        if result is None:
-            raise NotFoundException(f"Workbench session '{session_id}' not found or expired")
+    result = workbench_service.get_workbench_status(session_id=session_id)
+    if result is None:
+        raise NotFoundException(f"Workbench session '{session_id}' not found or expired")
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except ValueError as e:
-        _workbench_error_response(e)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 def _csv(text: str) -> list[str]:
@@ -361,17 +304,13 @@ async def get_session_variables(
 
     name_list = _csv(names) if names else None
 
-    # No WaveException re-raise arm: the service only raises LookupError.
-    try:
-        result = workbench_service.get_session_variables(
-            session_id=session_id, names=name_list, function_path=_csv(function_path or "")
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.get_session_variables(
+        session_id=session_id, names=name_list, function_path=_csv(function_path or "")
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class WorkbenchVariableOverrideRequest(BaseModel):
@@ -398,26 +337,21 @@ async def set_variable_override(
     with 409 while the session is running.
     """
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.set_variable_override(
-            session_id,
-            name,
-            value=request.value,
-            value_given="value" in request.model_fields_set,
-            expression=request.expression,
-            template=request.template,
-            declared_type=request.type,
-            element_types=request.element_types,
-            function_path=tuple(request.function_path or ()),
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.set_variable_override(
+        session_id,
+        name,
+        value=request.value,
+        value_given="value" in request.model_fields_set,
+        expression=request.expression,
+        template=request.template,
+        declared_type=request.type,
+        element_types=request.element_types,
+        function_path=tuple(request.function_path or ()),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class WorkbenchBreakpointsRequest(BaseModel):
@@ -430,19 +364,14 @@ class WorkbenchBreakpointsRequest(BaseModel):
 async def update_breakpoints(session_id: str, request: WorkbenchBreakpointsRequest) -> JSONResponse:
     """Replace the live breakpoint set on a running or paused debug session."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.update_breakpoints(
-            session_id=session_id,
-            breakpoints=request.breakpoints,
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.update_breakpoints(
+        session_id=session_id,
+        breakpoints=request.breakpoints,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class WorkbenchDebugOptionsPatchRequest(BaseModel):
@@ -460,84 +389,59 @@ async def update_debug_options(
 ) -> JSONResponse:
     """Patch live debug-options on a running or paused debug session."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.update_debug_options(
-            session_id=session_id,
-            pause_on_first_block=request.pause_on_first_block,
-            pause_on_errors=request.pause_on_errors,
-        )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.update_debug_options(
+        session_id=session_id,
+        pause_on_first_block=request.pause_on_first_block,
+        pause_on_errors=request.pause_on_errors,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.post("/workbench/{session_id}/continue")
 async def continue_session(session_id: str) -> JSONResponse:
     """Resume a paused debug session so the engine runs the paused node."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.continue_session(session_id=session_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.continue_session(session_id=session_id)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.post("/workbench/{session_id}/skip-block")
 async def skip_block(session_id: str) -> JSONResponse:
     """Skip the paused node and re-pause before the next node executes."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.skip_current_block(session_id=session_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.skip_current_block(session_id=session_id)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.post("/workbench/{session_id}/step-over")
 async def step_over(session_id: str) -> JSONResponse:
     """Run the paused node (and any sub-graph) then re-pause at the sibling-after."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.step_over(session_id=session_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.step_over(session_id=session_id)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 @router.post("/workbench/{session_id}/step-into")
 async def step_into(session_id: str) -> JSONResponse:
     """Run the paused node and re-pause BEFORE the immediate next node."""
     validate_uuid(session_id, "session_id")
-    try:
-        result = workbench_service.step_into(session_id=session_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    result = workbench_service.step_into(session_id=session_id)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class WorkbenchRepeatStepRequest(BaseModel):
@@ -552,19 +456,14 @@ async def repeat_step(
 ) -> JSONResponse:
     """Re-execute the currently paused node in place without advancing."""
     validate_uuid(session_id, "session_id")
-    try:
-        if request is None:
-            result = workbench_service.repeat_step(session_id=session_id)
-        else:
-            result = workbench_service.repeat_step(session_id=session_id, override=request.override)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "data": result},
-        )
-    except WaveException:
-        raise
-    except (LookupError, ValueError) as e:
-        _workbench_error_response(e)
+    if request is None:
+        result = workbench_service.repeat_step(session_id=session_id)
+    else:
+        result = workbench_service.repeat_step(session_id=session_id, override=request.override)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True, "data": result},
+    )
 
 
 class OwnershipClaimRequest(BaseModel):
@@ -654,8 +553,8 @@ async def ownership_leaving(request: Request) -> JSONResponse:
     from wavecore.api.websocket import session_registry
 
     try:
-        payload = json.loads(await request.body())
-    except ValueError:
+        payload = await read_json(request)
+    except ValidationException:
         payload = None
     if not isinstance(payload, dict) or not isinstance(payload.get("holder_id"), str):
         return _ownership_response({"ok": True})

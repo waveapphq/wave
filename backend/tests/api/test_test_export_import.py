@@ -27,7 +27,13 @@ from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import NOT_ID_LIST_FIELDS, assert_refused
 from tests.api.download_name_helpers import ENTITY_NAME, EXPORT_STEM, assert_whole_name
-from wavecore.api.exceptions import ConflictException, ValidationException
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    UnprocessableEntityException,
+    ValidationException,
+)
 from wavecore.api.services.storage_paths import get_test_testdata_path
 from wavecore.core.secrets.cipher import SecretCipher, is_secret_envelope
 from wavecore.core.secrets.masking import MASK_PLACEHOLDER
@@ -477,16 +483,12 @@ class TestExportBulkTests:
     def test_nonexistent_test_returns_404(self, client: TestClient) -> None:
         """Exporting non-existent test returns 404."""
         fake_id = str(uuid.uuid4())
-        with patch(
-            "wavecore.api.routes.tests.routes.test_service.export_tests_batch"
-        ) as mock_batch:
-            mock_batch.side_effect = ValueError(f"Test not found: {fake_id}")
-            response = client.post(
-                "/tests/export",
-                json={"test_ids": [fake_id], "format": "yaml", "secrets": "mask"},
-            )
+        response = client.post(
+            "/tests/export",
+            json={"test_ids": [fake_id], "format": "yaml", "secrets": "mask"},
+        )
 
-        assert response.status_code == 404
+        assert_error_reply(response, 404, "NOT_FOUND", f"Test not found: {fake_id}")
 
     def test_invalid_format_returns_400(self, client: TestClient) -> None:
         """Invalid format parameter returns 400."""
@@ -835,13 +837,13 @@ class TestValidateImport:
         with patch(
             "wavecore.api.routes.tests.routes.test_service.validate_test_import"
         ) as mock_validate:
-            mock_validate.side_effect = ValueError("Invalid YAML: could not parse file")
+            mock_validate.side_effect = ValidationException("Invalid YAML: could not parse file")
             response = client.post(
                 "/tests/import/validate",
                 files={"file": ("test.yaml", "{{invalid yaml:", "application/x-yaml")},
             )
 
-        assert response.status_code == 400
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Invalid YAML: could not parse file")
 
     def test_validate_empty_zip_returns_400(self, client: TestClient) -> None:
         """Empty ZIP archive returns 400."""
@@ -849,16 +851,14 @@ class TestValidateImport:
         with zipfile.ZipFile(buf, "w"):
             pass
         buf.seek(0)
-        with patch(
-            "wavecore.api.routes.tests.routes.test_service.validate_test_import"
-        ) as mock_validate:
-            mock_validate.side_effect = ValueError("ZIP archive contains no importable files")
-            response = client.post(
-                "/tests/import/validate",
-                files={"file": ("tests.zip", buf.getvalue(), "application/zip")},
-            )
+        response = client.post(
+            "/tests/import/validate",
+            files={"file": ("tests.zip", buf.getvalue(), "application/zip")},
+        )
 
-        assert response.status_code == 400
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "ZIP archive contains no importable files"
+        )
 
     def test_validate_summary_counts(self, client: TestClient) -> None:
         """Response includes correct summary counts."""
@@ -1106,15 +1106,19 @@ class TestImportTest:
     def test_import_fatal_errors_rejected(self, client: TestClient) -> None:
         """Fatal validation errors block import with 422."""
         content = yaml.dump({"name": "Fatal"})
-        with patch("wavecore.api.routes.tests.routes.test_service.import_tests") as mock_import:
-            mock_import.side_effect = ValueError("Fatal validation errors prevent import")
+        with patch(
+            "wavecore.api.services.tests.service._validate_test_data",
+            return_value={"fatal": True, "errors": [{"code": "FATAL", "message": "broken"}]},
+        ):
             response = client.post(
                 "/tests/import",
                 data={"conflict_resolutions": "{}"},
                 files={"file": ("test.yaml", content, "application/x-yaml")},
             )
 
-        assert response.status_code == 422
+        assert_error_reply(
+            response, 422, "FATAL_VALIDATION", "Fatal validation errors prevent import"
+        )
 
     def test_import_new_uuid_generated(self, client: TestClient) -> None:
         """Imported tests receive new UUIDs."""
@@ -1203,14 +1207,14 @@ class TestImportTest:
     def test_import_parse_error_returns_400(self, client: TestClient) -> None:
         """Malformed file content returns 400."""
         with patch("wavecore.api.routes.tests.routes.test_service.import_tests") as mock_import:
-            mock_import.side_effect = ValueError("Invalid YAML: could not parse file")
+            mock_import.side_effect = ValidationException("Invalid YAML: could not parse file")
             response = client.post(
                 "/tests/import",
                 data={"conflict_resolutions": "{}"},
                 files={"file": ("test.yaml", "{{bad yaml", "application/x-yaml")},
             )
 
-        assert response.status_code in (400, 422)
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Invalid YAML: could not parse file")
 
     def test_import_unsupported_format_returns_400(self, client: TestClient) -> None:
         """Unsupported file format returns 400."""
@@ -1299,8 +1303,9 @@ class TestImportTest:
             data={"conflict_resolutions": "{not valid json}"},
             files={"file": ("test.yaml", content, "application/x-yaml")},
         )
-        assert response.status_code == 400
-        assert "PARSE_ERROR" in response.text
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid JSON in conflict_resolutions"
+        )
 
 
 # ============================================================================
@@ -1763,7 +1768,7 @@ class TestExportTestsBatchService:
 
         with patch("wavecore.api.services.tests.service._load_test") as mock_load:
             mock_load.return_value = None
-            with pytest.raises(ValidationException, match="Test not found"):
+            with pytest.raises(NotFoundException, match=r"^Test not found: missing-id$"):
                 export_tests_batch(["missing-id"], "yaml", "mask")
 
     def test_batch_export_dedup_filenames(self) -> None:
@@ -2152,7 +2157,9 @@ class TestImportTestsService:
                 "errors": [{"code": "FATAL", "message": "broken"}],
                 "warnings": [],
             }
-            with pytest.raises(ValidationException, match="Fatal validation errors"):
+            with pytest.raises(
+                UnprocessableEntityException, match=r"^Fatal validation errors prevent import$"
+            ):
                 import_tests(content, "bad.yaml")
 
     def test_import_auto_fixes(self) -> None:
@@ -2566,11 +2573,7 @@ class TestImportRefusesVariableValuesTheRuleRefuses:
                 files={"file": ("refused.yaml", content, "application/x-yaml")},
             )
 
-        assert response.status_code == 400
-        assert response.json()["error"] == {
-            "message": _REFUSED_VALUE,
-            "code": "INVALID_VARIABLE_VALUE",
-        }
+        assert_error_reply(response, 400, "INVALID_VARIABLE_VALUE", _REFUSED_VALUE)
         mock_save.assert_not_called()
 
 
@@ -2670,3 +2673,145 @@ class TestImportStoresNumbersInWireForm:
         assert stored is not None
         assert http_numbers(stored["workflow"]["nodes"][0]) == STORED_HTTP_NUMBERS
         assert stored["variables"] == STORED_VARIABLES
+
+
+_INTERNAL_TEXT = "internal import route fault"
+_FAULT_ID = "5b1f0c2e-7a3d-4c8e-9f10-2d3c4b5a6e7f"
+_YAML_FILE = ("test.yaml", "name: Fault\n", "application/x-yaml")
+
+
+class TestAnUnexpectedFaultInATestImportOrExport:
+    """A fault below a Test import or export route answers the generic 500, never its text."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "service_call", "request_args"),
+        [
+            pytest.param(
+                "POST",
+                "/tests/export",
+                "export_tests_batch",
+                {"json": {"test_ids": [_FAULT_ID]}},
+                id="export-bulk",
+            ),
+            pytest.param(
+                "POST",
+                "/tests/import/validate",
+                "validate_test_import",
+                {"files": {"file": _YAML_FILE}},
+                id="import-validate",
+            ),
+            pytest.param(
+                "POST",
+                "/tests/import",
+                "import_tests",
+                {"files": {"file": _YAML_FILE}},
+                id="import",
+            ),
+            pytest.param("GET", f"/tests/{_FAULT_ID}/export", "export_test", {}, id="export"),
+        ],
+    )
+    def test_it_answers_the_generic_500(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        service_call: str,
+        request_args: dict[str, Any],
+    ) -> None:
+        from wavecore.api.services.tests import service as test_service
+
+        with patch.object(test_service, service_call, side_effect=ValueError(_INTERNAL_TEXT)):
+            response = client.request(method, path, **request_args)
+
+        assert_internal_error(response, _INTERNAL_TEXT)
+
+
+class TestATestImportOrExportRefusal:
+    """A Test import or export refusal answers in the shared error envelope with its message."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            pytest.param({"test_ids": []}, "test_ids must be a non-empty list", id="no-ids"),
+            pytest.param(
+                {"test_ids": [_FAULT_ID], "format": "xml"},
+                "Invalid format: 'xml'. Must be 'yaml' or 'json'",
+                id="format",
+            ),
+        ],
+    )
+    def test_a_bulk_export_bad_request(
+        self, client: TestClient, body: dict[str, Any], message: str
+    ) -> None:
+        response = client.post("/tests/export", json=body)
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+
+    @pytest.mark.parametrize(
+        ("path", "message"),
+        [
+            pytest.param("/tests/bad/export", "Invalid UUID format for id: 'bad'", id="id"),
+            pytest.param(
+                f"/tests/{_FAULT_ID}/export?format=xml",
+                "Invalid format: 'xml'. Must be 'yaml' or 'json'",
+                id="format",
+            ),
+        ],
+    )
+    def test_an_export_bad_request(self, client: TestClient, path: str, message: str) -> None:
+        assert_error_reply(client.get(path), 400, "VALIDATION_ERROR", message)
+
+    def test_an_export_of_a_missing_test_is_not_found(self, client: TestClient) -> None:
+        response = client.get(f"/tests/{_FAULT_ID}/export")
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Test not found: {_FAULT_ID}")
+
+    @pytest.mark.parametrize("path", ["/tests/import/validate", "/tests/import"])
+    @pytest.mark.parametrize(
+        ("file", "message"),
+        [
+            pytest.param(
+                ("test.xml", b"<test/>", "application/xml"),
+                "Unsupported file format: 'test.xml'",
+                id="unsupported",
+            ),
+            pytest.param(
+                ("test.yaml", b"name: \xff\xfe\n", "application/x-yaml"),
+                "Invalid YAML: could not parse file",
+                id="yaml-not-utf-8",
+            ),
+            pytest.param(
+                ("test.json", b'{"name": "\xff"}', "application/json"),
+                "Invalid JSON: could not parse file",
+                id="json-not-utf-8",
+            ),
+            pytest.param(
+                ("test.yaml", b"name: Dated\ncreated: 2024-13-45\n", "application/x-yaml"),
+                "Invalid YAML: could not parse file",
+                id="yaml-no-such-date",
+            ),
+            pytest.param(
+                ("test.json", b'{"name": "Big", "n": ' + b"9" * 5000 + b"}", "application/json"),
+                "Invalid JSON: could not parse file",
+                id="json-number-too-long",
+            ),
+        ],
+    )
+    def test_a_file_that_cannot_be_read_is_a_bad_request(
+        self, client: TestClient, path: str, file: tuple[str, bytes, str], message: str
+    ) -> None:
+        response = client.post(path, files={"file": file})
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)

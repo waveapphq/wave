@@ -183,6 +183,17 @@ test.describe('V-MCP-UPDATE-SUITE-FUNCTIONAL: update_suite', () => {
       expect(await readEntity(request, '/suites', suiteId)).toEqual(before)
     })
 
+    await test.step('a value the number rule refuses is refused and the Suite is unchanged', async () => {
+      const result = callTool(MCP_PORT, 'update_suite', {
+        suite_ref: suiteId,
+        set_variables: { count: { type: 'integer', value: 1.5 } },
+      })
+      expectRefused(result, 'updated', [
+        inputFinding('VALIDATION', "Value for variable 'count' is not a valid integer"),
+      ])
+      expect(await readEntity(request, '/suites', suiteId)).toEqual(before)
+    })
+
     await test.step('an unknown suite ref raises its not found message', () => {
       expectRaised(
         callTool(MCP_PORT, 'update_suite', { suite_ref: UNKNOWN, description: NEW_DESCRIPTION }),

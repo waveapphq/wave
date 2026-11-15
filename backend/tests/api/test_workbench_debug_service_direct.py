@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 
@@ -48,8 +49,8 @@ class TestUpdateBreakpointsDirect:
     def teardown_method(self) -> None:
         _wb_common._clear_sessions_sync()
 
-    def test_raises_lookup_error_when_session_missing(self) -> None:
-        with pytest.raises(LookupError, match="Workbench session 'missing' not found"):
+    def test_raises_not_found_when_session_missing(self) -> None:
+        with pytest.raises(NotFoundException, match="Workbench session 'missing' not found"):
             workbench_service.update_breakpoints("missing", ["bp"])
 
     def test_raises_conflict_when_session_is_idle(self) -> None:
@@ -79,8 +80,8 @@ class TestContinueSessionDirect:
     def teardown_method(self) -> None:
         _wb_common._clear_sessions_sync()
 
-    def test_raises_lookup_error_when_session_missing(self) -> None:
-        with pytest.raises(LookupError, match="Workbench session 'missing' not found"):
+    def test_raises_not_found_when_session_missing(self) -> None:
+        with pytest.raises(NotFoundException, match="Workbench session 'missing' not found"):
             workbench_service.continue_session("missing")
 
     def test_raises_conflict_when_session_not_paused(self) -> None:
@@ -111,8 +112,8 @@ class TestSkipCurrentBlockDirect:
     def teardown_method(self) -> None:
         _wb_common._clear_sessions_sync()
 
-    def test_raises_lookup_error_when_session_missing(self) -> None:
-        with pytest.raises(LookupError, match="Workbench session 'missing' not found"):
+    def test_raises_not_found_when_session_missing(self) -> None:
+        with pytest.raises(NotFoundException, match="Workbench session 'missing' not found"):
             workbench_service.skip_current_block("missing")
 
     def test_raises_conflict_when_session_not_paused(self) -> None:

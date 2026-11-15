@@ -16,7 +16,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+    WaveException,
+)
 from wavecore.api.services.shared import mask_secret_variables
 from wavecore.api.services.storage_paths import get_test_testdata_path, get_tests_storage_path
 from wavecore.api.services.tests import service as test_service
@@ -1067,7 +1073,10 @@ class TestUpdateTest:
         """Test that update validates ETag when provided."""
         created = test_service.create_test({"name": "ETag Test"})
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        with pytest.raises(
+            PreconditionRequiredException,
+            match=r"^Precondition failed: resource has been modified$",
+        ):
             test_service.update_test(created["id"], {"name": "Updated"}, etag='"wrong-etag"')
 
     def test_update_test_refuses_a_name_another_test_holds(self) -> None:
@@ -1184,7 +1193,10 @@ class TestUpdateTestMetadata:
         """Test that update_test_metadata validates ETag when provided."""
         created = test_service.create_test({"name": "ETag Meta Test"})
 
-        with pytest.raises(ConflictException, match="Precondition failed"):
+        with pytest.raises(
+            PreconditionRequiredException,
+            match=r"^Precondition failed: resource has been modified$",
+        ):
             test_service.update_test_metadata(
                 created["id"], {"name": "Updated"}, etag='"wrong-etag"'
             )
@@ -1713,8 +1725,10 @@ class TestBatchOperations:
         assert updated["metadata"]["tags"] == ["smoke"]
 
     def test_batch_update_tests_handles_exceptions(self) -> None:
-        """Test batch update handles exceptions during update."""
+        """An unexpected fault fails its item with the generic text; its own text stays out."""
         from unittest.mock import patch
+
+        from tests.api.error_reply_support import INTERNAL_ERROR_MESSAGE
 
         t1 = test_service.create_test({"name": "Test 1"})
 
@@ -1726,9 +1740,11 @@ class TestBatchOperations:
         ):
             result = test_service.batch_update_tests(updates)
 
-        assert len(result["updated"]) == 0
-        assert len(result["failed"]) == 1
-        assert "Update failed" in result["failed"][0]["error"]
+        assert result == {
+            "updated": [],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+            "repairs": {},
+        }
 
     def test_batch_delete_tests_deletes_multiple(self) -> None:
         """Test batch deleting multiple tests."""
@@ -8101,7 +8117,9 @@ class TestRestoreVersion:
         """Test that restore raises error when version not found."""
         created = test_service.create_test({"name": "Restore Test"})
 
-        with pytest.raises(ValidationException, match="not found"):
+        with pytest.raises(
+            NotFoundException, match=rf"^Version '99.0.0' not found for test '{created['id']}'$"
+        ):
             test_service.restore_test_version(created["id"], "99.0.0")
 
     @pytest.mark.parametrize("stored", NOT_SEMANTIC_VERSIONS)

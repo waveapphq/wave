@@ -21,6 +21,10 @@ _INVALID_KEY_MESSAGE = (
 )
 
 
+class SecretKeyError(ValueError):
+    """The configured secret encryption key is missing or not a usable key."""
+
+
 class KeyProvider(ABC):
     """Source of the secret encryption key."""
 
@@ -39,13 +43,13 @@ class ConfiguredKeyProvider(KeyProvider):
         config = self._config if self._config is not None else get_config()
         raw = config.get("security.secret_key", "")
         if not raw:
-            raise ValueError(_MISSING_KEY_MESSAGE)
+            raise SecretKeyError(_MISSING_KEY_MESSAGE)
         try:
             key = base64.b64decode(raw, validate=True)
         except ValueError as e:
-            raise ValueError(_INVALID_KEY_MESSAGE) from e
+            raise SecretKeyError(_INVALID_KEY_MESSAGE) from e
         if len(key) != _KEY_LENGTH:
-            raise ValueError(_INVALID_KEY_MESSAGE)
+            raise SecretKeyError(_INVALID_KEY_MESSAGE)
         return key
 
 

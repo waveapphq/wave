@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from wavecore.api.exceptions import ConflictException, WaveException
+from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.blocks._storage import (
     _check_circular_dependencies,
     _check_name_unique,
@@ -19,7 +19,12 @@ from wavecore.api.services.blocks._storage import (
     _validate_plugin_exists,
     get_block_dependents,
 )
-from wavecore.api.services.shared import batch_delete, batch_object, batch_update_problem
+from wavecore.api.services.shared import (
+    batch_delete,
+    batch_failure,
+    batch_object,
+    batch_update_problem,
+)
 
 # ===========================================================================
 # CRUD
@@ -148,9 +153,10 @@ def batch_create_blocks(blocks: list[Any]) -> dict[str, Any]:
     for idx, block_data in enumerate(blocks):
         try:
             block = create_block(batch_object(block_data))
-            created.append(block["id"])
-        except (ValueError, WaveException) as e:
-            failed.append({"index": idx, "error": str(e)})
+        except Exception as e:
+            failed.append(batch_failure(idx, e))
+            continue
+        created.append(block["id"])
     return {"created": created, "failed": failed}
 
 

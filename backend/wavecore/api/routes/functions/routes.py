@@ -11,7 +11,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Query, Response, status
 from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
+from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.routes.shared import list_field
 from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import _versioning as function_versioning
@@ -124,20 +124,6 @@ async def list_function_tags(response: Response) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _not_found_response(message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={
-            "success": False,
-            "error": {
-                "message": message,
-                "code": "NOT_FOUND",
-                "details": [{"message": message}],
-            },
-        },
-    )
-
-
 def _malformed_draft_response(reason: str) -> JSONResponse:
     message = f"Draft definition is malformed: {reason}"
     return JSONResponse(
@@ -163,8 +149,8 @@ async def get_function(
     if version is not None and version != "":
         try:
             definition, etag = function_service.read_version(function_id, version)
-        except LookupError as exc:
-            return _not_found_response(str(exc))
+        except function_storage.FunctionNotFoundError as exc:
+            raise NotFoundException(str(exc)) from exc
         response.headers["ETag"] = etag
         return {"success": True, "data": definition}
     # NotFoundException is propagated through ExceptionHandler middleware;
@@ -179,8 +165,8 @@ async def list_function_versions(function_id: str) -> Any:
     """Return ``{versions, latest}`` for a Function."""
     try:
         result = function_storage.list_versions(function_id)
-    except LookupError:
-        return _not_found_response(f"Function '{function_id}' not found")
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(f"Function '{function_id}' not found") from exc
     return {"success": True, "data": result}
 
 
@@ -224,8 +210,8 @@ async def get_function_version(function_id: str, version: str, response: Respons
     """Return ``{definition, etag}`` for a specific version."""
     try:
         definition, etag = function_service.read_version(function_id, version)
-    except LookupError as exc:
-        return _not_found_response(str(exc))
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(str(exc)) from exc
     response.headers["ETag"] = etag
     return {"success": True, "data": {"definition": definition, "etag": etag}}
 
@@ -251,8 +237,8 @@ async def validate_function_bumps(
         return _malformed_draft_response("source_version is required and must be a string")
     try:
         source_def = function_storage.load_version(function_id, source_version)
-    except LookupError as exc:
-        return _not_found_response(str(exc))
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(str(exc)) from exc
     draft = function_service.draft_over_source(draft, source_def)
     result = function_versioning.compute_allowed_bumps(source_def, draft)
     return {

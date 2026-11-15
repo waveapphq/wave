@@ -26,6 +26,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply
+
 
 class TestDashboardEndpoint:
     """Test suite for GET /dashboard endpoint (REQ-5.2.1.43)."""
@@ -551,7 +553,57 @@ class TestDashboardErrorHandling:
 
             response = client.get("/dashboard")
 
-            assert response.status_code == 503
+            assert_error_reply(response, 503, "SERVICE_UNAVAILABLE", "Storage unavailable")
+
+    def test_each_failed_section_is_named_without_the_fault_text(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The errors list names what failed; the fault's own text goes to the server log only."""
+        internal_text = "[Errno 13] Permission denied: '/srv/wave/data/tests'"
+        with (
+            patch("wavecore.api.routes.dashboard.routes.get_test_count") as mock_tests,
+            patch("wavecore.api.routes.dashboard.routes.get_suite_count") as mock_suites,
+            patch("wavecore.api.routes.dashboard.routes.get_regression_count") as mock_regressions,
+            patch("wavecore.api.routes.dashboard.routes.get_execution_statistics") as mock_stats,
+            patch("wavecore.api.routes.dashboard.routes.get_recent_activity") as mock_activity,
+            patch("wavecore.api.routes.dashboard.routes.get_recent_executions") as mock_executions,
+        ):
+            mock_tests.side_effect = OSError(internal_text)
+            mock_suites.side_effect = OSError(internal_text)
+            mock_regressions.side_effect = OSError(internal_text)
+            mock_stats.side_effect = OSError(internal_text)
+            mock_activity.side_effect = OSError(internal_text)
+            mock_executions.return_value = []
+
+            response = client.get("/dashboard")
+
+        assert response.status_code == 200
+        assert response.json()["meta"]["errors"] == [
+            "Failed to fetch tests count",
+            "Failed to fetch suites count",
+            "Failed to fetch regressions count",
+            "Failed to fetch execution statistics",
+            "Failed to fetch recentActivity",
+        ]
+        assert internal_text not in response.text
+        assert internal_text in caplog.text
+
+    def test_a_failed_recent_executions_section_is_named(self, client: TestClient) -> None:
+        with (
+            patch("wavecore.api.routes.dashboard.routes.get_test_count", return_value=1),
+            patch("wavecore.api.routes.dashboard.routes.get_suite_count", return_value=1),
+            patch("wavecore.api.routes.dashboard.routes.get_regression_count", return_value=1),
+            patch("wavecore.api.routes.dashboard.routes.get_execution_statistics") as mock_stats,
+            patch("wavecore.api.routes.dashboard.routes.get_recent_activity", return_value=[]),
+            patch("wavecore.api.routes.dashboard.routes.get_recent_executions") as mock_executions,
+        ):
+            mock_stats.return_value = {"sinceDays": 1, "count": 0}
+            mock_executions.side_effect = OSError("/srv/wave/data/executions")
+
+            response = client.get("/dashboard")
+
+        assert response.json()["meta"]["errors"] == ["Failed to fetch recentExecutions"]
+        assert "/srv/wave/data/executions" not in response.text
 
     def test_partial_failure_returns_200_with_available_data(self, client: TestClient) -> None:
         """Test that partial failures return 200 with available data."""

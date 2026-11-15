@@ -389,13 +389,16 @@ def get_function(function_id: str) -> tuple[dict[str, Any], str]:
     """The latest definition as a read shows it, with the ETag of the stored one."""
     try:
         definition, etag = _storage.load_function(function_id)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=f"Function '{function_id}' not found") from exc
     return read_definition_secrets(definition), etag
 
 
 def read_version(function_id: str, version: str) -> tuple[dict[str, Any], str]:
-    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag."""
+    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag.
+
+    An unknown Function id or version raises ``FunctionNotFoundError``.
+    """
     definition = _storage.load_version(function_id, version)
     return read_definition_secrets(definition), _storage.compute_etag(definition)
 
@@ -486,7 +489,7 @@ def add_function_version(
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
     try:
         source_def = _storage.load_version(function_id, source_version)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=str(exc), details=_details_payload([str(exc)])) from exc
     existing = _storage.list_versions(function_id)["versions"]
     if any(entry["version"] == target_version for entry in existing):
@@ -543,10 +546,7 @@ def add_function_version(
 
 
 def delete_function(function_id: str, *, cascade: bool = False) -> dict[str, Any]:
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
 
     dependents = _storage.scan_dependents(function_id)
     count = len(dependents["tests"]) + len(dependents["functions"])
@@ -569,19 +569,13 @@ def delete_function(function_id: str, *, cascade: bool = False) -> dict[str, Any
 
 
 def get_function_dependents(function_id: str, version: str | None = None) -> dict[str, Any]:
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
     return _storage.scan_dependents(function_id, version)
 
 
 def get_dependents_by_version(function_id: str) -> dict[str, Any]:
     """Per-version dependents in a single storage pass: {version: {tests, functions}}."""
-    try:
-        _storage.load_function(function_id)
-    except LookupError as exc:
-        raise NotFoundException(message=f"Function '{function_id}' not found") from exc
+    get_function(function_id)
     return _storage.scan_dependents_by_version(function_id)
 
 
@@ -593,7 +587,7 @@ def delete_function_version(function_id: str, version: str) -> None:
     """
     try:
         _storage.delete_version(function_id, version)
-    except LookupError as exc:
+    except _storage.FunctionNotFoundError as exc:
         raise NotFoundException(message=str(exc), details=_details_payload([str(exc)])) from exc
 
 

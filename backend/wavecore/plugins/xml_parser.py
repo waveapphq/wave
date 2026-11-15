@@ -215,7 +215,7 @@ class XMLParserPlugin(QueryParserBase):
         # Fallback for unexpected types - should not occur with XPath 1.0
         # XPath only returns: node-set (list), boolean, number, or string
         # This is defensive programming for future XPath versions or lxml changes
-        return {"type": "string", "value": str(xpath_result)}  # pragma: no cover
+        return {"type": "string", "value": str(xpath_result)}  # pragma: no cover - BCOV-TYPE-001
 
     @staticmethod
     def _convert_numeric(value: float) -> dict[str, Any]:
@@ -237,7 +237,7 @@ class XMLParserPlugin(QueryParserBase):
             return str(node)
         if isinstance(node, etree._Element):
             return str(node.text) if node.text else ""
-        return str(node)  # pragma: no cover
+        return str(node)  # pragma: no cover - BCOV-TYPE-001
 
     def _convert_node_set(self, nodes: list[Any]) -> dict[str, Any]:
         """Convert an XPath node-set (list) to a WAVE-typed result."""

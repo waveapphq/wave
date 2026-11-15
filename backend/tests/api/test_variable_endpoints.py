@@ -26,6 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
 from wavecore.api.exceptions import NotFoundException, ValidationException
 
 
@@ -404,6 +405,39 @@ class TestSetEntityVariablesEndpoint:
             r"^Field 'variables' is required$",
             data["error"]["message"],
         )
+
+    def test_set_variables_refuses_a_variable_both_expression_and_template(
+        self, client: TestClient
+    ) -> None:
+        response = client.post(
+            f"/variables/test/{uuid.uuid4()}",
+            json={
+                "variables": {
+                    "a": {"type": "string", "isExpression": True, "isTemplate": True, "value": "x"}
+                }
+            },
+        )
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "is_expression and is_template are mutually exclusive",
+        )
+
+    def test_set_variables_unexpected_fault_reading_a_declaration_is_internal(
+        self, client: TestClient
+    ) -> None:
+        with patch(
+            "wavecore.api.services.variable_service.declared_start",
+            side_effect=ValueError("internal declaration detail"),
+        ):
+            response = client.post(
+                f"/variables/test/{uuid.uuid4()}",
+                json={"variables": {"a": {"type": "string", "value": "x"}}},
+            )
+
+        assert_internal_error(response, "internal declaration detail")
 
 
 class TestUpdateEntityVariablesEndpoint:

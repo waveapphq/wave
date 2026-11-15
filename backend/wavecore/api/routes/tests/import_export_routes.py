@@ -10,14 +10,18 @@ Endpoints:
 - GET /tests/{test_id}/export: Export a single test as downloadable file
 """
 
-import json
 from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import id_list_field, read_json_object, validate_uuid
+from wavecore.api.exceptions import NotFoundException, ValidationException
+from wavecore.api.routes.shared import (
+    id_list_field,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.tests import service as test_service
@@ -26,6 +30,17 @@ from wavecore.api.services.tests import service as test_service
 router = APIRouter(tags=["Tests"])
 
 VALID_EXPORT_FORMATS = {"yaml", "json"}
+_IMPORT_EXTENSIONS = (".yaml", ".yml", ".json", ".zip")
+
+
+def _refuse_bad_format(fmt: str) -> None:
+    if fmt not in VALID_EXPORT_FORMATS:
+        raise ValidationException(f"Invalid format: '{fmt}'. Must be 'yaml' or 'json'")
+
+
+def _refuse_unsupported_file(filename: str) -> None:
+    if not filename.lower().endswith(_IMPORT_EXTENSIONS):
+        raise ValidationException(f"Unsupported file format: '{filename}'")
 
 
 @router.post("/tests/export")
@@ -44,39 +59,11 @@ async def export_tests_bulk(request: Request) -> Response:
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))
 
     if not test_ids:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": "test_ids must be a non-empty list",
-                    "code": "INVALID_PARAMETER",
-                },
-            },
-        )
+        raise ValidationException("test_ids must be a non-empty list")
+    _refuse_bad_format(fmt)
 
-    if fmt not in VALID_EXPORT_FORMATS:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Invalid format: '{fmt}'. Must be 'yaml' or 'json'",
-                    "code": "INVALID_PARAMETER",
-                },
-            },
-        )
-
-    try:
-        documents, files = test_service.export_tests_batch(test_ids, fmt, secrets_mode)
-    except (ValueError, ValidationException) as exc:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {"message": str(exc), "code": "NOT_FOUND"},
-            },
-        )
+    # NotFoundException propagates to the error handler for an unknown test
+    documents, files = test_service.export_tests_batch(test_ids, fmt, secrets_mode)
 
     if len(documents) == 1 and not files:
         _tid, content, filename = documents[0]
@@ -116,32 +103,12 @@ async def validate_import(
         Validation results per test
     """
     filename = file.filename or ""
-    lower = filename.lower()
-
-    if not lower.endswith((".yaml", ".yml", ".json", ".zip")):
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Unsupported file format: '{filename}'",
-                    "code": "INVALID_FORMAT",
-                },
-            },
-        )
+    _refuse_unsupported_file(filename)
 
     content = await file.read()
 
-    try:
-        result = test_service.validate_test_import(content, filename)
-    except (ValueError, ValidationException) as exc:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(exc), "code": "PARSE_ERROR"},
-            },
-        )
+    # ValidationException propagates to the error handler for a file that cannot be read
+    result = test_service.validate_test_import(content, filename)
 
     return JSONResponse(
         content={
@@ -152,7 +119,7 @@ async def validate_import(
 
 
 def _refused_import(message: str, code: str, errors: list[dict[str, Any]]) -> JSONResponse:
-    """The 422 answer for an import its findings refuse."""
+    """The 422 for an import its findings refuse; the findings stay an array specs read."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
@@ -177,37 +144,11 @@ async def import_tests(
         Import results
     """
     filename = file.filename or ""
-    lower = filename.lower()
-
-    if not lower.endswith((".yaml", ".yml", ".json", ".zip")):
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Unsupported file format: '{filename}'",
-                    "code": "INVALID_FORMAT",
-                },
-            },
-        )
+    _refuse_unsupported_file(filename)
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": "Invalid JSON in conflict_resolutions",
-                        "code": "PARSE_ERROR",
-                    },
-                },
-            )
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     try:
         result = test_service.import_tests(content, filename, resolutions)
@@ -215,31 +156,6 @@ async def import_tests(
         return _refused_import(exc.message, "EXPRESSION_CHANGES_DATA", exc.errors)
     except test_service.RepeatedEdgeIdImportError as exc:
         return _refused_import(exc.message, "DUPLICATE_EDGE_ID", exc.errors)
-    except test_service.VariableValueImportError as exc:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": exc.message, "code": "INVALID_VARIABLE_VALUE"},
-            },
-        )
-    except (ValueError, ValidationException) as exc:
-        error_msg = str(exc)
-        if "Fatal" in error_msg:
-            return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                content={
-                    "success": False,
-                    "error": {"message": error_msg, "code": "FATAL_VALIDATION"},
-                },
-            )
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": error_msg, "code": "PARSE_ERROR"},
-            },
-        )
 
     return JSONResponse(
         content={
@@ -268,39 +184,13 @@ async def export_test(
     Returns:
         File download with appropriate content-type
     """
-    try:
-        validate_uuid(test_id)
-    except (ValueError, ValidationException) as exc:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(exc), "code": "INVALID_UUID"},
-            },
-        )
-
-    if format not in VALID_EXPORT_FORMATS:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Invalid format: '{format}'. Must be 'yaml' or 'json'",
-                    "code": "INVALID_PARAMETER",
-                },
-            },
-        )
+    validate_uuid(test_id)
+    _refuse_bad_format(format)
 
     secrets_mode = shared_service.parse_secrets_mode(secrets)
     result = test_service.export_test(test_id, format, secrets_mode)
     if result is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {"message": f"Test not found: {test_id}", "code": "NOT_FOUND"},
-            },
-        )
+        raise NotFoundException(f"Test not found: {test_id}")
 
     content_val, filename, media_type = result
 

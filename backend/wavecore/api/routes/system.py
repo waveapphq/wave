@@ -14,8 +14,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 
 from wavecore import __version__
@@ -65,26 +64,11 @@ def _success_response(
     }
 
 
-def _internal_error_response() -> JSONResponse:
-    """Standard 500 envelope with a fresh correlation id."""
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "success": False,
-            "error": {
-                "message": "Internal server error",
-                "code": "INTERNAL_ERROR",
-                "correlation_id": str(uuid.uuid4()),
-            },
-        },
-    )
-
-
 @router.get("/system/info", response_model=None)
 async def get_system_info(
     request: Request,
     response: Response,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Get system information.
 
     Returns version, build, runtime, and support info
@@ -97,17 +81,14 @@ async def get_system_info(
     Returns:
         System information
     """
-    try:
-        return _success_response(request, response, system_service.get_system_info())
-    except RuntimeError:
-        return _internal_error_response()
+    return _success_response(request, response, system_service.get_system_info())
 
 
 @router.get("/system/tls-capabilities", response_model=None)
 async def get_tls_capabilities(
     request: Request,
     response: Response,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Get the fixed TLS cipher-suite catalog and the Cipher Suites defaults.
 
     Returns the static, host-independent cipher rows (OpenSSL and IANA
@@ -121,10 +102,7 @@ async def get_tls_capabilities(
     Returns:
         TLS cipher-suite catalog
     """
-    try:
-        return _success_response(request, response, tls_capabilities.capabilities())
-    except RuntimeError:
-        return _internal_error_response()
+    return _success_response(request, response, tls_capabilities.capabilities())
 
 
 @router.post("/system/password-strength")

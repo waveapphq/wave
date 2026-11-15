@@ -8,10 +8,15 @@ Focus: WAVE-specific business logic, NOT library validation (Pydantic/FastAPI).
 """
 
 import uuid
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
+from wavecore.api.exceptions import NotFoundException, ValidationException
 
 
 class TestWorkbenchRunEndpoint:
@@ -139,7 +144,7 @@ class TestWorkbenchRunEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError(f"Test with ID '{valid_test_id}' not found")
+            mock_run.side_effect = NotFoundException(f"Test with ID '{valid_test_id}' not found")
 
             response = client.post(
                 "/workbench/run",
@@ -149,11 +154,9 @@ class TestWorkbenchRunEndpoint:
                 },
             )
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "NOT_FOUND"
-            assert f"Test with ID '{valid_test_id}' not found" in data["error"]["message"]
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Test with ID '{valid_test_id}' not found"
+            )
 
     def test_workbench_run_returns_404_when_environment_not_found(
         self, client: TestClient, valid_test_id: str, valid_environment_id: str
@@ -162,7 +165,7 @@ class TestWorkbenchRunEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = LookupError(
+            mock_run.side_effect = NotFoundException(
                 f"Environment with ID '{valid_environment_id}' not found"
             )
 
@@ -174,13 +177,11 @@ class TestWorkbenchRunEndpoint:
                 },
             )
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "NOT_FOUND"
-            assert (
-                f"Environment with ID '{valid_environment_id}' not found"
-                in data["error"]["message"]
+            assert_error_reply(
+                response,
+                404,
+                "NOT_FOUND",
+                f"Environment with ID '{valid_environment_id}' not found",
             )
 
     # =========================================================================
@@ -237,7 +238,9 @@ class TestWorkbenchRunEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.start_workbench_run"
         ) as mock_run:
-            mock_run.side_effect = ValueError("Test must have at least one workflow block defined")
+            mock_run.side_effect = ValidationException(
+                "Test must have at least one workflow block defined"
+            )
 
             response = client.post(
                 "/workbench/run",
@@ -247,10 +250,12 @@ class TestWorkbenchRunEndpoint:
                 },
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "at least one workflow block" in data["error"]["message"]
+            assert_error_reply(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Test must have at least one workflow block defined",
+            )
 
     # =========================================================================
     # UUID Validation
@@ -333,13 +338,15 @@ class TestWorkbenchStopEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.stop_workbench_run"
         ) as mock_stop:
-            mock_stop.side_effect = LookupError(f"Workbench session '{valid_session_id}' not found")
+            mock_stop.side_effect = NotFoundException(
+                f"Workbench session '{valid_session_id}' not found"
+            )
 
             response = client.post(f"/workbench/{valid_session_id}/stop")
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["error"]["code"] == "NOT_FOUND"
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Workbench session '{valid_session_id}' not found"
+            )
 
     def test_workbench_stop_returns_400_for_invalid_session_id_uuid_format(
         self, client: TestClient
@@ -727,11 +734,7 @@ class TestWorkbenchClearSessionEndpoint:
 
             response = client.delete("/workbench/session")
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "INTERNAL_ERROR"
-            assert "Database connection lost" in data["error"]["message"]
+            assert_internal_error(response, "Database connection lost")
 
 
 class TestWorkbenchSkipUpdateEndpoint:
@@ -778,7 +781,7 @@ class TestWorkbenchSkipUpdateEndpoint:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.update_skipped_nodes"
         ) as mock_update:
-            mock_update.side_effect = LookupError(
+            mock_update.side_effect = NotFoundException(
                 f"Workbench session '{valid_session_id}' not found"
             )
 
@@ -787,29 +790,33 @@ class TestWorkbenchSkipUpdateEndpoint:
                 json={"skipped_node_ids": ["node-1"]},
             )
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["error"]["code"] == "NOT_FOUND"
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Workbench session '{valid_session_id}' not found"
+            )
 
-    def test_workbench_skip_update_returns_400_when_session_not_running(
+    @pytest.mark.usefixtures("clean_sessions")
+    def test_workbench_skip_update_returns_409_when_session_not_running(
         self, client: TestClient, valid_session_id: str
     ) -> None:
-        """Test that skip update returns 400 for non-running session."""
-        with patch(
-            "wavecore.api.routes.workbench.workbench_service.update_skipped_nodes"
-        ) as mock_update:
-            mock_update.side_effect = ValueError(
-                "Cannot update skipped blocks: session is 'passed', not running"
-            )
+        """Test that skip update refuses a session that is no longer running."""
+        from wavecore.api.services.workbench import _common as _wb_common
 
-            response = client.post(
-                f"/workbench/{valid_session_id}/skip",
-                json={"skipped_node_ids": ["node-1"]},
-            )
+        _wb_common._workbench_sessions[valid_session_id] = {
+            "session_id": valid_session_id,
+            "status": "passed",
+        }
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["error"]["code"] == "VALIDATION_ERROR"
+        response = client.post(
+            f"/workbench/{valid_session_id}/skip",
+            json={"skipped_node_ids": ["node-1"]},
+        )
+
+        assert_error_reply(
+            response,
+            409,
+            "CONFLICT",
+            "Cannot update skipped blocks: session is 'passed', not running",
+        )
 
     def test_workbench_skip_update_returns_400_for_invalid_uuid(self, client: TestClient) -> None:
         """Test that skip update returns 400 for invalid session_id UUID format."""
@@ -825,27 +832,155 @@ class TestWorkbenchSkipUpdateEndpoint:
         assert "Invalid UUID format for session_id" in data["error"]["message"]
 
 
-class TestWorkbenchSessionErrorHandling:
-    """Test suite for error handling in workbench session endpoints."""
+_SESSION_ID = "6f1c8a52-3d4e-4b7a-9c0d-2e5f7a8b9c10"
+_INTERNAL_TEXT = "engine detail /srv/wave/data/tests/run.yaml line 3"
+
+# (method, path, body, the service function the route calls)
+_WORKBENCH_CALLS = [
+    ("GET", "/workbench/session", None, "get_session_for_user"),
+    ("DELETE", "/workbench/session", None, "clear_session_for_user"),
+    (
+        "POST",
+        "/workbench/run",
+        {"test_id": _SESSION_ID, "environment_id": _SESSION_ID},
+        "start_workbench_run",
+    ),
+    ("POST", f"/workbench/{_SESSION_ID}/skip", {"skipped_node_ids": []}, "update_skipped_nodes"),
+    ("POST", f"/workbench/{_SESSION_ID}/stop", None, "stop_workbench_run"),
+    ("GET", f"/workbench/{_SESSION_ID}/status", None, "get_workbench_status"),
+    ("GET", f"/workbench/{_SESSION_ID}/variables", None, "get_session_variables"),
+    (
+        "PATCH",
+        f"/workbench/{_SESSION_ID}/variables/count",
+        {"type": "integer", "value": 1},
+        "set_variable_override",
+    ),
+    ("PATCH", f"/workbench/{_SESSION_ID}/breakpoints", {"breakpoints": []}, "update_breakpoints"),
+    ("PATCH", f"/workbench/{_SESSION_ID}/debug-options", {}, "update_debug_options"),
+    ("POST", f"/workbench/{_SESSION_ID}/continue", None, "continue_session"),
+    ("POST", f"/workbench/{_SESSION_ID}/skip-block", None, "skip_current_block"),
+    ("POST", f"/workbench/{_SESSION_ID}/step-over", None, "step_over"),
+    ("POST", f"/workbench/{_SESSION_ID}/step-into", None, "step_into"),
+    ("POST", f"/workbench/{_SESSION_ID}/repeat-step", None, "repeat_step"),
+]
+
+# The session routes whose service refuses a session it does not hold.
+_SESSION_CALLS = [
+    call for call in _WORKBENCH_CALLS if _SESSION_ID in call[1] and "status" not in call[1]
+]
+
+
+@pytest.fixture
+def clean_sessions() -> Generator[None, None, None]:
+    from wavecore.api.services.workbench import _common as _wb_common
+
+    _wb_common._clear_sessions_sync()
+    yield
+    _wb_common._clear_sessions_sync()
+
+
+class TestWorkbenchUnexpectedFaults:
+    """A fault inside the workbench service answers the generic 500, never its own text."""
 
     @pytest.fixture
     def client(self) -> TestClient:
-        """Create FastAPI test client."""
         from wavecore.api.app import app
 
         return TestClient(app)
 
-    def test_workbench_get_session_returns_500_on_service_error(self, client: TestClient) -> None:
-        """Test that GET /workbench/session returns 500 on unexpected errors."""
-        with patch(
-            "wavecore.api.routes.workbench.workbench_service.get_session_for_user"
-        ) as mock_get_session:
-            mock_get_session.side_effect = RuntimeError("Internal service failure")
+    @pytest.mark.parametrize("fault", [ValueError, LookupError, KeyError, RuntimeError])
+    @pytest.mark.parametrize(("method", "path", "body", "service_function"), _WORKBENCH_CALLS)
+    def test_a_service_fault_answers_the_generic_internal_error(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None,
+        service_function: str,
+        fault: type[Exception],
+    ) -> None:
+        from wavecore.api.services.workbench import service as workbench_service
 
-            response = client.get("/workbench/session")
+        def _fail(*_args: Any, **_kwargs: Any) -> Any:
+            raise fault(_INTERNAL_TEXT)
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "INTERNAL_ERROR"
-            assert "Internal service failure" in data["error"]["message"]
+        monkeypatch.setattr(workbench_service, service_function, _fail)
+
+        response = client.request(method, path, json=body)
+
+        assert_internal_error(response, _INTERNAL_TEXT)
+
+
+@pytest.mark.usefixtures("clean_sessions")
+class TestWorkbenchRefusalsThroughTheService:
+    """The service's own refusals keep their status and message at every route."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(("method", "path", "body", "_service_function"), _SESSION_CALLS)
+    def test_an_unknown_session_answers_404(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None,
+        _service_function: str,
+    ) -> None:
+        response = client.request(method, path, json=body)
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", f"Workbench session '{_SESSION_ID}' not found"
+        )
+
+    def test_an_unknown_session_status_answers_404(self, client: TestClient) -> None:
+        response = client.get(f"/workbench/{_SESSION_ID}/status")
+
+        assert_error_reply(
+            response, 404, "NOT_FOUND", f"Workbench session '{_SESSION_ID}' not found or expired"
+        )
+
+    def test_a_run_of_an_unknown_test_answers_404(self, client: TestClient) -> None:
+        test_id = str(uuid.uuid4())
+
+        response = client.post(
+            "/workbench/run", json={"test_id": test_id, "environment_id": _SESSION_ID}
+        )
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Test with ID '{test_id}' not found")
+
+    def test_a_repeat_with_no_paused_block_answers_404(self, client: TestClient) -> None:
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _wb_common._workbench_sessions[_SESSION_ID] = {
+            "session_id": _SESSION_ID,
+            "status": "paused",
+            "paused_node_id": None,
+        }
+
+        response = client.post(f"/workbench/{_SESSION_ID}/repeat-step")
+
+        assert_error_reply(response, 404, "NOT_FOUND", "Cannot repeat: no currently paused block")
+
+    def test_variables_of_an_unknown_function_scope_answer_404(self, client: TestClient) -> None:
+        from wavecore.api.services.workbench import _common as _wb_common
+
+        _wb_common._workbench_sessions[_SESSION_ID] = {
+            "session_id": _SESSION_ID,
+            "status": "passed",
+            "variables": {},
+            "function_scopes": {},
+        }
+
+        response = client.get(f"/workbench/{_SESSION_ID}/variables?function_path=fn-9")
+
+        assert_error_reply(
+            response,
+            404,
+            "NOT_FOUND",
+            f"Function scope 'fn-9' not found in workbench session '{_SESSION_ID}'",
+        )

@@ -41,6 +41,7 @@ const SECOND_TEST = `${PREFIX}2`
 const SUITE = `${PREFIX}3`
 const REFUSED_MEMBER_SUITE = `${PREFIX}4`
 const REFUSED_VARIABLE_SUITE = `${PREFIX}5`
+const REPEATED_MEMBER_SUITE = `${PREFIX}6`
 const UNKNOWN_TEST = `${PREFIX}9`
 const DESCRIPTION = 'Checkout flow, created by an assistant'
 const TAG = 'zz-mcp-checkout'
@@ -56,7 +57,7 @@ test.describe('V-MCP-CREATE-SUITE-FUNCTIONAL: create_suite', () => {
     await resetMcpSettings(page)
   })
 
-  test('creates the Suite the API and the Suites page show, and refuses a duplicate name, an unknown Test and an untyped variable', async ({
+  test('creates the Suite the API and the Suites page show, and refuses a duplicate name, an unknown Test, an untyped variable and a repeated Test', async ({
     page,
     request,
   }) => {
@@ -146,6 +147,17 @@ test.describe('V-MCP-CREATE-SUITE-FUNCTIONAL: create_suite', () => {
         ),
       ])
       expect(await idsNamed(request, '/suites', REFUSED_VARIABLE_SUITE)).toEqual([])
+    })
+
+    await test.step('a Test listed twice is refused and creates nothing', async () => {
+      const result = callTool(MCP_PORT, 'create_suite', {
+        name: REPEATED_MEMBER_SUITE,
+        tests: [firstId, firstId],
+      })
+      expectRefused(result, 'created', [
+        inputFinding('VALIDATION', `Test with ID '${firstId}' is listed more than once`),
+      ])
+      expect(await idsNamed(request, '/suites', REPEATED_MEMBER_SUITE)).toEqual([])
     })
   })
 })

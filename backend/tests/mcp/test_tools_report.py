@@ -524,7 +524,9 @@ class TestGetRunReportTool:
             "build_execution_report",
             side_effect=RuntimeError("disk full"),
         ):
-            with pytest.raises(InternalServerException, match=r"^disk full$"):
+            with pytest.raises(
+                InternalServerException, match=r"^An internal server error occurred$"
+            ):
                 await report_tools.get_run_report(seeded["execution_id"], format="json")
 
     async def test_running_execution_is_rejected(self) -> None:

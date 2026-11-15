@@ -37,12 +37,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class FunctionLoadError(RuntimeError):
+    """A Function Block whose definition cannot be loaded."""
+
+
 def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
     lifecycle = node_data.get("functionLifecycle", "local")
     if lifecycle == "local":
         local_def = node_data.get("localDefinition")
         if not isinstance(local_def, dict):
-            raise RuntimeError("Local Function block missing localDefinition")
+            raise FunctionLoadError("Local Function block missing localDefinition")
         return local_def
     # Edit-mode: the in-Test draft body is the execution contract (the
     # source-version definition is not consulted while editMode is true), so
@@ -52,7 +56,7 @@ def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
         return draft
     function_id = node_data.get("functionId", "")
     if not function_id:
-        raise RuntimeError("Shared Function block missing functionId")
+        raise FunctionLoadError("Shared Function block missing functionId")
     version = node_data.get("functionVersion", "")
     try:
         if version:
@@ -60,7 +64,7 @@ def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
         else:
             definition, _etag = _function_storage.load_function(function_id)
     except LookupError as exc:
-        raise RuntimeError(str(exc)) from exc
+        raise FunctionLoadError(str(exc)) from exc
     # Library versions are sealed at rest; Local and draft bodies unseal with the Test.
     return unseal_definition_secrets(dict(definition))
 
@@ -131,11 +135,11 @@ class FunctionCanvas:
 def locate_function_instance(
     nodes: list[dict[str, Any]], node_id: str, test_id: str
 ) -> dict[str, Any]:
-    """The Function instance ``node_id`` on a canvas, or LookupError."""
+    """The Function instance ``node_id`` on a canvas, or NotFoundException."""
     for node in nodes:
         if node.get("id") == node_id and (node.get("data") or {}).get("nodeType") == "function":
             return node
-    raise LookupError(f"Function block '{node_id}' not found in Test '{test_id}'")
+    raise NotFoundException(f"Function block '{node_id}' not found in Test '{test_id}'")
 
 
 def resolve_function_canvases(
@@ -149,8 +153,8 @@ def resolve_function_canvases(
         instance = locate_function_instance(canvases[-1].nodes, node_id, test_id)
         try:
             definition = _load_function_definition(instance.get("data") or {})
-        except RuntimeError as exc:
-            raise LookupError(str(exc)) from exc
+        except FunctionLoadError as exc:
+            raise NotFoundException(str(exc)) from exc
         body = definition.get("workflow") or {}
         canvases.append(
             FunctionCanvas(

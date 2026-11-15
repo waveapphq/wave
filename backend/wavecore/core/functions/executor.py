@@ -690,7 +690,7 @@ async def _push_initial_scope(
         from wavecore.api.services.workbench._common import _push_variable_changes
 
         await _push_variable_changes(session_id, {}, initial_scope)
-    except Exception:  # pragma: no cover - defensive: WS never blocks exec
+    except Exception:  # pragma: no cover - BCOV-GUARD-001 - defensive: WS never blocks exec
         pass
 
 

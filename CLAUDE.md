@@ -6,8 +6,9 @@ This file holds WAVE's code rules. They hold for every change, made by hand or w
 
 ### SonarQube Policy
 - **Fix the code, not the report** - When SonarQube reports an issue, fix it in the source code. Never suppress it in SonarQube.
-- **No NOSONAR comments** - Never add `// NOSONAR`, `# NOSONAR`, or any other SonarQube suppression comment to source code.
-- **False positives** - A maintainer reviews false positives in SonarQube.
+- **No NOSONAR comments** - Never add `// NOSONAR`, `# NOSONAR`, or any other SonarQube suppression comment to source code. An exclusion ID comment is not a suppression: it changes nothing in what the tool reports.
+- **False positives** - A maintainer marks a false positive in SonarQube Cloud. It gets an entry in `tests/exclusions/sonarqube-cloud.md`, and the code carries its `SQ-*` ID in a one-line comment at the spot.
+- **CodeQL dismissals** - A maintainer dismisses a CodeQL alert on GitHub. It gets an entry in `tests/exclusions/codeql.md`, and the code carries its `CQL-*` ID in a one-line comment at the spot.
 
 ### Typography Policy
 - **Never use em dashes or en dashes** (Unicode U+2014 and U+2013) - Always use regular hyphens/dashes (-) in all code, comments, documentation, and UI text. This applies to every file in the repository without exception.
@@ -23,7 +24,10 @@ This file holds WAVE's code rules. They hold for every change, made by hand or w
 | Referent lives in | Verdict | Examples |
 |---|---|---|
 | The design and the requirements in the WAVE docs repo | **VALID - keep** | `REQ-3.1.3.14`, `CANVAS-72`, `LIST-7`, `SHELL-2`, "per the Lifecycle badge location decision" |
-| `frontend/coverage-exclusions.md` | **MANDATORY** | `COV-BRANCH-146` - a `v8 ignore` without its registry ID is a policy violation |
+| `tests/exclusions/frontend-coverage.md` | **MANDATORY** | `COV-BRANCH-146` - a `v8 ignore` without its registry ID is a policy violation |
+| `tests/exclusions/backend-coverage.md` | **MANDATORY** | `BCOV-ABSTRACT-001` - a `pragma: no cover` without its ID is a policy violation |
+| `tests/exclusions/sonarqube-cloud.md` | **MANDATORY** | `SQ-HASH-001` - marks the spot of an issue a maintainer marked as a false positive |
+| `tests/exclusions/codeql.md` | **MANDATORY** | `CQL-LOG-001` - marks the spot of an alert a maintainer dismissed |
 | A roadmap, a session handoff, a ticket tracker, a PR, or a past conversation | **FORBIDDEN** | "Roadmap 10.6 #8", "phase 12.6", "D7", "issue #123", "ABC-42", "added for the Y flow", "fix for the Z regression", "session 4 decided" |
 
 Requirements and design are the contracts the code must satisfy; pointing at them is traceability and is wanted. Roadmaps, handoffs and tickets are scheduling and history; they get reordered and deleted, so a pointer to one outlives its referent and becomes dead weight. Never run a sweep that strips `REQ-*`, design-decision IDs, or `COV-*` from source.
@@ -95,7 +99,7 @@ Every change must follow this process:
 ### Production Code vs Test Mocks Policy
 - **Never implement production logic in test mocks** - Production code goes in `wavecore/`/`backend/`, not `tests/`
 - **Never put test/mock code in production files** - No mock implementations, test stubs, simulation logic, or test data in prod files
-- **Exception**: `data-testid` attributes and registered coverage exclusions (`/* v8 ignore next - COV-XXX-NNN */` with ID in `frontend/coverage-exclusions.md`) are allowed
+- **Exception**: `data-testid` attributes and registered coverage exclusions (`/* v8 ignore next - COV-XXX-NNN */` with ID in `tests/exclusions/frontend-coverage.md`) are allowed
 - **If tests fail, check for production code first** - Does `wavecore/` contain the real implementation? If not, create it. Never "fix" by elaborating mocks.
 - **Mock complexity is a red flag** - If a mock has >50 lines, you're implementing in the wrong place
 - **Correct**: `wavecore/plugins/sql_client.py` (real impl) + `tests/plugins/sql_client/conftest.py` (test fixtures over a scripted fake connection)
@@ -107,9 +111,10 @@ Every change must follow this process:
 - **If 100% seems hard, the code design may be wrong** - Question the architecture, not the requirement.
 
 ### Coverage Exclusions Registry (do not modify)
-- **Registry**: `frontend/coverage-exclusions.md` - no modifications without a maintainer's approval
+- **Registry**: `tests/exclusions/frontend-coverage.md` - no modifications without a maintainer's approval
 - **Format**: `/* v8 ignore next - COV-XXX-NNN */` - verify the ID exists in the registry before accepting
 - **Unregistered `/* v8 ignore */` comments are policy violations**
+- **Backend**: `tests/exclusions/backend-coverage.md` holds the backend's exclusions, under the same approval rule. Format: `# pragma: no cover - BCOV-XXX-NNN` - the ID must exist in the backend list. An unregistered `# pragma: no cover` in `backend/wavecore/` is a policy violation
 - **Before proposing exclusions**: Write tests for the edge case, fallback, and negative case first. Exclusions are only for genuinely untestable code (SSR checks, React concurrent internals, missing jsdom APIs) - not for "we didn't test this branch"
 - **Adding new exclusions**: Stop, explain why the code is untestable, and get a maintainer's approval; a maintainer adds the registry entry
 
@@ -362,7 +367,7 @@ npm run type-check
 - `frontend/src/app/router.tsx` - Route definitions
 - `frontend/src/app/main.tsx` - Frontend entry point
 - `backend/config/config.example.yaml` - dev config starting point
-- `frontend/coverage-exclusions.md` - V8 exclusion registry
+- `tests/exclusions/README.md` - the index of the exclusion lists: frontend and backend coverage, SonarQube Cloud, CodeQL
 - `scripts/Containerfile` - Container build definition
 
 ## Environment Variables

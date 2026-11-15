@@ -4,6 +4,7 @@ import os
 from typing import Final
 
 from wavecore.api.config import ConfigValidationError, get_config, instance_settings
+from wavecore.api.exceptions import ValidationException
 from wavecore.core.logging import formatter
 
 ENV_VAR: Final[str] = "WAVE_LOG_LEVEL"
@@ -21,7 +22,7 @@ def startup_level() -> str:
         return _configured_level()
     try:
         return formatter.canonical_level(named)
-    except ValueError as error:
+    except formatter.InvalidLogLevelError as error:
         allowed = ", ".join(instance_settings.LOG_LEVELS)
         raise ConfigValidationError(f"{ENV_VAR} must be one of {allowed}: {named}") from error
 
@@ -33,7 +34,10 @@ def apply_startup_level() -> None:
 
 def save(level: str) -> str:
     """Write a changed level to the config file, then put it in force."""
-    canonical = formatter.canonical_level(level)
+    try:
+        canonical = formatter.canonical_level(level)
+    except formatter.InvalidLogLevelError as error:
+        raise ValidationException(str(error)) from None
     if canonical != _configured_level():
         get_config().save({"logging.level": canonical})
     return formatter.set_log_level(canonical)

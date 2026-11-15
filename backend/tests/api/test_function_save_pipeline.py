@@ -802,7 +802,15 @@ class TestDeclarationRulesReachEverySave:
         )
 
         assert resp.status_code == 422, resp.text
-        assert _issue(resp.json(), _ENUM_INPUT_TYPE)["severity"] == "error"
+        error = resp.json()["error"]
+        assert error["code"] == "UNPROCESSABLE_ENTITY"
+        # The publish refusal carries its findings under the shared envelope's details.
+        found = [
+            issue
+            for issue in error["details"]["errors"]
+            if (issue.get("code"), issue.get("message")) == _ENUM_INPUT_TYPE
+        ]
+        assert [issue["severity"] for issue in found] == ["error"]
 
     @pytest.mark.parametrize("required", [True, False], ids=["required", "not-required"])
     def test_post_functions_accepts_a_secret_boolean_with_no_default(

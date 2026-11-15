@@ -35,6 +35,7 @@ from wavecore.connectivity.sql._errors import SqlFailure, map_error
 from wavecore.connectivity.sql.dialects import (
     DIALECTS,
     Handle,
+    UnknownDatabaseTypeError,
     _common,
     dialect,
     mssql,
@@ -455,7 +456,7 @@ class TestRegistry:
         assert dialect("postgresql") is replacement
 
     def test_an_unknown_type_is_refused(self) -> None:
-        with pytest.raises(ValueError, match=r"^Unknown database type 'db2'$"):
+        with pytest.raises(UnknownDatabaseTypeError, match=r"^Unknown database type 'db2'$"):
             dialect("db2")
 
     def test_the_handle_holds_the_run_connection(self) -> None:

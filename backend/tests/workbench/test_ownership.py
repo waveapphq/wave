@@ -420,8 +420,11 @@ class TestOwnershipRoutes:
         assert response.json()["data"] == {"ok": True}
         assert ownership.get_holder() == {"id": "u1", "label": "User One", "kind": "person"}
 
-    def test_leaving_with_an_unreadable_body_is_a_silent_no_op(self, client: TestClient) -> None:
-        response = client.post("/workbench/ownership/leaving", content="not json")
+    @pytest.mark.parametrize("body", [b"not json", b'{"holder_id": "\x80"}'])
+    def test_leaving_with_an_unreadable_body_is_a_silent_no_op(
+        self, client: TestClient, body: bytes
+    ) -> None:
+        response = client.post("/workbench/ownership/leaving", content=body)
 
         assert response.status_code == 200
         assert response.json()["data"] == {"ok": True}
