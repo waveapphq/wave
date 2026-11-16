@@ -264,8 +264,10 @@ class TestSaveNewVersionDuplicate:
 
         fn_id = str(uuid.uuid4())
         save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(ConflictException):
-            save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "1.0.0", definition, metadata, name="greet")
 
     def test_duplicate_version_conflict_message_is_anchored(self) -> None:
         from wavecore.api.exceptions import ConflictException
@@ -273,8 +275,10 @@ class TestSaveNewVersionDuplicate:
 
         fn_id = str(uuid.uuid4())
         save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(ConflictException) as excinfo:
-            save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "1.0.0", definition, metadata, name="greet")
         assert excinfo.value.message == f"Function '{fn_id}' version '1.0.0' already exists"
 
 
@@ -297,12 +301,14 @@ class TestSaveNewVersionImmutability:
         version_path = _published_dir() / fn_id / "versions" / "1.0.0.yaml"
         original_bytes = version_path.read_bytes()
 
+        definition = _make_definition(workflow={"nodes": [{"id": "tampered"}], "edges": []})
+        metadata = _make_metadata(description="tampered")
         with pytest.raises(ConflictException):
             save_new_version(
                 fn_id,
                 "1.0.0",
-                _make_definition(workflow={"nodes": [{"id": "tampered"}], "edges": []}),
-                _make_metadata(description="tampered"),
+                definition,
+                metadata,
                 name="greet",
             )
 
@@ -356,8 +362,10 @@ class TestSaveNewVersionAtomicWrite:
         monkeypatch.setattr(os, "replace", refuse)
 
         fn_id = str(uuid.uuid4())
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(OSError) as caught:
-            save_new_version(fn_id, "1.0.0", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "1.0.0", definition, metadata, name="greet")
 
         assert caught.value.errno == errno.ENOSPC
         versions_dir = _published_dir() / fn_id / "versions"
@@ -374,8 +382,10 @@ class TestSaveNewVersionVersionValidation:
         from wavecore.api.services.functions._storage import save_new_version
 
         fn_id = str(uuid.uuid4())
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(ValidationException):
-            save_new_version(fn_id, "../poison", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "../poison", definition, metadata, name="greet")
         # The crafted version must not have escaped into the function directory.
         assert not (_published_dir() / fn_id / "poison.yaml").exists()
 
@@ -384,16 +394,20 @@ class TestSaveNewVersionVersionValidation:
         from wavecore.api.services.functions._storage import save_new_version
 
         fn_id = str(uuid.uuid4())
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(ValidationException):
-            save_new_version(fn_id, "abc", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "abc", definition, metadata, name="greet")
 
     def test_non_semver_version_message_is_anchored(self) -> None:
         from wavecore.api.exceptions import ValidationException
         from wavecore.api.services.functions._storage import save_new_version
 
         fn_id = str(uuid.uuid4())
+        definition = _make_definition()
+        metadata = _make_metadata()
         with pytest.raises(ValidationException) as excinfo:
-            save_new_version(fn_id, "abc", _make_definition(), _make_metadata(), name="greet")
+            save_new_version(fn_id, "abc", definition, metadata, name="greet")
         assert excinfo.value.message == "Function version 'abc' is not a valid semver"
 
 

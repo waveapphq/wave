@@ -488,8 +488,9 @@ class TestControlBaseValidationInterface:
                     raise ValueError("iterator parameter is required")
 
         control = TestControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^iterator parameter is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
 
 class TestControlBaseIntrospection:
@@ -2126,8 +2127,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.conditional import IfElseControl
 
         control = IfElseControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="branches parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_if_else_validate_passes_with_branches(self):
         """Verify IfElse validate passes with valid branches."""
@@ -2191,8 +2193,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.conditional import AssertControl
 
         control = AssertControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="assertions parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_assert_validate_passes_with_assertions(self):
         """Verify Assert validate passes with assertions parameter."""
@@ -2222,8 +2225,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import ForControl
 
         control = ForControl()
+        validation = control.validate({"mode": "count"})
         with pytest.raises(ValueError, match="count is required when mode is 'count'"):
-            asyncio.run(control.validate({"mode": "count"}))
+            asyncio.run(validation)
 
     def test_for_validate_range_mode(self):
         """Verify For validate requires start and end in range mode."""
@@ -2232,8 +2236,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import ForControl
 
         control = ForControl()
+        validation = control.validate({"mode": "range"})
         with pytest.raises(ValueError, match="start is required when mode is 'range'"):
-            asyncio.run(control.validate({"mode": "range"}))
+            asyncio.run(validation)
 
     def test_for_validate_passes_count_mode(self):
         """Verify For validate passes with valid count mode parameters."""
@@ -2262,8 +2267,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import ForEachControl
 
         control = ForEachControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="collection parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_for_each_validate_passes_with_collection(self):
         """Verify ForEach validate passes with collection parameter."""
@@ -2301,8 +2307,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import WhileControl
 
         control = WhileControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="conditions parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_while_validate_passes_with_conditions(self):
         """Verify While validate passes with conditions parameter."""
@@ -2340,8 +2347,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import BreakControl
 
         control = BreakControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^target_loop is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_break_validate_accepts_valid_target(self):
         """Verify Break validate accepts non-empty target_loop."""
@@ -2372,8 +2380,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.loop import ContinueControl
 
         control = ContinueControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^target_loop is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_continue_validate_accepts_valid_target(self):
         """Verify Continue validate accepts non-empty target_loop."""
@@ -2465,8 +2474,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="duration parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_delay_validate_passes_with_duration(self):
         """Verify Delay validate passes with duration parameter (REQ-3.5.4.1)."""
@@ -2508,8 +2518,9 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.timing import WaitUntilControl
 
         control = WaitUntilControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="conditions parameter is required"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_wait_until_validate_requires_timeout(self):
         """Verify WaitUntil validate requires timeout parameter."""
@@ -2518,12 +2529,11 @@ class TestConcreteControlExecuteValidate:
         from wavecore.controls.timing import WaitUntilControl
 
         control = WaitUntilControl()
+        validation = control.validate(
+            {"conditions": [{"id": "c1", "type": "expression", "expression": "ready"}]}
+        )
         with pytest.raises(ValueError, match="timeout parameter is required"):
-            asyncio.run(
-                control.validate(
-                    {"conditions": [{"id": "c1", "type": "expression", "expression": "ready"}]}
-                )
-            )
+            asyncio.run(validation)
 
     def test_wait_until_validate_passes_with_params(self):
         """Verify WaitUntil validate passes with required parameters."""

@@ -158,9 +158,14 @@ function renderRegressionsPage(props: Partial<RegressionsPageProps> = {}) {
 
 describe('RegressionsPage', () => {
   describe('Page Structure', () => {
-    it('renders page container with correct testid', () => {
+    it.each([
+      ['renders page container with correct testid', 'regressions-page'],
+      ['renders filters section', 'filters-section'],
+      ['renders regressions DataTable', 'regressions-table'],
+      ['renders pagination controls', 'pagination'],
+    ])('%s', (_name, testId) => {
       renderRegressionsPage()
-      expect(screen.getByTestId('regressions-page')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders page title "Regressions" as h1', () => {
@@ -178,21 +183,6 @@ describe('RegressionsPage', () => {
       const newButton = screen.getByRole('button', { name: /New Regression/i })
       expect(newButton).toBeVisible()
       expect(newButton).toBeEnabled()
-    })
-
-    it('renders filters section', () => {
-      renderRegressionsPage()
-      expect(screen.getByTestId('filters-section')).toBeInTheDocument()
-    })
-
-    it('renders regressions DataTable', () => {
-      renderRegressionsPage()
-      expect(screen.getByTestId('regressions-table')).toBeInTheDocument()
-    })
-
-    it('renders pagination controls', () => {
-      renderRegressionsPage()
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
     })
   })
 

@@ -85,7 +85,7 @@ describe('useSettingsNavStore', () => {
       useSettingsNavStore.getState().setNetworkExpanded(true)
 
       expect(sessionStorage.getItem('wave-settings-nav')).toContain('"networkExpanded":true')
-      expect(localStorage.length).toBe(0)
+      expect(localStorage).toHaveLength(0)
     })
   })
 })

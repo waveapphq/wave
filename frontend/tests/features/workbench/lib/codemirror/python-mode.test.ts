@@ -152,13 +152,13 @@ describe('buildPythonModeExtensions', () => {
   it('marks the bracket matching the one at the cursor', () => {
     const view = mount('x = (1)', { selection: { anchor: 5, head: 5 } })
 
-    expect(view.dom.querySelectorAll('.cm-matchingBracket').length).toBe(2)
+    expect(view.dom.querySelectorAll('.cm-matchingBracket')).toHaveLength(2)
   })
 
   it('renders a fold gutter', () => {
     const view = mount('def f():\n    return 1')
 
-    expect(view.dom.querySelectorAll('.cm-foldGutter').length).toBe(1)
+    expect(view.dom.querySelectorAll('.cm-foldGutter')).toHaveLength(1)
   })
 
   // The sheet host already renders line numbers, so the bundle must not add a
@@ -167,7 +167,7 @@ describe('buildPythonModeExtensions', () => {
     const view = mount('a = 1\nb = 2\nc = 3', { extra: [lineNumbers()] })
     const gutters = view.dom.querySelectorAll('.cm-lineNumbers')
 
-    expect(gutters.length).toBe(1)
+    expect(gutters).toHaveLength(1)
     // The first element of a stock line-number gutter is its width spacer.
     const numbers = Array.from(gutters[0].querySelectorAll('.cm-gutterElement'))
       .map((element) => element.textContent)
@@ -179,14 +179,14 @@ describe('buildPythonModeExtensions', () => {
   it('adds no line-number gutter of its own', () => {
     const view = mount('a = 1\nb = 2')
 
-    expect(view.dom.querySelectorAll('.cm-lineNumbers').length).toBe(0)
+    expect(view.dom.querySelectorAll('.cm-lineNumbers')).toHaveLength(0)
   })
 
   it('highlights the active line', () => {
     const view = mount('a = 1\nb = 2', { selection: { anchor: 0, head: 0 } })
     const active = view.dom.querySelectorAll('.cm-activeLine')
 
-    expect(active.length).toBe(1)
+    expect(active).toHaveLength(1)
     expect(active[0].textContent).toBe('a = 1')
   })
 

@@ -187,23 +187,26 @@ class TestBlockOutcome:
 
     def test_fail_mode_raises_the_exact_message(self) -> None:
         params = {"on_error": "fail"}
+        empties = _get_empties()
+        log = _Log()
 
         with pytest.raises(ValueError, match=_exact(_NOT_FOUND_MESSAGE)):
-            block_failure(
-                params, _get_empties(), _NOT_FOUND_MESSAGE, "NotFound", _Log(), action="Read"
-            )
+            block_failure(params, empties, _NOT_FOUND_MESSAGE, "NotFound", log, action="Read")
 
     def test_fail_is_the_default_when_on_error_is_absent(self) -> None:
+        empties = _get_empties()
+        log = _Log()
+
         with pytest.raises(ValueError, match=_exact(_NOT_FOUND_MESSAGE)):
-            block_failure({}, _get_empties(), _NOT_FOUND_MESSAGE, "NotFound", _Log(), action="Read")
+            block_failure({}, empties, _NOT_FOUND_MESSAGE, "NotFound", log, action="Read")
 
     def test_only_record_records_and_any_other_value_raises(self) -> None:
         params = {"on_error": "continue"}
+        empties = _get_empties()
+        log = _Log()
 
         with pytest.raises(ValueError, match=_exact(_NOT_FOUND_MESSAGE)):
-            block_failure(
-                params, _get_empties(), _NOT_FOUND_MESSAGE, "NotFound", _Log(), action="Read"
-            )
+            block_failure(params, empties, _NOT_FOUND_MESSAGE, "NotFound", log, action="Read")
 
 
 class TestRecordedFailureIsAmber:
@@ -311,8 +314,10 @@ class TestRecordedFailureAction:
 
     @pytest.mark.parametrize("action", _BLOCK_ACTIONS)
     def test_fail_mode_raises_the_message_alone(self, action: str) -> None:
+        log = _Log()
+
         with pytest.raises(ValueError, match=_exact(_NOT_FOUND_MESSAGE)):
-            block_failure({}, {}, _NOT_FOUND_MESSAGE, "NotFound", _Log(), action=action)
+            block_failure({}, {}, _NOT_FOUND_MESSAGE, "NotFound", log, action=action)
 
 
 class TestFailureLogCallable:

@@ -382,9 +382,10 @@ class TestDeclaredBounds:
     @pytest.mark.parametrize("name", list(_FLOOR_MESSAGES))
     async def test_one_below_the_declared_minimum_is_refused(self, name: str) -> None:
         minimum = _params_by_name(SSHSessionOpenPlugin())[name]["minimum"]
+        params = _valid_params(**{name: minimum - 1})
 
         with pytest.raises(ValueError, match=exact(_FLOOR_MESSAGES[name])):
-            await SSHSessionOpenPlugin().validate(_valid_params(**{name: minimum - 1}))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_the_declared_port_range_is_the_one_enforced(self) -> None:
         row = _params_by_name(SSHSessionOpenPlugin())["port"]
@@ -393,8 +394,9 @@ class TestDeclaredBounds:
         await plugin.validate(_valid_params(port=row["minimum"]))
         await plugin.validate(_valid_params(port=row["maximum"]))
         for outside in (row["minimum"] - 1, row["maximum"] + 1):
+            params = _valid_params(port=outside)
             with pytest.raises(ValueError, match=exact(_PORT_RANGE)):
-                await plugin.validate(_valid_params(port=outside))
+                await plugin.validate(params)
 
 
 class TestValidation:
@@ -447,16 +449,22 @@ class TestValidation:
         await SSHSessionOpenPlugin().validate(params)
 
     async def test_port_zero_is_out_of_range(self) -> None:
+        params = _valid_params(port=0)
+
         with pytest.raises(ValueError, match=r"^Parameter 'port' must be between 1 and 65535$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(port=0))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_port_above_range(self) -> None:
+        params = _valid_params(port=65536)
+
         with pytest.raises(ValueError, match=r"^Parameter 'port' must be between 1 and 65535$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(port=65536))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_non_integer_port(self) -> None:
+        params = _valid_params(port="22")
+
         with pytest.raises(ValueError, match=r"^Parameter 'port' must be between 1 and 65535$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(port="22"))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_valid_port_passes(self) -> None:
         await SSHSessionOpenPlugin().validate(_valid_params(port=2222))
@@ -467,21 +475,29 @@ class TestValidation:
 
     async def test_an_empty_text_port_is_refused(self) -> None:
         """Empty text is text, not a missing value (SSH-10)."""
+        params = _valid_params(port="")
+
         with pytest.raises(ValueError, match=r"^Parameter 'port' must be between 1 and 65535$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(port=""))
+            await SSHSessionOpenPlugin().validate(params)
 
     @pytest.mark.parametrize("bad", [True, False, 22.5], ids=["true", "false", "float"])
     async def test_a_port_that_is_not_a_whole_number_is_out_of_range(self, bad: Any) -> None:
+        params = _valid_params(port=bad)
+
         with pytest.raises(ValueError, match=exact(_PORT_RANGE)):
-            await SSHSessionOpenPlugin().validate(_valid_params(port=bad))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_zero_connect_timeout(self) -> None:
+        params = _valid_params(connect_timeout=0)
+
         with pytest.raises(ValueError, match=r"^Connect timeout must be at least 1$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(connect_timeout=0))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_negative_connect_timeout(self) -> None:
+        params = _valid_params(connect_timeout=-5)
+
         with pytest.raises(ValueError, match=r"^Connect timeout must be at least 1$"):
-            await SSHSessionOpenPlugin().validate(_valid_params(connect_timeout=-5))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_positive_connect_timeout_passes(self) -> None:
         await SSHSessionOpenPlugin().validate(_valid_params(connect_timeout=10))
@@ -495,16 +511,20 @@ class TestValidation:
     async def test_a_number_row_that_is_not_a_whole_number_is_refused(
         self, name: str, bad: Any
     ) -> None:
+        params = _valid_params(**{name: bad})
+
         with pytest.raises(ValueError, match=exact(f"Parameter '{name}' must be an integer")):
-            await SSHSessionOpenPlugin().validate(_valid_params(**{name: bad}))
+            await SSHSessionOpenPlugin().validate(params)
 
     @pytest.mark.parametrize(
         ("name", "below"),
         [("keep_alive_interval", -1), ("keep_alive_interval", -30), ("keep_alive_max_count", 0)],
     )
     async def test_a_keepalive_row_below_its_floor_is_refused(self, name: str, below: int) -> None:
+        params = _valid_params(**{name: below})
+
         with pytest.raises(ValueError, match=exact(_FLOOR_MESSAGES[name])):
-            await SSHSessionOpenPlugin().validate(_valid_params(**{name: below}))
+            await SSHSessionOpenPlugin().validate(params)
 
     @pytest.mark.parametrize(
         ("name", "value"),
@@ -567,10 +587,14 @@ class TestValidation:
         ],
     )
     async def test_checks_run_in_order(self, overrides: dict[str, Any], message: str) -> None:
+        params = _valid_params(**overrides)
+
         with pytest.raises(ValueError, match=exact(message)):
-            await SSHSessionOpenPlugin().validate(_valid_params(**overrides))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_invalid_host_key_verification(self) -> None:
+        params = _valid_params(host_key_verification="yolo")
+
         with pytest.raises(
             ValueError,
             match=(
@@ -578,10 +602,11 @@ class TestValidation:
                 r"strict, accept-new, disabled; Actual value was 'yolo'\.$"
             ),
         ):
-            await SSHSessionOpenPlugin().validate(_valid_params(host_key_verification="yolo"))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_long_invalid_enum_value_shows_length_not_content(self) -> None:
         long_value = "x" * 60
+        params = _valid_params(host_key_verification=long_value)
         with pytest.raises(
             ValueError,
             match=(
@@ -589,7 +614,7 @@ class TestValidation:
                 r"strict, accept-new, disabled; Actual value was a 60-character value\.$"
             ),
         ):
-            await SSHSessionOpenPlugin().validate(_valid_params(host_key_verification=long_value))
+            await SSHSessionOpenPlugin().validate(params)
 
     async def test_all_host_key_modes_pass(self) -> None:
         plugin = SSHSessionOpenPlugin()
@@ -777,13 +802,14 @@ class TestThePrivateKeyIsReadByWave:
     async def test_a_missing_key_file_is_refused_before_connecting(self) -> None:
         registry, _pushes = _make_registry()
         connect_mock = AsyncMock(return_value=_make_conn())
+        context = _make_context(registry, params=_key_file_params())
 
         with (
             patch.object(registry, "register", wraps=registry.register) as register_spy,
             patch("wavecore.plugins._ssh_session.asyncssh.connect", new=connect_mock),
             pytest.raises(ValueError, match=r"^Private Key file not found: /.+/keys/id_lab$"),
         ):
-            await SSHSessionOpenPlugin().execute(_make_context(registry, params=_key_file_params()))
+            await SSHSessionOpenPlugin().execute(context)
 
         connect_mock.assert_not_called()
         register_spy.assert_not_called()
@@ -791,9 +817,10 @@ class TestThePrivateKeyIsReadByWave:
     async def test_the_missing_message_names_the_home_folder_path(self, server_home: Path) -> None:
         registry, _pushes = _make_registry()
         missing = server_home / "keys" / "id_lab"
+        context = _make_context(registry, params=_key_file_params())
 
         with pytest.raises(ValueError, match=exact(f"Private Key file not found: {missing}")):
-            await SSHSessionOpenPlugin().execute(_make_context(registry, params=_key_file_params()))
+            await SSHSessionOpenPlugin().execute(context)
 
     async def test_an_unreadable_key_file_is_refused_with_the_reason(
         self, server_home: Path
@@ -801,19 +828,21 @@ class TestThePrivateKeyIsReadByWave:
         unreadable = server_home / "keys" / "id_lab"
         unreadable.mkdir(parents=True)
         registry, _pushes = _make_registry()
+        context = _make_context(registry, params=_key_file_params())
 
         with pytest.raises(
             ValueError,
             match="^" + re.escape(f"Private Key file {unreadable} cannot be read: ") + ".+$",
         ):
-            await SSHSessionOpenPlugin().execute(_make_context(registry, params=_key_file_params()))
+            await SSHSessionOpenPlugin().execute(context)
 
     async def test_the_unreadable_message_has_the_documented_shape(self, server_home: Path) -> None:
         (server_home / "keys" / "id_lab").mkdir(parents=True)
         registry, _pushes = _make_registry()
+        context = _make_context(registry, params=_key_file_params())
 
         with pytest.raises(ValueError, match=r"^Private Key file /.+ cannot be read: .+$"):
-            await SSHSessionOpenPlugin().execute(_make_context(registry, params=_key_file_params()))
+            await SSHSessionOpenPlugin().execute(context)
 
     async def test_the_key_file_logs_in_and_its_stray_siblings_are_not_loaded(
         self, key_endpoint: KeyEndpoint, server_home: Path

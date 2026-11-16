@@ -1326,7 +1326,8 @@ class TestCorrelationAndTracing:
         id2 = response2.headers.get("x-correlation-id") or response2.headers.get("x-request-id")
 
         # Should have different IDs
-        assert id1 is not None and id2 is not None
+        assert id1 is not None
+        assert id2 is not None
         assert id1 != id2, "Each request should have unique correlation ID"
 
     @pytest.mark.asyncio

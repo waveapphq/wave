@@ -1388,7 +1388,7 @@ class TestBuildPlan:
 
         item = _planned("profiles", documents[kind], **options)
 
-        assert (item.status, item.action) == expected
+        assert expected == (item.status, item.action)
 
 
 MISSING_PARTS = [

@@ -192,7 +192,11 @@ describe('Dropdown Component', () => {
   })
 
   describe('Keyboard Navigation', () => {
-    it('opens menu with Enter key on trigger', async () => {
+    it.each([
+      ['opens menu with Enter key on trigger', '{Enter}'],
+      ['opens menu with Space key on trigger', ' '],
+      ['opens menu with ArrowDown key on trigger', '{ArrowDown}'],
+    ])('%s', async (_title, keys) => {
       const user = userEvent.setup()
 
       render(
@@ -205,43 +209,7 @@ describe('Dropdown Component', () => {
       )
 
       screen.getByRole('button', { name: 'Actions' }).focus()
-      await user.keyboard('{Enter}')
-
-      expect(screen.getByRole('menu')).toBeInTheDocument()
-    })
-
-    it('opens menu with Space key on trigger', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu>
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      screen.getByRole('button', { name: 'Actions' }).focus()
-      await user.keyboard(' ')
-
-      expect(screen.getByRole('menu')).toBeInTheDocument()
-    })
-
-    it('opens menu with ArrowDown key on trigger', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu>
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      screen.getByRole('button', { name: 'Actions' }).focus()
-      await user.keyboard('{ArrowDown}')
+      await user.keyboard(keys)
 
       expect(screen.getByRole('menu')).toBeInTheDocument()
     })
@@ -614,7 +582,13 @@ describe('Dropdown Component', () => {
   })
 
   describe('Design System Compliance', () => {
-    it('applies menu panel styling', async () => {
+    it.each([
+      ['applies menu panel styling', 'dropdown-menu'],
+      ['applies rounded-md to menu (6px per design system)', 'rounded-md'],
+      ['applies shadow-md to menu (per design system)', 'shadow-md'],
+      ['applies border to menu', 'border'],
+      ['applies bg-card to menu', 'bg-card'],
+    ])('%s', async (_title, className) => {
       const user = userEvent.setup()
 
       render(
@@ -628,75 +602,7 @@ describe('Dropdown Component', () => {
 
       await user.click(screen.getByRole('button', { name: 'Actions' }))
 
-      expect(screen.getByTestId('menu')).toHaveClass('dropdown-menu')
-    })
-
-    it('applies rounded-md to menu (6px per design system)', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu data-testid="menu">
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      await user.click(screen.getByRole('button', { name: 'Actions' }))
-
-      expect(screen.getByTestId('menu')).toHaveClass('rounded-md')
-    })
-
-    it('applies shadow-md to menu (per design system)', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu data-testid="menu">
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      await user.click(screen.getByRole('button', { name: 'Actions' }))
-
-      expect(screen.getByTestId('menu')).toHaveClass('shadow-md')
-    })
-
-    it('applies border to menu', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu data-testid="menu">
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      await user.click(screen.getByRole('button', { name: 'Actions' }))
-
-      expect(screen.getByTestId('menu')).toHaveClass('border')
-    })
-
-    it('applies bg-card to menu', async () => {
-      const user = userEvent.setup()
-
-      render(
-        <Dropdown>
-          <DropdownTrigger>Actions</DropdownTrigger>
-          <DropdownMenu data-testid="menu">
-            <DropdownItem>Edit</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      )
-
-      await user.click(screen.getByRole('button', { name: 'Actions' }))
-
-      expect(screen.getByTestId('menu')).toHaveClass('bg-card')
+      expect(screen.getByTestId('menu')).toHaveClass(className)
     })
 
     it('applies padding to menu items', async () => {

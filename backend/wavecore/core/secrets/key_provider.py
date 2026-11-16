@@ -76,4 +76,5 @@ def new_secret_key() -> str:
 
 def print_new_secret_key() -> None:
     """Print a new key as the only line on stdout (the wave-new-secret-key command)."""
+    # CodeQL exclusion: CQL-LOG-002
     print(new_secret_key())

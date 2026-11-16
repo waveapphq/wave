@@ -190,6 +190,8 @@ class TestRevealSecretVocabulary:
     def test_unknown_entity_type_is_rejected(self) -> None:
         from wavecore.api.exceptions import ValidationException
 
+        tool = secrets_tool()
+
         with pytest.raises(
             ValidationException,
             match=(
@@ -197,14 +199,15 @@ class TestRevealSecretVocabulary:
                 r"system, global, suite, regression, test, profile, function$"
             ),
         ):
-            secrets_tool().reveal_secret("bogus", "any-ref", "token")
+            tool.reveal_secret("bogus", "any-ref", "token")
 
     def test_unknown_entity_type_is_rejected_before_the_reveal_flag(self) -> None:
         from wavecore.api.exceptions import ValidationException
 
         masking_settings.set_reveal_settings(shared_variables=True)
+        tool = secrets_tool()
         with pytest.raises(ValidationException, match=r"^Invalid entity_type"):
-            secrets_tool().reveal_secret("bogus", "any-ref", "token", consent=True)
+            tool.reveal_secret("bogus", "any-ref", "token", consent=True)
 
 
 class TestRevealFunctionSecret:
@@ -243,9 +246,10 @@ class TestRevealFunctionSecret:
         from wavecore.api.exceptions import NotFoundException
 
         masking_settings.set_reveal_settings(test_variables=True)
+        tool = secrets_tool()
 
         with pytest.raises(NotFoundException, match=r"^Function 'ghost' not found$"):
-            secrets_tool().reveal_secret("function", "ghost", "token", consent=True)
+            tool.reveal_secret("function", "ghost", "token", consent=True)
 
 
 class TestRevealUnsetSecret:

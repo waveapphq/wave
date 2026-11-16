@@ -752,8 +752,9 @@ class TestEntryRules:
     ) -> None:
         before = config_file.read_bytes()
 
+        entries = [_regex("(unclosed")]
         with pytest.raises(ValidationException, match=f"^Entry 1: {REGEX_MESSAGE_PATTERN}$"):
-            proxy_service.update_settings(entries=[_regex("(unclosed")])
+            proxy_service.update_settings(entries=entries)
 
         assert config_file.read_bytes() == before
         assert proxy_service.get_settings() == _custom()

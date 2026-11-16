@@ -303,7 +303,7 @@ describe('createTemplateHighlighter', () => {
   it('highlights multiple template regions', () => {
     const { view, plugin } = trackedTpl(createTemplateView('{{a}} and {{b}}'))
     const decos = collectTemplateDecorations(view, plugin)
-    expect(decos.length).toBe(2)
+    expect(decos).toHaveLength(2)
     expect(decos[0].class).toBe('cm-expression')
     expect(decos[1].class).toBe('cm-expression')
   })

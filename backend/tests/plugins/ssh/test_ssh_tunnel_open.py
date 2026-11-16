@@ -649,8 +649,8 @@ class TestValidateTargetFails:
         monkeypatch.setattr(asyncio, "wait_for", expire)
         message = _failed(f"bastion did not connect within {within}")
         try:
-            with pytest.raises(ConnectionError, match=exact(message)):
-                async with asyncio.timeout(1):
+            async with asyncio.timeout(1):
+                with pytest.raises(ConnectionError, match=exact(message)):
                     await _open(registry, log, local_port=local_port, validate_target=True)
 
             assert expire.bounds == [connect_timeout]
@@ -671,10 +671,9 @@ class TestBindFailure:
                 taken.bind(("127.0.0.1", 0))
                 taken.listen()
                 prefix = re.escape(_failed(""))
+                local_port = taken.getsockname()[1]
                 with pytest.raises(ConnectionError, match=f"^{prefix}.+$"):
-                    await _open(
-                        registry, log, local_port=taken.getsockname()[1], validate_target=True
-                    )
+                    await _open(registry, log, local_port=local_port, validate_target=True)
 
             assert registry.get(_SESSION_ID)["tunnels"] == {}
             assert connection.open_connection.call_count == 0

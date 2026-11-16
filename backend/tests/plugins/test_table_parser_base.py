@@ -105,8 +105,9 @@ class TestFilterConditionJoins:
             }
         ]
 
+        parser = plugin()
         with pytest.raises(
             ValueError,
             match=r"^Condition items in 'filters\.0\.conditions' must be joined by 'and' or 'or'$",
         ):
-            plugin().apply_transforms(table, [], filters, {})
+            parser.apply_transforms(table, [], filters, {})

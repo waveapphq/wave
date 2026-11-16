@@ -19,29 +19,13 @@ import { useCanvasRoute } from '@/features/workbench/hooks/use-canvas-route'
 
 describe('useCanvasRoute', () => {
   describe('canvas route detection', () => {
-    it('returns true for /workbench route', () => {
-      const wrapper = createSimpleRouterWrapper(['/workbench'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(true)
-    })
-
-    it('returns true for /workbench/:blockId route', () => {
-      const wrapper = createSimpleRouterWrapper(['/workbench/block-456'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(true)
-    })
-
-    it('returns true for /executions/history/:runId route', () => {
-      const wrapper = createSimpleRouterWrapper(['/executions/history/run-1'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(true)
-    })
-
-    it('handles UUID-style block IDs', () => {
-      const wrapper = createSimpleRouterWrapper(['/workbench/a1b2c3d4-e5f6-7890-abcd-ef1234567890'])
+    it.each([
+      ['returns true for /workbench route', '/workbench'],
+      ['returns true for /workbench/:blockId route', '/workbench/block-456'],
+      ['returns true for /executions/history/:runId route', '/executions/history/run-1'],
+      ['handles UUID-style block IDs', '/workbench/a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
+    ])('%s', (_title, route) => {
+      const wrapper = createSimpleRouterWrapper([route])
       const { result } = renderHook(() => useCanvasRoute(), { wrapper })
 
       expect(result.current).toBe(true)
@@ -49,15 +33,15 @@ describe('useCanvasRoute', () => {
   })
 
   describe('non-canvas route detection', () => {
-    it('returns false for /tests list route', () => {
-      const wrapper = createSimpleRouterWrapper(['/tests'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(false)
-    })
-
-    it('returns false for /tests/:testId detail route (read-only)', () => {
-      const wrapper = createSimpleRouterWrapper(['/tests/test-123'])
+    it.each([
+      ['returns false for /tests list route', '/tests'],
+      ['returns false for /tests/:testId detail route (read-only)', '/tests/test-123'],
+      ['returns false for /regressions routes', '/regressions'],
+      ['returns false for /executions routes', '/executions'],
+      ['returns false for /dashboard route', '/dashboard'],
+      ['returns false for /profiles routes', '/profiles'],
+    ])('%s', (_title, route) => {
+      const wrapper = createSimpleRouterWrapper([route])
       const { result } = renderHook(() => useCanvasRoute(), { wrapper })
 
       expect(result.current).toBe(false)
@@ -74,40 +58,12 @@ describe('useCanvasRoute', () => {
       expect(renderHook(() => useCanvasRoute(), { wrapper: wrapperEdit }).result.current).toBe(false)
     })
 
-    it('returns false for /regressions routes', () => {
-      const wrapper = createSimpleRouterWrapper(['/regressions'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(false)
-    })
-
-    it('returns false for /executions routes', () => {
-      const wrapper = createSimpleRouterWrapper(['/executions'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(false)
-    })
-
-    it('returns false for /dashboard route', () => {
-      const wrapper = createSimpleRouterWrapper(['/dashboard'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(false)
-    })
-
     it('returns false for /settings routes', () => {
       const wrapperSettings = createSimpleRouterWrapper(['/settings'])
       expect(renderHook(() => useCanvasRoute(), { wrapper: wrapperSettings }).result.current).toBe(false)
 
       const wrapperSection = createSimpleRouterWrapper(['/settings/environments'])
       expect(renderHook(() => useCanvasRoute(), { wrapper: wrapperSection }).result.current).toBe(false)
-    })
-
-    it('returns false for /profiles routes', () => {
-      const wrapper = createSimpleRouterWrapper(['/profiles'])
-      const { result } = renderHook(() => useCanvasRoute(), { wrapper })
-
-      expect(result.current).toBe(false)
     })
 
     it('returns false for /blocks list and detail routes', () => {

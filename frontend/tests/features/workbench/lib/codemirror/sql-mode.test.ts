@@ -155,14 +155,14 @@ describe('buildSqlModeExtensions - editor facilities', () => {
     const view = mount('SELECT 1\nFROM orders', { selection: { anchor: 0, head: 0 } })
     const active = view.dom.querySelectorAll('.cm-activeLine')
 
-    expect(active.length).toBe(1)
+    expect(active).toHaveLength(1)
     expect(active[0].textContent).toBe('SELECT 1')
   })
 
   it('marks the bracket matching the one at the cursor', () => {
     const view = mount('SELECT (1)', { selection: { anchor: 8, head: 8 } })
 
-    expect(view.dom.querySelectorAll('.cm-matchingBracket').length).toBe(2)
+    expect(view.dom.querySelectorAll('.cm-matchingBracket')).toHaveLength(2)
   })
 
   it('closes a bracket as it is typed', () => {
@@ -190,7 +190,7 @@ describe('buildSqlModeExtensions - editor facilities', () => {
   it('adds no line-number gutter of its own', () => {
     const view = mount('SELECT 1\nFROM orders')
 
-    expect(view.dom.querySelectorAll('.cm-lineNumbers').length).toBe(0)
+    expect(view.dom.querySelectorAll('.cm-lineNumbers')).toHaveLength(0)
   })
 
   // The sheet host renders the line numbers; a second gutter reads as doubled numbers.
@@ -198,7 +198,7 @@ describe('buildSqlModeExtensions - editor facilities', () => {
     const view = mount('SELECT 1\nFROM orders\nWHERE id = :id', { extra: [lineNumbers()] })
     const gutters = view.dom.querySelectorAll('.cm-lineNumbers')
 
-    expect(gutters.length).toBe(1)
+    expect(gutters).toHaveLength(1)
     // The first element of a stock line-number gutter is its width spacer.
     const numbers = Array.from(gutters[0].querySelectorAll('.cm-gutterElement'))
       .map((element) => element.textContent)

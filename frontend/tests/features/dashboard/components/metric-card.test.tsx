@@ -294,7 +294,12 @@ describe('MetricCard Component', () => {
   })
 
   describe('Card Styling', () => {
-    it('applies card base class', () => {
+    it.each([
+      ['applies card base class', 'card'],
+      ['applies rounded corners', 'rounded-lg'],
+      ['applies border styling', 'border'],
+      ['applies card background', 'bg-card'],
+    ])('%s', (_name, className) => {
       render(
         <MetricCard
           label="Tests"
@@ -303,43 +308,7 @@ describe('MetricCard Component', () => {
           testId="metric-card-tests"
         />
       )
-      expect(screen.getByTestId('metric-card-tests')).toHaveClass('card')
-    })
-
-    it('applies rounded corners', () => {
-      render(
-        <MetricCard
-          label="Tests"
-          count={42}
-          subtitle="All passing"
-          testId="metric-card-tests"
-        />
-      )
-      expect(screen.getByTestId('metric-card-tests')).toHaveClass('rounded-lg')
-    })
-
-    it('applies border styling', () => {
-      render(
-        <MetricCard
-          label="Tests"
-          count={42}
-          subtitle="All passing"
-          testId="metric-card-tests"
-        />
-      )
-      expect(screen.getByTestId('metric-card-tests')).toHaveClass('border')
-    })
-
-    it('applies card background', () => {
-      render(
-        <MetricCard
-          label="Tests"
-          count={42}
-          subtitle="All passing"
-          testId="metric-card-tests"
-        />
-      )
-      expect(screen.getByTestId('metric-card-tests')).toHaveClass('bg-card')
+      expect(screen.getByTestId('metric-card-tests')).toHaveClass(className)
     })
 
     it('applies padding', () => {

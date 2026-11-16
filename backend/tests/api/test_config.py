@@ -151,13 +151,13 @@ class TestEnvironmentVariableIntegration:
         for key, value in original_env.items():
             os.environ[key] = value
 
-    def test_environment_variable_prefix(self) -> None:
+    def test_environment_variable_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that environment variables use WAVE_ prefix."""
         from wavecore.api.config import Config
 
         # Set environment variables
-        os.environ["WAVE_SERVER_HOST"] = "test.example.com"
-        os.environ["WAVE_SERVER_PORT"] = "9000"
+        monkeypatch.setenv("WAVE_SERVER_HOST", "test.example.com")
+        monkeypatch.setenv("WAVE_SERVER_PORT", "9000")
 
         # Create new config instance
         config = Config()
@@ -165,12 +165,12 @@ class TestEnvironmentVariableIntegration:
         assert config.server.host == "test.example.com", "WAVE_SERVER_HOST must override default"
         assert config.server.port == 9000, "WAVE_SERVER_PORT must override default"
 
-    def test_environment_variable_type_coercion_int(self) -> None:
+    def test_environment_variable_type_coercion_int(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that environment variables are coerced to int when needed."""
         from wavecore.api.config import Config
 
-        os.environ["WAVE_SERVER_PORT"] = "8080"
-        os.environ["WAVE_SERVER_WORKER_COUNT"] = "4"
+        monkeypatch.setenv("WAVE_SERVER_PORT", "8080")
+        monkeypatch.setenv("WAVE_SERVER_WORKER_COUNT", "4")
 
         config = Config()
 
@@ -179,7 +179,7 @@ class TestEnvironmentVariableIntegration:
         assert isinstance(config.server.worker_count, int), "worker_count must be coerced to int"
         assert config.server.worker_count == 4, "worker_count must have correct value"
 
-    def test_environment_variable_type_coercion_bool(self) -> None:
+    def test_environment_variable_type_coercion_bool(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that environment variables are coerced to bool when needed."""
         from wavecore.api.config import Config
 
@@ -196,17 +196,19 @@ class TestEnvironmentVariableIntegration:
         ]
 
         for env_value, expected_bool in test_cases:
-            os.environ["WAVE_SERVER_DEBUG"] = env_value
+            monkeypatch.setenv("WAVE_SERVER_DEBUG", env_value)
             config = Config()
             assert (
                 config.server.debug == expected_bool
             ), f"'{env_value}' must be coerced to {expected_bool}"
 
-    def test_environment_variable_type_coercion_list(self) -> None:
+    def test_environment_variable_type_coercion_list(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that environment variables are coerced to list when needed."""
         from wavecore.api.config import Config
 
-        os.environ["WAVE_SECURITY_CORS_ORIGINS"] = "http://localhost:3000,https://app.example.com"
+        monkeypatch.setenv(
+            "WAVE_SECURITY_CORS_ORIGINS", "http://localhost:3000,https://app.example.com"
+        )
 
         config = Config()
 
@@ -218,11 +220,13 @@ class TestEnvironmentVariableIntegration:
             "https://app.example.com",
         ], "must hold both origins in order"
 
-    def test_environment_variable_invalid_type_raises_error(self) -> None:
+    def test_environment_variable_invalid_type_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that invalid type coercion raises validation error."""
         from wavecore.api.config import Config, ConfigValidationError
 
-        os.environ["WAVE_SERVER_PORT"] = "not_a_number"
+        monkeypatch.setenv("WAVE_SERVER_PORT", "not_a_number")
 
         with pytest.raises(ConfigValidationError, match="^.*port.*invalid.*$"):
             Config()
@@ -359,7 +363,7 @@ class TestConfigurationPriority:
         for key, value in original_env.items():
             os.environ[key] = value
 
-    def test_environment_overrides_file(self) -> None:
+    def test_environment_overrides_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that environment variables override config file values."""
         from wavecore.api.config import Config
 
@@ -374,7 +378,7 @@ class TestConfigurationPriority:
 
         try:
             # Set environment variable
-            os.environ["WAVE_SERVER_HOST"] = "env.example.com"
+            monkeypatch.setenv("WAVE_SERVER_HOST", "env.example.com")
 
             config = Config(config_file=config_file)
 
@@ -1282,11 +1286,11 @@ class TestConfigurationInternalBehavior:
 
         assert config.cors_origin_regex == "^http://localhost(:\\d+)?$", "data must override"
 
-    def test_environment_variable_cors_origin_regex(self) -> None:
+    def test_environment_variable_cors_origin_regex(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test WAVE_SECURITY_CORS_ORIGIN_REGEX environment variable."""
         from wavecore.api.config import Config
 
-        os.environ["WAVE_SECURITY_CORS_ORIGIN_REGEX"] = "^http://192\\.168\\.1\\.5(:\\d+)?$"
+        monkeypatch.setenv("WAVE_SECURITY_CORS_ORIGIN_REGEX", "^http://192\\.168\\.1\\.5(:\\d+)?$")
 
         config = Config()
 

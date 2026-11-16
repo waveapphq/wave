@@ -487,43 +487,27 @@ describe('Route Rendering', () => {
   })
 
   describe('Suites Routes', () => {
-    it('renders suites list at /suites', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/suites'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        // SuitesPage component uses suites-page testid
-        expect(screen.getByTestId('suites-page')).toBeInTheDocument()
-      })
-    })
-
-    it('renders suite detail at /suites/:suiteId', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/suites/suite-456'],
-      })
-
-      render(<RouterProvider router={router} />)
-
+    it.each([
+      // SuitesPage component uses suites-page testid
+      ['renders suites list at /suites', '/suites', 'suites-page'],
       // SuiteDetailPage shows loading state while fetching suite data
-      await waitFor(() => {
-        expect(screen.getByTestId('suite-detail-loading')).toBeInTheDocument()
-      })
-    })
-
-    it('renders suite detail at /suites/:suiteId/edit (same component as detail)', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/suites/suite-456/edit'],
-      })
-
-      render(<RouterProvider router={router} />)
-
+      ['renders suite detail at /suites/:suiteId', '/suites/suite-456', 'suite-detail-loading'],
       // Edit route uses the same SuiteDetailPage component
       // It shows loading state while fetching suite data
+      [
+        'renders suite detail at /suites/:suiteId/edit (same component as detail)',
+        '/suites/suite-456/edit',
+        'suite-detail-loading',
+      ],
+    ])('%s', async (_name, path, testId) => {
+      const router = createMemoryRouter(routeConfig, {
+        initialEntries: [path],
+      })
+
+      render(<RouterProvider router={router} />)
+
       await waitFor(() => {
-        expect(screen.getByTestId('suite-detail-loading')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
     })
 
@@ -541,41 +525,29 @@ describe('Route Rendering', () => {
   })
 
   describe('Regressions Routes', () => {
-    it('renders regressions list at /regressions', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/regressions'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('regressions-page')).toBeInTheDocument()
-      })
-    })
-
-    it('renders regression detail at /regressions/:regressionId', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/regressions/regression-789'],
-      })
-
-      render(<RouterProvider router={router} />)
-
+    it.each([
+      ['renders regressions list at /regressions', '/regressions', 'regressions-page'],
       // RegressionDetailPage shows loading state while fetching regression
       // data (no API mock is configured for this router-level smoke test).
-      await waitFor(() => {
-        expect(screen.getByTestId('regression-detail-loading')).toBeInTheDocument()
-      })
-    })
-
-    it('renders regression edit at /regressions/:regressionId/edit', async () => {
+      [
+        'renders regression detail at /regressions/:regressionId',
+        '/regressions/regression-789',
+        'regression-detail-loading',
+      ],
+      [
+        'renders regression edit at /regressions/:regressionId/edit',
+        '/regressions/regression-789/edit',
+        'regression-detail-loading',
+      ],
+    ])('%s', async (_name, path, testId) => {
       const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/regressions/regression-789/edit'],
+        initialEntries: [path],
       })
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('regression-detail-loading')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
     })
 
@@ -730,39 +702,27 @@ describe('Route Rendering', () => {
 
   describe('Profiles Routes', () => {
 
-    it('renders profile create at /profiles/new', async () => {
+    it.each([
+      ['renders profile create at /profiles/new', '/profiles/new', 'profile-create-page'],
+      [
+        'renders profile detail at /profiles/:profileId',
+        '/profiles/profile-789',
+        'profile-detail-page',
+      ],
+      [
+        'renders profile edit at /profiles/:profileId/edit',
+        '/profiles/profile-789/edit',
+        'profile-edit-page',
+      ],
+    ])('%s', async (_name, path, testId) => {
       const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/profiles/new'],
+        initialEntries: [path],
       })
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('profile-create-page')).toBeInTheDocument()
-      })
-    })
-
-    it('renders profile detail at /profiles/:profileId', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/profiles/profile-789'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('profile-detail-page')).toBeInTheDocument()
-      })
-    })
-
-    it('renders profile edit at /profiles/:profileId/edit', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/profiles/profile-789/edit'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('profile-edit-page')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
     })
   })
@@ -868,9 +828,25 @@ describe('Route Rendering', () => {
   })
 
   describe('Settings Proxy Routes', () => {
-    it('renders the Settings container at /settings/network/proxy/setup', async () => {
+    it.each([
+      [
+        'renders the Settings container at /settings/network/proxy/setup',
+        '/settings/network/proxy/setup',
+        'network-proxy-setup-tab',
+      ],
+      [
+        'renders the Settings container at /settings/network/proxy/blocks',
+        '/settings/network/proxy/blocks',
+        'network-proxy-blocks-tab',
+      ],
+      [
+        'renders the Proxy Setup page for the bare /settings/network/proxy path',
+        '/settings/network/proxy',
+        'network-proxy-setup-tab',
+      ],
+    ])('%s', async (_name, path, tabTestId) => {
       const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/settings/network/proxy/setup'],
+        initialEntries: [path],
       })
 
       render(<RouterProvider router={router} />)
@@ -878,35 +854,7 @@ describe('Route Rendering', () => {
       await waitFor(() => {
         expect(screen.getByTestId('settings-page')).toBeInTheDocument()
       })
-      expect(screen.getByTestId('network-proxy-setup-tab')).toBeInTheDocument()
-      expect(screen.queryByText(/page not found/i)).not.toBeInTheDocument()
-    })
-
-    it('renders the Settings container at /settings/network/proxy/blocks', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/settings/network/proxy/blocks'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('settings-page')).toBeInTheDocument()
-      })
-      expect(screen.getByTestId('network-proxy-blocks-tab')).toBeInTheDocument()
-      expect(screen.queryByText(/page not found/i)).not.toBeInTheDocument()
-    })
-
-    it('renders the Proxy Setup page for the bare /settings/network/proxy path', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/settings/network/proxy'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('settings-page')).toBeInTheDocument()
-      })
-      expect(screen.getByTestId('network-proxy-setup-tab')).toBeInTheDocument()
+      expect(screen.getByTestId(tabTestId)).toBeInTheDocument()
       expect(screen.queryByText(/page not found/i)).not.toBeInTheDocument()
     })
   })
@@ -917,29 +865,35 @@ describe('Route Rendering', () => {
     // workbench page; the real workbench container does not fully settle
     // inside the router-test harness.
 
-    it('hides breadcrumb on /suites/:suiteId/edit (suite detail has its own header)', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/suites/suite-456/edit'],
-      })
-
-      render(<RouterProvider router={router} />)
-
+    it.each([
       // Suite detail routes hide the standard breadcrumb - the page has its own header
-      await waitFor(() => {
-        expect(screen.getByTestId('suite-detail-loading')).toBeInTheDocument()
-      })
-      expect(screen.queryByRole('navigation', { name: /breadcrumb/i })).not.toBeInTheDocument()
-    })
-
-    it('hides route breadcrumb on /regressions/:regressionId/edit (detail manages own breadcrumb)', async () => {
+      [
+        'hides breadcrumb on /suites/:suiteId/edit (suite detail has its own header)',
+        '/suites/suite-456/edit',
+        'suite-detail-loading',
+      ],
+      [
+        'hides route breadcrumb on /regressions/:regressionId/edit (detail manages own breadcrumb)',
+        '/regressions/regression-789/edit',
+        'regression-detail-loading',
+      ],
+      // Breadcrumb should be hidden on list pages per design
+      [
+        'hides breadcrumb on /regressions list page (per design)',
+        '/regressions',
+        'regressions-page',
+      ],
+      // Breadcrumb should be hidden on list pages per design
+      ['hides breadcrumb on /executions list page (per design)', '/executions', 'executions-page'],
+    ])('%s', async (_name, path, testId) => {
       const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/regressions/regression-789/edit'],
+        initialEntries: [path],
       })
 
       render(<RouterProvider router={router} />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('regression-detail-loading')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
       expect(screen.queryByRole('navigation', { name: /breadcrumb/i })).not.toBeInTheDocument()
     })
@@ -966,36 +920,6 @@ describe('Route Rendering', () => {
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/regressions')
       })
-    })
-
-    it('hides breadcrumb on /regressions list page (per design)', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/regressions'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('regressions-page')).toBeInTheDocument()
-      })
-
-      // Breadcrumb should be hidden on list pages per design
-      expect(screen.queryByRole('navigation', { name: /breadcrumb/i })).not.toBeInTheDocument()
-    })
-
-    it('hides breadcrumb on /executions list page (per design)', async () => {
-      const router = createMemoryRouter(routeConfig, {
-        initialEntries: ['/executions'],
-      })
-
-      render(<RouterProvider router={router} />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('executions-page')).toBeInTheDocument()
-      })
-
-      // Breadcrumb should be hidden on list pages per design
-      expect(screen.queryByRole('navigation', { name: /breadcrumb/i })).not.toBeInTheDocument()
     })
 
   })
@@ -4849,7 +4773,20 @@ describe('DashboardPageWrapper Integration', () => {
     meta: { timestamp: '2025-01-15T12:00:00Z', errors: [] },
   }
 
-  it('handles navigation when clicking metric cards', async () => {
+  it.each([
+    ['handles navigation when clicking metric cards', 'metric-card-tests', '/tests'],
+    ['handles navigation when clicking Suites metric card', 'metric-card-suites', '/suites'],
+    [
+      'handles navigation when clicking Regressions metric card',
+      'metric-card-regressions',
+      '/regressions',
+    ],
+    [
+      'handles navigation when clicking Executions metric card',
+      'metric-card-executions',
+      '/executions',
+    ],
+  ])('%s', async (_name, cardTestId, expectedPath) => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockDashboardData),
@@ -4864,96 +4801,15 @@ describe('DashboardPageWrapper Integration', () => {
 
     // Wait for dashboard to load
     await waitFor(() => {
-      expect(screen.getByTestId('metric-card-tests')).toBeInTheDocument()
+      expect(screen.getByTestId(cardTestId)).toBeInTheDocument()
     })
 
-    // Click the Tests metric card
-    await user.click(screen.getByTestId('metric-card-tests'))
+    // Click the metric card
+    await user.click(screen.getByTestId(cardTestId))
 
-    // Verify navigation to tests page
+    // Verify navigation to the card's page
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/tests')
-    })
-  })
-
-  it('handles navigation when clicking Suites metric card', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockDashboardData),
-    })
-
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const router = createMemoryRouter(routeConfig, {
-      initialEntries: ['/dashboard'],
-    })
-
-    render(<RouterProvider router={router} />)
-
-    // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.getByTestId('metric-card-suites')).toBeInTheDocument()
-    })
-
-    // Click the Suites metric card
-    await user.click(screen.getByTestId('metric-card-suites'))
-
-    // Verify navigation to suites page
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/suites')
-    })
-  })
-
-  it('handles navigation when clicking Regressions metric card', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockDashboardData),
-    })
-
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const router = createMemoryRouter(routeConfig, {
-      initialEntries: ['/dashboard'],
-    })
-
-    render(<RouterProvider router={router} />)
-
-    // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.getByTestId('metric-card-regressions')).toBeInTheDocument()
-    })
-
-    // Click the Regressions metric card
-    await user.click(screen.getByTestId('metric-card-regressions'))
-
-    // Verify navigation to regressions page
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/regressions')
-    })
-  })
-
-  it('handles navigation when clicking Executions metric card', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockDashboardData),
-    })
-
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const router = createMemoryRouter(routeConfig, {
-      initialEntries: ['/dashboard'],
-    })
-
-    render(<RouterProvider router={router} />)
-
-    // Wait for dashboard to load
-    await waitFor(() => {
-      expect(screen.getByTestId('metric-card-executions')).toBeInTheDocument()
-    })
-
-    // Click the Executions metric card
-    await user.click(screen.getByTestId('metric-card-executions'))
-
-    // Verify navigation to executions page
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/executions')
+      expect(router.state.location.pathname).toBe(expectedPath)
     })
   })
 

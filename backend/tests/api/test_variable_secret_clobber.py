@@ -43,7 +43,7 @@ def _isolated_storage_path(tmp_path, monkeypatch):
         lambda: target,
     )
     _reset_storage()
-    yield target
+    return target
 
 
 class TestSetEntityVariablesColdCacheClobber:

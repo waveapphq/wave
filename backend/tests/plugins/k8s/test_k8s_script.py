@@ -385,8 +385,9 @@ class TestValidation:
             await K8sScriptPlugin().validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        params = _valid_params(impersonate_groups="qa, ops")
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await K8sScriptPlugin().validate(_valid_params(impersonate_groups="qa, ops"))
+            await K8sScriptPlugin().validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await K8sScriptPlugin().validate(
@@ -396,8 +397,9 @@ class TestValidation:
     async def test_invalid_on_error_is_rejected(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        params = _valid_params(on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScriptPlugin().validate(_valid_params(on_error="ignore"))
+            await K8sScriptPlugin().validate(params)
 
     async def test_missing_pod_is_rejected(self) -> None:
         params = _valid_params()
@@ -407,8 +409,9 @@ class TestValidation:
             await K8sScriptPlugin().validate(params)
 
     async def test_empty_pod_counts_as_missing(self) -> None:
+        params = _valid_params(pod="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: pod$"):
-            await K8sScriptPlugin().validate(_valid_params(pod=""))
+            await K8sScriptPlugin().validate(params)
 
     async def test_missing_container_is_rejected(self) -> None:
         params = _valid_params()
@@ -418,8 +421,9 @@ class TestValidation:
             await K8sScriptPlugin().validate(params)
 
     async def test_empty_container_counts_as_missing(self) -> None:
+        params = _valid_params(container="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: container$"):
-            await K8sScriptPlugin().validate(_valid_params(container=""))
+            await K8sScriptPlugin().validate(params)
 
     async def test_missing_script_is_rejected(self) -> None:
         params = _valid_params()
@@ -429,19 +433,22 @@ class TestValidation:
             await K8sScriptPlugin().validate(params)
 
     async def test_empty_script_counts_as_missing(self) -> None:
+        params = _valid_params(script="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: script$"):
-            await K8sScriptPlugin().validate(_valid_params(script=""))
+            await K8sScriptPlugin().validate(params)
 
     async def test_a_namespace_row_is_optional(self) -> None:
         await K8sScriptPlugin().validate(_valid_params(namespace=""))
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=0)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScriptPlugin().validate(_valid_params(timeout=0))
+            await K8sScriptPlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=-5)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScriptPlugin().validate(_valid_params(timeout=-5))
+            await K8sScriptPlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sScriptPlugin().validate(_valid_params(timeout=45))
@@ -454,24 +461,29 @@ class TestInterpreterSplitting:
         assert _params_by_name(K8sScriptPlugin())["interpreter"]["type"] == "string"
 
     async def test_an_empty_interpreter_is_rejected(self) -> None:
+        params = _valid_params(interpreter="")
         with pytest.raises(ValueError, match=exact(_EMPTY_INTERPRETER)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter=""))
+            await K8sScriptPlugin().validate(params)
 
     async def test_a_whitespace_only_interpreter_is_rejected(self) -> None:
+        params = _valid_params(interpreter="   ")
         with pytest.raises(ValueError, match=exact(_EMPTY_INTERPRETER)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter="   "))
+            await K8sScriptPlugin().validate(params)
 
     async def test_an_unclosed_double_quote_in_the_interpreter_is_rejected(self) -> None:
+        params = _valid_params(interpreter='"/opt/my bin/sh')
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter='"/opt/my bin/sh'))
+            await K8sScriptPlugin().validate(params)
 
     async def test_an_unclosed_single_quote_in_the_interpreter_is_rejected(self) -> None:
+        params = _valid_params(interpreter="'/opt/my bin/sh")
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter="'/opt/my bin/sh"))
+            await K8sScriptPlugin().validate(params)
 
     async def test_the_unclosed_quote_message_names_the_interpreter_not_the_command(self) -> None:
+        params = _valid_params(interpreter='sh "x')
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)) as excinfo:
-            await K8sScriptPlugin().validate(_valid_params(interpreter='sh "x'))
+            await K8sScriptPlugin().validate(params)
 
         assert "'command'" not in str(excinfo.value)
 
@@ -756,15 +768,17 @@ class TestErrorReasonGate:
     async def test_fail_mode_raises_out_of_the_block(self) -> None:
         channel = _channel(ExecRejected('pods "web-1" not found', "NotFound"))
 
+        params = _valid_params()
         with pytest.raises(ValueError, match=exact(_transport('pods "web-1" not found'))):
-            await _execute(channel, _valid_params())
+            await _execute(channel, params)
 
     async def test_fail_mode_binds_no_value_for_error_or_reason(self) -> None:
         channel = _channel(ExecRejected('pods "web-1" not found', "NotFound"))
         result: Any = None
 
+        params = _valid_params(on_error="fail")
         with pytest.raises(ValueError):
-            result = await _execute(channel, _valid_params(on_error="fail"))
+            result = await _execute(channel, params)
 
         assert result is None
 
@@ -792,18 +806,20 @@ class TestVersionRefusal:
     async def test_the_refusal_message_is_the_approved_copy(self) -> None:
         channel = _channel(ExecVersionUnsupported())
 
+        params = _valid_params()
         with pytest.raises(
             ValueError,
             match=r"^K8s Script needs Kubernetes 1\.30 or newer\. "
             r"Use K8s Copy and K8s Exec on older clusters\.$",
         ):
-            await _execute(channel, _valid_params())
+            await _execute(channel, params)
 
     async def test_the_refusal_message_is_anchored_verbatim(self) -> None:
         channel = _channel(ExecVersionUnsupported())
 
+        params = _valid_params()
         with pytest.raises(ValueError, match=exact(_UNSUPPORTED_VERSION)):
-            await _execute(channel, _valid_params())
+            await _execute(channel, params)
 
     async def test_the_refusal_names_no_pod_or_namespace(self) -> None:
         channel = _channel(ExecVersionUnsupported())
@@ -865,8 +881,9 @@ class TestFailureHandling:
             'pods "web-1" not found'
         )
 
+        params = _valid_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(channel, _valid_params())
+            await _execute(channel, params)
 
     async def test_the_message_names_the_container_the_row_selected(self) -> None:
         channel = _channel(ExecRejected("denied", "Forbidden"))
@@ -947,8 +964,9 @@ class TestFailureHandling:
         channel = _channel(ExecRejected("denied", "Forbidden"))
         logger = MagicMock()
 
+        params = _valid_params()
         with pytest.raises(ValueError):
-            await _execute(channel, _valid_params(), logger)
+            await _execute(channel, params, logger)
 
         assert logger.warn.call_count == 0
 
@@ -979,24 +997,27 @@ class TestAlwaysHardFail:
         detail = "[Errno 111] Connection refused"
         channel = _channel(ExecTransportError(detail))
 
+        params = _valid_params(on_error=mode)
         with pytest.raises(ValueError, match=exact(_transport(detail))):
-            await _execute(channel, _valid_params(on_error=mode))
+            await _execute(channel, params)
 
     @_BOTH_MODES
     async def test_a_transport_failure_names_the_selected_container(self, mode: str) -> None:
         detail = "TLS handshake failed"
         channel = _channel(ExecTransportError(detail))
 
+        params = _valid_params(container="sidecar", on_error=mode)
         with pytest.raises(ValueError, match=exact(_transport(detail, container="sidecar"))):
-            await _execute(channel, _valid_params(container="sidecar", on_error=mode))
+            await _execute(channel, params)
 
     @_BOTH_MODES
     async def test_a_transport_failure_records_nothing(self, mode: str) -> None:
         channel = _channel(ExecTransportError("socket closed"))
         logger = MagicMock()
 
+        params = _valid_params(on_error=mode)
         with pytest.raises(ValueError):
-            await _execute(channel, _valid_params(on_error=mode), logger)
+            await _execute(channel, params, logger)
 
         assert logger.warn.call_count == 0
 
@@ -1005,26 +1026,30 @@ class TestAlwaysHardFail:
         message = "Script execution timed out after 60 seconds"
         channel = _channel(ExecTimeout("Command execution timed out after 60 seconds"))
 
+        params = _valid_params(on_error=mode)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(channel, _valid_params(on_error=mode))
+            await _execute(channel, params)
 
     @_BOTH_MODES
     async def test_the_timeout_row_names_the_configured_timeout(self, mode: str) -> None:
         message = "Script execution timed out after 45 seconds"
         channel = _channel(ExecTimeout("Command execution timed out after 45 seconds"))
 
+        params = _valid_params(timeout=45, on_error=mode)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(channel, _valid_params(timeout=45, on_error=mode))
+            await _execute(channel, params)
 
     @_BOTH_MODES
     async def test_an_empty_interpreter_raises(self, mode: str) -> None:
+        params = _valid_params(interpreter="", on_error=mode)
         with pytest.raises(ValueError, match=exact(_EMPTY_INTERPRETER)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter="", on_error=mode))
+            await K8sScriptPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_an_unclosed_quote_in_the_interpreter_raises(self, mode: str) -> None:
+        params = _valid_params(interpreter='sh "x', on_error=mode)
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)):
-            await K8sScriptPlugin().validate(_valid_params(interpreter='sh "x', on_error=mode))
+            await K8sScriptPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_a_missing_script_raises(self, mode: str) -> None:
@@ -1044,8 +1069,9 @@ class TestAlwaysHardFail:
 
     @_BOTH_MODES
     async def test_a_non_positive_timeout_raises(self, mode: str) -> None:
+        params = _valid_params(timeout=0, on_error=mode)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScriptPlugin().validate(_valid_params(timeout=0, on_error=mode))
+            await K8sScriptPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_an_invalid_on_error_value_raises(self, mode: str) -> None:

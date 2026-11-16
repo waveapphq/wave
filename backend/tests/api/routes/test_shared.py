@@ -114,8 +114,9 @@ class TestReadJson:
         from wavecore.api.exceptions import ValidationException
         from wavecore.api.routes.shared import read_json
 
+        request = _failing_request(error)
         with pytest.raises(ValidationException, match=r"^The request body is not valid JSON$"):
-            await read_json(_failing_request(error))
+            await read_json(request)
 
     def test_a_body_with_a_number_too_long_to_read_is_a_bad_request(self) -> None:
         from fastapi.testclient import TestClient

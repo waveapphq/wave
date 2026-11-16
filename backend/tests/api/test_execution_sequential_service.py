@@ -614,7 +614,8 @@ def test_boundary_banners_suite_canceled_by_shutdown(tmp_storage: Any) -> None:
     banners.finish("stopped", user_stopped=False)
     chronology = _exec_storage._load_chronology(exec_id)
     fatal = [c for c in chronology if c.get("level") == "FATAL"]
-    assert fatal and "canceled by backend shutdown" in fatal[-1]["message"]
+    assert fatal
+    assert "canceled by backend shutdown" in fatal[-1]["message"]
 
 
 def test_boundary_banners_regression_without_active_suite_at_finish(

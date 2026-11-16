@@ -46,8 +46,10 @@ def params_for(**overrides: Any) -> dict[str, Any]:
 
 async def refuses(message: str, **overrides: Any) -> None:
     """The parameter set is refused with exactly this message."""
+    plugin = PythonPlugin()
+    params = params_for(**overrides)
     with pytest.raises(ValueError, match=exact(message)):
-        await PythonPlugin().validate(params_for(**overrides))
+        await plugin.validate(params)
 
 
 class TestScriptSourceMode:
@@ -136,13 +138,17 @@ class TestStopOnPattern:
 
     @pytest.mark.parametrize("value", BAD_PATTERNS)
     async def test_an_invalid_pass_pattern(self, value: str) -> None:
+        plugin = PythonPlugin()
+        params = params_for(stop_on_pattern=True, pass_pattern=value)
         with pytest.raises(ValueError, match=r"^Invalid pass pattern: .+$"):
-            await PythonPlugin().validate(params_for(stop_on_pattern=True, pass_pattern=value))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("value", BAD_PATTERNS)
     async def test_an_invalid_fail_pattern(self, value: str) -> None:
+        plugin = PythonPlugin()
+        params = params_for(stop_on_pattern=True, fail_pattern=value)
         with pytest.raises(ValueError, match=r"^Invalid fail pattern: .+$"):
-            await PythonPlugin().validate(params_for(stop_on_pattern=True, fail_pattern=value))
+            await plugin.validate(params)
 
     async def test_a_broken_pattern_is_ignored_while_the_switch_is_off(self) -> None:
         await PythonPlugin().validate(params_for(pass_pattern="(", fail_pattern="["))
@@ -465,16 +471,16 @@ class TestValidationOrder:
         )
 
     async def test_the_pass_pattern_compiles_before_the_fail_pattern(self) -> None:
+        plugin = PythonPlugin()
+        params = params_for(stop_on_pattern=True, pass_pattern="(", fail_pattern="[")
         with pytest.raises(ValueError, match=r"^Invalid pass pattern: .+$"):
-            await PythonPlugin().validate(
-                params_for(stop_on_pattern=True, pass_pattern="(", fail_pattern="[")
-            )
+            await plugin.validate(params)
 
     async def test_the_patterns_compile_before_the_input_variable_names(self) -> None:
+        plugin = PythonPlugin()
+        params = params_for(stop_on_pattern=True, pass_pattern="(", input_vars={"__x": 1})
         with pytest.raises(ValueError, match=r"^Invalid pass pattern: .+$"):
-            await PythonPlugin().validate(
-                params_for(stop_on_pattern=True, pass_pattern="(", input_vars={"__x": 1})
-            )
+            await plugin.validate(params)
 
     async def test_the_input_variable_names_run_before_the_export_names(self) -> None:
         await refuses(

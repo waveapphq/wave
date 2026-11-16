@@ -297,25 +297,15 @@ describe('Control Metadata - REQ-5.2.1.48', () => {
   })
 
   describe('getControlLatestVersion', () => {
-    it('returns latest version for valid control', async () => {
-      const { getControlLatestVersion } = await import('@/features/workbench/docs/_loader')
-
-      const version = getControlLatestVersion('delay')
-      expect(version).toBe('1.0.0')
-    })
-
-    it('returns default 1.0.0 for invalid control id', async () => {
-      const { getControlLatestVersion } = await import('@/features/workbench/docs/_loader')
-
-      const version = getControlLatestVersion('not-a-control')
-      expect(version).toBe('1.0.0')
-    })
-
-    it('returns first version in the list (newest)', async () => {
-      const { getControlLatestVersion } = await import('@/features/workbench/docs/_loader')
-
+    it.each([
+      ['returns latest version for valid control', 'delay'],
+      ['returns default 1.0.0 for invalid control id', 'not-a-control'],
       // wait-until ships a single 1.0.0 entry
-      const version = getControlLatestVersion('wait-until')
+      ['returns first version in the list (newest)', 'wait-until'],
+    ])('%s', async (_title, controlId) => {
+      const { getControlLatestVersion } = await import('@/features/workbench/docs/_loader')
+
+      const version = getControlLatestVersion(controlId)
       expect(version).toBe('1.0.0')
     })
   })

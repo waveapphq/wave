@@ -877,14 +877,11 @@ class TestVariableExports:
         assert result["success"] is True
 
     async def test_a_conversion_failure_raises_under_fail(self) -> None:
+        params = export_params("COUNT=abc; STATUS=ok")
         with pytest.raises(
             ValueError, match=exact("Script variable 'COUNT' is not a valid integer")
         ):
-            await run_script(
-                export_params("COUNT=abc; STATUS=ok"),
-                output_bindings=EXPORT_BINDINGS,
-                output_types=EXPORT_TYPES,
-            )
+            await run_script(params, output_bindings=EXPORT_BINDINGS, output_types=EXPORT_TYPES)
 
     async def test_a_recorded_conversion_failure_binds_what_converted(self) -> None:
         result = await run_script(
@@ -1128,12 +1125,9 @@ class TestExportsAfterAPatternStop:
         assert result["__block_warning"] is True
 
     async def test_nothing_binds_after_a_fail_match_under_fail(self) -> None:
+        params = fail_stop(EXPORTS_THEN_FAIL)
         with pytest.raises(ValueError, match=exact("Output matched the fail pattern: ERROR x")):
-            await run_script(
-                fail_stop(EXPORTS_THEN_FAIL),
-                output_bindings=EXPORT_BINDINGS,
-                output_types=EXPORT_TYPES,
-            )
+            await run_script(params, output_bindings=EXPORT_BINDINGS, output_types=EXPORT_TYPES)
 
     async def test_a_conversion_failure_after_a_pass_match_is_an_output_variable_failure(
         self,

@@ -639,7 +639,7 @@ class TestRunStartCapturesSecretNames:
             yield test_client
 
     @pytest.fixture(autouse=True)
-    def _register_plugins(self) -> Generator[None, None, None]:
+    def _register_plugins(self) -> None:
         from wavecore.controls.registry import _registry, register_all_core_controls
         from wavecore.core.plugin_registry import clear_registry, register_plugin
         from wavecore.plugins.log import LogPlugin
@@ -648,7 +648,6 @@ class TestRunStartCapturesSecretNames:
         register_all_core_controls(_registry)
         clear_registry()
         register_plugin(LogPlugin())
-        yield
 
     def test_secret_true_names_captured_on_session(self, client: TestClient) -> None:
         session_id = _run_with_variables(
@@ -714,7 +713,7 @@ class TestRunProducedSessionVariables:
             yield test_client
 
     @pytest.fixture(autouse=True)
-    def _register_plugins(self) -> Generator[None, None, None]:
+    def _register_plugins(self) -> None:
         from wavecore.controls.registry import _registry, register_all_core_controls
         from wavecore.core.plugin_registry import clear_registry, register_plugin
         from wavecore.plugins.log import LogPlugin
@@ -723,7 +722,6 @@ class TestRunProducedSessionVariables:
         register_all_core_controls(_registry)
         clear_registry()
         register_plugin(LogPlugin())
-        yield
 
     def test_real_run_session_serves_user_variables_json_safe(self, client: TestClient) -> None:
         session_id = _run_with_variables(
@@ -906,7 +904,7 @@ class TestRunStartSeedsSecretRegistry:
             yield test_client
 
     @pytest.fixture(autouse=True)
-    def _register_plugins(self) -> Generator[None, None, None]:
+    def _register_plugins(self) -> None:
         from wavecore.controls.registry import _registry, register_all_core_controls
         from wavecore.core.plugin_registry import clear_registry, register_plugin
         from wavecore.plugins.log import LogPlugin
@@ -915,7 +913,6 @@ class TestRunStartSeedsSecretRegistry:
         register_all_core_controls(_registry)
         clear_registry()
         register_plugin(LogPlugin())
-        yield
 
     def test_declared_literal_secret_seeds_the_registry(self, client: TestClient) -> None:
         session_id = _run_with_variables(
@@ -1064,7 +1061,7 @@ class TestRunStartUsesRawStoredSecrets:
             yield test_client
 
     @pytest.fixture(autouse=True)
-    def _register_plugins(self) -> Generator[None, None, None]:
+    def _register_plugins(self) -> None:
         from wavecore.controls.registry import _registry, register_all_core_controls
         from wavecore.core.plugin_registry import clear_registry, register_plugin
         from wavecore.plugins.log import LogPlugin
@@ -1073,7 +1070,6 @@ class TestRunStartUsesRawStoredSecrets:
         register_all_core_controls(_registry)
         clear_registry()
         register_plugin(LogPlugin())
-        yield
 
     def _disk_test(self, client: TestClient, message: str = "'run'") -> str:
         return _create_disk_test_with_variables(

@@ -1129,6 +1129,7 @@ def _evaluate_expression(expr_content: str, variables: MutableMapping[str, Any])
     # The 28-digit context keeps WaveDecimal arithmetic exact (REQ-3.1.3.14).
     try:
         with decimal_context():
+            # CodeQL exclusion: CQL-EVAL-001
             result = eval(expr_content, {"__builtins__": SAFE_BUILTINS}, variables)
         return result
     except NameError as e:

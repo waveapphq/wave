@@ -218,28 +218,16 @@ describe('Workflow store - validation state', () => {
   })
 
   describe('legacy field removal', () => {
-    it('the old validationErrorNodeIds array is gone', async () => {
+    it.each([
+      ['the old validationErrorNodeIds array is gone', 'validationErrorNodeIds'],
+      ['the old setValidationErrorNodeIds action is gone', 'setValidationErrorNodeIds'],
+      ['the old clearValidationErrorNode action is gone', 'clearValidationErrorNode'],
+    ])('%s', async (_title, field) => {
       const { useWorkflowStore } = await import(
         '../../../../src/features/workbench/stores/workflow-store'
       )
       const state = useWorkflowStore.getState() as unknown as Record<string, unknown>
-      expect('validationErrorNodeIds' in state).toBe(false)
-    })
-
-    it('the old setValidationErrorNodeIds action is gone', async () => {
-      const { useWorkflowStore } = await import(
-        '../../../../src/features/workbench/stores/workflow-store'
-      )
-      const state = useWorkflowStore.getState() as unknown as Record<string, unknown>
-      expect('setValidationErrorNodeIds' in state).toBe(false)
-    })
-
-    it('the old clearValidationErrorNode action is gone', async () => {
-      const { useWorkflowStore } = await import(
-        '../../../../src/features/workbench/stores/workflow-store'
-      )
-      const state = useWorkflowStore.getState() as unknown as Record<string, unknown>
-      expect('clearValidationErrorNode' in state).toBe(false)
+      expect(field in state).toBe(false)
     })
   })
 })

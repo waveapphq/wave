@@ -552,7 +552,8 @@ class TestDetectCircularDeps:
         a_id, b_id = str(uuid.uuid4()), str(uuid.uuid4())
         cycle = detect_circular_deps(a_id, {a_id: {b_id}, b_id: {a_id}})
         assert cycle is not None
-        assert a_id in cycle and b_id in cycle
+        assert a_id in cycle
+        assert b_id in cycle
         assert cycle.split(" -> ")[0] == cycle.split(" -> ")[-1]
 
     def test_longer_cycle_returns_full_path(self) -> None:

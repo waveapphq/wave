@@ -250,6 +250,7 @@ class TestAddVersionServicePerMajorNoBackports:
     def test_prerelease_within_occupied_major_line_is_rejected(self) -> None:
         # 2.0.0 is released; 2.0.0-dev1 sorts below it within the 2.x line.
         fn_id = self._seed_two_versions()
+        draft_definition = _draft_added_required_input()
         with pytest.raises(
             UnprocessableEntityException,
             match=r"^Target version '2\.0\.0-dev1' must be greater than the latest "
@@ -259,7 +260,7 @@ class TestAddVersionServicePerMajorNoBackports:
                 fn_id,
                 source_version="1.0.0",
                 target_version="2.0.0-dev1",
-                draft_definition=_draft_added_required_input(),
+                draft_definition=draft_definition,
                 changelog="pre-release of an existing release",
                 description="say hello",
             )
@@ -339,11 +340,12 @@ class TestAddVersionServiceDuplicateTarget:
 class TestAddVersionServiceDisallowedBump:
     def test_patch_target_with_added_required_input_raises_unprocessable(self) -> None:
         fn_id = _seed_source()
+        draft_definition = _draft_added_required_input()
         with pytest.raises(UnprocessableEntityException) as exc_info:
             _call(
                 fn_id,
                 target_version="1.0.1",
-                draft_definition=_draft_added_required_input(),
+                draft_definition=draft_definition,
                 changelog="Trying to sneak a required input into a patch",
             )
         assert re.match(
@@ -360,8 +362,9 @@ class TestAddVersionServiceReferenceChecks:
         fn_id = _seed_plain("caller")
         unknown_id = str(uuid.uuid4())
 
+        workflow = _workflow_calling(unknown_id)
         with pytest.raises(SaveValidationError) as exc_info:
-            _publish_body_change(fn_id, "caller", _workflow_calling(unknown_id))
+            _publish_body_change(fn_id, "caller", workflow)
 
         findings = exc_info.value.errors
         assert [finding["code"] for finding in findings] == ["MISSING_FUNCTION_ID"]
@@ -376,8 +379,9 @@ class TestAddVersionServiceReferenceChecks:
         callee_id = _seed_plain("callee")
         fn_id = _seed_plain("caller")
 
+        workflow = _workflow_calling(callee_id, "9.9.9")
         with pytest.raises(SaveValidationError) as exc_info:
-            _publish_body_change(fn_id, "caller", _workflow_calling(callee_id, "9.9.9"))
+            _publish_body_change(fn_id, "caller", workflow)
 
         findings = exc_info.value.errors
         assert [finding["code"] for finding in findings] == ["MISSING_FUNCTION_VERSION"]
@@ -393,11 +397,12 @@ class TestAddVersionServiceReferenceChecks:
         a_id = _seed_plain("fn_a")
         b_id = _seed_plain("fn_b", _workflow_calling(a_id))
 
+        workflow = _workflow_calling(b_id)
         with pytest.raises(
             UnprocessableEntityException,
             match=r"^Circular Function reference: fn_a -> fn_b -> fn_a$",
         ) as exc_info:
-            _publish_body_change(a_id, "fn_a", _workflow_calling(b_id))
+            _publish_body_change(a_id, "fn_a", workflow)
 
         assert exc_info.value.status_code == 422
         assert _version_strings(a_id) == ["1.0.0"]
@@ -409,8 +414,9 @@ class TestAddVersionServiceBodyChecks:
     def test_a_block_missing_a_required_parameter_is_refused(self) -> None:
         fn_id = _seed_plain("caller")
 
+        workflow = _workflow_of_block("log", {})
         with pytest.raises(SaveValidationError) as exc_info:
-            _publish_body_change(fn_id, "caller", _workflow_of_block("log", {}))
+            _publish_body_change(fn_id, "caller", workflow)
 
         assert _findings(exc_info.value.errors) == [
             ("REQUIRED_PARAM_MISSING", "Required parameter 'message' is missing", "Blk_1")
@@ -425,8 +431,9 @@ class TestAddVersionServiceBodyChecks:
         fn_id = _seed_plain("caller")
         values = {"operation": "write", "path": "out.txt"}
 
+        workflow = _workflow_of_block("file-io", values)
         with pytest.raises(SaveValidationError) as exc_info:
-            _publish_body_change(fn_id, "caller", _workflow_of_block("file-io", values))
+            _publish_body_change(fn_id, "caller", workflow)
 
         assert _findings(exc_info.value.errors) == [
             ("REQUIRED_PARAM_MISSING", "Required parameter 'content' is missing", "Blk_1")
@@ -486,17 +493,18 @@ class TestAddVersionServiceBodyChecks:
     def test_the_changelog_is_checked_before_the_body(self) -> None:
         fn_id = _seed_plain("caller")
 
+        draft_definition = {
+            "name": "caller",
+            "inputs": [],
+            "outputs": [],
+            "workflow": _workflow_of_block("log", {}),
+        }
         with pytest.raises(
             UnprocessableEntityException,
             match=r"^Changelog is required for edit-mode publish$",
         ):
             _call(
                 fn_id,
-                draft_definition={
-                    "name": "caller",
-                    "inputs": [],
-                    "outputs": [],
-                    "workflow": _workflow_of_block("log", {}),
-                },
+                draft_definition=draft_definition,
                 changelog="",
             )

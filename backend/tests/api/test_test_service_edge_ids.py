@@ -161,8 +161,10 @@ class TestTheValidationNamesARepeatedEdgeId:
 
 class TestTheSaveRefusesARepeatedEdgeId:
     def test_create_refuses_it_and_stores_nothing(self) -> None:
+        test_data = _test(_chain("e-1", "e-1"))
+
         with pytest.raises(test_service.SaveValidationError) as refused:
-            test_service.create_test(_test(_chain("e-1", "e-1")))
+            test_service.create_test(test_data)
 
         assert [(e["code"], e["message"]) for e in refused.value.errors] == [
             (CODE, _message("e-1"))
@@ -171,9 +173,10 @@ class TestTheSaveRefusesARepeatedEdgeId:
 
     def test_update_refuses_it_and_keeps_the_stored_workflow(self) -> None:
         created = test_service.create_test(_test(_chain("e-1", "e-2")))
+        update = {"workflow": _chain("e-1", "e-1")}
 
         with pytest.raises(test_service.SaveValidationError) as refused:
-            test_service.update_test(created["id"], {"workflow": _chain("e-1", "e-1")})
+            test_service.update_test(created["id"], update)
 
         assert [(e["code"], e["message"]) for e in refused.value.errors] == [
             (CODE, _message("e-1"))
@@ -185,9 +188,10 @@ class TestTheSaveRefusesARepeatedEdgeId:
     def test_nothing_is_repaired_before_the_refusal(self) -> None:
         workflow = _chain("e-1")
         workflow["edges"].append(_edge("e-1", "log-1", "gone"))
+        test_data = _test(workflow)
 
         with pytest.raises(test_service.SaveValidationError) as refused:
-            test_service.create_test(_test(workflow))
+            test_service.create_test(test_data)
 
         assert [e["code"] for e in refused.value.errors] == ["DANGLING_EDGE", CODE]
         assert test_service._list_all_tests() == []
@@ -211,9 +215,10 @@ class TestTheSaveRefusesARepeatedEdgeId:
             "nodes": [_local_function(_chain("b-1", "b-1"))],
             "edges": [_edge("e-1", "start-node", "fn-1")],
         }
+        test_data = _test(workflow)
 
         with pytest.raises(test_service.SaveValidationError) as refused:
-            test_service.create_test(_test(workflow))
+            test_service.create_test(test_data)
 
         (finding,) = _findings(refused.value.errors)
         assert finding["message"] == _message("b-1")
@@ -245,8 +250,10 @@ class TestTheImportRefusesARepeatedEdgeId:
         assert (result["importable"], result["blocked"]) == (0, 1)
 
     def test_the_import_refuses_it_and_stores_nothing(self) -> None:
+        document = _document(_chain("e-1", "e-1"))
+
         with pytest.raises(test_service.RepeatedEdgeIdImportError) as refused:
-            test_service.import_tests(_document(_chain("e-1", "e-1")), "t.yaml")
+            test_service.import_tests(document, "t.yaml")
 
         assert refused.value.message == (
             "Cannot import test 'Imported Edge Ids'. " + _message("e-1")

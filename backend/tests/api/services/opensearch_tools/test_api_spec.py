@@ -345,8 +345,10 @@ class TestPackagedExtract:
         for family, descriptions in own.items():
             for name, text in descriptions.items():
                 where = f"{family}.{name}"
-                assert text == " ".join(text.split()) and text.endswith("."), where
-                assert text[0].isupper() and ". " not in text, where
+                assert text == " ".join(text.split()), where
+                assert text.endswith("."), where
+                assert text[0].isupper(), where
+                assert ". " not in text, where
                 assert not {"\u2014", "\u2013"} & set(text), where
 
     def test_every_type_has_a_description_after_the_merge(self) -> None:

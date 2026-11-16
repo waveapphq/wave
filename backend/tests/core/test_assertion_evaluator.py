@@ -1893,9 +1893,10 @@ class TestNullHoldsNothing:
     @pytest.mark.parametrize("operator", ["equals", "not_equals"])
     def test_a_table_check_offers_no_other_operator(self, operator: str) -> None:
         items = [_null_rule_check(operator, "table", "anything")]
+        variables = {"x": _table_with_rows(2)}
 
         with pytest.raises(ValueError, match=rf"^Unknown operator '{operator}' for type 'table'$"):
-            evaluate_assertions(items, {"x": _table_with_rows(2)})
+            evaluate_assertions(items, variables)
 
     @pytest.mark.parametrize(
         ("operator", "expected"),

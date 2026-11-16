@@ -190,8 +190,10 @@ class TestUninstallFailure:
     def test_a_missing_release_stops_the_block(self) -> None:
         message = "uninstall: Release not loaded: web: release: not found"
 
+        params = _params()
+        results = [helm_failed(STDERR_NOT_FOUND)]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(uninstall, _params(), [helm_failed(STDERR_NOT_FOUND)])
+            run_verb(uninstall, params, results)
 
     def test_a_recorded_missing_release_reads_as_not_found(self) -> None:
         outputs = outputs_of(uninstall, _params(on_error="record"), [helm_failed(STDERR_NOT_FOUND)])
@@ -220,8 +222,10 @@ class TestUninstallFailure:
     def test_the_process_deadline_is_the_timeout_itself(self) -> None:
         message = "helm uninstall did not finish within 300 s"
 
+        params = _params()
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(uninstall, _params(), [helm_timed_out()])
+            run_verb(uninstall, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         outputs = outputs_of(uninstall, _params(on_error="record"), [helm_timed_out()])

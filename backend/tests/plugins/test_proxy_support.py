@@ -117,9 +117,10 @@ class TestRegistration:
     @pytest.mark.parametrize("stated", OUTSIDE_THE_THREE)
     def test_a_value_outside_the_three_is_refused(self, stated: str) -> None:
         registry = PluginRegistry()
+        block = _SampleBlock(stated)
 
         with pytest.raises(ValueError, match=_refused(stated)):
-            registry.register(_SampleBlock(stated))
+            registry.register(block)
 
         assert registry.get(SAMPLE_ID, SAMPLE_VERSION) is None
         assert registry.list_plugins() == []

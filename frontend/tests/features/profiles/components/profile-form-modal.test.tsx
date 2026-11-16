@@ -430,35 +430,21 @@ describe('ProfileFormModal', () => {
       return { user, searchInput }
     }
 
-    it('filters environments by tag when search matches tag but not name', async () => {
+    it.each([
+      // "test" matches Staging's tag 'test' but does NOT appear in the name "Staging"
+      ['filters environments by tag when search matches tag but not name', 'test'],
+      // "tes" partially matches Staging's tag 'test' but NOT name "Staging"
+      ['filters environments by partial tag match', 'tes'],
+      // "TEST" uppercase should still match Staging's tag 'test'
+      ['tag search is case-insensitive', 'TEST'],
+    ])('%s', async (_title, query) => {
       const { user, searchInput } = await openCopyValuesWithSearch()
 
-      // "test" matches Staging's tag 'test' but does NOT appear in the name "Staging"
-      await user.type(searchInput, 'test')
+      await user.type(searchInput, query)
 
       // Staging should be visible (matched via tag 'test')
       expect(screen.getByRole('button', { name: /staging/i })).toBeInTheDocument()
       // Development should NOT be visible (no name or tag contains "test")
-      expect(screen.queryByRole('button', { name: /development/i })).not.toBeInTheDocument()
-    })
-
-    it('filters environments by partial tag match', async () => {
-      const { user, searchInput } = await openCopyValuesWithSearch()
-
-      // "tes" partially matches Staging's tag 'test' but NOT name "Staging"
-      await user.type(searchInput, 'tes')
-
-      expect(screen.getByRole('button', { name: /staging/i })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /development/i })).not.toBeInTheDocument()
-    })
-
-    it('tag search is case-insensitive', async () => {
-      const { user, searchInput } = await openCopyValuesWithSearch()
-
-      // "TEST" uppercase should still match Staging's tag 'test'
-      await user.type(searchInput, 'TEST')
-
-      expect(screen.getByRole('button', { name: /staging/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /development/i })).not.toBeInTheDocument()
     })
 
@@ -589,10 +575,10 @@ describe('ProfileFormModal', () => {
       renderProfileFormModal({ mode: 'edit', profile: customProfile })
 
       const deleteButtons = screen.getAllByLabelText(/delete parameter/i)
-      expect(deleteButtons.length).toBe(3) // 3 parameters
+      expect(deleteButtons).toHaveLength(3) // 3 parameters
 
       await user.click(deleteButtons[0])
-      expect(screen.getAllByLabelText(/delete parameter/i).length).toBe(2)
+      expect(screen.getAllByLabelText(/delete parameter/i)).toHaveLength(2)
     })
 
     it('updates parameter name when changed', async () => {
@@ -636,7 +622,7 @@ describe('ProfileFormModal', () => {
       await user.click(screen.getByRole('button', { name: /Convert to Custom/i }))
 
       // Parameter should now be deleted
-      expect(screen.getAllByLabelText(/delete parameter/i).length).toBe(2)
+      expect(screen.getAllByLabelText(/delete parameter/i)).toHaveLength(2)
     })
 
     it('locks parameter structure when profile is in use', () => {

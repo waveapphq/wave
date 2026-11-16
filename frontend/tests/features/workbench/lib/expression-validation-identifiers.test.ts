@@ -68,27 +68,9 @@ describe('validateSimpleVariable', () => {
   })
 
   describe('Python literals (True, False, None)', () => {
-    it('returns no issues for True', () => {
+    it.each(['True', 'False', 'None'])('returns no issues for %s', (name) => {
       const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'True' }
-
-      const issues = validateSimpleVariable(classification, FROM, TO, ctx)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('returns no issues for False', () => {
-      const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'False' }
-
-      const issues = validateSimpleVariable(classification, FROM, TO, ctx)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('returns no issues for None', () => {
-      const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'None' }
+      const classification = { type: 'simple_variable' as const, name }
 
       const issues = validateSimpleVariable(classification, FROM, TO, ctx)
 
@@ -148,26 +130,19 @@ describe('validateSimpleVariable', () => {
       expect(issues[0].identifier).toBe('class')
     })
 
-    it('returns invalid_function issue for "import"', () => {
+    it.each([
+      ['import', "'import' is a Python keyword"],
+      ['pass', "'pass' is a Python keyword"],
+      ['while', 'Python keyword'],
+    ])('returns invalid_function issue for "%s"', (name, message) => {
       const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'import' }
+      const classification = { type: 'simple_variable' as const, name }
 
       const issues = validateSimpleVariable(classification, FROM, TO, ctx)
 
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain("'import' is a Python keyword")
-    })
-
-    it('returns invalid_function issue for "pass"', () => {
-      const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'pass' }
-
-      const issues = validateSimpleVariable(classification, FROM, TO, ctx)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain("'pass' is a Python keyword")
+      expect(issues[0].message).toContain(message)
     })
 
     it('returns invalid_function issue for "return"', () => {
@@ -179,17 +154,6 @@ describe('validateSimpleVariable', () => {
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('invalid_function')
     })
-
-    it('returns invalid_function issue for "while"', () => {
-      const ctx = makeCtx([])
-      const classification = { type: 'simple_variable' as const, name: 'while' }
-
-      const issues = validateSimpleVariable(classification, FROM, TO, ctx)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain('Python keyword')
-    })
   })
 })
 
@@ -199,29 +163,15 @@ describe('validateSimpleVariable', () => {
 
 describe('validateMethodCall', () => {
   describe('valid method calls', () => {
-    it('returns no issues for a valid string method', () => {
+    it.each([
+      ['a valid string method', '.upper()', 'name.upper()'],
+      ['chained valid methods', '.strip().upper()', 'name.strip().upper()'],
+      ['a method with arguments', ".replace('a', 'b')", "name.replace('a', 'b')"],
+    ])('returns no issues for %s', (_name, chain, expression) => {
       const ctx = makeCtx(['name'])
-      const classification = { type: 'method_call' as const, base: 'name', chain: '.upper()' }
+      const classification = { type: 'method_call' as const, base: 'name', chain }
 
-      const issues = validateMethodCall(classification, 'name.upper()', FROM, TO, ctx)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('returns no issues for chained valid methods', () => {
-      const ctx = makeCtx(['name'])
-      const classification = { type: 'method_call' as const, base: 'name', chain: '.strip().upper()' }
-
-      const issues = validateMethodCall(classification, 'name.strip().upper()', FROM, TO, ctx)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('returns no issues for a method with arguments', () => {
-      const ctx = makeCtx(['name'])
-      const classification = { type: 'method_call' as const, base: 'name', chain: ".replace('a', 'b')" }
-
-      const issues = validateMethodCall(classification, "name.replace('a', 'b')", FROM, TO, ctx)
+      const issues = validateMethodCall(classification, expression, FROM, TO, ctx)
 
       expect(issues).toHaveLength(0)
     })

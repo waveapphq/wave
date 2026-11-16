@@ -443,7 +443,7 @@ describe('ProxyBlockLists', () => {
         await leaveThemAsLeft()
 
         expect(sessionStorage.length).toBeGreaterThan(0)
-        expect(localStorage.length).toBe(0)
+        expect(localStorage).toHaveLength(0)
       })
     })
   })

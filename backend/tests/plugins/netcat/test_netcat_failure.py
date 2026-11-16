@@ -46,7 +46,8 @@ def exact(message: str) -> str:
 
 
 def outputs(envelope: dict[str, Any]) -> dict[str, Any]:
-    assert envelope["__wave_type"] == "result" and envelope["secrets"] == []
+    assert envelope["__wave_type"] == "result"
+    assert envelope["secrets"] == []
     return envelope["outputs"]
 
 
@@ -315,8 +316,10 @@ class TestFailureBeforeAnyDial:
 
     async def test_a_pre_dial_refusal_under_fail_raises_its_message(self, log: LogRecorder) -> None:
         calls: list[tuple[str, int]] = []
+        params = netcat_params(7)
+        opener = recording(calls)
         with pytest.raises(ValueError, match=exact("boom")):
-            await run(netcat_params(7), log, opener=recording(calls), pre_dial=no_route)
+            await run(params, log, opener=opener, pre_dial=no_route)
         assert calls == []
 
 

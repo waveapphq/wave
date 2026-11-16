@@ -1498,14 +1498,18 @@ class TestOutputFormatTableUnsupported:
             "code": 406,
         }
 
+        params = block_params(output_format="table")
+        fake = _serving(406, body)
         with pytest.raises(ValueError, match=exact(_TABLE_UNSUPPORTED_MESSAGE)):
-            await _execute(block_params(output_format="table"), _serving(406, body))
+            await _execute(params, fake)
 
     async def test_a_plain_event_list_body_says_the_cluster_will_not_print_a_table(self) -> None:
         body = _event_list(_event("new-evt", _NEWEST))
 
+        params = block_params(output_format="table")
+        fake = _serving(200, body)
         with pytest.raises(ValueError, match=exact(_TABLE_UNSUPPORTED_MESSAGE)):
-            await _execute(block_params(output_format="table"), _serving(200, body))
+            await _execute(params, fake)
 
     async def test_the_other_formats_never_meet_the_table_arm(self) -> None:
         body = _event_list(_event("new-evt", _NEWEST))
@@ -1616,13 +1620,15 @@ class TestOutputCore:
         for on_error in ("fail", "record"):
             params = {"session": "not-a-kubeconfig", "on_error": on_error}
 
+            fake = _listing()
             with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-                await _execute(params, _listing())
+                await _execute(params, fake)
 
     async def test_a_missing_session_raises_in_both_modes(self) -> None:
         for on_error in ("fail", "record"):
+            fake = _listing()
             with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-                await _execute({"on_error": on_error}, _listing())
+                await _execute({"on_error": on_error}, fake)
 
     async def test_a_transport_failure_raises_in_both_modes(self) -> None:
         for on_error in ("fail", "record"):

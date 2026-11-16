@@ -116,7 +116,8 @@ class TestNetcatIdentity:
         }
         assert meta["remotable"] is True
         description = meta["description"]
-        assert isinstance(description, str) and description.strip()
+        assert isinstance(description, str)
+        assert description.strip()
         assert description.endswith(".")
         assert ". " not in description
 
@@ -151,7 +152,8 @@ class TestNetcatParameters:
     def test_every_parameter_has_a_description(self, name: str) -> None:
         description = _parameters()[name]["description"]
 
-        assert isinstance(description, str) and description.strip()
+        assert isinstance(description, str)
+        assert description.strip()
 
     @pytest.mark.parametrize(
         ("name", "shared"),
@@ -192,4 +194,5 @@ class TestNetcatOutputs:
     def test_every_output_has_a_description(self, name: str) -> None:
         description = _outputs()[name]["description"]
 
-        assert isinstance(description, str) and description.strip()
+        assert isinstance(description, str)
+        assert description.strip()

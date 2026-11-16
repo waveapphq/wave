@@ -375,20 +375,22 @@ class TestDqlNotBeforeASpace:
 
     @pytest.mark.parametrize("value", ["x not y", "not ann", "cannot stop", "knot tied", "noT x"])
     def test_a_lowercase_not_before_a_space_is_refused(self, value: str) -> None:
+        evaluator = _evaluator({"v": value})
+
         with pytest.raises(InvalidExpressionError, match=f"^{re.escape(_not_refusal('{{ v }}'))}$"):
-            render_escaped("a: {{ v }}", "dql", _evaluator({"v": value}), MARKER, setting="query")
+            render_escaped("a: {{ v }}", "dql", evaluator, MARKER, setting="query")
 
     def test_a_lowercase_not_ending_the_value_before_a_template_space_is_refused(self) -> None:
+        evaluator = _evaluator({"v": "cannot"})
+
         with pytest.raises(InvalidExpressionError, match=f"^{re.escape(_not_refusal('{{ v }}'))}$"):
-            render_escaped(
-                "a: {{ v }} or b: 1", "dql", _evaluator({"v": "cannot"}), MARKER, setting="query"
-            )
+            render_escaped("a: {{ v }} or b: 1", "dql", evaluator, MARKER, setting="query")
 
     def test_the_refusal_names_the_marker_as_written_and_its_expression(self) -> None:
+        evaluator = _evaluator({"user": "do not retry"})
+
         with pytest.raises(InvalidExpressionError) as caught:
-            render_escaped(
-                "a: {{user}}", "dql", _evaluator({"user": "do not retry"}), MARKER, setting="query"
-            )
+            render_escaped("a: {{user}}", "dql", evaluator, MARKER, setting="query")
 
         assert str(caught.value) == _not_refusal("{{user}}")
         assert caught.value.expression == "user"

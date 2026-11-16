@@ -333,22 +333,28 @@ class TestCheckAddition:
 
     @pytest.mark.parametrize("host", ["", "   "])
     def test_host_is_required(self, keys: dict[str, asyncssh.SSHKey], host: str) -> None:
+        addition = new_host(host, 22, "ED25519", openssh(keys["ed25519"]))
+
         with pytest.raises(ValueError, match=exact("Addition 2: host is required")):
-            check_addition(2, new_host(host, 22, "ED25519", openssh(keys["ed25519"])))
+            check_addition(2, addition)
 
     def test_hashed_host(self, keys: dict[str, asyncssh.SSHKey]) -> None:
+        addition = new_host(HASHED_NAME, 22, "ED25519", openssh(keys["ed25519"]))
+
         with pytest.raises(
             ValueError,
             match=exact("Addition 1: hashed host name, run ssh-keyscan without -H and paste again"),
         ):
-            check_addition(1, new_host(HASHED_NAME, 22, "ED25519", openssh(keys["ed25519"])))
+            check_addition(1, addition)
 
     @pytest.mark.parametrize("host", ["*.lab.internal", "db?", "!db1"])
     def test_wildcard_host(self, keys: dict[str, asyncssh.SSHKey], host: str) -> None:
+        addition = new_host(host, 22, "ED25519", openssh(keys["ed25519"]))
+
         with pytest.raises(
             ValueError, match=exact("Addition 3: wildcard host patterns are not supported")
         ):
-            check_addition(3, new_host(host, 22, "ED25519", openssh(keys["ed25519"])))
+            check_addition(3, addition)
 
     @pytest.mark.parametrize("port", ["22", "022", "65535"])
     def test_a_port_sent_as_its_digits_is_accepted(
@@ -360,18 +366,24 @@ class TestCheckAddition:
         "port", [0, 65536, -22, True, 22.0, "22.0", "+22", " 22", "1_000", "65536", None]
     )
     def test_port_outside_the_range(self, keys: dict[str, asyncssh.SSHKey], port: Any) -> None:
+        addition = new_host("db1", port, "ED25519", openssh(keys["ed25519"]))
+
         with pytest.raises(ValueError, match=exact("Addition 1: port must be from 1 to 65535")):
-            check_addition(1, new_host("db1", port, "ED25519", openssh(keys["ed25519"])))
+            check_addition(1, addition)
 
     @pytest.mark.parametrize("key_type", ["DSA", "ed25519", "ssh-ed25519"])
     def test_unsupported_key_type(self, keys: dict[str, asyncssh.SSHKey], key_type: str) -> None:
+        addition = new_host("db1", 22, key_type, openssh(keys["ed25519"]))
+
         with pytest.raises(ValueError, match=exact(f"Addition 1: unsupported key type {key_type}")):
-            check_addition(1, new_host("db1", 22, key_type, openssh(keys["ed25519"])))
+            check_addition(1, addition)
 
     @pytest.mark.parametrize("key", ["ssh-ed25519 AAAAnotakey", "", "not a key"])
     def test_unreadable_key(self, key: str) -> None:
+        addition = new_host("db1", 22, "ED25519", key)
+
         with pytest.raises(ValueError, match=exact("Addition 1: unreadable key")):
-            check_addition(1, new_host("db1", 22, "ED25519", key))
+            check_addition(1, addition)
 
     @pytest.mark.parametrize(
         ("key_type", "name"),
@@ -380,7 +392,9 @@ class TestCheckAddition:
     def test_key_type_does_not_match_the_key(
         self, keys: dict[str, asyncssh.SSHKey], key_type: str, name: str
     ) -> None:
+        addition = new_host("db1", 22, key_type, openssh(keys[name]))
+
         with pytest.raises(
             ValueError, match=exact(f"Addition 1: key type {key_type} does not match the key")
         ):
-            check_addition(1, new_host("db1", 22, key_type, openssh(keys[name])))
+            check_addition(1, addition)

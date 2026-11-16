@@ -410,10 +410,7 @@ class TestSkipBlockSwitchContainer:
         session_id = "skip-switch"
         session = self._seed_paused_switch(session_id)
 
-        try:
-            result = workbench_service.skip_current_block(session_id=session_id)
-        except ConflictException as exc:  # pragma: no cover - failure path
-            pytest.fail(f"skip raised a conflict for a Switch node: {exc}")
+        result = workbench_service.skip_current_block(session_id=session_id)
 
         assert result == {
             "session_id": session_id,

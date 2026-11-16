@@ -466,7 +466,8 @@ class TestRestoreKeepsIdentity:
         for part in FIVE:
             _assert_part(result[part], imported=1)
             ((new_id, written),) = stored(part).items()
-            assert isinstance(new_id, str) and new_id, part
+            assert isinstance(new_id, str), part
+            assert new_id, part
             assert written["name"] == "From the backup", part
 
     def test_a_suite_whose_variable_type_clashes_with_another_suite_is_restored(self) -> None:
@@ -551,7 +552,8 @@ class TestRestoreChoices:
         if incoming_id == "backup-1":
             assert new_id == "backup-1"
         else:
-            assert isinstance(new_id, str) and new_id
+            assert isinstance(new_id, str)
+            assert new_id
 
     def test_a_second_rename_takes_3(self) -> None:
         for part in FIVE:
@@ -616,7 +618,8 @@ class TestRestoreLinks:
 
         if became is None:
             (became,) = set(stored("tests")) - {"t-backup"}
-            assert isinstance(became, str) and became
+            assert isinstance(became, str)
+            assert became
         assert became in stored("tests")
         assert stored("suites")["s-1"]["tests"] == [became]
 

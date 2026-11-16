@@ -109,18 +109,12 @@ describe('ExecutionsRowActions', () => {
       expect(screen.getByTestId('row-action-stop')).toBeInTheDocument()
     })
 
-    it('does NOT render for passed status', () => {
-      renderRowActions({ execution: createExecution({ status: 'passed' }) })
-      expect(screen.queryByTestId('row-action-stop')).not.toBeInTheDocument()
-    })
-
-    it('does NOT render for failed status', () => {
-      renderRowActions({ execution: createExecution({ status: 'failed' }) })
-      expect(screen.queryByTestId('row-action-stop')).not.toBeInTheDocument()
-    })
-
-    it('does NOT render for stopped status', () => {
-      renderRowActions({ execution: createExecution({ status: 'stopped' }) })
+    it.each([
+      ['does NOT render for passed status', 'passed'],
+      ['does NOT render for failed status', 'failed'],
+      ['does NOT render for stopped status', 'stopped'],
+    ] as const)('%s', (_title, status) => {
+      renderRowActions({ execution: createExecution({ status }) })
       expect(screen.queryByTestId('row-action-stop')).not.toBeInTheDocument()
     })
 
@@ -169,18 +163,12 @@ describe('ExecutionsRowActions', () => {
   })
 
   describe('Delete button', () => {
-    it('renders ONLY for terminal status passed', () => {
-      renderRowActions({ execution: createExecution({ status: 'passed' }) })
-      expect(screen.getByTestId('row-action-delete')).toBeInTheDocument()
-    })
-
-    it('renders for terminal status failed', () => {
-      renderRowActions({ execution: createExecution({ status: 'failed' }) })
-      expect(screen.getByTestId('row-action-delete')).toBeInTheDocument()
-    })
-
-    it('renders for terminal status stopped', () => {
-      renderRowActions({ execution: createExecution({ status: 'stopped' }) })
+    it.each([
+      ['renders ONLY for terminal status passed', 'passed'],
+      ['renders for terminal status failed', 'failed'],
+      ['renders for terminal status stopped', 'stopped'],
+    ] as const)('%s', (_title, status) => {
+      renderRowActions({ execution: createExecution({ status }) })
       expect(screen.getByTestId('row-action-delete')).toBeInTheDocument()
     })
 

@@ -468,7 +468,7 @@ describe('WorkbenchPage', () => {
 
       // Node count should decrease
       await waitFor(function waitForUndo() {
-        expect(useWorkflowStore.getState().nodes.length).toBe(1)
+        expect(useWorkflowStore.getState().nodes).toHaveLength(1)
       })
     })
 

@@ -210,8 +210,9 @@ class TestAlwaysHardFail:
     """The always-hard-fail classes raise under both on_error values."""
 
     def test_an_invalid_parameter_is_rejected_before_dispatch(self) -> None:
+        schema = [common.on_error_parameter()]
         with pytest.raises(ValueError, match=_exact(_ENUM_MESSAGE)):
-            validate_enum_from_schema("on_error", "continue", [common.on_error_parameter()])
+            validate_enum_from_schema("on_error", "continue", schema)
 
 
 class TestKindPickers:

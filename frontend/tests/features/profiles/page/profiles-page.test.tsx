@@ -159,9 +159,14 @@ function renderProfilesPage(props: Partial<ProfilesPageProps> = {}) {
 
 describe('ProfilesPage', () => {
   describe('Page Structure', () => {
-    it('renders page container with correct testid', () => {
+    it.each([
+      ['renders page container with correct testid', 'profiles-page'],
+      ['renders filters section', 'filters-section'],
+      ['renders profiles table', 'profiles-table'],
+      ['renders pagination controls', 'pagination'],
+    ])('%s', (_title, testId) => {
       renderProfilesPage()
-      expect(screen.getByTestId('profiles-page')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders page title "Profiles" as h1', () => {
@@ -179,21 +184,6 @@ describe('ProfilesPage', () => {
       const newButton = screen.getByRole('button', { name: /New Profile/i })
       expect(newButton).toBeVisible()
       expect(newButton).toBeEnabled()
-    })
-
-    it('renders filters section', () => {
-      renderProfilesPage()
-      expect(screen.getByTestId('filters-section')).toBeInTheDocument()
-    })
-
-    it('renders profiles table', () => {
-      renderProfilesPage()
-      expect(screen.getByTestId('profiles-table')).toBeInTheDocument()
-    })
-
-    it('renders pagination controls', () => {
-      renderProfilesPage()
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
     })
   })
 
@@ -1296,7 +1286,7 @@ describe('ProfilesPage', () => {
       })
       // 1 select-all + 4 profile row checkboxes
       const checkboxes = screen.getAllByRole('checkbox', { name: /select /i })
-      expect(checkboxes.length).toBe(5)
+      expect(checkboxes).toHaveLength(5)
     })
 
     it('select-all selects all profile IDs', async () => {

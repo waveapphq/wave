@@ -450,8 +450,10 @@ class TestValidation:
             await K8sScalePlugin().validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        params = _valid_params(impersonate_groups="qa, ops")
+
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await K8sScalePlugin().validate(_valid_params(impersonate_groups="qa, ops"))
+            await K8sScalePlugin().validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await K8sScalePlugin().validate(
@@ -463,33 +465,37 @@ class TestValidation:
             "Parameter 'resource_type' must be one of: default, custom; "
             "Actual value was 'builtin'."
         )
+        params = _valid_params(resource_type="builtin")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScalePlugin().validate(_valid_params(resource_type="builtin"))
+            await K8sScalePlugin().validate(params)
 
     async def test_invalid_kind_is_rejected(self) -> None:
         message = (
             "Parameter 'kind' must be one of: Deployment, ReplicaSet, ReplicationController, "
             "StatefulSet; Actual value was 'ConfigMap'."
         )
+        params = _valid_params(kind="ConfigMap")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScalePlugin().validate(_valid_params(kind="ConfigMap"))
+            await K8sScalePlugin().validate(params)
 
     async def test_kind_is_case_sensitive(self) -> None:
         message = (
             "Parameter 'kind' must be one of: Deployment, ReplicaSet, ReplicationController, "
             "StatefulSet; Actual value was 'deployment'."
         )
+        params = _valid_params(kind="deployment")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScalePlugin().validate(_valid_params(kind="deployment"))
+            await K8sScalePlugin().validate(params)
 
     async def test_invalid_on_error_is_rejected(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
+        params = _valid_params(on_error="ignore")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScalePlugin().validate(_valid_params(on_error="ignore"))
+            await K8sScalePlugin().validate(params)
 
     async def test_missing_kind_under_the_default_resource_type(self) -> None:
         params = _valid_params()
@@ -499,8 +505,10 @@ class TestValidation:
             await K8sScalePlugin().validate(params)
 
     async def test_missing_kind_custom_under_the_custom_resource_type(self) -> None:
+        params = _valid_params(resource_type="custom")
+
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind_custom$"):
-            await K8sScalePlugin().validate(_valid_params(resource_type="custom"))
+            await K8sScalePlugin().validate(params)
 
     async def test_kind_is_not_required_under_the_custom_resource_type(self) -> None:
         params = _valid_params(resource_type="custom", kind_custom="Widget")
@@ -519,8 +527,10 @@ class TestValidation:
             await K8sScalePlugin().validate(params)
 
     async def test_empty_name_counts_as_missing(self) -> None:
+        params = _valid_params(name="")
+
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await K8sScalePlugin().validate(_valid_params(name=""))
+            await K8sScalePlugin().validate(params)
 
     async def test_missing_replicas_is_rejected(self) -> None:
         params = _valid_params()
@@ -530,23 +540,31 @@ class TestValidation:
             await K8sScalePlugin().validate(params)
 
     async def test_a_negative_replica_count_is_rejected(self) -> None:
+        params = _valid_params(replicas=-1)
+
         with pytest.raises(ValueError, match=exact(_NEGATIVE_REPLICAS)):
-            await K8sScalePlugin().validate(_valid_params(replicas=-1))
+            await K8sScalePlugin().validate(params)
 
     async def test_a_deeply_negative_replica_count_is_rejected(self) -> None:
+        params = _valid_params(replicas=-100)
+
         with pytest.raises(ValueError, match=exact(_NEGATIVE_REPLICAS)):
-            await K8sScalePlugin().validate(_valid_params(replicas=-100))
+            await K8sScalePlugin().validate(params)
 
     async def test_zero_replicas_is_valid(self) -> None:
         await K8sScalePlugin().validate(_valid_params(replicas=0))
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=0)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScalePlugin().validate(_valid_params(timeout=0))
+            await K8sScalePlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=-5)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScalePlugin().validate(_valid_params(timeout=-5))
+            await K8sScalePlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sScalePlugin().validate(_valid_params(timeout=45))
@@ -808,15 +826,17 @@ class TestScalabilityGuard:
     async def test_a_missing_object_is_a_not_found_and_not_a_scalability_refusal(self) -> None:
         fake = _fake(_OBJECT_MISSING)
         message = f"K8s Deployment 'web' not found in namespace '{NAMESPACE}'"
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5))
+            await _execute(fake, params)
 
     async def test_a_missing_object_writes_nothing(self) -> None:
         fake = _fake(_OBJECT_MISSING)
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError):
-            await _execute(fake, _valid_params(replicas=5))
+            await _execute(fake, params)
 
         assert [call.method for call in fake.calls] == ["GET"]
 
@@ -1012,16 +1032,18 @@ class TestErrorReasonGate:
 
     async def test_fail_mode_raises_out_of_the_block(self) -> None:
         fake = _fake((403, _failure("Forbidden", "denied", 403)))
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError, match=exact("Kubernetes API permission denied: denied")):
-            await _execute(fake, _valid_params(replicas=5))
+            await _execute(fake, params)
 
     async def test_fail_mode_binds_no_value_for_error_or_reason(self) -> None:
         fake = _fake((403, _failure("Forbidden", "denied", 403)))
         result: Any = None
+        params = _valid_params(replicas=5, on_error="fail")
 
         with pytest.raises(ValueError):
-            result = await _execute(fake, _valid_params(replicas=5, on_error="fail"))
+            result = await _execute(fake, params)
 
         assert result is None
 
@@ -1052,9 +1074,10 @@ class TestFailureHandling:
         message = (
             f"Kubernetes could not scale Deployment 'web' in namespace '{NAMESPACE}': {detail}"
         )
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5))
+            await _execute(fake, params)
 
     async def test_a_server_error_on_the_read_says_the_scale_failed_too(self) -> None:
         detail = "the server is currently unable to handle the request"
@@ -1062,9 +1085,10 @@ class TestFailureHandling:
         message = (
             f"Kubernetes could not scale Deployment 'web' in namespace '{NAMESPACE}': {detail}"
         )
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5))
+            await _execute(fake, params)
 
     async def test_a_recorded_server_error_logs_the_scale_shaped_warn_line(self) -> None:
         detail = "the server is currently unable to handle the request"
@@ -1115,9 +1139,10 @@ class TestFailureHandling:
     async def test_fail_mode_logs_no_warn_line(self) -> None:
         fake = _fake((403, _failure("Forbidden", "denied", 403)))
         logger = MagicMock()
+        params = _valid_params(replicas=5)
 
         with pytest.raises(ValueError):
-            await _execute(fake, _valid_params(replicas=5), logger)
+            await _execute(fake, params, logger)
 
         assert logger.warn.call_count == 0
 
@@ -1158,30 +1183,35 @@ class TestAlwaysHardFail:
     async def test_a_transport_failure_raises(self, mode: str) -> None:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = _fake(K8sApiError(message))
+        params = _valid_params(replicas=5, on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5, on_error=mode))
+            await _execute(fake, params)
 
     @_BOTH_MODES
     async def test_a_tls_failure_raises(self, mode: str) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: self-signed certificate"
         fake = _fake(K8sApiError(message))
+        params = _valid_params(replicas=5, on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5, on_error=mode))
+            await _execute(fake, params)
 
     @_BOTH_MODES
     async def test_a_timeout_on_the_write_raises(self, mode: str) -> None:
         message = f"Kubernetes API request PATCH {_DEPLOY_SCALE} timed out after 30 seconds"
         fake = _fake((200, _scale_object(2)), K8sApiError(message))
+        params = _valid_params(replicas=5, on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _valid_params(replicas=5, on_error=mode))
+            await _execute(fake, params)
 
     @_BOTH_MODES
     async def test_a_negative_replica_count_raises(self, mode: str) -> None:
+        params = _valid_params(replicas=-1, on_error=mode)
+
         with pytest.raises(ValueError, match=exact(_NEGATIVE_REPLICAS)):
-            await K8sScalePlugin().validate(_valid_params(replicas=-1, on_error=mode))
+            await K8sScalePlugin().validate(params)
 
     @_BOTH_MODES
     async def test_an_invalid_kind_raises(self, mode: str) -> None:
@@ -1189,14 +1219,17 @@ class TestAlwaysHardFail:
             "Parameter 'kind' must be one of: Deployment, ReplicaSet, ReplicationController, "
             "StatefulSet; Actual value was 'ConfigMap'."
         )
+        params = _valid_params(kind="ConfigMap", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sScalePlugin().validate(_valid_params(kind="ConfigMap", on_error=mode))
+            await K8sScalePlugin().validate(params)
 
     @_BOTH_MODES
     async def test_a_non_positive_timeout_raises(self, mode: str) -> None:
+        params = _valid_params(timeout=0, on_error=mode)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sScalePlugin().validate(_valid_params(timeout=0, on_error=mode))
+            await K8sScalePlugin().validate(params)
 
 
 class TestNamespaceDescription:

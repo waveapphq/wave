@@ -209,31 +209,17 @@ describe('useTestRun', () => {
   // --- skippedNodeIds subscription ---
 
   describe('skippedNodeIds subscription', () => {
-    it('does NOT subscribe when workbenchStatus is idle', () => {
+    it.each([
+      ['does NOT subscribe when workbenchStatus is idle', 'idle', 0],
+      ['subscribes to skippedNodeIds when workbenchStatus is running', 'running', 1],
+      ['subscribes to skippedNodeIds when workbenchStatus is paused', 'paused', 1],
+    ] as const)('%s', (_title, workbenchStatus, subscriptionCount) => {
       setupStore()
-      const params = makeParams({ workbenchStatus: 'idle' })
+      const params = makeParams({ workbenchStatus })
 
       renderHook(() => useTestRun(params))
 
-      expect(subscribeCalls).toHaveLength(0)
-    })
-
-    it('subscribes to skippedNodeIds when workbenchStatus is running', () => {
-      setupStore()
-      const params = makeParams({ workbenchStatus: 'running' })
-
-      renderHook(() => useTestRun(params))
-
-      expect(subscribeCalls).toHaveLength(1)
-    })
-
-    it('subscribes to skippedNodeIds when workbenchStatus is paused', () => {
-      setupStore()
-      const params = makeParams({ workbenchStatus: 'paused' })
-
-      renderHook(() => useTestRun(params))
-
-      expect(subscribeCalls).toHaveLength(1)
+      expect(subscribeCalls).toHaveLength(subscriptionCount)
     })
 
     it('calls updateWorkbenchSkippedNodes when subscription fires', () => {

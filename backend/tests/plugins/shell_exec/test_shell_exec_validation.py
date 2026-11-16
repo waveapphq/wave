@@ -56,8 +56,9 @@ class TestShellParameter:
 
     @pytest.mark.parametrize("value", ["", "   ", "\t"])
     async def test_a_blank_shell_is_refused(self, value: str) -> None:
+        block_params = params(shell=value)
         with pytest.raises(ValueError, match=exact("Parameter 'shell' cannot be empty")):
-            await ShellExecPlugin().validate(params(shell=value))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("value", [None, "/bin/sh", "/bin/bash -o pipefail"])
     async def test_an_unset_or_named_shell_is_accepted(self, value: str | None) -> None:
@@ -73,8 +74,9 @@ class TestEnvironmentShape:
     async def test_a_non_map_environment_is_refused(self, value: Any, type_name: str) -> None:
         message = f"Parameter 'env_vars' must be a map (dictionary), got {type_name}"
 
+        block_params = params(env_vars=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(env_vars=value))
+            await ShellExecPlugin().validate(block_params)
 
     async def test_an_empty_map_is_accepted(self) -> None:
         await ShellExecPlugin().validate(params(env_vars={}))
@@ -85,19 +87,22 @@ class TestEnvironmentNames:
 
     @pytest.mark.parametrize("name", ["bad-name", "1st", "", "has space", "WAVE-KEY", "a.b"])
     async def test_a_name_that_is_not_a_shell_identifier(self, name: str) -> None:
+        block_params = params(env_vars={name: "value"})
         with pytest.raises(ValueError, match=exact(f"Invalid variable name: '{name}'")):
-            await ShellExecPlugin().validate(params(env_vars={name: "value"}))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("name", ["WAVE_KEY", "WAVE_", "WAVE_TESTDATA_DIR"])
     async def test_a_name_that_takes_the_reserved_prefix(self, name: str) -> None:
         message = f"Variable names may not start with WAVE_: '{name}'"
 
+        block_params = params(env_vars={name: "value"})
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(env_vars={name: "value"}))
+            await ShellExecPlugin().validate(block_params)
 
     async def test_the_identifier_rule_is_checked_before_the_prefix_rule(self) -> None:
+        block_params = params(env_vars={"WAVE-KEY": "value"})
         with pytest.raises(ValueError, match=exact("Invalid variable name: 'WAVE-KEY'")):
-            await ShellExecPlugin().validate(params(env_vars={"WAVE-KEY": "value"}))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("name", ["GREETING", "_private", "a1", "WAVES", "count_2"])
     async def test_accepted_names(self, name: str) -> None:
@@ -125,16 +130,18 @@ class TestEnvironmentNamesAtSave:
         message = f"Invalid variable name: '{name}'"
 
         assert saved(env_vars={name: "v"}) == [("INVALID_NAME", message, None, "env_vars")]
+        block_params = params(env_vars={name: "v"})
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(env_vars={name: "v"}))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("name", ["WAVE_KEY", "WAVE_", "WAVE_TESTDATA_DIR"])
     async def test_a_name_that_takes_the_reserved_prefix(self, name: str) -> None:
         message = f"Variable names may not start with WAVE_: '{name}'"
 
         assert saved(env_vars={name: "v"}) == [("INVALID_NAME", message, None, "env_vars")]
+        block_params = params(env_vars={name: "v"})
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(env_vars={name: "v"}))
+            await ShellExecPlugin().validate(block_params)
 
     def test_the_identifier_rule_is_checked_before_the_prefix_rule(self) -> None:
         assert saved(env_vars={"WAVE-KEY": "v"}) == [
@@ -151,16 +158,18 @@ class TestTimeout:
 
     @pytest.mark.parametrize("value", [0, -1, -300])
     async def test_a_timeout_that_is_not_positive(self, value: int) -> None:
+        block_params = params(timeout=value)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await ShellExecPlugin().validate(params(timeout=value))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("value", [None, 1, 300])
     async def test_accepted_timeouts(self, value: int | None) -> None:
         await ShellExecPlugin().validate(params(timeout=value))
 
     async def test_the_timeout_is_checked_before_the_environment_names(self) -> None:
+        block_params = params(timeout=0, env_vars={"bad-name": "value"})
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await ShellExecPlugin().validate(params(timeout=0, env_vars={"bad-name": "value"}))
+            await ShellExecPlugin().validate(block_params)
 
 
 class TestWorkingDirectory:
@@ -194,32 +203,32 @@ class TestStopOnPattern:
     async def test_both_patterns_empty(self) -> None:
         message = "Set a pass pattern, a fail pattern or both"
 
+        block_params = params(stop_on_pattern=True)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(stop_on_pattern=True))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("value", ["[", "(", "a{2,1}"])
     async def test_a_pass_pattern_that_does_not_compile(self, value: str) -> None:
         message = f"Invalid pass pattern: {compile_reason(value)}"
 
+        block_params = params(stop_on_pattern=True, pass_pattern=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(stop_on_pattern=True, pass_pattern=value))
+            await ShellExecPlugin().validate(block_params)
 
     @pytest.mark.parametrize("value", ["[", "(", "a{2,1}"])
     async def test_a_fail_pattern_that_does_not_compile(self, value: str) -> None:
         message = f"Invalid fail pattern: {compile_reason(value)}"
 
+        block_params = params(stop_on_pattern=True, pass_pattern="^ready", fail_pattern=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(
-                params(stop_on_pattern=True, pass_pattern="^ready", fail_pattern=value)
-            )
+            await ShellExecPlugin().validate(block_params)
 
     async def test_the_pass_pattern_is_compiled_before_the_fail_pattern(self) -> None:
         message = f"Invalid pass pattern: {compile_reason('[')}"
 
+        block_params = params(stop_on_pattern=True, pass_pattern="[", fail_pattern="(")
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(
-                params(stop_on_pattern=True, pass_pattern="[", fail_pattern="(")
-            )
+            await ShellExecPlugin().validate(block_params)
 
     async def test_both_patterns_may_be_set(self) -> None:
         await ShellExecPlugin().validate(
@@ -241,16 +250,18 @@ class TestOnError:
     async def test_refused_values(self, value: str) -> None:
         message = f"Parameter 'on_error' must be one of: fail, record; Actual value was '{value}'."
 
+        block_params = params(on_error=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(on_error=value))
+            await ShellExecPlugin().validate(block_params)
 
     async def test_a_long_value_is_shown_by_length_only(self) -> None:
         value = "x" * 60
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was "
         message += "a 60-character value."
 
+        block_params = params(on_error=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellExecPlugin().validate(params(on_error=value))
+            await ShellExecPlugin().validate(block_params)
 
     async def test_on_error_is_checked_before_the_command(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'continue'."

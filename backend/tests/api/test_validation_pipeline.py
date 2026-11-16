@@ -1253,10 +1253,11 @@ class TestUpdateTestUndeclaredVariableBlocksSave:
             },
         )
 
+        data = {"workflow": {"nodes": [_make_workflow_node("node-good"), http_node], "edges": []}}
         with pytest.raises(SaveValidationError) as excinfo:
             test_service.update_test(
                 created["id"],
-                {"workflow": {"nodes": [_make_workflow_node("node-good"), http_node], "edges": []}},
+                data,
             )
         codes = [e["code"] for e in excinfo.value.errors]
         assert "UNDECLARED_VARIABLE" in codes
@@ -2489,8 +2490,9 @@ class TestK8sReadBlocksAreGatedBeforeTheRun:
         self, element_type: str, param_name: str, values: dict[str, Any]
     ) -> None:
         """The gate and the block's own validate() agree on what is missing."""
+        plugin = _k8s_plugin(element_type)
         with pytest.raises(ValueError, match=f"^Missing required parameter: {param_name}$"):
-            await _k8s_plugin(element_type).validate({"session": _K8S_SESSION, **values})
+            await plugin.validate({"session": _K8S_SESSION, **values})
 
     @pytest.mark.parametrize(
         ("element_type", "param_name", "values"),
@@ -2501,8 +2503,9 @@ class TestK8sReadBlocksAreGatedBeforeTheRun:
         self, element_type: str, param_name: str, values: dict[str, Any]
     ) -> None:
         """A direct call gets no default fill, so the block's own validate() still refuses."""
+        plugin = _k8s_plugin(element_type)
         with pytest.raises(ValueError, match=f"^Missing required parameter: {param_name}$"):
-            await _k8s_plugin(element_type).validate({"session": _K8S_SESSION, **values})
+            await plugin.validate({"session": _K8S_SESSION, **values})
 
     @pytest.mark.parametrize(
         ("element_type", "values"),
@@ -2638,8 +2641,9 @@ class TestHalfFilledHttpAndSshOpenBlocks:
     def test_save_refuses_an_unset_conditional_field(
         self, element_type: str, label: str, param_name: str, values: dict[str, Any]
     ) -> None:
+        data = _half_filled_test(element_type, label, values)
         with pytest.raises(SaveValidationError) as excinfo:
-            test_service.create_test(_half_filled_test(element_type, label, values))
+            test_service.create_test(data)
 
         assert [(e["code"], e["message"], e["path"]) for e in excinfo.value.errors] == [
             (

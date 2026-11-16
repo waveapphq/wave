@@ -719,13 +719,17 @@ describe('Quick Insert - the page step follows the list', () => {
     spy.mockRestore()
   })
 
-  it('steps ten rows when the list reports no height', () => {
+  it.each([
+    ['steps ten rows when the list reports no height', 0, 50, 'plugin-10'],
+    ['moves one row when the rows report no height', 300, 0, 'plugin-1'],
+    ['still moves one row when the list is shorter than a single row', 20, 50, 'plugin-1'],
+  ])('%s', (_title, viewport, rowHeight, expected) => {
     renderPopover({ items: LONG_ITEMS })
-    layOutList({ viewport: 0, rowHeight: 50 })
+    layOutList({ viewport, rowHeight })
 
     fireEvent.keyDown(getInput(), { key: 'PageDown' })
 
-    expect(highlightedId()).toBe('plugin-10')
+    expect(highlightedId()).toBe(expected)
   })
 
   it('steps ten rows back when the list reports no height', () => {
@@ -836,15 +840,6 @@ describe('Quick Insert - the page step follows the list', () => {
     expect(highlightedId()).toBe('plugin-0')
   })
 
-  it('moves one row when the rows report no height', () => {
-    renderPopover({ items: LONG_ITEMS })
-    layOutList({ viewport: 300, rowHeight: 0 })
-
-    fireEvent.keyDown(getInput(), { key: 'PageDown' })
-
-    expect(highlightedId()).toBe('plugin-1')
-  })
-
   it('moves one row back when the rows report no height', () => {
     renderPopover({ items: LONG_ITEMS })
     fireEvent.keyDown(getInput(), { key: 'ArrowDown' })
@@ -853,15 +848,6 @@ describe('Quick Insert - the page step follows the list', () => {
     fireEvent.keyDown(getInput(), { key: 'PageUp' })
 
     expect(highlightedId()).toBe('plugin-0')
-  })
-
-  it('still moves one row when the list is shorter than a single row', () => {
-    renderPopover({ items: LONG_ITEMS })
-    layOutList({ viewport: 20, rowHeight: 50 })
-
-    fireEvent.keyDown(getInput(), { key: 'PageDown' })
-
-    expect(highlightedId()).toBe('plugin-1')
   })
 
   it('still moves in both directions when only one row fits the box', () => {

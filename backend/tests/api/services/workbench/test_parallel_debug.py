@@ -211,7 +211,8 @@ class TestStepOverInsideABranch:
         workbench_service.continue_session(session_id=session_id)
         await asyncio.wait_for(task, timeout=10.0)
 
-        assert released_at is not None and released_at.startswith("br-b-"), released_at
+        assert released_at is not None, released_at
+        assert released_at.startswith("br-b-"), released_at
         assert session["status"] == "passed", session.get("status")
         assert variables["a_count"] == 1, variables
         assert variables["b_count"] == 4, variables

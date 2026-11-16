@@ -107,20 +107,23 @@ class TestIfElseControlValidation:
     def test_validate_rejects_missing_branches(self) -> None:
         """Verify validation fails when branches parameter is missing."""
         control = IfElseControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^branches parameter is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_rejects_non_list_branches(self) -> None:
         """Verify validation fails when branches is not a list."""
         control = IfElseControl()
+        validation = control.validate({"branches": "not a list"})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": "not a list"}))
+            asyncio.run(validation)
 
     def test_validate_rejects_empty_branches(self) -> None:
         """Verify validation fails when branches is an empty list."""
         control = IfElseControl()
+        validation = control.validate({"branches": []})
         with pytest.raises(ValueError, match="^branches must not be empty$"):
-            asyncio.run(control.validate({"branches": []}))
+            asyncio.run(validation)
 
     def test_validate_rejects_first_branch_not_if(self) -> None:
         """Verify validation fails when first branch is not type 'if'."""
@@ -131,8 +134,9 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("x", "integer", "equals", 1)],
             }
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^first branch must be type 'if'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_if_at_wrong_position(self) -> None:
         """Verify validation fails when 'if' branch is not first."""
@@ -147,8 +151,9 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^if branch must be first$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_else_if_at_position_zero(self) -> None:
         """Verify validation fails when else_if is at position 0."""
@@ -159,9 +164,10 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("x", "integer", "equals", 1)],
             },
         ]
+        validation = control.validate({"branches": branches})
         # First branch not 'if' is caught first
         with pytest.raises(ValueError, match="^first branch must be type 'if'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_invalid_branch_type(self) -> None:
         """Verify validation fails for unknown branch type."""
@@ -173,8 +179,9 @@ class TestIfElseControlValidation:
             },
             {"type": "unknown"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^invalid branch type: 'unknown'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_else_not_last(self) -> None:
         """Verify validation fails when else branch is not last."""
@@ -190,8 +197,9 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^else branch must be last$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_multiple_else_branches(self) -> None:
         """Verify validation fails when there are multiple else branches."""
@@ -206,8 +214,9 @@ class TestIfElseControlValidation:
             {"type": "else"},
             {"type": "else"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^else branch must be last$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_else_with_conditions(self) -> None:
         """Verify validation fails when else branch has conditions."""
@@ -222,15 +231,17 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^else branch must not have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_if_without_conditions(self) -> None:
         """Verify validation fails when if branch has no conditions."""
         control = IfElseControl()
         branches = [{"type": "if"}]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^if branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_else_if_without_conditions(self) -> None:
         """Verify validation fails when else_if branch has no conditions."""
@@ -242,8 +253,9 @@ class TestIfElseControlValidation:
             },
             {"type": "else_if"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^else_if branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_duplicate_branch_ids(self) -> None:
         """Verify validation fails for duplicate branch IDs."""
@@ -260,8 +272,9 @@ class TestIfElseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^duplicate branch id: 'branch_a'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_accepts_if_only(self) -> None:
         """Verify validation passes with just an if branch."""
@@ -333,21 +346,24 @@ class TestIfElseControlValidation:
     def test_validate_rejects_dict_branches(self) -> None:
         """Verify validation rejects dict as branches."""
         control = IfElseControl()
+        validation = control.validate({"branches": {"a": 1}})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": {"a": 1}}))
+            asyncio.run(validation)
 
     def test_validate_rejects_integer_branches(self) -> None:
         """Verify validation rejects integer as branches."""
         control = IfElseControl()
+        validation = control.validate({"branches": 42})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": 42}))
+            asyncio.run(validation)
 
     def test_validate_rejects_if_with_empty_conditions_list(self) -> None:
         """Verify validation fails when if branch has empty conditions list."""
         control = IfElseControl()
         branches = [{"type": "if", "conditions": []}]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^if branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_else_if_with_empty_conditions_list(self) -> None:
         """Verify validation fails when else_if has empty conditions list."""
@@ -359,8 +375,9 @@ class TestIfElseControlValidation:
             },
             {"type": "else_if", "conditions": []},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^else_if branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_branch_conditions_side_by_side_with_the_save_text(self) -> None:
         """The run refuses a branch whose conditions have no and / or between them."""
@@ -369,11 +386,12 @@ class TestIfElseControlValidation:
             {"type": "if", "conditions": [one]},
             {"type": "else_if", "conditions": [one, _expression_condition("x > 2")]},
         ]
+        validation = IfElseControl().validate({"branches": branches})
         with pytest.raises(
             ValueError,
             match=r"^Condition items in 'branches\.1\.conditions' must be joined by 'and' or 'or'$",
         ):
-            asyncio.run(IfElseControl().validate({"branches": branches}))
+            asyncio.run(validation)
 
 
 # =============================================================================
@@ -593,8 +611,9 @@ class TestIfElseStructureProblems:
             "else branch must be last",
             "else branch must not have conditions",
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match=f"^{re.escape(problems[0].message)}$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
 
 # =============================================================================
@@ -1253,8 +1272,9 @@ class TestIfElseControlErrorPropagation:
             "parameters": {"branches": branches},
             "variables": {},
         }
+        execution = control.execute(context)
         with pytest.raises(KeyError, match="nonexistent"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_type_error_propagates(self) -> None:
         """Verify TypeError from type coercion propagates."""
@@ -1270,8 +1290,9 @@ class TestIfElseControlErrorPropagation:
             "parameters": {"branches": branches},
             "variables": {"x": "not_a_number"},
         }
+        execution = control.execute(context)
         with pytest.raises(TypeError):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
 
 class TestIfConditionsAreReadOnly:
@@ -1294,9 +1315,10 @@ class TestIfConditionsAreReadOnly:
             },
             "variables": {"rows": rows},
         }
+        execution = control.execute(context)
 
         with pytest.raises(BlockedExpressionError) as exc_info:
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
         assert "add a Variable Setter Block" in str(exc_info.value)
         assert rows == [1]

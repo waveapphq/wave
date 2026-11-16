@@ -117,49 +117,31 @@ describe('SearchInput Component', () => {
   })
 
   describe('Design System Compliance', () => {
-    it('applies full width by default', () => {
+    it.each([
+      ['applies full width by default', 'w-full'],
+      ['applies rounded border radius (4px per design system)', 'rounded'],
+      ['applies left padding for search icon', 'pl-10'],
+      ['applies default height', 'h-10'],
+    ])('%s', (_name, className) => {
       render(<SearchInput />)
-      expect(screen.getByRole('searchbox')).toHaveClass('w-full')
-    })
-
-    it('applies rounded border radius (4px per design system)', () => {
-      render(<SearchInput />)
-      expect(screen.getByRole('searchbox')).toHaveClass('rounded')
-    })
-
-    it('applies left padding for search icon', () => {
-      render(<SearchInput />)
-      expect(screen.getByRole('searchbox')).toHaveClass('pl-10')
+      expect(screen.getByRole('searchbox')).toHaveClass(className)
     })
 
     it('applies right padding for clear button', () => {
       render(<SearchInput defaultValue="test" />)
       expect(screen.getByRole('searchbox')).toHaveClass('pr-10')
     })
-
-    it('applies default height', () => {
-      render(<SearchInput />)
-      expect(screen.getByRole('searchbox')).toHaveClass('h-10')
-    })
   })
 
   describe('Search Icon', () => {
-    it('positions search icon on the left', () => {
+    it.each([
+      ['positions search icon on the left', 'left-3'],
+      ['applies muted color to search icon', 'text-muted'],
+      ['centers search icon vertically', 'top-1/2'],
+    ])('%s', (_name, className) => {
       const { container } = render(<SearchInput />)
       const iconWrapper = container.querySelector('[data-search-icon]')
-      expect(iconWrapper).toHaveClass('left-3')
-    })
-
-    it('applies muted color to search icon', () => {
-      const { container } = render(<SearchInput />)
-      const iconWrapper = container.querySelector('[data-search-icon]')
-      expect(iconWrapper).toHaveClass('text-muted')
-    })
-
-    it('centers search icon vertically', () => {
-      const { container } = render(<SearchInput />)
-      const iconWrapper = container.querySelector('[data-search-icon]')
-      expect(iconWrapper).toHaveClass('top-1/2')
+      expect(iconWrapper).toHaveClass(className)
     })
   })
 

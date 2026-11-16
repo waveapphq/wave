@@ -188,7 +188,7 @@ describe('createOnConnectHandler', () => {
       })
 
       // Execute rAF callback
-      expect(rafCallbacks.length).toBe(1)
+      expect(rafCallbacks).toHaveLength(1)
       rafCallbacks[0]()
 
       expect(params.updateNodeInternals).toHaveBeenCalledWith('node-b')
@@ -347,7 +347,7 @@ describe('createOnConnectHandler', () => {
         targetHandle: null,
       })
 
-      expect(rafCallbacks.length).toBe(1)
+      expect(rafCallbacks).toHaveLength(1)
       rafCallbacks[0]()
 
       // Snap target and the dragged edge's previous target both re-measured.

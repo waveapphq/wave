@@ -1595,8 +1595,9 @@ class TestParseZipFile:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w"):
             pass
+        data = buf.getvalue()
         with pytest.raises(ValidationException, match="no importable files"):
-            _parse_zip_file(buf.getvalue())
+            _parse_zip_file(data)
 
     def test_parse_invalid_zip_raises(self) -> None:
         from wavecore.api.services.tests.service import _parse_zip_file

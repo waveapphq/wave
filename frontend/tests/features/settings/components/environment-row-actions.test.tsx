@@ -44,19 +44,13 @@ describe('EnvironmentRowActions', () => {
   })
 
   describe('Structure', () => {
-    it('renders actions container with correct testid', () => {
+    it.each([
+      ['renders actions container with correct testid', 'environment-row-actions'],
+      ['renders Edit button', 'action-edit'],
+      ['renders kebab menu trigger', 'action-menu-trigger'],
+    ])('%s', (_title, testId) => {
       renderEnvironmentRowActions()
-      expect(screen.getByTestId('environment-row-actions')).toBeInTheDocument()
-    })
-
-    it('renders Edit button', () => {
-      renderEnvironmentRowActions()
-      expect(screen.getByTestId('action-edit')).toBeInTheDocument()
-    })
-
-    it('renders kebab menu trigger', () => {
-      renderEnvironmentRowActions()
-      expect(screen.getByTestId('action-menu-trigger')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('Edit button has pencil icon', () => {

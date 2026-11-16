@@ -802,15 +802,17 @@ class TestRestartPausedGuard:
 
     def test_a_paused_deployment_refuses_a_restart(self) -> None:
         fake = _status_client(_deployment(paused=True))
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(PAUSED_MESSAGE)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
     def test_a_paused_deployment_is_never_patched(self) -> None:
         fake = _status_client(_deployment(paused=True))
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
         assert _writes(fake) == []
         assert len(fake.calls) == 1
@@ -1071,21 +1073,24 @@ class TestReportableGuard:
 
     def test_a_statefulset_off_rolling_update_has_no_status_to_report(self) -> None:
         fake = _status_client(_stateful_set(strategy="OnDelete", partition=None))
+        params = _params(operation="status", kind="StatefulSet", name="db")
 
         with pytest.raises(ValueError, match=exact(ON_DELETE_MESSAGE)):
-            _run(fake, _params(operation="status", kind="StatefulSet", name="db"))
+            _run(fake, params)
 
     def test_a_daemonset_off_rolling_update_has_no_status_to_report(self) -> None:
         fake = _status_client(_daemon_set(strategy="OnDelete"))
+        params = _params(operation="status", kind="DaemonSet", name="agent")
 
         with pytest.raises(ValueError, match=exact(DAEMONSET_ON_DELETE_MESSAGE)):
-            _run(fake, _params(operation="status", kind="DaemonSet", name="agent"))
+            _run(fake, params)
 
     def test_an_update_strategy_refusal_never_writes(self) -> None:
         fake = _status_client(_daemon_set(strategy="OnDelete"))
+        params = _params(operation="status", kind="DaemonSet", name="agent")
 
         with pytest.raises(ValueError):
-            _run(fake, _params(operation="status", kind="DaemonSet", name="agent"))
+            _run(fake, params)
 
         assert _writes(fake) == []
         assert len(fake.calls) == 1
@@ -1371,9 +1376,10 @@ class TestUndoRevisionHistory:
     def test_an_unknown_revision_is_refused_and_never_written(self) -> None:
         fake = _undo_client(_deployment(), _replica_sets())
         message = "No revision 7 found for Deployment 'web'"
+        params = _params(operation="undo", to_revision=7)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo", to_revision=7))
+            _run(fake, params)
 
         assert _writes(fake) == []
         assert len(fake.calls) == 2
@@ -1391,9 +1397,10 @@ class TestUndoRevisionHistory:
         only_current = _listed("ReplicaSet", [_replica_set("1", "nginx:1.25", "5f4")])
         fake = _undo_client(_deployment(), only_current)
         message = "No earlier revision found for Deployment 'web'"
+        params = _params(operation="undo")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo"))
+            _run(fake, params)
 
         assert _writes(fake) == []
 
@@ -1403,9 +1410,10 @@ class TestUndoRevisionHistory:
         )
         fake = _undo_client(_deployment(), revisions)
         message = "No earlier revision found for Deployment 'web'"
+        params = _params(operation="undo")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo"))
+            _run(fake, params)
 
         assert _writes(fake) == []
 
@@ -1439,9 +1447,10 @@ class TestUndoRevisionHistory:
         )
         fake = _undo_client(_deployment(), revisions)
         message = "No revision 9 found for Deployment 'web'"
+        params = _params(operation="undo", to_revision=9)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo", to_revision=9))
+            _run(fake, params)
 
         assert _writes(fake) == []
 
@@ -1589,16 +1598,18 @@ class TestClusterErrors:
         message = (
             f"Kubernetes could not restart Deployment 'web' in namespace 'apps': {SERVER_ERROR}"
         )
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
     def test_a_status_failure_names_the_read(self) -> None:
         fake = _refusing_client(500, _failure("InternalError", SERVER_ERROR, 500))
         message = f"Kubernetes could not read Deployment 'web' in namespace 'apps': {SERVER_ERROR}"
+        params = _params(operation="status")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="status"))
+            _run(fake, params)
 
     def test_an_undo_failure_names_the_roll_back(self) -> None:
         body = _failure("InternalError", SERVER_ERROR, 500)
@@ -1609,9 +1620,10 @@ class TestClusterErrors:
         message = (
             f"Kubernetes could not roll back Deployment 'web' in namespace 'apps': {SERVER_ERROR}"
         )
+        params = _params(operation="undo")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo"))
+            _run(fake, params)
 
     def test_a_failed_history_listing_still_names_the_workload_and_the_roll_back(self) -> None:
         body = _failure("InternalError", SERVER_ERROR, 500)
@@ -1619,9 +1631,10 @@ class TestClusterErrors:
         message = (
             f"Kubernetes could not roll back Deployment 'web' in namespace 'apps': {SERVER_ERROR}"
         )
+        params = _params(operation="undo")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo"))
+            _run(fake, params)
 
         assert len(fake.calls) == 2
 
@@ -1629,9 +1642,10 @@ class TestClusterErrors:
         body = _failure("NotFound", 'deployments.apps "web" not found', 404)
         fake = _refusing_client(404, body)
         message = "K8s Deployment 'web' not found in namespace 'apps'"
+        params = _params(operation="status")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="status"))
+            _run(fake, params)
 
     def test_a_missing_workload_records_the_not_found_reason(self) -> None:
         body = _failure("NotFound", 'deployments.apps "web" not found', 404)
@@ -1646,17 +1660,19 @@ class TestClusterErrors:
         body = _failure("NotFound", 'namespaces "apps" not found', 404)
         body["details"] = {"kind": "namespaces", "name": "apps"}
         fake = _refusing_client(404, body)
+        params = _params(operation="status")
 
         with pytest.raises(ValueError, match=exact("K8s namespace 'apps' not found")):
-            _run(fake, _params(operation="status"))
+            _run(fake, params)
 
     def test_a_rejected_token_reads_as_an_authentication_failure(self) -> None:
         fake = _refusing_client(401, _failure("Unauthorized", "Unauthorized", 401))
+        params = _params(operation="status")
 
         with pytest.raises(
             ValueError, match=exact("Kubernetes API authentication failed: Unauthorized")
         ):
-            _run(fake, _params(operation="status"))
+            _run(fake, params)
 
     def test_a_permission_denial_is_recordable_with_its_reason(self) -> None:
         outputs = _outputs(_forbidden_client(), _params(operation="restart", on_error="record"))
@@ -1672,17 +1688,19 @@ class TestClusterErrors:
             "Kubernetes rejected the update to Deployment 'web' because it changed on the "
             "cluster first: the object has been modified"
         )
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
     def test_an_error_with_no_message_falls_back_to_the_status_code(self) -> None:
         body = {"kind": "Status", "apiVersion": "v1", "reason": "InternalError", "code": 500}
         fake = FakeK8sClient(responses=[(200, _deployment()), (500, body)], resources=_WORKLOADS)
         message = "Kubernetes could not restart Deployment 'web' in namespace 'apps' (HTTP 500)"
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
     def test_a_discovery_miss_on_the_workload_kind_names_the_kind(self) -> None:
         fake = FakeK8sClient(resources={})
@@ -1690,9 +1708,10 @@ class TestClusterErrors:
             "This cluster has no resource kind 'Deployment' "
             "- check the spelling, or whether the CRD is installed"
         )
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
         assert fake.calls == []
 
@@ -1712,9 +1731,10 @@ class TestClusterErrors:
             "This cluster has no resource kind 'ReplicaSet' "
             "- check the spelling, or whether the CRD is installed"
         )
+        params = _params(operation="undo")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo"))
+            _run(fake, params)
 
         assert len(fake.calls) == 1
 
@@ -1727,26 +1747,29 @@ class TestClusterErrors:
             "This cluster has no resource kind 'ControllerRevision' "
             "- check the spelling, or whether the CRD is installed"
         )
+        params = _params(operation="undo", kind="StatefulSet", name="db")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="undo", kind="StatefulSet", name="db"))
+            _run(fake, params)
 
     def test_a_denied_discovery_walk_reads_as_a_permission_denial(self) -> None:
         fake = DeniedDiscoveryClient(
             403, _failure("Forbidden", "deployments.apps is forbidden", 403)
         )
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(FORBIDDEN_MESSAGE)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
         assert fake.calls == []
 
     def test_a_denied_discovery_walk_with_another_status_reads_as_a_failed_listing(self) -> None:
         fake = DeniedDiscoveryClient(500, _failure("InternalError", SERVER_ERROR, 500))
         message = f"Kubernetes could not list Deployment objects: {SERVER_ERROR}"
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _params(operation="restart"))
+            _run(fake, params)
 
 
 class TestFailureDispatch:
@@ -1754,18 +1777,26 @@ class TestFailureDispatch:
 
     @pytest.mark.parametrize("operation", ["restart", "status", "undo"])
     def test_a_cluster_refusal_raises_out_of_the_verb(self, operation: str) -> None:
+        fake = _forbidden_client()
+        params = _params(operation=operation)
+
         with pytest.raises(ValueError, match=exact(FORBIDDEN_MESSAGE)):
-            _run(_forbidden_client(), _params(operation=operation))
+            _run(fake, params)
 
     def test_fail_is_the_default_mode(self) -> None:
+        fake = _forbidden_client()
+        params = _params()
+
         with pytest.raises(ValueError, match=exact(FORBIDDEN_MESSAGE)):
-            _run(_forbidden_client(), _params())
+            _run(fake, params)
 
     def test_a_raised_refusal_writes_no_log_line_at_all(self) -> None:
         log = RecordingLog()
+        fake = _forbidden_client()
+        params = _params(operation="restart")
 
         with pytest.raises(ValueError):
-            _run(_forbidden_client(), _params(operation="restart"), log)
+            _run(fake, params, log)
 
         assert log.entries == []
 
@@ -1837,8 +1868,11 @@ class TestFailureDispatch:
 
     @pytest.mark.parametrize("on_error", ["Record", "RECORD", True, None])
     def test_only_the_literal_record_records(self, on_error: Any) -> None:
+        fake = _forbidden_client()
+        params = _params(operation="restart", on_error=on_error)
+
         with pytest.raises(ValueError, match=exact(FORBIDDEN_MESSAGE)):
-            _run(_forbidden_client(), _params(operation="restart", on_error=on_error))
+            _run(fake, params)
 
 
 class TestAlwaysHardFail:
@@ -1846,21 +1880,26 @@ class TestAlwaysHardFail:
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_bogus_session_raises(self, on_error: str) -> None:
+        fake = _restart_client()
+        params = _params(session="not-a-kubeconfig", on_error=on_error)
+
         with pytest.raises(ValueError, match=exact(SESSION_MESSAGE)):
-            _run(_restart_client(), _params(session="not-a-kubeconfig", on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_missing_session_raises(self, on_error: str) -> None:
         params = {"kind": "Deployment", "name": "web", "on_error": on_error}
+        fake = _restart_client()
 
         with pytest.raises(ValueError, match=exact(SESSION_MESSAGE)):
-            _run(_restart_client(), params)
+            _run(fake, params)
 
     def test_a_bogus_session_never_constructs_a_client(self) -> None:
         fake = _restart_client()
+        params = _params(session="not-a-kubeconfig")
 
         with pytest.raises(ValueError):
-            _run(fake, _params(session="not-a-kubeconfig"))
+            _run(fake, params)
 
         assert fake.factory.call_count == 0
         assert fake.calls == []
@@ -1871,14 +1910,16 @@ class TestAlwaysHardFail:
             f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] Connection refused"
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_WORKLOADS)
+        params = _params(operation="restart", on_error=on_error)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _params(operation="restart", on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_timeout_raises(self, on_error: str) -> None:
         message = f"Kubernetes API request GET {DEPLOYMENT_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_WORKLOADS)
+        params = _params(operation="status", on_error=on_error)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _params(operation="status", on_error=on_error))
+            _run(fake, params)

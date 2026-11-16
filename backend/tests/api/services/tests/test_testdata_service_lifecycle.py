@@ -323,9 +323,10 @@ class TestUnlocked:
         root = testdata_root(test_id)
         seed_folder(test_id, "fixtures")
         testdata_service._lock_tree(root)
+        unlocked = testdata_service._unlocked(root / "fixtures")
 
         with pytest.raises(RuntimeError, match=r"^mutation failed$"):
-            with testdata_service._unlocked(root / "fixtures"):
+            with unlocked:
                 raise RuntimeError("mutation failed")
 
         assert mode_of(root / "fixtures") == "0o500"

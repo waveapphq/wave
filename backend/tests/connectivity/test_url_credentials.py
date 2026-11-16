@@ -126,7 +126,8 @@ class TestRidesToRemoteHosts:
     def test_it_imports_only_the_standard_library(self) -> None:
         names = imported_names(url_credentials.__name__, _PATH)
 
-        assert names and all(is_stdlib({name}) for name in names), names
+        assert names, names
+        assert all(is_stdlib({name}) for name in names), names
 
     def test_it_parses_at_the_interpreter_floor(self) -> None:
         source = _PATH.read_text(encoding="utf-8")

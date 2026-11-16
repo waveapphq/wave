@@ -120,7 +120,7 @@ describe('WorkflowStore Disable/Skip', () => {
       // Post-state baseline model: baseline + 1 commit = 2 entries; the new
       // entry IS the post-mutation state (disabled=true).
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(2)
+      expect(state.history).toHaveLength(2)
       expect(state.historyIndex).toBe(1)
       expect(state.history[1].nodes[0].data.disabled).toBe(true)
     })
@@ -255,7 +255,7 @@ describe('WorkflowStore Disable/Skip', () => {
       // HistoryEntry); committing produced dead undo steps that could
       // fake-dirty on redo.
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(1)
+      expect(state.history).toHaveLength(1)
       expect(state.historyIndex).toBe(0)
       expect(state.canUndo()).toBe(false)
     })
@@ -448,7 +448,7 @@ describe('WorkflowStore Disable/Skip', () => {
       // Post-state baseline model: baseline + 1 commit = 2 entries; the new
       // entry IS the post-mutation state (edge gone).
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(2)
+      expect(state.history).toHaveLength(2)
       expect(state.historyIndex).toBe(1)
       expect(state.history[1].edges).toEqual([])
       expect(state.history[1].operationDescription).toBe('Unlink block')
@@ -520,7 +520,7 @@ describe('WorkflowStore Disable/Skip', () => {
       useWorkflowStore.getState().unskipAll()
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(1)
+      expect(state.history).toHaveLength(1)
       expect(state.historyIndex).toBe(0)
       expect(state.canUndo()).toBe(false)
     })
@@ -589,7 +589,7 @@ describe('WorkflowStore Disable/Skip', () => {
       useWorkflowStore.getState().enableAll()
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(2)
+      expect(state.history).toHaveLength(2)
       expect(state.historyIndex).toBe(1)
       // Entry IS the post-mutation state (both enabled)
       expect(state.history[1].nodes[0].data.disabled).toBe(false)

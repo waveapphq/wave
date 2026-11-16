@@ -45,7 +45,8 @@ def exact(message: str) -> str:
 
 
 def outputs(envelope: dict[str, Any]) -> dict[str, Any]:
-    assert envelope["__wave_type"] == "result" and envelope["secrets"] == []
+    assert envelope["__wave_type"] == "result"
+    assert envelope["secrets"] == []
     return envelope["outputs"]
 
 
@@ -439,7 +440,8 @@ class TestResults:
     ) -> None:
         echo = await listen("tcp-echo")
         [[*_, time_ms]] = (await run_check(log, echo.port))["results"]["rows"]
-        assert isinstance(time_ms, int) and not isinstance(time_ms, bool)
+        assert isinstance(time_ms, int)
+        assert not isinstance(time_ms, bool)
         assert 0 <= time_ms < 1000
 
     async def test_time_ms_spans_the_wait_up_to_the_verdict(
@@ -448,7 +450,8 @@ class TestResults:
         resolve_to(monkeypatch, "127.0.0.1")
         out = await run_check(log, 7, opener=never, timeout=FAST, on_error="record")
         [[*_, time_ms]] = out["results"]["rows"]
-        assert isinstance(time_ms, int) and not isinstance(time_ms, bool)
+        assert isinstance(time_ms, int)
+        assert not isinstance(time_ms, bool)
         assert time_ms >= 40
 
     async def test_a_range_dials_at_most_64_ports_at_once(self, log: LogRecorder) -> None:
@@ -668,7 +671,8 @@ class TestAPortThatRaises:
                 stopped.append(port)
                 raise
 
+        params = netcat_params(timeout=10, **span(1, 2, 3))
         with pytest.raises(RuntimeError, match=exact("stream broke")):
-            await run(netcat_params(timeout=10, **span(1, 2, 3)), log, opener=opener)
+            await run(params, log, opener=opener)
 
         assert sorted(stopped) == [2, 3]

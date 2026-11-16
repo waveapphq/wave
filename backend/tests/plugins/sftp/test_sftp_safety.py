@@ -494,8 +494,9 @@ class TestASessionOnATunnelsLocalPort:
     ) -> None:
         ep = await sftp_server(subsystem=False, host_identity=TUNNEL_FAR_HOST)
         message = _unavailable("Session request failed", TUNNEL_FAR_HOST)
+        params = ep.params("list", path="/")
         with pytest.raises(ValueError, match=_exact(message)):
-            await ep.run(ep.params("list", path="/"), log)
+            await ep.run(params, log)
         assert log == []
 
     async def test_a_lost_session_names_the_far_host(

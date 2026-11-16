@@ -276,6 +276,7 @@ class TestDefaults:
         huge = sftp_endpoint.write("/outbound/huge.bin")
         os.truncate(huge, 1024 * MIB + 1)
         # A run that failed to refuse would copy a gibibyte; the Timeout bounds it.
+        row = _row("max_size_mib", blank)
         with pytest.raises(
             ValueError, match=_exact(_too_large("/outbound/huge.bin", 1024 * MIB + 1, 1024))
         ):
@@ -284,7 +285,7 @@ class TestDefaults:
                 log,
                 source="/outbound/huge.bin",
                 timeout=5,
-                **_row("max_size_mib", blank),
+                **row,
             )
         assert tree(sftp_endpoint.wave.artifacts) == []
 
@@ -299,10 +300,9 @@ class TestDefaults:
         # Ten thousand and one files would take seconds to walk; the default is pinned above.
         monkeypatch.setattr("wavecore.plugins._sftp_ops.MAX_FILES_DEFAULT", 2)
         _seed(sftp_endpoint, {"/outbound/a.bin": 1, "/outbound/b.bin": 1, "/outbound/c.bin": 1})
+        row = _row("max_files", blank)
         with pytest.raises(ValueError, match=_exact(_too_many("/outbound/*.bin", 3, 2))):
-            await _download(
-                sftp_endpoint, log, source="/outbound/*.bin", **_row("max_files", blank)
-            )
+            await _download(sftp_endpoint, log, source="/outbound/*.bin", **row)
         assert tree(sftp_endpoint.wave.artifacts) == []
 
 

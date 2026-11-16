@@ -122,7 +122,7 @@ class TestTestRunBorrowsTheSession:
             session_id=_register_client(),
         )
 
-        assert {"execution_id", "status", "mirrored"} == set(result.keys())
+        assert set(result.keys()) == {"execution_id", "status", "mirrored"}
         assert result["status"] == "running"
 
     def test_without_a_session_id_holds_under_the_default_id(self) -> None:

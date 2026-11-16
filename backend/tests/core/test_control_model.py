@@ -653,13 +653,14 @@ class TestControlParameterSchemas:
         from wavecore.models.controls.parameters import ControlParameter
         from wavecore.models.enums import ControlId
 
+        parameters = [
+            ControlParameter(name="value", type="string", required=True),
+            ControlParameter(name="value", type="integer", required=False),
+        ]
         with pytest.raises(ValidationError):
             ControlParameterSchema(
                 control_id=ControlId.FOR,
-                parameters=[
-                    ControlParameter(name="value", type="string", required=True),
-                    ControlParameter(name="value", type="integer", required=False),
-                ],
+                parameters=parameters,
             )
 
 

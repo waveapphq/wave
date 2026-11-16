@@ -536,8 +536,9 @@ class TestNamespaceTargeting:
         fake = _serving((404, body), resources=_CRDS)
         message = "K8s CustomResourceDefinition 'widgets.example.com' not found"
 
+        params = _manifest_params(manifest=_manifest_text(_crd_document()))
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _manifest_params(manifest=_manifest_text(_crd_document())))
+            _run(fake, params)
 
     def test_the_name_and_the_namespace_reach_the_wire_percent_encoded(self) -> None:
         fake = _serving((200, _applied("probe a/b")))
@@ -658,15 +659,19 @@ class TestIfExistsFail:
         body = _failure("AlreadyExists", 'configmaps "probe-a" already exists', 409)
         message = "K8s ConfigMap 'probe-a' already exists in namespace 'apps'"
 
+        fake = _serving((409, body))
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving((409, body)), _manifest_params(if_exists="fail"))
+            _run(fake, params)
 
     def test_the_already_exists_row_is_chosen_on_the_body_reason_not_the_status(self) -> None:
         body = _failure("AlreadyExists", 'configmaps "probe-a" already exists', 500)
         message = "K8s ConfigMap 'probe-a' already exists in namespace 'apps'"
 
+        fake = _serving((500, body))
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving((500, body)), _manifest_params(if_exists="fail"))
+            _run(fake, params)
 
     def test_an_existing_object_is_recordable_with_its_reason(self) -> None:
         body = _failure("AlreadyExists", 'configmaps "probe-a" already exists', 409)
@@ -710,8 +715,10 @@ class TestIfExistsFail:
             f"Kubernetes could not apply ConfigMap 'probe-a' in namespace 'apps': {_STRICT_DETAIL}"
         )
 
+        fake = _serving((400, body))
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving((400, body)), _manifest_params(if_exists="fail"))
+            _run(fake, params)
 
 
 class TestMultiDocumentManifest:
@@ -759,14 +766,17 @@ class TestMultiDocumentManifest:
     def test_a_failure_at_the_second_document_fails_the_block_by_default(self) -> None:
         message = "Kubernetes API permission denied: configmaps is forbidden"
 
+        fake = self._stopped()
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(self._stopped(), _manifest_params(manifest=_MANIFEST_THREE))
+            _run(fake, params)
 
     def test_a_failure_at_the_second_document_stops_before_the_third(self) -> None:
         fake = self._stopped()
 
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError):
-            _run(fake, _manifest_params(manifest=_MANIFEST_THREE))
+            _run(fake, params)
 
         assert [_split(entry.path)[0] for entry in _writes(fake)] == [
             f"{_CONFIGMAP_COLLECTION}/probe-a",
@@ -776,8 +786,9 @@ class TestMultiDocumentManifest:
     def test_a_failure_at_the_second_document_never_undoes_the_first(self) -> None:
         fake = self._stopped()
 
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError):
-            _run(fake, _manifest_params(manifest=_MANIFEST_THREE))
+            _run(fake, params)
 
         assert [entry for entry in fake.calls if entry.method == "DELETE"] == []
 
@@ -814,8 +825,9 @@ class TestMultiDocumentManifest:
         fake = _serving()
         log = RecordingLog()
 
+        params = _manifest_params(manifest="[]")
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            _run(fake, _manifest_params(manifest="[]"), log=log)
+            _run(fake, params, log=log)
 
         assert fake.calls == []
         assert log.entries == []
@@ -1097,15 +1109,17 @@ class TestFormJob:
         fake = _serving((404, body), resources=_JOBS_AND_CRONJOBS)
         message = "K8s CronJob 'nightly' not found in namespace 'apps'"
 
+        params = _cronjob_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _cronjob_params())
+            _run(fake, params)
 
     def test_a_missing_cronjob_writes_nothing(self) -> None:
         body = _failure("NotFound", 'cronjobs.batch "nightly" not found', 404)
         fake = _serving((404, body), resources=_JOBS_AND_CRONJOBS)
 
+        params = _cronjob_params()
         with pytest.raises(ValueError):
-            _run(fake, _cronjob_params())
+            _run(fake, params)
 
         assert _writes(fake) == []
 
@@ -1191,8 +1205,9 @@ class TestCronJobReadErrors:
     ) -> None:
         fake = _serving((status, body), resources=_JOBS_AND_CRONJOBS)
 
+        params = _cronjob_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _cronjob_params())
+            _run(fake, params)
 
     def test_a_cluster_without_the_cronjob_kind_says_so(self) -> None:
         fake = _serving(resources=_JOBS)
@@ -1201,15 +1216,17 @@ class TestCronJobReadErrors:
             "- check the spelling, or whether the CRD is installed"
         )
 
+        params = _cronjob_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _cronjob_params())
+            _run(fake, params)
 
     def test_a_denied_walk_on_the_cronjob_lookup_renders_the_permission_row(self) -> None:
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", _DISCOVERY_FORBIDDEN, 403))
         message = f"Kubernetes API permission denied: {_DISCOVERY_FORBIDDEN}"
 
+        params = _cronjob_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _cronjob_params())
+            _run(fake, params)
 
 
 class TestSummaryEnvelope:
@@ -1800,8 +1817,10 @@ class TestApiErrors:
     def test_the_cluster_answer_renders_its_apply_row(
         self, status: int, body: dict[str, Any], message: str
     ) -> None:
+        fake = _serving((status, body))
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving((status, body)), _manifest_params())
+            _run(fake, params)
 
     @pytest.mark.parametrize(
         ("status", "body", "reason"),
@@ -1828,8 +1847,9 @@ class TestApiErrors:
             "- check the spelling, or whether the CRD is installed"
         )
 
+        params = _manifest_params(manifest=_manifest_text(document))
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _manifest_params(manifest=_manifest_text(document)))
+            _run(fake, params)
 
         assert fake.calls == []
 
@@ -1845,10 +1865,11 @@ class TestApiErrors:
     def test_a_denied_discovery_walk_renders_the_authentication_row(self) -> None:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
 
+        params = _manifest_params()
         with pytest.raises(
             ValueError, match=exact("Kubernetes API authentication failed: Unauthorized")
         ):
-            _run(fake, _manifest_params())
+            _run(fake, params)
 
     def test_a_denied_discovery_walk_records_the_permission_row_and_its_reason(self) -> None:
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", _DISCOVERY_FORBIDDEN, 403))
@@ -1938,31 +1959,39 @@ class TestRecordedFailure:
     def test_nothing_comes_back_under_fail(self) -> None:
         outputs: dict[str, Any] | None = None
 
+        fake = self._forbidden()
+        params = _manifest_params()
         with pytest.raises(ValueError):
-            outputs = _outputs(self._forbidden(), _manifest_params())
+            outputs = _outputs(fake, params)
 
         assert outputs is None
 
     def test_a_failing_apply_under_fail_mode_logs_nothing(self) -> None:
         log = RecordingLog()
 
+        fake = self._forbidden()
+        params = _manifest_params()
         with pytest.raises(ValueError):
-            _run(self._forbidden(), _manifest_params(), log=log)
+            _run(fake, params, log=log)
 
         assert log.entries == []
 
     def test_fail_is_the_default_mode(self) -> None:
         message = "Kubernetes API permission denied: configmaps is forbidden"
 
+        fake = self._forbidden()
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(self._forbidden(), _manifest_params())
+            _run(fake, params)
 
     @pytest.mark.parametrize(
         "on_error", ["Record", "", None, True], ids=["cased", "blank", "none", "true"]
     )
     def test_only_the_literal_record_keeps_the_block_running(self, on_error: Any) -> None:
+        fake = self._forbidden()
+        params = _manifest_params(on_error=on_error)
         with pytest.raises(ValueError):
-            _run(self._forbidden(), _manifest_params(on_error=on_error))
+            _run(fake, params)
 
     def test_record_mode_keeps_a_happy_apply_green(self) -> None:
         outputs = _outputs(
@@ -1982,15 +2011,17 @@ class TestAlwaysHardFail:
     def test_a_bogus_session_raises_in_both_modes(self, on_error: str) -> None:
         params = _manifest_params(session="not-a-kubeconfig", on_error=on_error)
 
+        fake = _serving((201, _applied("probe-a")))
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(_serving((201, _applied("probe-a"))), params)
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_an_absent_session_raises_in_both_modes(self, on_error: str) -> None:
         params = {"define_with": "manifest", "manifest": _MANIFEST_ONE, "on_error": on_error}
 
+        fake = _serving((201, _applied("probe-a")))
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(_serving((201, _applied("probe-a"))), params)
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     @pytest.mark.parametrize(
@@ -2006,8 +2037,9 @@ class TestAlwaysHardFail:
     def test_a_transport_failure_raises_in_both_modes(self, message: str, on_error: str) -> None:
         fake = _serving(K8sApiError(message))
 
+        params = _manifest_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _manifest_params(on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_an_api_version_holding_no_text_raises_in_both_modes(self, on_error: str) -> None:

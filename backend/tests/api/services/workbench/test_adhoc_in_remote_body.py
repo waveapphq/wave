@@ -580,7 +580,9 @@ class TestAStopEndsTheAdhocWorker:
         graph: tuple[Nodes, Edges], hosts: _Hosts, **target: str
     ) -> list[str]:
         stopped: list[str] = []
-        with patch.object(_worker_registry, "stop_worker", lambda _w: stopped.append("stop")):
+        with patch.object(
+            _worker_registry, "stop_worker", side_effect=lambda _w: stopped.append("stop")
+        ):
             task = asyncio.create_task(_run_adhoc(graph, hosts, **target))
             for _ in range(500):
                 await asyncio.sleep(0.01)

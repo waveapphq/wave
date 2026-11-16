@@ -127,7 +127,15 @@ describe('ConfirmationDialog Component', () => {
   })
 
   describe('Visual Integration - Container Styling', () => {
-    it('applies max-w-[400px] width constraint', () => {
+    it.each([
+      ['applies max-w-[400px] width constraint', 'max-w-[400px]'],
+      ['applies max-height of 90vh', 'max-h-[90vh]'],
+      ['applies p-6 padding (24px per space-6)', 'p-6'],
+      ['applies rounded-xl border radius (12px)', 'rounded-xl'],
+      ['applies shadow-lg', 'shadow-lg'],
+      ['applies bg-elevated for elevated background', 'bg-elevated'],
+      ['applies text-center alignment', 'text-center'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -137,90 +145,16 @@ describe('ConfirmationDialog Component', () => {
           data-testid="confirmation-dialog"
         />
       )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('max-w-[400px]')
-    })
-
-    it('applies max-height of 90vh', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('max-h-[90vh]')
-    })
-
-    it('applies p-6 padding (24px per space-6)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('p-6')
-    })
-
-    it('applies rounded-xl border radius (12px)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('rounded-xl')
-    })
-
-    it('applies shadow-lg', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('shadow-lg')
-    })
-
-    it('applies bg-elevated for elevated background', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('bg-elevated')
-    })
-
-    it('applies text-center alignment', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          data-testid="confirmation-dialog"
-        />
-      )
-      expect(screen.getByTestId('confirmation-dialog')).toHaveClass('text-center')
+      expect(screen.getByTestId('confirmation-dialog')).toHaveClass(className)
     })
   })
 
   describe('Visual Integration - Icon Styling', () => {
-    it('applies icon-xl size (24px)', () => {
+    it.each([
+      ['applies icon-xl size (24px)', 'icon-xl'],
+      ['applies text-error color for icon', 'text-error'],
+      ['applies mb-4 margin bottom (16px per space-4)', 'mb-4'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -230,33 +164,7 @@ describe('ConfirmationDialog Component', () => {
         />
       )
       const icon = document.querySelector('[data-confirmation-icon]')
-      expect(icon).toHaveClass('icon-xl')
-    })
-
-    it('applies text-error color for icon', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      const icon = document.querySelector('[data-confirmation-icon]')
-      expect(icon).toHaveClass('text-error')
-    })
-
-    it('applies mb-4 margin bottom (16px per space-4)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      const icon = document.querySelector('[data-confirmation-icon]')
-      expect(icon).toHaveClass('mb-4')
+      expect(icon).toHaveClass(className)
     })
 
     it('icon has aria-hidden for decorative purpose', () => {
@@ -274,7 +182,12 @@ describe('ConfirmationDialog Component', () => {
   })
 
   describe('Visual Integration - Title Styling', () => {
-    it('applies text-lg font size (18px)', () => {
+    it.each([
+      ['applies text-lg font size (18px)', 'text-lg'],
+      ['applies font-semibold weight (600)', 'font-semibold'],
+      ['applies text-primary color', 'text-primary'],
+      ['applies mb-2 margin bottom (8px per space-2)', 'mb-2'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -283,43 +196,7 @@ describe('ConfirmationDialog Component', () => {
           title="Delete item?"
         />
       )
-      expect(screen.getByText('Delete item?')).toHaveClass('text-lg')
-    })
-
-    it('applies font-semibold weight (600)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      expect(screen.getByText('Delete item?')).toHaveClass('font-semibold')
-    })
-
-    it('applies text-primary color', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      expect(screen.getByText('Delete item?')).toHaveClass('text-primary')
-    })
-
-    it('applies mb-2 margin bottom (8px per space-2)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      expect(screen.getByText('Delete item?')).toHaveClass('mb-2')
+      expect(screen.getByText('Delete item?')).toHaveClass(className)
     })
 
     it('renders title as h2 element', () => {
@@ -336,7 +213,13 @@ describe('ConfirmationDialog Component', () => {
   })
 
   describe('Visual Integration - Description Styling', () => {
-    it('applies text-sm font size (14px)', () => {
+    it.each([
+      ['applies text-sm font size (14px)', 'text-sm'],
+      ['applies font-normal weight (400)', 'font-normal'],
+      ['applies text-secondary color', 'text-secondary'],
+      ['applies leading-normal line height (1.5)', 'leading-normal'],
+      ['applies mb-6 margin bottom (24px per space-6)', 'mb-6'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -346,59 +229,7 @@ describe('ConfirmationDialog Component', () => {
           description="This action cannot be undone."
         />
       )
-      expect(screen.getByText('This action cannot be undone.')).toHaveClass('text-sm')
-    })
-
-    it('applies font-normal weight (400)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          description="This action cannot be undone."
-        />
-      )
-      expect(screen.getByText('This action cannot be undone.')).toHaveClass('font-normal')
-    })
-
-    it('applies text-secondary color', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          description="This action cannot be undone."
-        />
-      )
-      expect(screen.getByText('This action cannot be undone.')).toHaveClass('text-secondary')
-    })
-
-    it('applies leading-normal line height (1.5)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          description="This action cannot be undone."
-        />
-      )
-      expect(screen.getByText('This action cannot be undone.')).toHaveClass('leading-normal')
-    })
-
-    it('applies mb-6 margin bottom (24px per space-6)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          description="This action cannot be undone."
-        />
-      )
-      expect(screen.getByText('This action cannot be undone.')).toHaveClass('mb-6')
+      expect(screen.getByText('This action cannot be undone.')).toHaveClass(className)
     })
 
     it('renders description as p element', () => {
@@ -416,7 +247,11 @@ describe('ConfirmationDialog Component', () => {
   })
 
   describe('Visual Integration - Action Group Styling', () => {
-    it('action group applies flex layout', () => {
+    it.each([
+      ['action group applies flex layout', 'flex'],
+      ['action group applies justify-end alignment', 'justify-end'],
+      ['action group applies gap-3 spacing (12px per space-3)', 'gap-3'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -426,33 +261,7 @@ describe('ConfirmationDialog Component', () => {
         />
       )
       const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('flex')
-    })
-
-    it('action group applies justify-end alignment', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('justify-end')
-    })
-
-    it('action group applies gap-3 spacing (12px per space-3)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-        />
-      )
-      const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('gap-3')
+      expect(actionGroup).toHaveClass(className)
     })
 
     it('cancel button appears before confirm button (left position)', () => {
@@ -1122,7 +931,11 @@ describe('ConfirmationDialog Component', () => {
       expect(screen.getByRole('textbox')).not.toHaveClass('border-error')
     })
 
-    it('instruction text has text-sm font size (14px)', () => {
+    it.each([
+      ['instruction text has text-sm font size (14px)', 'text-sm'],
+      ['instruction text has text-secondary color', 'text-secondary'],
+      ['instruction text has mb-2 margin bottom (8px per space-2)', 'mb-2'],
+    ])('%s', (_name, className) => {
       render(
         <ConfirmationDialog
           isOpen={true}
@@ -1133,35 +946,7 @@ describe('ConfirmationDialog Component', () => {
         />
       )
       const instructionText = screen.getByText(/type/i)
-      expect(instructionText).toHaveClass('text-sm')
-    })
-
-    it('instruction text has text-secondary color', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          requireConfirmation="DELETE"
-        />
-      )
-      const instructionText = screen.getByText(/type/i)
-      expect(instructionText).toHaveClass('text-secondary')
-    })
-
-    it('instruction text has mb-2 margin bottom (8px per space-2)', () => {
-      render(
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Delete item?"
-          requireConfirmation="DELETE"
-        />
-      )
-      const instructionText = screen.getByText(/type/i)
-      expect(instructionText).toHaveClass('mb-2')
+      expect(instructionText).toHaveClass(className)
     })
 
     it('submits on Enter when input matches and confirm is enabled', async () => {

@@ -164,7 +164,13 @@ describe('Regressions API', () => {
       )
     })
 
-    it('includes sort parameters when provided', async () => {
+    it.each([
+      ['includes sort parameters when provided', 'name', 'asc', 'name'],
+      ['converts camelCase sort fields to snake_case (testsCount -> tests_count)', 'testsCount', 'desc', 'tests_count'],
+      ['converts camelCase sort fields to snake_case (suitesCount -> suites_count)', 'suitesCount', 'asc', 'suites_count'],
+      ['converts camelCase sort fields to snake_case (lastRun -> last_run)', 'lastRun', 'desc', 'last_run'],
+      ['converts camelCase sort fields to snake_case (createdAt -> created_at)', 'createdAt', 'asc', 'created_at'],
+    ] as const)('%s', async (_title, sortBy, sortOrder, sentSortBy) => {
       vi.mocked(apiClient.get).mockResolvedValue({
         data: [],
         meta: { requestId: '' },
@@ -172,13 +178,13 @@ describe('Regressions API', () => {
         pagination: {},
       })
 
-      await fetchRegressions({ sort_by: 'name', sort_order: 'asc' })
+      await fetchRegressions({ sort_by: sortBy, sort_order: sortOrder })
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_by=name')
+        expect.stringContaining(`sort_by=${sentSortBy}`)
       )
       expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_order=asc')
+        expect.stringContaining(`sort_order=${sortOrder}`)
       )
     })
 
@@ -197,78 +203,6 @@ describe('Regressions API', () => {
       )
       expect(apiClient.get).not.toHaveBeenCalledWith(
         expect.stringContaining('sort_order=')
-      )
-    })
-
-    it('converts camelCase sort fields to snake_case (testsCount -> tests_count)', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        data: [],
-        meta: { requestId: '' },
-        status: 200,
-        pagination: {},
-      })
-
-      await fetchRegressions({ sort_by: 'testsCount', sort_order: 'desc' })
-
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_by=tests_count')
-      )
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_order=desc')
-      )
-    })
-
-    it('converts camelCase sort fields to snake_case (suitesCount -> suites_count)', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        data: [],
-        meta: { requestId: '' },
-        status: 200,
-        pagination: {},
-      })
-
-      await fetchRegressions({ sort_by: 'suitesCount', sort_order: 'asc' })
-
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_by=suites_count')
-      )
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_order=asc')
-      )
-    })
-
-    it('converts camelCase sort fields to snake_case (lastRun -> last_run)', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        data: [],
-        meta: { requestId: '' },
-        status: 200,
-        pagination: {},
-      })
-
-      await fetchRegressions({ sort_by: 'lastRun', sort_order: 'desc' })
-
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_by=last_run')
-      )
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_order=desc')
-      )
-    })
-
-    it('converts camelCase sort fields to snake_case (createdAt -> created_at)', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        data: [],
-        meta: { requestId: '' },
-        status: 200,
-        pagination: {},
-      })
-
-      await fetchRegressions({ sort_by: 'createdAt', sort_order: 'asc' })
-
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_by=created_at')
-      )
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('sort_order=asc')
       )
     })
 

@@ -364,9 +364,10 @@ class TestAHostOutsideTheCarriedSetIsRefused:
             "Python 3.15 on x86_64 / glibc",
             "Python 3.10-3.14 on x86_64 / glibc",
         )
+        host_probe = probe((3, 15))
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 15)), "mssql", "db-runner.example")
+            runner.select_wheels(host_probe, "mssql", "db-runner.example")
 
     def test_sqlite_is_named_as_the_type(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -378,18 +379,20 @@ class TestAHostOutsideTheCarriedSetIsRefused:
             "Python 3.15 on x86_64 / glibc",
             "Python 3.10-3.14 on x86_64 / glibc",
         )
+        host_probe = probe((3, 15))
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 15)), "sqlite", "edge-7")
+            runner.select_wheels(host_probe, "sqlite", "edge-7")
 
     def test_the_real_lock_names_every_platform_sqlite_is_carried_for(self) -> None:
         carried = (
             "Python 3.10-3.14 on aarch64 / glibc, aarch64 / musl, x86_64 / glibc, x86_64 / musl"
         )
         message = unsupported(HOST, "SQLite", "Python 3.12 on riscv64 / glibc", carried)
+        host_probe = probe((3, 12), "riscv64")
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 12), "riscv64"), "sqlite", HOST)
+            runner.select_wheels(host_probe, "sqlite", HOST)
 
     def test_a_platform_one_package_lacks_is_not_carried(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -403,9 +406,10 @@ class TestAHostOutsideTheCarriedSetIsRefused:
         message = unsupported(
             HOST, "Oracle", "Python 3.12 on aarch64 / musl", "Python 3.10-3.14 on x86_64 / glibc"
         )
+        host_probe = probe((3, 12), "aarch64", "musl")
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 12), "aarch64", "musl"), "oracle", HOST)
+            runner.select_wheels(host_probe, "oracle", HOST)
 
     def test_the_range_is_the_versions_every_package_carries(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -420,9 +424,10 @@ class TestAHostOutsideTheCarriedSetIsRefused:
         message = unsupported(
             HOST, "Oracle", "Python 3.10 on x86_64 / glibc", "Python 3.11-3.13 on x86_64 / glibc"
         )
+        host_probe = probe((3, 10))
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 10)), "oracle", HOST)
+            runner.select_wheels(host_probe, "oracle", HOST)
 
     def test_a_single_carried_version_prints_alone(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -433,9 +438,10 @@ class TestAHostOutsideTheCarriedSetIsRefused:
         message = unsupported(
             HOST, "Oracle", "Python 3.13 on x86_64 / glibc", "Python 3.12 on x86_64 / glibc"
         )
+        host_probe = probe((3, 13))
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 13)), "oracle", HOST)
+            runner.select_wheels(host_probe, "oracle", HOST)
 
     def test_the_carried_platforms_are_sorted(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -456,9 +462,10 @@ class TestAHostOutsideTheCarriedSetIsRefused:
             "Python 3.10-3.14 on aarch64 / glibc, aarch64 / musl, x86_64 / glibc, x86_64 / musl"
         )
         message = unsupported(HOST, "Oracle", "Python 3.12 on riscv64 / glibc", carried)
+        host_probe = probe((3, 12), "riscv64")
 
         with pytest.raises(runner.UnsupportedHost, match=exact(message)):
-            runner.select_wheels(probe((3, 12), "riscv64"), "oracle", HOST)
+            runner.select_wheels(host_probe, "oracle", HOST)
 
 
 class TestAFittingWheelMissingFromTheCache:

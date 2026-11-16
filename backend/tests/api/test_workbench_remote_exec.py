@@ -2499,7 +2499,9 @@ class TestRemoteBodyCancel:
         run_registry = RemoteWorkerRegistry(push_variable=_push)
         run_registry.register("rw1", worker, "ssh-1", "prod-host", "conn_ok", variables=variables)
 
-        with patch.object(_worker_registry, "stop_worker", lambda _worker: order.append("stop")):
+        with patch.object(
+            _worker_registry, "stop_worker", side_effect=lambda _worker: order.append("stop")
+        ):
             run_registry.close("rw1")
 
         assert order == ["stop", "close"]

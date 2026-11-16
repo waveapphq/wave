@@ -1295,7 +1295,8 @@ class TestExceptionsModuleImport:
     def test_import_raises_no_warning(self) -> None:
         """Running the module's code raises no warning, deprecation warnings included."""
         spec = importlib.util.find_spec("wavecore.api.exceptions")
-        assert spec is not None and spec.loader is not None
+        assert spec is not None
+        assert spec.loader is not None
         # A second module object, so the imported classes stay the ones other tests hold.
         fresh = importlib.util.module_from_spec(spec)
 

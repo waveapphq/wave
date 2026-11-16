@@ -149,16 +149,21 @@ class TestValidation:
         params = _valid()
         params.pop("release")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_non_positive_timeout_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_valid(timeout=0))
+            await plugin.validate(params)
 
     async def test_an_unknown_output_format_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(output_format="csv")
         with pytest.raises(ValueError, match="output_format"):
-            await _plugin().validate(_valid(output_format="csv"))
+            await plugin.validate(params)
 
 
 class TestExecute:
@@ -202,8 +207,10 @@ class TestExecute:
             helm_ok(release_json(hooks=[test_hook(phase="Failed")])),
         ]
 
+        plugin = _plugin()
+        params = _valid()
         with pytest.raises(ValueError, match=exact("pod web-wave-demo-test failed")):
-            await execute_verb(_plugin(), "test", _valid(), results)
+            await execute_verb(plugin, "test", params, results)
 
     async def test_a_recorded_failure_still_hands_back_the_data(self) -> None:
         results = [

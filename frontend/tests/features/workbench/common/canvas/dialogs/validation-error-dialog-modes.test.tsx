@@ -51,49 +51,21 @@ const fixableLoadError: ValidationError[] = [
 ]
 
 describe('ValidationErrorDialog mode-per-trigger', () => {
-  it('mode=save shows "Cannot Save Test" with Close only', () => {
+  it.each([
+    ['mode=save shows "Cannot Save Test" with Close only', 'save', 'Cannot Save Test'],
+    ['mode=run shows "Cannot Run Test" with Close only', 'run', 'Cannot Run Test'],
+    ['mode=debug shows "Cannot Debug Test" with Close only', 'debug', 'Cannot Debug Test'],
+  ] as const)('%s', (_title, mode, heading) => {
     render(
       <ValidationErrorDialog
         isOpen
         fatal={false}
         errors={oneError}
-        mode="save"
+        mode={mode}
         onClose={vi.fn()}
       />
     )
-    expect(screen.getByText('Cannot Save Test')).toBeInTheDocument()
-    expect(screen.getByTestId('validation-close-btn')).toBeInTheDocument()
-    expect(screen.queryByTestId('validation-fix-all-btn')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('validation-delete-test-btn')).not.toBeInTheDocument()
-  })
-
-  it('mode=run shows "Cannot Run Test" with Close only', () => {
-    render(
-      <ValidationErrorDialog
-        isOpen
-        fatal={false}
-        errors={oneError}
-        mode="run"
-        onClose={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Cannot Run Test')).toBeInTheDocument()
-    expect(screen.getByTestId('validation-close-btn')).toBeInTheDocument()
-    expect(screen.queryByTestId('validation-fix-all-btn')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('validation-delete-test-btn')).not.toBeInTheDocument()
-  })
-
-  it('mode=debug shows "Cannot Debug Test" with Close only', () => {
-    render(
-      <ValidationErrorDialog
-        isOpen
-        fatal={false}
-        errors={oneError}
-        mode="debug"
-        onClose={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Cannot Debug Test')).toBeInTheDocument()
+    expect(screen.getByText(heading)).toBeInTheDocument()
     expect(screen.getByTestId('validation-close-btn')).toBeInTheDocument()
     expect(screen.queryByTestId('validation-fix-all-btn')).not.toBeInTheDocument()
     expect(screen.queryByTestId('validation-delete-test-btn')).not.toBeInTheDocument()

@@ -660,42 +660,49 @@ class TestRefusedValues:
     def test_invalid_value_refuses_the_load(
         self, key: str, value: Any, rule: str, config_file: Path, load_config: LoadConfig
     ) -> None:
+        content = _file(key, value)
         with pytest.raises(ConfigValidationError, match=_refusal(config_file, key, rule)):
-            load_config(_file(key, value))
+            load_config(content)
 
     @pytest.mark.parametrize("key", BOOLEAN_KEYS)
     @pytest.mark.parametrize("value", [0, 1])
     def test_integer_is_refused_for_a_boolean(
         self, key: str, value: int, config_file: Path, load_config: LoadConfig
     ) -> None:
+        content = _file(key, value)
         with pytest.raises(ConfigValidationError, match=_refusal(config_file, key, BOOLEAN_RULE)):
-            load_config(_file(key, value))
+            load_config(content)
 
     @pytest.mark.parametrize("key", NOT_NULLABLE_KEYS)
     def test_null_is_refused_where_the_rule_names_no_null(
         self, key: str, config_file: Path, load_config: LoadConfig
     ) -> None:
+        content = _file(key, None)
         with pytest.raises(ConfigValidationError, match=_refusal(config_file, key, KEY_RULES[key])):
-            load_config(_file(key, None))
+            load_config(content)
 
     @pytest.mark.parametrize("key", WHOLE_NUMBER_KEYS)
     @pytest.mark.parametrize("value", [True, False])
     def test_boolean_is_refused_for_a_whole_number(
         self, key: str, value: bool, config_file: Path, load_config: LoadConfig
     ) -> None:
+        content = _file(key, value)
         with pytest.raises(ConfigValidationError, match=_refusal(config_file, key, KEY_RULES[key])):
-            load_config(_file(key, value))
+            load_config(content)
 
     @pytest.mark.parametrize(("key", "value"), WRONG_CASE, ids=_case_ids(WRONG_CASE))
     def test_listed_text_value_in_another_case_is_refused(
         self, key: str, value: str, config_file: Path, load_config: LoadConfig
     ) -> None:
+        content = _file(key, value)
         with pytest.raises(ConfigValidationError, match=_refusal(config_file, key, KEY_RULES[key])):
-            load_config(_file(key, value))
+            load_config(content)
 
-    def test_refusal_names_the_file_the_singleton_located(self, config_file: Path) -> None:
+    def test_refusal_names_the_file_the_singleton_located(
+        self, config_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         config_file.write_text("mcp:\n  bind: public\n", encoding="utf-8")
-        loader._config_instance = None
+        monkeypatch.setattr(loader, "_config_instance", None)
 
         with pytest.raises(
             ConfigValidationError, match=_refusal(config_file, "mcp.bind", BIND_RULE)

@@ -1361,7 +1361,7 @@ class TestSystemVariablePersistence:
             lambda: target,
         )
         _reset_storage()
-        yield target
+        return target
 
     def test_set_system_variables_writes_yaml_file(self, _isolated_storage_path) -> None:
         variable_service.set_system_variables({"env": {"type": "string", "value": "prod"}})
@@ -1374,7 +1374,7 @@ class TestSystemVariablePersistence:
         assert data == {"variables": {"env": {"type": "string", "value": "prod"}}}
 
     def test_vars_survive_in_memory_reset_by_reading_from_disk(
-        self, _isolated_storage_path
+        self, _isolated_storage_path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Simulating a backend restart: set vars, wipe the in-memory
         cache + hydrated flag, then fetch. The file-backed store must
@@ -1387,23 +1387,27 @@ class TestSystemVariablePersistence:
         )
         # Simulate restart.
         variable_service._variable_storage.clear()
-        variable_service._system_cache_loaded = False
+        monkeypatch.setattr(variable_service, "_system_cache_loaded", False)
 
         result = variable_service.get_system_variables()
         assert result["variables"]["env"]["value"] == "prod"
         assert result["variables"]["retries"]["value"] == 5
 
-    def test_delete_all_system_variables_persists_empty_state(self, _isolated_storage_path) -> None:
+    def test_delete_all_system_variables_persists_empty_state(
+        self, _isolated_storage_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         variable_service.set_system_variables({"env": {"type": "string", "value": "prod"}})
         variable_service.delete_all_system_variables()
         # Restart.
         variable_service._variable_storage.clear()
-        variable_service._system_cache_loaded = False
+        monkeypatch.setattr(variable_service, "_system_cache_loaded", False)
 
         # After reload, the deletion must persist - not revert to the prior snapshot.
         assert variable_service.get_system_variables() == {"variables": {}}
 
-    def test_delete_single_system_variable_persists(self, _isolated_storage_path) -> None:
+    def test_delete_single_system_variable_persists(
+        self, _isolated_storage_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         variable_service.set_system_variables(
             {
                 "keep": {"type": "string", "value": "k"},
@@ -1412,7 +1416,7 @@ class TestSystemVariablePersistence:
         )
         assert variable_service.delete_system_variable("drop") is True
         variable_service._variable_storage.clear()
-        variable_service._system_cache_loaded = False
+        monkeypatch.setattr(variable_service, "_system_cache_loaded", False)
 
         result = variable_service.get_system_variables()
         assert "keep" in result["variables"]
@@ -1439,7 +1443,9 @@ class TestSystemVariablePersistence:
         _isolated_storage_path.write_text("variables: [1, 2, 3]\n", encoding="utf-8")
         assert variable_service.get_system_variables() == {"variables": {}}
 
-    def test_update_entity_variables_system_scope_persists(self, _isolated_storage_path) -> None:
+    def test_update_entity_variables_system_scope_persists(
+        self, _isolated_storage_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """The generic update_entity_variables(scope='system', ...) path
         (used by the PATCH /variables/system API) must also write through
         to disk so merges survive restart."""
@@ -1450,13 +1456,15 @@ class TestSystemVariablePersistence:
             {"retries": {"type": "integer", "value": 3}},
         )
         variable_service._variable_storage.clear()
-        variable_service._system_cache_loaded = False
+        monkeypatch.setattr(variable_service, "_system_cache_loaded", False)
 
         result = variable_service.get_system_variables()
         assert result["variables"]["env"]["value"] == "prod"
         assert result["variables"]["retries"]["value"] == 3
 
-    def test_delete_variable_system_scope_persists(self, _isolated_storage_path) -> None:
+    def test_delete_variable_system_scope_persists(
+        self, _isolated_storage_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """The generic delete_variable(scope='system', ..., name=...) path
         (used by the DELETE /variables/system/{name} API's backing call
         for non-system scopes - kept here for parity) must also persist."""
@@ -1468,7 +1476,7 @@ class TestSystemVariablePersistence:
         )
         assert variable_service.delete_variable("system", variable_service.SYSTEM_ENTITY_ID, "drop")
         variable_service._variable_storage.clear()
-        variable_service._system_cache_loaded = False
+        monkeypatch.setattr(variable_service, "_system_cache_loaded", False)
 
         result = variable_service.get_system_variables()
         assert "keep" in result["variables"]

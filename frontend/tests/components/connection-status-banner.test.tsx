@@ -64,7 +64,7 @@ describe('ConnectionStatusBanner', () => {
       reportFailure()
       reportFailure()
     })
-    expect(screen.queryByText(/Backend offline/)).toBeInTheDocument()
+    expect(screen.getByText(/Backend offline/)).toBeInTheDocument()
 
     act(() => {
       reportSuccess()

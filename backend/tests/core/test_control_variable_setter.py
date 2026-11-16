@@ -1906,10 +1906,12 @@ class TestVariableSetterTableCoercion:
     def test_table_to_array_raises_exact_message(self) -> None:
         from wavecore.controls.variable_setter import _coerce_value
 
+        table = _orders_table()
+
         with pytest.raises(
             TypeError, match="^Variable 'rows': cannot assign Table value to array variable$"
         ):
-            _coerce_value(_orders_table(), "array", "rows")
+            _coerce_value(table, "array", "rows")
 
     def test_none_clears_a_table_variable(self) -> None:
         from wavecore.controls.variable_setter import _coerce_value

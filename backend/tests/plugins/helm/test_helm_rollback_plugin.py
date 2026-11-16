@@ -153,9 +153,10 @@ class TestValidation:
     async def test_a_missing_release_is_refused(self) -> None:
         params = _valid()
         params.pop("release")
+        plugin = _plugin()
 
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_an_empty_revision_passes(self) -> None:
         await _plugin().validate(_valid(revision=None))
@@ -165,19 +166,27 @@ class TestValidation:
 
     @pytest.mark.parametrize("revision", [0, -1])
     async def test_a_non_positive_revision_is_refused(self, revision: int) -> None:
+        plugin = _plugin()
+        params = _valid(revision=revision)
+
         with pytest.raises(ValueError, match=exact("Parameter 'revision' must be positive")):
-            await _plugin().validate(_valid(revision=revision))
+            await plugin.validate(params)
 
     async def test_a_non_positive_timeout_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(timeout=-5)
+
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_valid(timeout=-5))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("cleanup_timeout", [0, -1])
     async def test_a_non_positive_cleanup_timeout_is_refused(self, cleanup_timeout: int) -> None:
         message = "Parameter 'cleanup_timeout' must be positive"
+        plugin = _plugin()
+        params = _valid(cleanup_timeout=cleanup_timeout)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_valid(cleanup_timeout=cleanup_timeout))
+            await plugin.validate(params)
 
 
 class TestExecute:

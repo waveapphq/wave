@@ -206,7 +206,7 @@ describe('VersionDropdown - custom version length cap', () => {
   }
 
   it('validateCustomVersion rejects an over-length version with the cap message', () => {
-    expect(OVER_LENGTH.length).toBe(33)
+    expect(OVER_LENGTH).toHaveLength(33)
     const result = validateCustomVersion('1.0.0', OVER_LENGTH, allowAll, [], '1.0.0')
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/exceeds the maximum length of 32 characters/)
@@ -229,7 +229,7 @@ describe('VersionDropdown - custom version length cap', () => {
     const input = screen.getByTestId('version-dropdown-custom-input') as HTMLInputElement
     expect(input.maxLength).toBe(32)
     await user.type(input, OVER_LENGTH)
-    expect(input.value.length).toBe(32)
+    expect(input.value).toHaveLength(32)
   })
 })
 

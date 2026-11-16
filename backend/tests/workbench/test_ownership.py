@@ -463,10 +463,12 @@ class TestClearResetsTheReservation:
 class TestStaleSweepUnchanged:
     """The sweep keeps its last-resort role; the away work does not retune it."""
 
-    async def test_a_watched_holder_past_the_timeout_is_still_swept(self) -> None:
+    async def test_a_watched_holder_past_the_timeout_is_still_swept(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("u1", "User One")
-            ownership._watchers = 1
+            monkeypatch.setattr(ownership, "_watchers", 1)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 
@@ -475,10 +477,12 @@ class TestStaleSweepUnchanged:
             assert ownership.get_holder() is None
             mock_emit.assert_called_once_with({"event": "holder_changed", "holder": None})
 
-    async def test_an_unwatched_holder_past_the_timeout_is_still_retained(self) -> None:
+    async def test_an_unwatched_holder_past_the_timeout_is_still_retained(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("u1", "User One")
-            ownership._watchers = 0
+            monkeypatch.setattr(ownership, "_watchers", 0)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 

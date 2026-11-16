@@ -3,7 +3,7 @@
 import subprocess
 import sys
 import uuid
-from collections.abc import Callable, Generator
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -15,9 +15,8 @@ from wavecore.core.artifacts import log_writer
 
 
 @pytest.fixture(autouse=True)
-def _isolate_storage(temp_storage_path: Path) -> Generator[None, None, None]:
+def _isolate_storage(temp_storage_path: Path) -> None:
     exec_storage._clear_storage()
-    yield
 
 
 def _seed_execution(

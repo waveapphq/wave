@@ -409,8 +409,10 @@ class TestValidation:
             await K8sTopPlugin().validate(params)
 
     async def test_empty_name_under_select_by_name_counts_as_missing(self) -> None:
+        params = _valid_params(name="")
+
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await K8sTopPlugin().validate(_valid_params(name=""))
+            await K8sTopPlugin().validate(params)
 
     async def test_name_is_not_required_under_select_by_all(self) -> None:
         params = _valid_params(select_by="all")
@@ -426,37 +428,45 @@ class TestValidation:
 
     async def test_invalid_scope_is_rejected(self) -> None:
         message = "Parameter 'scope' must be one of: pod, node; Actual value was 'cluster'."
+        params = _valid_params(scope="cluster")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sTopPlugin().validate(_valid_params(scope="cluster"))
+            await K8sTopPlugin().validate(params)
 
     async def test_scope_is_case_sensitive(self) -> None:
         message = "Parameter 'scope' must be one of: pod, node; Actual value was 'Pod'."
+        params = _valid_params(scope="Pod")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sTopPlugin().validate(_valid_params(scope="Pod"))
+            await K8sTopPlugin().validate(params)
 
     async def test_invalid_select_by_is_rejected(self) -> None:
         message = (
             "Parameter 'select_by' must be one of: all, name, selector; Actual value was 'label'."
         )
+        params = _valid_params(select_by="label")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sTopPlugin().validate(_valid_params(select_by="label"))
+            await K8sTopPlugin().validate(params)
 
     async def test_invalid_on_error_is_rejected(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
+        params = _valid_params(on_error="ignore")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sTopPlugin().validate(_valid_params(on_error="ignore"))
+            await K8sTopPlugin().validate(params)
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=0)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sTopPlugin().validate(_valid_params(timeout=0))
+            await K8sTopPlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=-5)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sTopPlugin().validate(_valid_params(timeout=-5))
+            await K8sTopPlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sTopPlugin().validate(_valid_params(timeout=45))
@@ -836,22 +846,25 @@ class TestOutputCore:
 
     async def test_fail_mode_raises_on_a_forbidden_read(self) -> None:
         fake = _fake((403, {"reason": "Forbidden", "message": "denied"}))
+        params = _valid_params(select_by="all", on_error="fail")
 
         with pytest.raises(ValueError, match=exact("Kubernetes API permission denied: denied")):
-            await _execute(_valid_params(select_by="all", on_error="fail"), fake)
+            await _execute(params, fake)
 
     async def test_the_default_on_error_is_fail(self) -> None:
         fake = _fake((403, {"reason": "Forbidden", "message": "denied"}))
+        params = _valid_params(select_by="all")
 
         with pytest.raises(ValueError, match=exact("Kubernetes API permission denied: denied")):
-            await _execute(_valid_params(select_by="all"), fake)
+            await _execute(params, fake)
 
     async def test_fail_mode_raises_when_the_named_pod_is_absent(self) -> None:
         fake = _fake((404, {"reason": "NotFound", "message": "pods 'web-1' not found"}))
         message = f"K8s Pod 'web-1' not found in namespace '{NAMESPACE}'"
+        params = _valid_params(name="web-1")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(_valid_params(name="web-1"), fake)
+            await _execute(params, fake)
 
     async def test_record_mode_records_an_absent_named_pod(self) -> None:
         fake = _fake((404, {"reason": "NotFound", "message": "pods 'web-1' not found"}))
@@ -883,9 +896,10 @@ class TestOutputCore:
         detail = "the server is currently unable to handle the request"
         fake = _fake((503, {"reason": "ServiceUnavailable", "message": detail}))
         message = f"Kubernetes could not read Pod 'web-1' in namespace '{NAMESPACE}': {detail}"
+        params = _valid_params(name="web-1")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(_valid_params(name="web-1"), fake)
+            await _execute(params, fake)
 
     async def test_a_server_error_on_an_unnamed_read_names_the_kind_not_an_object(self) -> None:
         detail = "the server is currently unable to handle the request"
@@ -905,16 +919,18 @@ class TestGatewayAnswers:
     async def test_401_with_a_body_that_is_not_a_status_ends_with_the_http_status(self) -> None:
         fake = _fake((401, {}))
         message = f"Kubernetes could not read Pod 'web-1' in namespace '{NAMESPACE}' (HTTP 401)"
+        params = _valid_params(name="web-1")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(_valid_params(name="web-1"), fake)
+            await _execute(params, fake)
 
     async def test_403_on_an_unnamed_read_names_the_kind_not_an_object(self) -> None:
         fake = _fake((403, {}))
         message = f"Kubernetes could not list Pod objects in namespace '{NAMESPACE}' (HTTP 403)"
+        params = _valid_params(select_by="all")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(_valid_params(select_by="all"), fake)
+            await _execute(params, fake)
 
     async def test_a_gateway_401_is_recordable_with_an_empty_reason(self) -> None:
         fake = _fake((401, {}))
@@ -932,28 +948,32 @@ class TestMissingMetricsApi:
 
     async def test_fail_mode_raises_the_metrics_message(self) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
+        params = _valid_params(select_by="all", on_error="fail")
 
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            await _execute(_valid_params(select_by="all", on_error="fail"), fake)
+            await _execute(params, fake)
 
     async def test_record_mode_also_raises_the_metrics_message(self) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
+        params = _valid_params(select_by="all", on_error="record")
 
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            await _execute(_valid_params(select_by="all", on_error="record"), fake)
+            await _execute(params, fake)
 
     async def test_record_mode_also_raises_for_the_node_scope(self) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
+        params = _valid_params(scope="node", select_by="all", on_error="record")
 
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            await _execute(_valid_params(scope="node", select_by="all", on_error="record"), fake)
+            await _execute(params, fake)
 
     @_BOTH_MODES
     async def test_no_metrics_read_follows_the_failed_probe(self, mode: str) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
+        params = _valid_params(select_by="all", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            await _execute(_valid_params(select_by="all", on_error=mode), fake)
+            await _execute(params, fake)
 
         assert [_path_of(call) for call in fake.calls] == [_PROBE_PATH]
 
@@ -983,37 +1003,43 @@ class TestAlwaysHardFail:
     async def test_a_transport_failure_raises(self, mode: str) -> None:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
+        params = _valid_params(select_by="all", on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(_valid_params(select_by="all", on_error=mode), fake)
+            await _execute(params, fake)
 
     @_BOTH_MODES
     async def test_a_tls_failure_raises(self, mode: str) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: self-signed certificate"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
+        params = _valid_params(select_by="all", on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(_valid_params(select_by="all", on_error=mode), fake)
+            await _execute(params, fake)
 
     @_BOTH_MODES
     async def test_a_timeout_raises(self, mode: str) -> None:
         message = f"Kubernetes API request GET {_POD_METRICS_PATH} timed out after 30 seconds"
         fake = _fake(K8sApiError(message))
+        params = _valid_params(select_by="all", on_error=mode)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(_valid_params(select_by="all", on_error=mode), fake)
+            await _execute(params, fake)
 
     @_BOTH_MODES
     async def test_an_invalid_enum_raises(self, mode: str) -> None:
         message = "Parameter 'scope' must be one of: pod, node; Actual value was 'cluster'."
+        params = _valid_params(scope="cluster", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sTopPlugin().validate(_valid_params(scope="cluster", on_error=mode))
+            await K8sTopPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_a_non_positive_timeout_raises(self, mode: str) -> None:
+        params = _valid_params(timeout=0, on_error=mode)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sTopPlugin().validate(_valid_params(timeout=0, on_error=mode))
+            await K8sTopPlugin().validate(params)
 
 
 class TestClientConstruction:
@@ -1178,9 +1204,10 @@ class TestNodesTheMetricsApiDoesNotReport:
 
     async def test_a_node_metrics_denial_still_fails_the_block(self) -> None:
         fake = _fake((403, {"reason": "Forbidden", "message": "no access"}))
+        params = _valid_params(scope="node", select_by="all")
 
         with pytest.raises(ValueError, match=exact("Kubernetes API permission denied: no access")):
-            await _execute(_valid_params(scope="node", select_by="all"), fake)
+            await _execute(params, fake)
 
 
 class TestSelectByDefaultsToAll:
@@ -1219,9 +1246,10 @@ class TestPathEncoding:
     async def test_an_absent_pod_is_reported_by_its_typed_name_and_namespace(self) -> None:
         fake = _fake((404, {"reason": "NotFound", "message": "pods 'web 1?' not found"}))
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
+        params = _valid_params(name="web 1?", namespace="my ns?")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(_valid_params(name="web 1?", namespace="my ns?"), fake)
+            await _execute(params, fake)
 
         assert fake.calls[1].path == (
             "/apis/metrics.k8s.io/v1beta1/namespaces/my%20ns%3F/pods/web%201%3F"
@@ -1264,18 +1292,20 @@ class TestRecordedFailureIsAmber:
     ) -> None:
         fake = FakeK8sClient(responses=[(404, {})])
         logger = MagicMock()
+        params = _valid_params(select_by="all", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            await _execute(_valid_params(select_by="all", on_error=mode), fake, logger)
+            await _execute(params, fake, logger)
 
         assert logger.warn.call_count == 0
 
     async def test_fail_mode_logs_no_warn_line(self) -> None:
         fake = _fake((403, {"reason": "Forbidden", "message": "denied"}))
         logger = MagicMock()
+        params = _valid_params(select_by="all", on_error="fail")
 
         with pytest.raises(ValueError):
-            await _execute(_valid_params(select_by="all", on_error="fail"), fake, logger)
+            await _execute(params, fake, logger)
 
         assert logger.warn.call_count == 0
 

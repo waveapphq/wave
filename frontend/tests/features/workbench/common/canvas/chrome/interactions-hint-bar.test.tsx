@@ -104,16 +104,22 @@ describe('REQ-4.2.5 Interactions Hint Popover', () => {
       })
 
       // REQ-4.2.5: the selected-block keys.
-      it('shows Blocks section with 2 shortcuts', async () => {
+      it.each([
+        ['shows Blocks section with 2 shortcuts', 'BLOCKS', 'Configure', 'Open Function'],
+        // Section header, then all 2 navigation shortcuts
+        ['shows Navigation section with 2 shortcuts', 'NAVIGATION', 'Zoom', 'Pan'],
+        // Section header, then all 2 history shortcuts
+        ['shows History section with 2 shortcuts', 'HISTORY', 'Undo', 'Redo'],
+      ])('%s', async (_title, header, firstShortcut, secondShortcut) => {
         const { InteractionsHintPopover } = await import(
           '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
         )
 
         render(<InteractionsHintPopover open={true} />)
 
-        expect(screen.getByText('BLOCKS')).toBeInTheDocument()
-        expect(screen.getByText('Configure')).toBeInTheDocument()
-        expect(screen.getByText('Open Function')).toBeInTheDocument()
+        expect(screen.getByText(header)).toBeInTheDocument()
+        expect(screen.getByText(firstShortcut)).toBeInTheDocument()
+        expect(screen.getByText(secondShortcut)).toBeInTheDocument()
       })
 
       it('shows Editing section with 6 shortcuts', async () => {
@@ -151,36 +157,6 @@ describe('REQ-4.2.5 Interactions Hint Popover', () => {
         expect(screen.getByText('Box Select')).toBeInTheDocument()
         expect(screen.getByText('Chain Select')).toBeInTheDocument()
         expect(screen.getByText('Select All')).toBeInTheDocument()
-      })
-
-      it('shows Navigation section with 2 shortcuts', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        // Section header
-        expect(screen.getByText('NAVIGATION')).toBeInTheDocument()
-
-        // All 2 navigation shortcuts
-        expect(screen.getByText('Zoom')).toBeInTheDocument()
-        expect(screen.getByText('Pan')).toBeInTheDocument()
-      })
-
-      it('shows History section with 2 shortcuts', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        // Section header
-        expect(screen.getByText('HISTORY')).toBeInTheDocument()
-
-        // All 2 history shortcuts
-        expect(screen.getByText('Undo')).toBeInTheDocument()
-        expect(screen.getByText('Redo')).toBeInTheDocument()
       })
 
       it('renders exactly 5 section headers', async () => {
@@ -240,94 +216,24 @@ describe('REQ-4.2.5 Interactions Hint Popover', () => {
         expect(popover.textContent).toContain('Ctrl+D')
       })
 
-      it('shows Del key for Delete shortcut', async () => {
+      it.each([
+        ['shows Del key for Delete shortcut', 'Del'],
+        ['shows Backspace key for Unlink shortcut', 'Backspace'],
+        ['shows Click key for Select shortcut', 'Click'],
+        ['shows Ctrl+Click key for Multi-select shortcut', 'Ctrl+Click'],
+        ['shows Shift+Drag key for Box Select shortcut', 'Shift+Drag'],
+        ['shows Shift+Click key for Chain Select shortcut', 'Shift+Click'],
+        ['shows Scroll key for Zoom shortcut', 'Scroll'],
+        ['shows Drag key for Pan shortcut', 'Drag'],
+        ['shows Ctrl+Shift+Z key for Redo shortcut', 'Ctrl+Shift+Z'],
+      ])('%s', async (_title, keyLabel) => {
         const { InteractionsHintPopover } = await import(
           '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
         )
 
         render(<InteractionsHintPopover open={true} />)
 
-        expect(screen.getByText('Del')).toBeInTheDocument()
-      })
-
-      it('shows Backspace key for Unlink shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Backspace')).toBeInTheDocument()
-      })
-
-      it('shows Click key for Select shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Click')).toBeInTheDocument()
-      })
-
-      it('shows Ctrl+Click key for Multi-select shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Ctrl+Click')).toBeInTheDocument()
-      })
-
-      it('shows Shift+Drag key for Box Select shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Shift+Drag')).toBeInTheDocument()
-      })
-
-      it('shows Shift+Click key for Chain Select shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Shift+Click')).toBeInTheDocument()
-      })
-
-      it('shows Scroll key for Zoom shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Scroll')).toBeInTheDocument()
-      })
-
-      it('shows Drag key for Pan shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Drag')).toBeInTheDocument()
-      })
-
-      it('shows Ctrl+Shift+Z key for Redo shortcut', async () => {
-        const { InteractionsHintPopover } = await import(
-          '@/features/workbench/common/canvas/chrome/interactions-hint-bar'
-        )
-
-        render(<InteractionsHintPopover open={true} />)
-
-        expect(screen.getByText('Ctrl+Shift+Z')).toBeInTheDocument()
+        expect(screen.getByText(keyLabel)).toBeInTheDocument()
       })
     })
 
@@ -455,39 +361,19 @@ describe('REQ-4.2.5 Interactions Hint Popover', () => {
       expect(onToggle).toHaveBeenCalledTimes(1)
     })
 
-    it('has accessible aria-label for keyboard shortcuts', async () => {
+    it.each([
+      ['has accessible aria-label for keyboard shortcuts', false, 'aria-label', 'Toggle keyboard shortcuts'],
+      ['indicates expanded state when isOpen is true', true, 'aria-expanded', 'true'],
+      ['indicates collapsed state when isOpen is false', false, 'aria-expanded', 'false'],
+    ])('%s', async (_title, isOpen, attribute, expected) => {
       const { HintPopoverToggle } = await import(
         '@/features/workbench/common/canvas/chrome/hint-bar-toggle'
       )
 
-      render(<HintPopoverToggle isOpen={false} onToggle={vi.fn()} />)
+      render(<HintPopoverToggle isOpen={isOpen} onToggle={vi.fn()} />)
 
       const button = screen.getByRole('button')
-      expect(button.getAttribute('aria-label')).toBe(
-        'Toggle keyboard shortcuts'
-      )
-    })
-
-    it('indicates expanded state when isOpen is true', async () => {
-      const { HintPopoverToggle } = await import(
-        '@/features/workbench/common/canvas/chrome/hint-bar-toggle'
-      )
-
-      render(<HintPopoverToggle isOpen={true} onToggle={vi.fn()} />)
-
-      const button = screen.getByRole('button')
-      expect(button.getAttribute('aria-expanded')).toBe('true')
-    })
-
-    it('indicates collapsed state when isOpen is false', async () => {
-      const { HintPopoverToggle } = await import(
-        '@/features/workbench/common/canvas/chrome/hint-bar-toggle'
-      )
-
-      render(<HintPopoverToggle isOpen={false} onToggle={vi.fn()} />)
-
-      const button = screen.getByRole('button')
-      expect(button.getAttribute('aria-expanded')).toBe('false')
+      expect(button.getAttribute(attribute)).toBe(expected)
     })
 
     it('has data-testid for test selectors', async () => {

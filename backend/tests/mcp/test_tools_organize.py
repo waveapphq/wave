@@ -381,17 +381,20 @@ class TestUpdateSuite:
         assert "b" in variables
 
     def test_unknown_suite_ref_raises(self) -> None:
+        tools = organize()
+
         with pytest.raises(NotFoundException, match=r"^Suite 'ghost' not found$"):
-            organize().update_suite("ghost", name="Renamed")
+            tools.update_suite("ghost", name="Renamed")
 
     def test_ambiguous_suite_name_raises(self) -> None:
         _write_raw_suite("Dup Suite")
         _write_raw_suite("Dup Suite")
+        tools = organize()
 
         with pytest.raises(
             ValidationException, match=r"^Multiple suites named 'Dup Suite'; use the id$"
         ):
-            organize().update_suite("Dup Suite", name="Renamed")
+            tools.update_suite("Dup Suite", name="Renamed")
 
     def test_rename_and_retag_updates_both(self) -> None:
         suite = _make_suite("Rename Me Suite")
@@ -541,8 +544,10 @@ class TestUpdateRegression:
         assert _has_problem(result["findings"], SUITE_REF_MISSING.format(suite_id=ghost_suite))
 
     def test_unknown_regression_ref_raises(self) -> None:
+        tools = organize()
+
         with pytest.raises(NotFoundException, match=r"^Regression 'ghost' not found$"):
-            organize().update_regression("ghost", name="Renamed")
+            tools.update_regression("ghost", name="Renamed")
 
     def test_rename_and_retag_updates_both(self) -> None:
         regression = _make_regression("Reg Rename")
@@ -680,8 +685,10 @@ class TestUpdateProfile:
         assert _has_problem(result["findings"], PROFILE_IN_USE_STRUCTURE.format(usage=1))
 
     def test_unknown_profile_ref_raises(self) -> None:
+        tools = organize()
+
         with pytest.raises(NotFoundException, match=r"^Profile 'ghost' not found$"):
-            organize().update_profile("ghost", name="Renamed")
+            tools.update_profile("ghost", name="Renamed")
 
     def test_rename_updates_the_profile(self) -> None:
         profile = _make_profile("Profile To Rename")
@@ -803,20 +810,26 @@ class TestUpdateVariables:
         assert "shared" in _system_variables()
 
     def test_invalid_scope_raises(self) -> None:
+        tools = organize()
+        variables = {"x": _var("y")}
+
         with pytest.raises(ValidationException, match=r"^Scope must be 'system' or 'global'$"):
-            organize().update_variables("suite", set={"x": _var("y")})
+            tools.update_variables("suite", set=variables)
 
     def test_invalid_variable_name_raises(self) -> None:
         _seed_system_variables({"seed": _var("s")})
+        tools = organize()
+        variables = {"123bad": _var("x")}
 
         with pytest.raises(
             ValidationException,
             match=r"^Invalid variable name: '123bad' \(must match \[a-zA-Z_\]\[a-zA-Z0-9_\]\*\)$",
         ):
-            organize().update_variables("system", set={"123bad": _var("x")})
+            tools.update_variables("system", set=variables)
 
     def test_invalid_variable_type_raises(self) -> None:
         _seed_system_variables({"seed": _var("s")})
+        tools = organize()
 
         with pytest.raises(
             ValidationException,
@@ -825,16 +838,18 @@ class TestUpdateVariables:
                 r"array, boolean, float, integer, map, string, table\)$"
             ),
         ):
-            organize().update_variables("system", set={"where": {"type": "geo", "value": "y"}})
+            tools.update_variables("system", set={"where": {"type": "geo", "value": "y"}})
 
     def test_circular_reference_raises(self) -> None:
         _seed_system_variables({"seed": _var("s")})
+
+        tools = organize()
 
         with pytest.raises(
             ValidationException,
             match=r"^Circular reference detected for variable 'a': a -> a$",
         ):
-            organize().update_variables(
+            tools.update_variables(
                 "system",
                 set={"a": {"type": "integer", "computed": True, "expression": "a + 1"}},
             )

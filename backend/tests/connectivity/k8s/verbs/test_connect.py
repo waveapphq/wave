@@ -294,8 +294,10 @@ class TestVersionFloor:
     def test_a_version_below_the_floor_reports_the_raw_git_version(self) -> None:
         message = "WAVE needs Kubernetes 1.19 or newer - this cluster reports v1.18.3"
 
+        params = _params()
+        client_cls = _client_mock(version="v1.18.3")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(), _client_mock(version="v1.18.3"))
+            _run(params, client_cls)
 
     def test_the_floor_version_itself_passes(self) -> None:
         assert _outputs(_params(), _client_mock(version="v1.19.0"))["cluster_version"] == "v1.19.0"
@@ -310,8 +312,9 @@ class TestVersionFloor:
         client_cls.return_value.server_version.side_effect = RuntimeError("connection reset")
         message = f"Could not read the Kubernetes version from {SERVER}: connection reset"
 
+        params = _params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(), client_cls)
+            _run(params, client_cls)
 
     def test_an_unrecognized_git_version_reads_as_an_unreadable_version(self) -> None:
         message = (
@@ -319,14 +322,17 @@ class TestVersionFloor:
             "unrecognized gitVersion 'unknown'"
         )
 
+        params = _params()
+        client_cls = _client_mock(version="unknown")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(), _client_mock(version="unknown"))
+            _run(params, client_cls)
 
     def test_a_version_below_the_floor_never_mints_a_run_token(self) -> None:
         client_cls = _client_mock(version="v1.18.3")
 
+        params = _token_params()
         with pytest.raises(ValueError):
-            _run(_token_params(), client_cls)
+            _run(params, client_cls)
 
         client_cls.return_value.token_request.assert_not_called()
 
@@ -389,8 +395,9 @@ class TestRunToken:
             f"in namespace 'ops': {detail}"
         )
 
+        params = _token_params(run_token_namespace="ops")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_token_params(run_token_namespace="ops"), client_cls)
+            _run(params, client_cls)
 
 
 class TestClientConstruction:
@@ -480,8 +487,10 @@ class TestLogging:
     def test_a_version_below_the_floor_logs_nothing(self) -> None:
         log = _Log()
 
+        params = _params()
+        client_cls = _client_mock(version="v1.18.3")
         with pytest.raises(ValueError):
-            _run(_params(), _client_mock(version="v1.18.3"), log=log)
+            _run(params, client_cls, log=log)
 
         assert log.entries == []
 
@@ -490,8 +499,9 @@ class TestLogging:
         client_cls.return_value.token_request.side_effect = RuntimeError("denied")
         log = _Log()
 
+        params = _token_params()
         with pytest.raises(ValueError):
-            _run(_token_params(), client_cls, log=log)
+            _run(params, client_cls, log=log)
 
         assert log.entries == [("INFO", f"Connected to Kubernetes {_VERSION} at {SERVER}")]
 

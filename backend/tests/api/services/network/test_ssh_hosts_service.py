@@ -449,9 +449,10 @@ class TestHostChanges:
         self, hosts_file: Path, keys: dict[str, asyncssh.SSHKey]
     ) -> None:
         bad = {**addition("db2", 22, keys["rsa"]), "host": ""}
+        additions = [addition("db1", 22, keys["ed25519"]), bad]
 
         with pytest.raises(ValidationException, match=exact("Addition 2: host is required")):
-            ssh_hosts.apply_changes(None, [addition("db1", 22, keys["ed25519"]), bad], [])
+            ssh_hosts.apply_changes(None, additions, [])
 
     @pytest.mark.parametrize(
         ("change", "message"),
@@ -526,9 +527,10 @@ class TestHostChanges:
         write_store(hosts_file, {"hosts": [stored("a" * 32, "db1", 22, keys["ed25519"])]})
         original = hosts_file.read_bytes()
         original_config = config_file.read_bytes()
+        body = request_body(keys)
 
         with pytest.raises(ValidationException, match=exact(message)):
-            ssh_hosts.apply_changes(*request_body(keys))
+            ssh_hosts.apply_changes(*body)
 
         assert hosts_file.read_bytes() == original
         assert sorted(hosts_file.parent.iterdir()) == [hosts_file]
@@ -548,6 +550,7 @@ class TestHostChanges:
             },
         )
         original = hosts_file.read_bytes()
+        additions = [addition("db1", 22, keys["ed25519_other"])]
 
         with pytest.raises(
             ConflictException,
@@ -557,7 +560,7 @@ class TestHostChanges:
         ):
             ssh_hosts.apply_changes(
                 {"default_block_action": "disabled"},
-                [addition("db1", 22, keys["ed25519_other"])],
+                additions,
                 ["b" * 32],
             )
 
@@ -568,6 +571,10 @@ class TestHostChanges:
     ) -> None:
         write_store(hosts_file, {"hosts": [stored("b" * 32, "db2", 22, keys["rsa"])]})
         original = hosts_file.read_bytes()
+        additions = [
+            addition("db1", 22, keys["ed25519"]),
+            addition("db1", 22, keys["ed25519_other"]),
+        ]
 
         with pytest.raises(
             ConflictException,
@@ -577,7 +584,7 @@ class TestHostChanges:
         ):
             ssh_hosts.apply_changes(
                 None,
-                [addition("db1", 22, keys["ed25519"]), addition("db1", 22, keys["ed25519_other"])],
+                additions,
                 [],
             )
 
@@ -724,11 +731,10 @@ class TestTwoStoreSave:
         seed_policy(False, "strict")
         write_store(hosts_file, {"hosts": [stored("a" * 32, "db1", 22, keys["ed25519"])]})
         original = hosts_file.read_bytes()
+        additions = [addition("db1", 22, keys["ed25519_other"])]
 
         with pytest.raises(ConflictException, match=exact(CONFLICT_MESSAGE)):
-            ssh_hosts.apply_changes(
-                LOCKED_DISABLED, [addition("db1", 22, keys["ed25519_other"])], []
-            )
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert ssh_hosts.get_policy() == UNLOCKED_STRICT
         assert saved_policy() == UNLOCKED_STRICT
@@ -747,9 +753,10 @@ class TestTwoStoreSave:
         failing_hosts_write: None,
     ) -> None:
         seed_policy(False, "strict")
+        additions = [addition("db1", 22, keys["ed25519"])]
 
         with pytest.raises(OSError, match=exact("No space left on device")):
-            ssh_hosts.apply_changes(LOCKED_DISABLED, [addition("db1", 22, keys["ed25519"])], [])
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert ssh_hosts.get_policy() == UNLOCKED_STRICT
         assert saved_policy() == UNLOCKED_STRICT
@@ -796,11 +803,10 @@ class TestTwoStoreSave:
         seed_policy(False, "strict")
         write_store(hosts_file, {"hosts": [stored("a" * 32, "db1", 22, keys["ed25519"])]})
         original = hosts_file.read_bytes()
+        additions = [addition("db1", 22, keys["ed25519_other"])]
 
         with pytest.raises(ConflictException, match=exact(CONFLICT_MESSAGE)):
-            ssh_hosts.apply_changes(
-                LOCKED_DISABLED, [addition("db1", 22, keys["ed25519_other"])], []
-            )
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert policy_saved_before_the_config_turned_read_only == [LOCKED_DISABLED]
         assert hosts_file.read_bytes() == original
@@ -814,9 +820,10 @@ class TestTwoStoreSave:
         policy_saved_before_the_config_turned_read_only: list[dict[str, Any]],
     ) -> None:
         seed_policy(False, "strict")
+        additions = [addition("db1", 22, keys["ed25519"])]
 
         with pytest.raises(OSError, match=exact("No space left on device")):
-            ssh_hosts.apply_changes(LOCKED_DISABLED, [addition("db1", 22, keys["ed25519"])], [])
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert policy_saved_before_the_config_turned_read_only == [LOCKED_DISABLED]
         assert not hosts_file.exists()
@@ -833,12 +840,13 @@ class TestTwoStoreSave:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         seed_policy(False, "strict")
+        additions = [addition("db1", 22, keys["ed25519"])]
 
         with (
             caplog.at_level(logging.WARNING, logger=ssh_hosts.__name__),
             pytest.raises(OSError, match=exact("No space left on device")),
         ):
-            ssh_hosts.apply_changes(LOCKED_DISABLED, [addition("db1", 22, keys["ed25519"])], [])
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert logged_warnings(caplog) == [
             "SSH host policy could not be put back after a failed Save; "
@@ -858,12 +866,13 @@ class TestTwoStoreSave:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         seed_policy(False, "strict")
+        additions = [addition("db1", 22, keys["ed25519"])]
 
         with (
             caplog.at_level(logging.WARNING, logger=ssh_hosts.__name__),
             pytest.raises(OSError, match=exact("No space left on device")),
         ):
-            ssh_hosts.apply_changes(LOCKED_DISABLED, [addition("db1", 22, keys["ed25519"])], [])
+            ssh_hosts.apply_changes(LOCKED_DISABLED, additions, [])
 
         assert logged_warnings(caplog) == []
         assert saved_policy() == UNLOCKED_STRICT
@@ -874,9 +883,10 @@ class TestTwoStoreSave:
         from wavecore.api.config.write_back import ConfigWriteError
 
         original = read_only_config.read_bytes()
+        additions = [addition("db1", 22, keys["ed25519"])]
 
         with pytest.raises(ConfigWriteError, match=read_only(read_only_config)):
-            ssh_hosts.apply_changes(LOCKED_STRICT, [addition("db1", 22, keys["ed25519"])], [])
+            ssh_hosts.apply_changes(LOCKED_STRICT, additions, [])
 
         assert read_only_config.read_bytes() == original
         assert ssh_hosts.get_policy() == DEFAULT_POLICY
@@ -889,9 +899,10 @@ class TestTwoStoreSave:
 
         write_store(hosts_file, {"hosts": [stored("a" * 32, "db1", 22, keys["ed25519"])]})
         original = hosts_file.read_bytes()
+        additions = [addition("db2", 22, keys["rsa"])]
 
         with pytest.raises(ConfigWriteError, match=read_only(read_only_config)):
-            ssh_hosts.apply_changes(LOCKED_STRICT, [addition("db2", 22, keys["rsa"])], ["a" * 32])
+            ssh_hosts.apply_changes(LOCKED_STRICT, additions, ["a" * 32])
 
         assert hosts_file.read_bytes() == original
         assert sorted(hosts_file.parent.iterdir()) == [hosts_file]

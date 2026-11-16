@@ -1619,25 +1619,31 @@ class TestTableFilter:
     # --- operator availability --------------------------------------------
 
     def test_filter_ordering_operator_on_a_string_column(self, people: Table) -> None:
+        step = people.filter("name")
+
         with pytest.raises(
             ValueError,
             match="^Operator 'greater_than' is not available for string column 'name'$",
         ):
-            people.filter("name").greater_than("x")
+            step.greater_than("x")
 
     def test_filter_text_operator_on_a_numeric_column(self, people: Table) -> None:
+        step = people.filter("id")
+
         with pytest.raises(
             ValueError,
             match="^Operator 'starts_with' is not available for integer column 'id'$",
         ):
-            people.filter("id").starts_with("1")
+            step.starts_with("1")
 
     def test_filter_boolean_operator_on_a_numeric_column(self, people: Table) -> None:
+        step = people.filter("id")
+
         with pytest.raises(
             ValueError,
             match="^Operator 'is_true' is not available for integer column 'id'$",
         ):
-            people.filter("id").is_true()
+            step.is_true()
 
     def test_filter_emptiness_works_on_every_type(self, people: Table) -> None:
         assert people.filter("name").is_not_empty().row_count() == 4
@@ -1645,11 +1651,13 @@ class TestTableFilter:
         assert people.filter("id").is_empty().row_count() == 0
 
     def test_filter_names_the_column_by_index_in_the_error(self, people: Table) -> None:
+        step = people.filter(0)
+
         with pytest.raises(
             ValueError,
             match="^Operator 'contains' is not available for integer column 'id'$",
         ):
-            people.filter(0).contains("1")
+            step.contains("1")
 
     # --- chaining + non-mutation ------------------------------------------
 

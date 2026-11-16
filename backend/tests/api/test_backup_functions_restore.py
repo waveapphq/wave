@@ -378,7 +378,7 @@ class TestFunctionsInTheArchive:
         assert all(is_secret_envelope(value) for value in sealed)
         assert _token(member["workflow"]) == expected[0]
         assert _tokens(member["versions"]) == expected
-        assert [member] == backup_helpers._list_functions_entities(mode)
+        assert backup_helpers._list_functions_entities(mode) == [member]
 
     def test_the_manifest_counts_the_functions(self) -> None:
         two_versions = [function_version("1.1.0"), function_version("1.0.0")]
@@ -562,7 +562,7 @@ class TestFunctionsRestore:
         assert _library() == {"fn-1": "Fn one", "fn-2": "Fn two", "fn-3": "Fn three"}
         after = stored("functions")
         del after["fn-3"]
-        assert (after, function_versions("fn-1"), function_versions("fn-2")) == before
+        assert before == (after, function_versions("fn-1"), function_versions("fn-2"))
 
     def test_overwrite_merges_the_versions(self) -> None:
         only_here = function_version("1.2.0", [log_block(message="only here")])

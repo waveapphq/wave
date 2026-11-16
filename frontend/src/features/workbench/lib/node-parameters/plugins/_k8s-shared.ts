@@ -232,8 +232,8 @@ export function k8sKindInputs(groupName: string): InputParam[] {
 /** Namespace row of the tail: each block words it and gates it its own way. */
 export interface K8sNamespaceRow {
   description: string
-  showWhen?: InputParam['showWhen']
-  showWhenAll?: InputParam['showWhenAll']
+  showWhen?: NonNullable<InputParam['showWhen']>
+  showWhenAll?: NonNullable<InputParam['showWhenAll']>
   retainOnHide?: boolean
 }
 

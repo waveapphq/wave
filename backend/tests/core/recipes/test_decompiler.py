@@ -102,7 +102,8 @@ def assert_round_trip(recipe_text: str) -> None:
     first = compile_clean(recipe_text)["test_data"]
     readback = decompile(first)
     recipe = readback["recipe"]
-    assert isinstance(recipe, str) and recipe.strip(), f"expected recipe yaml, got {recipe!r}"
+    assert isinstance(recipe, str), f"expected recipe yaml, got {recipe!r}"
+    assert recipe.strip(), f"expected recipe yaml, got {recipe!r}"
     second = compile_clean(recipe)["test_data"]
     assert _node_shapes(first) == _node_shapes(second)
     assert _edge_set(first) == _edge_set(second)

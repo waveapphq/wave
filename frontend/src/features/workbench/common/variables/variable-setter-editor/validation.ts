@@ -57,7 +57,7 @@ export function validateName(
     return { error: `'${name}' conflicts with profile alias from ${aliasConflict.source}` }
   }
   // A Function's inputs are read-only inside its body; its outputs are writable targets (REQ-3.4.3.8).
-  const inputConflict = availableVariables.find(
+  const inputConflict = availableVariables.some(
     (v) => v.name === name && v.source === 'Function input',
   )
   if (inputConflict) {

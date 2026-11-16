@@ -706,9 +706,10 @@ export function useTestRun(params: UseTestRunParams): TestRunResult {
   // in the backend when the finalize pipeline is present. Stop is
   // confirmation-gated.
   const handleStop = useCallback(
-    async function requestStopWorkbench(mode: 'immediate' | 'finalize') {
+    function requestStopWorkbench(mode: 'immediate' | 'finalize'): Promise<void> {
       setPendingStopMode(mode)
       setShowStopConfirmDialog(true)
+      return Promise.resolve()
     },
     []
   )

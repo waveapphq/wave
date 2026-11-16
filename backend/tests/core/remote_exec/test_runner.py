@@ -494,12 +494,14 @@ class TestTheHostProbe:
         ],
     )
     async def test_anything_else_is_the_unreadable_refusal(self, stdout: str) -> None:
+        connection = _fake_connection(stdout=stdout)
         with pytest.raises(RuntimeError, match=_exact(_unreadable_message("python3"))):
-            await runner.probe(_fake_connection(stdout=stdout))
+            await runner.probe(connection)
 
     async def test_a_missing_interpreter_is_the_same_refusal_open_worker_gave(self) -> None:
+        connection = _fake_connection(exit_status=127, stdout="")
         with pytest.raises(RuntimeError, match=_exact(NO_INTERPRETER_MSG)):
-            await runner.probe(_fake_connection(exit_status=127, stdout=""))
+            await runner.probe(connection)
 
     async def test_an_interpreter_below_the_floor_is_refused_by_major_and_minor(self) -> None:
         conn = _fake_connection(stdout=probe_line("3.9.18", "aarch64", "musl"))
@@ -1029,7 +1031,8 @@ class TestCloseWorker:
 
         await close_worker(fake.worker)
 
-        assert fake.worker.reader is not None and fake.worker.reader.done()
+        assert fake.worker.reader is not None
+        assert fake.worker.reader.done()
 
 
 class TestWorkerHandle:
@@ -1071,4 +1074,5 @@ class TestWorkerHandle:
         fake.worker.close()
         await fake.settle()
 
-        assert fake.worker.reader is not None and fake.worker.reader.done()
+        assert fake.worker.reader is not None
+        assert fake.worker.reader.done()

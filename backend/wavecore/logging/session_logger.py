@@ -109,6 +109,7 @@ class SessionLogger:
             "CRITICAL": logging.CRITICAL,
         }
         log_level = level_map.get(level.upper(), logging.INFO)
+        # CodeQL exclusion: CQL-LOG-001
         terminal_logger.log(log_level, terminal_message)
 
     def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:

@@ -77,32 +77,39 @@ class TestWriteTestdataArguments:
     def test_neither_content_nor_base64_is_refused(self) -> None:
         test = make_test("Write Args None")
 
+        testdata_tools = testdata()
         with pytest.raises(ValidationException, match=rf"^{EXACTLY_ONE_CONTENT}$"):
-            testdata().write_testdata(test["id"], "customers.csv")
+            testdata_tools.write_testdata(test["id"], "customers.csv")
 
     def test_both_content_and_base64_are_refused(self) -> None:
         test = make_test("Write Args Both")
 
+        testdata_tools = testdata()
+        content_base64 = base64.b64encode(CSV_TEXT.encode()).decode()
         with pytest.raises(ValidationException, match=rf"^{EXACTLY_ONE_CONTENT}$"):
-            testdata().write_testdata(
+            testdata_tools.write_testdata(
                 test["id"],
                 "customers.csv",
                 content=CSV_TEXT,
-                content_base64=base64.b64encode(CSV_TEXT.encode()).decode(),
+                content_base64=content_base64,
             )
 
     def test_content_that_is_not_base64_is_refused(self) -> None:
         test = make_test("Write Args Bad Base64")
 
+        testdata_tools = testdata()
         with pytest.raises(ValidationException):
-            testdata().write_testdata(test["id"], "customers.csv", content_base64="not base64!!")
+            testdata_tools.write_testdata(
+                test["id"], "customers.csv", content_base64="not base64!!"
+            )
 
     def test_an_argument_error_never_reaches_the_service(self) -> None:
         test = make_test("Write Args Short Circuit")
 
         with patch.object(service(), "store_bytes") as upload:
+            testdata_tools = testdata()
             with pytest.raises(ValidationException):
-                testdata().write_testdata(test["id"], "customers.csv")
+                testdata_tools.write_testdata(test["id"], "customers.csv")
 
         upload.assert_not_called()
         assert not folder_of(test["id"]).exists()
@@ -204,8 +211,9 @@ class TestWriteTestdataRefusals:
         assert not (folder_of(test["id"]) / "customers.csv").exists()
 
     def test_an_unknown_test_raises_instead_of_reporting_a_finding(self) -> None:
+        testdata_tools = testdata()
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            testdata().write_testdata("ghost", "customers.csv", content=CSV_TEXT)
+            testdata_tools.write_testdata("ghost", "customers.csv", content=CSV_TEXT)
 
 
 class TestCreateTestdataFolder:
@@ -270,8 +278,9 @@ class TestCreateTestdataFolder:
         assert only_finding(result)["problem"] == RUNNING.format(name="Folder While Running")
 
     def test_an_unknown_test_raises_instead_of_reporting_a_finding(self) -> None:
+        testdata_tools = testdata()
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            testdata().create_testdata_folder("ghost", "examples")
+            testdata_tools.create_testdata_folder("ghost", "examples")
 
 
 class TestRenameTestdata:
@@ -331,8 +340,9 @@ class TestRenameTestdata:
         assert (folder_of(test["id"]) / "customers.csv").exists()
 
     def test_an_unknown_test_raises_instead_of_reporting_a_finding(self) -> None:
+        testdata_tools = testdata()
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            testdata().rename_testdata("ghost", "customers.csv", "clients.csv")
+            testdata_tools.rename_testdata("ghost", "customers.csv", "clients.csv")
 
 
 class TestDeleteTestdata:
@@ -376,5 +386,6 @@ class TestDeleteTestdata:
         assert (folder_of(test["id"]) / "customers.csv").exists()
 
     def test_an_unknown_test_raises_instead_of_reporting_a_finding(self) -> None:
+        testdata_tools = testdata()
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            testdata().delete_testdata("ghost", "customers.csv")
+            testdata_tools.delete_testdata("ghost", "customers.csv")

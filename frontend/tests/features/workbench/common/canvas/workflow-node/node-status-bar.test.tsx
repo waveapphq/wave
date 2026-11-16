@@ -132,12 +132,17 @@ describe('NodeStatusBar - left cluster badge order', () => {
     expect(children[children.length - 1].getAttribute('data-testid')).toBe('node-run-state-badge')
   })
 
-  it('omits L/S badge for plugin nodes', async () => {
+  it.each([
+    ['omits L/S badge for plugin nodes', 'plugin', 'node-function-lifecycle-badge'],
+    ['omits L/S badge for control nodes', 'control', 'node-function-lifecycle-badge'],
+    ['omits L/S badge for function node when functionLifecycle is undefined', 'function', 'node-function-lifecycle-badge'],
+    ['renders no run-state badge when runState is undefined', 'plugin', 'node-run-state-badge'],
+  ] as const)('%s', async (_title, kind, absentTestId) => {
     const { NodeStatusBar } = await import('@/features/workbench/common/canvas/workflow-node/node-status-bar')
     render(
       <NodeStatusBar
         nodeId="n1"
-        kind="plugin"
+        kind={kind}
         runState={undefined}
         isMuted={false}
         hasIssue={false}
@@ -146,24 +151,7 @@ describe('NodeStatusBar - left cluster badge order', () => {
         onMenuAction={vi.fn()}
       />,
     )
-    expect(screen.queryByTestId('node-function-lifecycle-badge')).not.toBeInTheDocument()
-  })
-
-  it('omits L/S badge for control nodes', async () => {
-    const { NodeStatusBar } = await import('@/features/workbench/common/canvas/workflow-node/node-status-bar')
-    render(
-      <NodeStatusBar
-        nodeId="n1"
-        kind="control"
-        runState={undefined}
-        isMuted={false}
-        hasIssue={false}
-        hasNewerVersion={false}
-        onConfigure={vi.fn()}
-        onMenuAction={vi.fn()}
-      />,
-    )
-    expect(screen.queryByTestId('node-function-lifecycle-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId(absentTestId)).not.toBeInTheDocument()
   })
 
   it('renders L badge for function node with functionLifecycle="local"', async () => {
@@ -206,23 +194,6 @@ describe('NodeStatusBar - left cluster badge order', () => {
     expect(badge).toHaveTextContent('S')
   })
 
-  it('omits L/S badge for function node when functionLifecycle is undefined', async () => {
-    const { NodeStatusBar } = await import('@/features/workbench/common/canvas/workflow-node/node-status-bar')
-    render(
-      <NodeStatusBar
-        nodeId="n1"
-        kind="function"
-        runState={undefined}
-        isMuted={false}
-        hasIssue={false}
-        hasNewerVersion={false}
-        onConfigure={vi.fn()}
-        onMenuAction={vi.fn()}
-      />,
-    )
-    expect(screen.queryByTestId('node-function-lifecycle-badge')).not.toBeInTheDocument()
-  })
-
   it('renders only one run-state badge at a time (mutual exclusivity)', async () => {
     const { NodeStatusBar } = await import('@/features/workbench/common/canvas/workflow-node/node-status-bar')
     render(
@@ -240,23 +211,6 @@ describe('NodeStatusBar - left cluster badge order', () => {
     const badges = screen.getAllByTestId('node-run-state-badge')
     expect(badges).toHaveLength(1)
     expect(badges[0]).toHaveAttribute('data-state', 'pass')
-  })
-
-  it('renders no run-state badge when runState is undefined', async () => {
-    const { NodeStatusBar } = await import('@/features/workbench/common/canvas/workflow-node/node-status-bar')
-    render(
-      <NodeStatusBar
-        nodeId="n1"
-        kind="plugin"
-        runState={undefined}
-        isMuted={false}
-        hasIssue={false}
-        hasNewerVersion={false}
-        onConfigure={vi.fn()}
-        onMenuAction={vi.fn()}
-      />,
-    )
-    expect(screen.queryByTestId('node-run-state-badge')).not.toBeInTheDocument()
   })
 })
 

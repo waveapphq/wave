@@ -122,6 +122,7 @@ export function CopyValuesModal({
               className="pl-8 h-9"
             />
             <svg
+              aria-hidden="true"
               className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

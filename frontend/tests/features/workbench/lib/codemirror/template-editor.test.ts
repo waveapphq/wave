@@ -66,6 +66,6 @@ describe('buildTemplateExtensions', () => {
     })
     expect(withNeither).not.toContain(templateHighlighter)
     expect(withNeither).not.toContain(templateTooltip)
-    expect(withBoth.length).toBe(withNeither.length + 2)
+    expect(withBoth).toHaveLength(withNeither.length + 2)
   })
 })

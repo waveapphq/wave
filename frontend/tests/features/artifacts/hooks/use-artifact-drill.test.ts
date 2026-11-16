@@ -252,7 +252,7 @@ describe('useArtifactDrill - a failed supporting read blocks the page', () => {
 
     expect(usePageBlockStore.getState().block).toBeNull()
     expect(result.current.failedScopes.has('smoke/login')).toBe(true)
-    expect(vi.mocked(fetchDrillExecution).mock.calls.length).toBe(executionCalls)
+    expect(vi.mocked(fetchDrillExecution).mock.calls).toHaveLength(executionCalls)
     expect(vi.mocked(fetchExecutionArtifacts)).toHaveBeenCalledTimes(1)
   })
 

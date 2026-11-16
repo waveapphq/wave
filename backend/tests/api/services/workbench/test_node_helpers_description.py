@@ -145,7 +145,8 @@ class TestTheEngineCallsABlockByItsName:
         monkeypatch.setattr(execution_module, "_broadcast_event", record)
         await run_graph(session_id, [_described_failing_block()], [edge("start-node", "load")], {})
 
-        assert names and set(names) == {"Load seed rows"}, names
+        assert names, names
+        assert set(names) == {"Load seed rows"}, names
 
     async def test_a_caught_error_names_the_block(self) -> None:
         session_id = "engine-name-caught-error"

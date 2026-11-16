@@ -152,36 +152,22 @@ describe('MainLayout canvas route content styling', () => {
       expect(contentWrapper).toHaveClass('px-0')
     })
 
-    it('applies standard padding on non-canvas routes', async () => {
-      renderMainLayout('/tests')
+    it.each([
+      ['applies standard padding on non-canvas routes', '/tests', 'tests-list-page'],
+      [
+        'applies standard padding on detail page (read-only, not canvas)',
+        '/tests/test-123',
+        'test-detail-page',
+      ],
+      ['applies standard padding on dashboard', '/dashboard', 'dashboard-page'],
+    ])('%s', async (_name, path, testId) => {
+      renderMainLayout(path)
 
       await waitFor(() => {
-        expect(screen.getByTestId('tests-list-page')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
 
-      const contentWrapper = screen.getByTestId('tests-list-page').parentElement
-      expect(contentWrapper).toHaveClass('px-4')
-    })
-
-    it('applies standard padding on detail page (read-only, not canvas)', async () => {
-      renderMainLayout('/tests/test-123')
-
-      await waitFor(() => {
-        expect(screen.getByTestId('test-detail-page')).toBeInTheDocument()
-      })
-
-      const contentWrapper = screen.getByTestId('test-detail-page').parentElement
-      expect(contentWrapper).toHaveClass('px-4')
-    })
-
-    it('applies standard padding on dashboard', async () => {
-      renderMainLayout('/dashboard')
-
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
-      })
-
-      const contentWrapper = screen.getByTestId('dashboard-page').parentElement
+      const contentWrapper = screen.getByTestId(testId).parentElement
       expect(contentWrapper).toHaveClass('px-4')
     })
   })

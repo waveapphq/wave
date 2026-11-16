@@ -2514,8 +2514,7 @@ function buildInitializer(
     toggleSkip: (nodeId) => {
       const state = get()
       const active = walkActiveSubtree(state.nodes, state.edges, state.variables, state.drillPath)
-      const node = active.nodes.find(byId(nodeId))
-      if (!node) return
+      if (!active.nodes.some(byId(nodeId))) return
 
       set((currentState) => ({
         skippedNodeIds: currentState.skippedNodeIds.includes(nodeId)
@@ -2528,8 +2527,7 @@ function buildInitializer(
     unlinkNode: (nodeId) => {
       const state = get()
       const active = walkActiveSubtree(state.nodes, state.edges, state.variables, state.drillPath)
-      const node = active.nodes.find(byId(nodeId))
-      if (!node) return
+      if (!active.nodes.some(byId(nodeId))) return
 
       // Find nodes that will lose ingress edges when this node is unlinked
       const affectedTargets = new Set<string>()

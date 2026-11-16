@@ -175,39 +175,17 @@ describe('RecentActivity Section', () => {
       expect(section).toHaveClass('flex-col')
     })
 
-    it('card element has card styling', () => {
+    it.each([
+      ['card element has card styling', 'card'],
+      ['card element has rounded corners', 'rounded-lg'],
+      ['card element has border', 'border'],
+      ['card element has card background', 'bg-card'],
+      ['card element has no padding (items handle their own)', 'p-0'],
+    ])('%s', (_name, className) => {
       render(<RecentActivity activities={mockActivities} />)
       const section = screen.getByTestId('recent-activity-section')
       const card = section.querySelector('.card')
-      expect(card).toHaveClass('card')
-    })
-
-    it('card element has rounded corners', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const section = screen.getByTestId('recent-activity-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('rounded-lg')
-    })
-
-    it('card element has border', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const section = screen.getByTestId('recent-activity-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('border')
-    })
-
-    it('card element has card background', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const section = screen.getByTestId('recent-activity-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('bg-card')
-    })
-
-    it('card element has no padding (items handle their own)', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const section = screen.getByTestId('recent-activity-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('p-0')
+      expect(card).toHaveClass(className)
     })
   })
 
@@ -237,22 +215,14 @@ describe('RecentActivity Section', () => {
       expect(screen.getByRole('list')).toBeInTheDocument()
     })
 
-    it('list items have dividers between them', () => {
+    it.each([
+      ['list items have dividers between them', 'divide-y'],
+      ['list expands to fill available space', 'flex-1'],
+      ['list has overflow-y-auto for scrolling', 'overflow-y-auto'],
+    ])('%s', (_name, className) => {
       render(<RecentActivity activities={mockActivities} />)
       const list = screen.getByRole('list')
-      expect(list).toHaveClass('divide-y')
-    })
-
-    it('list expands to fill available space', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const list = screen.getByRole('list')
-      expect(list).toHaveClass('flex-1')
-    })
-
-    it('list has overflow-y-auto for scrolling', () => {
-      render(<RecentActivity activities={mockActivities} />)
-      const list = screen.getByRole('list')
-      expect(list).toHaveClass('overflow-y-auto')
+      expect(list).toHaveClass(className)
     })
   })
 

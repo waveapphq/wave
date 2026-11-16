@@ -124,7 +124,7 @@ describe('processConnectEnd', () => {
       const calls = removeEventListenerSpy.mock.calls.filter(
         ([type]) => type === 'mousemove'
       )
-      expect(calls.length).toBe(0)
+      expect(calls).toHaveLength(0)
       removeEventListenerSpy.mockRestore()
     })
   })
@@ -158,7 +158,7 @@ describe('processConnectEnd', () => {
       const calls = removeEventListenerSpy.mock.calls.filter(
         ([, fn]) => fn !== null
       )
-      expect(calls.length).toBe(0)
+      expect(calls).toHaveLength(0)
       removeEventListenerSpy.mockRestore()
     })
   })
@@ -446,11 +446,11 @@ describe('processConnectEnd', () => {
       vi.advanceTimersByTime(100)
 
       // First rAF callback queued by setTimeout
-      expect(rafCallbacks.length).toBe(1)
+      expect(rafCallbacks).toHaveLength(1)
       rafCallbacks[0](0)
 
       // Second rAF callback (nested inside the first)
-      expect(rafCallbacks.length).toBe(2)
+      expect(rafCallbacks).toHaveLength(2)
       rafCallbacks[1](0)
 
       // setEdges called with spread copy and skipDirty

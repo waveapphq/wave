@@ -168,9 +168,10 @@ class TestUnsealFailures:
 
     def test_wrong_key_raises_decryption_error(self) -> None:
         envelope = SecretCipher(KEY_A).seal("hunter2-classified")
+        wrong_cipher = SecretCipher(KEY_B)
 
         with pytest.raises(SecretDecryptionError, match=DECRYPTION_ERROR):
-            SecretCipher(KEY_B).unseal(envelope)
+            wrong_cipher.unseal(envelope)
 
     def test_invalid_base64_payload_raises_decryption_error(self) -> None:
         cipher = SecretCipher(KEY_A)

@@ -569,8 +569,10 @@ class TestGetRecipeGuide:
         result = author().get_recipe_guide()
         for example in result["examples"]:
             assert set(example.keys()) == {"name", "description", "recipe"}
-            assert isinstance(example["description"], str) and example["description"].strip()
-            assert isinstance(example["recipe"], str) and example["recipe"].strip()
+            assert isinstance(example["description"], str)
+            assert example["description"].strip()
+            assert isinstance(example["recipe"], str)
+            assert example["recipe"].strip()
 
     def test_the_guide_documents_the_wait_until_container(self) -> None:
         # A guide that advertises the leaf shorthand teaches authors to write definitions
@@ -829,7 +831,8 @@ class TestGetRecipeGuide:
         flows = [doc["flow"] for doc in map(yaml.safe_load, blocks) if "flow" in (doc or {})]
 
         steps = [step for flow in flows for step in flow]
-        assert steps and all(isinstance(step.get("function"), str) for step in steps)
+        assert steps
+        assert all(isinstance(step.get("function"), str) for step in steps)
         assert [step for step in steps if {"call", "inputs"} & set(step)] == []
         assert any(isinstance(step.get("settings"), dict) for step in steps)
 
@@ -905,10 +908,12 @@ class TestPackagedSwitchExample:
 
     def test_cases_are_condition_guarded_with_their_own_steps(self) -> None:
         cases = _branching_example_switch()["cases"]
-        assert isinstance(cases, list) and cases
+        assert isinstance(cases, list)
+        assert cases
         for case in cases:
             assert "when" in case, f"case is not condition-guarded: {case!r}"
-            assert isinstance(case["steps"], list) and case["steps"]
+            assert isinstance(case["steps"], list)
+            assert case["steps"]
 
     def test_the_switch_has_no_on_capture_or_equals_key(self) -> None:
         # YAML 1.1 reads a bare 'on:' as boolean True, so both forms are checked.
@@ -942,12 +947,14 @@ class TestPackagedWaitUntilExample:
 
     def test_the_example_waits_on_an_assertion_set_with_a_deadline(self) -> None:
         wait = _wait_until_example()
-        assert isinstance(wait["that"], list) and wait["that"]
+        assert isinstance(wait["that"], list)
+        assert wait["that"]
         assert isinstance(wait["timeout"], int)
 
     def test_the_example_demonstrates_a_retry_lane(self) -> None:
         wait = _wait_until_example()
-        assert isinstance(wait["retry"], list) and wait["retry"]
+        assert isinstance(wait["retry"], list)
+        assert wait["retry"]
 
     def test_the_wait_has_no_condition_or_poll_interval_key(self) -> None:
         wait = _wait_until_example()
@@ -1628,7 +1635,8 @@ class TestGetTestRecipe:
         assert result["version"] == "1.0.0"
         assert result["expressible"] is True
         assert result["inexpressible"] == []
-        assert isinstance(result["recipe"], str) and result["recipe"].strip()
+        assert isinstance(result["recipe"], str)
+        assert result["recipe"].strip()
 
     def test_readback_recipe_recompiles_clean(self) -> None:
         from wavecore.core.recipes.compiler import compile_recipe
@@ -1686,8 +1694,10 @@ class TestGetTestRecipe:
     def test_absent_target_raises_not_found(self) -> None:
         from wavecore.api.exceptions import NotFoundException
 
+        tools = author()
+
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            author().get_test_recipe("ghost")
+            tools.get_test_recipe("ghost")
 
 
 def declared_inputs_recipe(name: str, inputs: list[dict[str, Any]]) -> str:
@@ -1850,8 +1860,11 @@ class TestAmendTestFromRecipe:
     def test_absent_target_raises_not_found(self) -> None:
         from wavecore.api.exceptions import NotFoundException
 
+        tools = author()
+        recipe = simple_recipe("ghost")
+
         with pytest.raises(NotFoundException, match=r"^Test 'ghost' not found$"):
-            author().amend_test_from_recipe("ghost", simple_recipe("ghost"))
+            tools.amend_test_from_recipe("ghost", recipe)
 
     def test_a_block_placed_by_hand_keeps_its_place_through_an_amend(self) -> None:
         # REQ-5.2.7.4: a hand-placed Block carries no recipe key; it is recognized by what it is.

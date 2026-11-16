@@ -440,12 +440,16 @@ describe('Node Parameters', () => {
       expect(inputs).toHaveLength(4)
     })
 
-    it('has xml_content as a required string', () => {
+    it.each([
+      ['has xml_content as a required string', 'xml_content', 'string', true],
+      ['has queries as required map', 'queries', 'map', true],
+      ['has query_output_types as optional map', 'query_output_types', 'map', false],
+    ])('%s', (_name, paramName, type, required) => {
       const inputs = PLUGIN_INPUTS['xml-parser']
-      const param = inputs.find((p) => p.name === 'xml_content')
+      const param = inputs.find((p) => p.name === paramName)
       expect(param).toBeDefined()
-      expect(param!.type).toBe('string')
-      expect(param!.required).toBe(true)
+      expect(param!.type).toBe(type)
+      expect(param!.required).toBe(required)
     })
 
     it('has xml_content with allowedFormats locked to xml', () => {
@@ -482,22 +486,6 @@ describe('Node Parameters', () => {
       expect(param!.defaultValue).toBe('combined')
     })
 
-    it('has queries as required map', () => {
-      const inputs = PLUGIN_INPUTS['xml-parser']
-      const param = inputs.find((p) => p.name === 'queries')
-      expect(param).toBeDefined()
-      expect(param!.type).toBe('map')
-      expect(param!.required).toBe(true)
-    })
-
-    it('has query_output_types as optional map', () => {
-      const inputs = PLUGIN_INPUTS['xml-parser']
-      const param = inputs.find((p) => p.name === 'query_output_types')
-      expect(param).toBeDefined()
-      expect(param!.type).toBe('map')
-      expect(param!.required).toBe(false)
-    })
-
     it('has 3 outputs (success, errors, results)', () => {
       const outputs = PLUGIN_OUTPUTS['xml-parser']
       expect(outputs).toHaveLength(3)
@@ -526,12 +514,16 @@ describe('Node Parameters', () => {
       expect(inputs).toHaveLength(4)
     })
 
-    it('has json_content as a required string', () => {
+    it.each([
+      ['has json_content as a required string', 'json_content', 'string', true],
+      ['has queries as required map', 'queries', 'map', true],
+      ['has query_output_types as optional map', 'query_output_types', 'map', false],
+    ])('%s', (_name, paramName, type, required) => {
       const inputs = PLUGIN_INPUTS['json-parser']
-      const param = inputs.find((p) => p.name === 'json_content')
+      const param = inputs.find((p) => p.name === paramName)
       expect(param).toBeDefined()
-      expect(param!.type).toBe('string')
-      expect(param!.required).toBe(true)
+      expect(param!.type).toBe(type)
+      expect(param!.required).toBe(required)
     })
 
     it('has json_content with allowedFormats', () => {
@@ -560,22 +552,6 @@ describe('Node Parameters', () => {
       expect(param!.required).toBe(false)
       expect(param!.enumValues).toEqual(['combined', 'individual'])
       expect(param!.defaultValue).toBe('combined')
-    })
-
-    it('has queries as required map', () => {
-      const inputs = PLUGIN_INPUTS['json-parser']
-      const param = inputs.find((p) => p.name === 'queries')
-      expect(param).toBeDefined()
-      expect(param!.type).toBe('map')
-      expect(param!.required).toBe(true)
-    })
-
-    it('has query_output_types as optional map', () => {
-      const inputs = PLUGIN_INPUTS['json-parser']
-      const param = inputs.find((p) => p.name === 'query_output_types')
-      expect(param).toBeDefined()
-      expect(param!.type).toBe('map')
-      expect(param!.required).toBe(false)
     })
 
     it('has 3 outputs (success, errors, results)', () => {

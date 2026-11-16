@@ -481,24 +481,14 @@ beforeEach(() => {
 
 describe('BackupRestoreTab', () => {
   describe('Layout', () => {
-    it('renders main container', () => {
+    it.each([
+      ['renders main container', 'backup-restore-tab'],
+      ['renders Create Backup section', 'create-backup-section'],
+      ['renders Restore from Backup section', 'restore-backup-section'],
+      ['renders Periodic Backup section', 'periodic-backup-section'],
+    ])('%s', (_title, testId) => {
       renderTab()
-      expect(screen.getByTestId('backup-restore-tab')).toBeInTheDocument()
-    })
-
-    it('renders Create Backup section', () => {
-      renderTab()
-      expect(screen.getByTestId('create-backup-section')).toBeInTheDocument()
-    })
-
-    it('renders Restore from Backup section', () => {
-      renderTab()
-      expect(screen.getByTestId('restore-backup-section')).toBeInTheDocument()
-    })
-
-    it('renders Periodic Backup section', () => {
-      renderTab()
-      expect(screen.getByTestId('periodic-backup-section')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders section headings', () => {
@@ -517,22 +507,16 @@ describe('BackupRestoreTab', () => {
   })
 
   describe('Create Backup Section', () => {
-    it('renders entity selector', () => {
+    it.each([
+      ['renders entity selector', 'entity-selector'],
+      ['renders format dropdown', 'format-select'],
+      ['renders compression method dropdown', 'compression-method-select'],
+      ['renders compression level slider', 'compression-level-slider'],
+      ['renders the secrets mode picker after the compression controls', 'secrets-mode-picker'],
+    ])('%s', (_title, testId) => {
       renderTab()
       const section = screen.getByTestId('create-backup-section')
-      expect(within(section).getByTestId('entity-selector')).toBeInTheDocument()
-    })
-
-    it('renders format dropdown', () => {
-      renderTab()
-      const section = screen.getByTestId('create-backup-section')
-      expect(within(section).getByTestId('format-select')).toBeInTheDocument()
-    })
-
-    it('renders compression method dropdown', () => {
-      renderTab()
-      const section = screen.getByTestId('create-backup-section')
-      expect(within(section).getByTestId('compression-method-select')).toBeInTheDocument()
+      expect(within(section).getByTestId(testId)).toBeInTheDocument()
     })
 
     it('names the Format and Compression selects by their labels', () => {
@@ -544,18 +528,6 @@ describe('BackupRestoreTab', () => {
       expect(section.getByRole('combobox', { name: 'Compression' })).toBe(
         section.getByTestId('compression-method-select'),
       )
-    })
-
-    it('renders compression level slider', () => {
-      renderTab()
-      const section = screen.getByTestId('create-backup-section')
-      expect(within(section).getByTestId('compression-level-slider')).toBeInTheDocument()
-    })
-
-    it('renders the secrets mode picker after the compression controls', () => {
-      renderTab()
-      const section = screen.getByTestId('create-backup-section')
-      expect(within(section).getByTestId('secrets-mode-picker')).toBeInTheDocument()
     })
 
     it('no longer renders the include-credentials toggle', () => {

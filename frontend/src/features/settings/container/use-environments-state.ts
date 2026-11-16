@@ -30,6 +30,14 @@ import type { ExportSecretsMode } from '@/types/import-export'
 
 const TAGS_LABEL = 'tags'
 
+/** Runs the action on each id one after another, stopping at the first failure. */
+async function runInOrder(ids: string[], action: (id: string) => Promise<unknown>): Promise<void> {
+  if (ids.length === 0) return
+  const [first, ...rest] = ids
+  await action(first)
+  await runInOrder(rest, action)
+}
+
 /** What the section's two reads last did; drives whether the page is blocked. */
 interface SectionReadStatus {
   primaryFailed: boolean
@@ -460,9 +468,7 @@ export function useEnvironmentsState(active: boolean) {
   const handleBulkDuplicate = useCallback(async () => {
     // selectedIds is guaranteed non-empty: bulk actions are only shown when items are selected
     try {
-      for (const id of selectedIds) {
-        await duplicateEnvironmentApi(id)
-      }
+      await runInOrder(selectedIds, duplicateEnvironmentApi)
       await loadEnvironments()
       toastSuccess(`Duplicated ${selectedIds.length} environment(s)`)
       setSelectedIds([])
@@ -474,9 +480,7 @@ export function useEnvironmentsState(active: boolean) {
   const handleBulkDelete = useCallback(async () => {
     // selectedIds is guaranteed non-empty: bulk actions are only shown when items are selected
     try {
-      for (const id of selectedIds) {
-        await deleteEnvironmentApi(id)
-      }
+      await runInOrder(selectedIds, deleteEnvironmentApi)
       await loadEnvironments()
       toastSuccess(`Deleted ${selectedIds.length} environment(s)`)
       setSelectedIds([])

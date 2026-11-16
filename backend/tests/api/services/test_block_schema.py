@@ -393,8 +393,10 @@ class TestSharedFunctionBlockFromAGivenRegistry:
         assert _names(schema.outputs) == ["greeting"]
 
     def test_the_registry_is_a_keyword_argument(self) -> None:
+        block = _shared_block("no-such-function", "1.0.0")
+
         with pytest.raises(TypeError):
-            block_schema(_shared_block("no-such-function", "1.0.0"), {})
+            block_schema(block, {})
 
 
 def _control_block(element_type: str, **values: Any) -> dict[str, Any]:

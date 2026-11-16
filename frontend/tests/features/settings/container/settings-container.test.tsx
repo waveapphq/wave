@@ -2740,27 +2740,15 @@ describe('SettingsContainer', () => {
 
   describe('Network Section (REQ-5.2.1.42)', () => {
     describe('URL mapping', () => {
-      it('shows the SSH Hosts page for /settings/network/ssh-hosts', async () => {
-        renderSettingsContainer('/settings/network/ssh-hosts')
+      it.each([
+        ['shows the SSH Hosts page for /settings/network/ssh-hosts', '/settings/network/ssh-hosts', 'network-ssh-hosts-tab', 'network-certificates-tab'],
+        ['shows the Certificates page for /settings/network/certificates', '/settings/network/certificates', 'network-certificates-tab', 'network-ssh-hosts-tab'],
+        ['shows the SSH Hosts page for the bare /settings/network path', '/settings/network', 'network-ssh-hosts-tab', 'network-certificates-tab'],
+      ])('%s', async (_title, path, shownTestId, hiddenTestId) => {
+        renderSettingsContainer(path)
 
-        expect(await screen.findByTestId('network-ssh-hosts-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-certificates-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
-      })
-
-      it('shows the Certificates page for /settings/network/certificates', async () => {
-        renderSettingsContainer('/settings/network/certificates')
-
-        expect(await screen.findByTestId('network-certificates-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-ssh-hosts-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
-      })
-
-      it('shows the SSH Hosts page for the bare /settings/network path', async () => {
-        renderSettingsContainer('/settings/network')
-
-        expect(await screen.findByTestId('network-ssh-hosts-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-certificates-tab')).not.toBeInTheDocument()
+        expect(await screen.findByTestId(shownTestId)).toBeInTheDocument()
+        expect(screen.queryByTestId(hiddenTestId)).not.toBeInTheDocument()
         expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
       })
 
@@ -3046,29 +3034,15 @@ describe('SettingsContainer', () => {
     }
 
     describe('URL mapping', () => {
-      it('shows the Proxy Setup page for /settings/network/proxy/setup', async () => {
-        renderSettingsContainer('/settings/network/proxy/setup')
+      it.each([
+        ['shows the Proxy Setup page for /settings/network/proxy/setup', '/settings/network/proxy/setup', 'network-proxy-setup-tab', 'network-proxy-blocks-tab'],
+        ['shows the Proxy Blocks page for /settings/network/proxy/blocks', '/settings/network/proxy/blocks', 'network-proxy-blocks-tab', 'network-proxy-setup-tab'],
+        ['shows the Proxy Setup page for the bare /settings/network/proxy path', '/settings/network/proxy', 'network-proxy-setup-tab', 'network-proxy-blocks-tab'],
+      ])('%s', async (_title, path, shownTestId, hiddenTestId) => {
+        renderSettingsContainer(path)
 
-        expect(await screen.findByTestId('network-proxy-setup-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-proxy-blocks-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('network-ssh-hosts-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
-      })
-
-      it('shows the Proxy Blocks page for /settings/network/proxy/blocks', async () => {
-        renderSettingsContainer('/settings/network/proxy/blocks')
-
-        expect(await screen.findByTestId('network-proxy-blocks-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-proxy-setup-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('network-ssh-hosts-tab')).not.toBeInTheDocument()
-        expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
-      })
-
-      it('shows the Proxy Setup page for the bare /settings/network/proxy path', async () => {
-        renderSettingsContainer('/settings/network/proxy')
-
-        expect(await screen.findByTestId('network-proxy-setup-tab')).toBeInTheDocument()
-        expect(screen.queryByTestId('network-proxy-blocks-tab')).not.toBeInTheDocument()
+        expect(await screen.findByTestId(shownTestId)).toBeInTheDocument()
+        expect(screen.queryByTestId(hiddenTestId)).not.toBeInTheDocument()
         expect(screen.queryByTestId('network-ssh-hosts-tab')).not.toBeInTheDocument()
         expect(screen.queryByTestId('general-tab')).not.toBeInTheDocument()
       })
