@@ -666,44 +666,14 @@ describe('ExpressionEditorModal', () => {
       act(() => { dispatchKeyOnEditor('Enter') })
     })
 
-    it('ArrowDown without autocomplete is a no-op', async () => {
+    it.each(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'])('%s without autocomplete is a no-op', async (key) => {
       render(<ExpressionEditorModal {...defaultProps} value="endpoint" />)
 
       await waitFor(() => {
         expect(getEditorView()).not.toBeNull()
       })
 
-      act(() => { dispatchKeyOnEditor('ArrowDown') })
-    })
-
-    it('ArrowUp without autocomplete is a no-op', async () => {
-      render(<ExpressionEditorModal {...defaultProps} value="endpoint" />)
-
-      await waitFor(() => {
-        expect(getEditorView()).not.toBeNull()
-      })
-
-      act(() => { dispatchKeyOnEditor('ArrowUp') })
-    })
-
-    it('PageDown without autocomplete is a no-op', async () => {
-      render(<ExpressionEditorModal {...defaultProps} value="endpoint" />)
-
-      await waitFor(() => {
-        expect(getEditorView()).not.toBeNull()
-      })
-
-      act(() => { dispatchKeyOnEditor('PageDown') })
-    })
-
-    it('PageUp without autocomplete is a no-op', async () => {
-      render(<ExpressionEditorModal {...defaultProps} value="endpoint" />)
-
-      await waitFor(() => {
-        expect(getEditorView()).not.toBeNull()
-      })
-
-      act(() => { dispatchKeyOnEditor('PageUp') })
+      act(() => { dispatchKeyOnEditor(key) })
     })
 
     it('Ctrl+Space dispatches on editor', async () => {

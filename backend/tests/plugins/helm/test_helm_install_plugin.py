@@ -214,58 +214,77 @@ class TestValidation:
         params = _valid()
         params.pop("session")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact(MISSING_SESSION_MESSAGE)):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_session_that_resolved_to_nothing_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(session="")
         with pytest.raises(ValueError, match=exact(EMPTY_SESSION_MESSAGE)):
-            await _plugin().validate(_valid(session=""))
+            await plugin.validate(params)
 
     async def test_groups_without_a_user_are_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(impersonate_groups="qa")
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await _plugin().validate(_valid(impersonate_groups="qa"))
+            await plugin.validate(params)
 
     async def test_a_missing_release_is_refused(self) -> None:
         params = _valid()
         params.pop("release")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_blank_release_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(release="   ")
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(_valid(release="   "))
+            await plugin.validate(params)
 
     async def test_a_missing_chart_is_refused(self) -> None:
         params = _valid()
         params.pop("chart")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'chart' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_blank_chart_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(chart="")
         with pytest.raises(ValueError, match=exact("Parameter 'chart' is required")):
-            await _plugin().validate(_valid(chart=""))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("timeout", [0, -1])
     async def test_a_non_positive_timeout_is_refused(self, timeout: int) -> None:
+        plugin = _plugin()
+        params = _valid(timeout=timeout)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_valid(timeout=timeout))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("cleanup_timeout", [0, -1])
     async def test_a_non_positive_cleanup_timeout_is_refused(self, cleanup_timeout: int) -> None:
         message = "Parameter 'cleanup_timeout' must be positive"
 
+        plugin = _plugin()
+        params = _valid(cleanup_timeout=cleanup_timeout)
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_valid(cleanup_timeout=cleanup_timeout))
+            await plugin.validate(params)
 
     async def test_an_unknown_output_format_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(output_format="csv")
         with pytest.raises(ValueError, match="output_format"):
-            await _plugin().validate(_valid(output_format="csv"))
+            await plugin.validate(params)
 
     async def test_an_unknown_failure_handling_value_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(on_error="ignore")
         with pytest.raises(ValueError, match="on_error"):
-            await _plugin().validate(_valid(on_error="ignore"))
+            await plugin.validate(params)
 
 
 class TestExecute:
@@ -325,8 +344,11 @@ class TestExecute:
     async def test_a_refusal_stops_the_block(self) -> None:
         message = "INSTALL FAILED: cannot re-use a name that is still in use"
 
+        plugin = _plugin()
+        params = _valid()
+        results = [helm_failed(STDERR_STILL_IN_USE)]
         with pytest.raises(ValueError, match=exact(message)):
-            await execute_verb(_plugin(), "install", _valid(), [helm_failed(STDERR_STILL_IN_USE)])
+            await execute_verb(plugin, "install", params, results)
 
     async def test_a_recorded_refusal_reaches_the_block_as_data(self) -> None:
         outputs, _fake = await execute_verb(
@@ -412,5 +434,6 @@ class TestChartResolution:
         params = _valid(chart="testdata://absent.tgz")
         context = execute_context(params, testdata_dirs=[str(tmp_path)])
 
+        prepare = _chart_prepare()
         with pytest.raises(FileNotFoundError):
-            _chart_prepare()(params, context)
+            prepare(params, context)

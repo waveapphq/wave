@@ -123,20 +123,23 @@ class TestAssertControlValidation:
     def test_validate_rejects_missing_assertions(self):
         """Verify validation fails when assertions parameter is missing."""
         control = AssertControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^assertions parameter is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_rejects_non_list_assertions(self):
         """Verify validation fails when assertions is not a list."""
         control = AssertControl()
+        validation = control.validate({"assertions": "not a list"})
         with pytest.raises(ValueError, match="^assertions must be a list$"):
-            asyncio.run(control.validate({"assertions": "not a list"}))
+            asyncio.run(validation)
 
     def test_validate_rejects_empty_assertions(self):
         """Verify validation fails when assertions is an empty list."""
         control = AssertControl()
+        validation = control.validate({"assertions": []})
         with pytest.raises(ValueError, match="^assertions must not be empty$"):
-            asyncio.run(control.validate({"assertions": []}))
+            asyncio.run(validation)
 
     def test_the_run_fill_refuses_an_invalid_mode(self):
         """A mode outside the declared list stops the Block before validate() runs."""
@@ -168,14 +171,16 @@ class TestAssertControlValidation:
     def test_validate_rejects_dict_assertions(self):
         """Verify validation rejects dict as assertions."""
         control = AssertControl()
+        validation = control.validate({"assertions": {"a": 1}})
         with pytest.raises(ValueError, match="^assertions must be a list$"):
-            asyncio.run(control.validate({"assertions": {"a": 1}}))
+            asyncio.run(validation)
 
     def test_validate_rejects_integer_assertions(self):
         """Verify validation rejects integer as assertions."""
         control = AssertControl()
+        validation = control.validate({"assertions": 42})
         with pytest.raises(ValueError, match="^assertions must be a list$"):
-            asyncio.run(control.validate({"assertions": 42}))
+            asyncio.run(validation)
 
 
 _CHECK = {"type": "expression", "expression": "x == 1"}
@@ -208,8 +213,10 @@ class TestAssertConditionJoins:
     def test_validate_refuses_a_list_out_of_order(
         self, assertions: list[dict[str, Any]], message: str
     ) -> None:
+        validation = AssertControl().validate({"assertions": assertions, "mode": "single"})
+
         with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
-            asyncio.run(AssertControl().validate({"assertions": assertions, "mode": "single"}))
+            asyncio.run(validation)
 
     def test_validate_takes_a_list_joined_at_every_depth(self) -> None:
         group = {"type": "group", "items": [_CHECK, _OR, _CHECK]}
@@ -806,8 +813,9 @@ class TestAssertControlFailTest:
             },
             "variables": {"x": 10},
         }
+        execution = control.execute(context)
         with pytest.raises(AssertionError, match=r"^Assertion failed: 1 of 1 assertions failed$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_split_mode_failure_with_fail_current_scope_true(self):
         """Verify both __scope_failed and __branch in result when fail_current_scope=True in split
@@ -882,8 +890,9 @@ class TestAssertControlFailTest:
             "variables": {"x": 10},
             "logger": logger,
         }
+        execution = control.execute(context)
         with pytest.raises(AssertionError):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
         # Should use error, not warn, before the block fails
         assert logger.error.call_count >= 1
         assert logger.warn.call_count == 0
@@ -998,8 +1007,9 @@ class TestAssertControlVariablePassthrough:
             "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},
         }
+        execution = control.execute(context)
         with pytest.raises(KeyError, match="nonexistent"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
 
 # =============================================================================
@@ -1026,8 +1036,9 @@ class TestAssertControlErrorPropagation:
             "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},  # Missing variable -> KeyError
         }
+        execution = control.execute(context)
         with pytest.raises(KeyError):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_type_error_propagates(self):
         """Verify TypeError from type coercion propagates."""
@@ -1045,8 +1056,9 @@ class TestAssertControlErrorPropagation:
             "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {"x": "not_a_number"},
         }
+        execution = control.execute(context)
         with pytest.raises(TypeError):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_unknown_item_type_propagates(self):
         """Verify ValueError from unknown assertion item type propagates."""
@@ -1060,8 +1072,9 @@ class TestAssertControlErrorPropagation:
             "parameters": {"assertions": assertions, "mode": "single", "fail_current_scope": False},
             "variables": {},
         }
+        execution = control.execute(context)
         with pytest.raises(ValueError, match=r"^Unknown assertion item type: 'unknown_type'$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
 
 # =============================================================================

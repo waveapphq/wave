@@ -622,10 +622,10 @@ class TestValidation:
             "Actual value was 'bogus'."
         )
 
+        plugin = K8sGetPlugin()
+        params = _name_params(resource_type="bogus", kind_custom="widgets")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(
-                _name_params(resource_type="bogus", kind_custom="widgets")
-            )
+            await plugin.validate(params)
 
     async def test_search_by_enum(self) -> None:
         message = (
@@ -633,8 +633,10 @@ class TestValidation:
             "Actual value was 'everything'."
         )
 
+        plugin = K8sGetPlugin()
+        params = _name_params(search_by="everything")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(search_by="everything"))
+            await plugin.validate(params)
 
     async def test_output_format_enum(self) -> None:
         message = (
@@ -642,26 +644,34 @@ class TestValidation:
             "Actual value was 'xml'."
         )
 
+        plugin = K8sGetPlugin()
+        params = _name_params(output_format="xml")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(output_format="xml"))
+            await plugin.validate(params)
 
     async def test_on_error_enum(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        plugin = K8sGetPlugin()
+        params = _name_params(on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(on_error="ignore"))
+            await plugin.validate(params)
 
     async def test_zero_timeout_is_rejected(self) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        plugin = K8sGetPlugin()
+        params = _name_params(timeout=0)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(timeout=0))
+            await plugin.validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        plugin = K8sGetPlugin()
+        params = _name_params(timeout=-5)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(timeout=-5))
+            await plugin.validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sGetPlugin().validate(_name_params(timeout=1))
@@ -720,8 +730,9 @@ class TestExecuteNameMode:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_a_missing_object_is_recordable(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
@@ -738,8 +749,9 @@ class TestExecuteNameMode:
         fake = FakeK8sClient(responses=[(404, body)], resources=_NODES)
         message = "K8s Node 'kwok-node-0' not found"
 
+        params = _name_params(kind="Node", name="kwok-node-0")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params(kind="Node", name="kwok-node-0"))
+            await _execute(fake, params)
 
 
 class TestExecuteListModes:
@@ -799,8 +811,9 @@ class TestExecuteListModes:
             'user cannot list resource "pods"'
         )
 
+        params = _list_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params())
+            await _execute(fake, params)
 
 
 class TestRequestShape:
@@ -1197,8 +1210,9 @@ class TestOutputFormatTableUnsupported:
             "- choose Map, JSON or YAML for this kind"
         )
 
+        params = _list_params(output_format="table")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params(output_format="table"))
+            await _execute(fake, params)
 
     async def test_a_plain_object_body_says_the_cluster_will_not_print_a_table(self) -> None:
         fake = FakeK8sClient(responses=[(200, _POD_LIST)], resources=_PODS)
@@ -1207,8 +1221,9 @@ class TestOutputFormatTableUnsupported:
             "- choose Map, JSON or YAML for this kind"
         )
 
+        params = _list_params(output_format="table")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params(output_format="table"))
+            await _execute(fake, params)
 
     async def test_the_message_names_the_resolved_kind(self) -> None:
         body = _failure("NotAcceptable", "only the following media types are accepted", 406)
@@ -1386,24 +1401,27 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(401, body)], resources=_PODS)
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_403_renders_the_permission_row(self) -> None:
         detail = 'pods "web-1" is forbidden: user cannot get resource "pods"'
         fake = FakeK8sClient(responses=[(403, _failure("Forbidden", detail, 403))], resources=_PODS)
         message = f"Kubernetes API permission denied: {detail}"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_404_renders_the_not_found_row(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_401_is_recordable_with_its_reason(self) -> None:
         body = _failure("Unauthorized", "Unauthorized", 401)
@@ -1428,8 +1446,9 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = "K8s Pod 'web-1' not found in namespace 'ops'"
 
+        params = _name_params(namespace="ops")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params(namespace="ops"))
+            await _execute(fake, params)
 
     async def test_a_server_error_on_a_named_read_says_the_read_failed(self) -> None:
         detail = "the server is currently unable to handle the request"
@@ -1437,8 +1456,9 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(503, body)], resources=_PODS)
         message = f"Kubernetes could not read Pod 'web-1' in namespace 'apps': {detail}"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_a_server_error_on_a_named_read_is_recordable(self) -> None:
         detail = "Internal error occurred: rpc error: code = Unknown"
@@ -1458,8 +1478,9 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(503, body)], resources=_PODS)
         message = f"Kubernetes could not list Pod objects in namespace 'apps': {detail}"
 
+        params = _list_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params())
+            await _execute(fake, params)
 
     async def test_a_missing_collection_names_the_kind_not_an_object(self) -> None:
         detail = "the server could not find the requested resource"
@@ -1467,29 +1488,33 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = f"Kubernetes could not list Pod objects in namespace 'apps': {detail}"
 
+        params = _list_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params())
+            await _execute(fake, params)
 
     async def test_a_server_error_without_a_cluster_message_names_the_status(self) -> None:
         fake = FakeK8sClient(responses=[(502, {})], resources=_PODS)
         message = "Kubernetes could not read Pod 'web-1' in namespace 'apps' (HTTP 502)"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_401_with_a_body_that_is_not_a_status_ends_with_the_http_status(self) -> None:
         fake = FakeK8sClient(responses=[(401, {})], resources=_PODS)
         message = "Kubernetes could not read Pod 'web-1' in namespace 'apps' (HTTP 401)"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_403_with_a_body_that_is_not_a_status_ends_with_the_http_status(self) -> None:
         fake = FakeK8sClient(responses=[(403, {})], resources=_PODS)
         message = "Kubernetes could not list Pod objects in namespace 'apps' (HTTP 403)"
 
+        params = _list_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _list_params())
+            await _execute(fake, params)
 
     async def test_a_gateway_401_is_recordable_with_an_empty_reason(self) -> None:
         fake = FakeK8sClient(responses=[(401, {})], resources=_PODS)
@@ -1508,8 +1533,9 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(401, GATEWAY_HTML)], resources=_PODS)
         message = "Kubernetes could not read Pod 'web-1' in namespace 'apps' (HTTP 401)"
 
+        params = _name_params(output_format=output_format)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params(output_format=output_format))
+            await _execute(fake, params)
 
 
 class TestTextFormatsRejectAnUnreadableBody:
@@ -1519,29 +1545,33 @@ class TestTextFormatsRejectAnUnreadableBody:
     async def test_a_gateway_page_at_200_fails_the_block(self, output_format: str) -> None:
         fake = FakeK8sClient(responses=[(200, GATEWAY_HTML)], resources=_PODS)
 
+        params = _list_params(output_format=output_format)
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            await _execute(fake, _list_params(output_format=output_format))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     async def test_a_named_read_fails_the_same_way(self, output_format: str) -> None:
         fake = FakeK8sClient(responses=[(200, GATEWAY_HTML)], resources=_PODS)
 
+        params = _name_params(output_format=output_format)
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            await _execute(fake, _name_params(output_format=output_format))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     async def test_record_mode_does_not_soften_it(self, output_format: str) -> None:
         fake = FakeK8sClient(responses=[(200, GATEWAY_HTML)], resources=_PODS)
 
+        params = _list_params(output_format=output_format, on_error="record")
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            await _execute(fake, _list_params(output_format=output_format, on_error="record"))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     async def test_a_body_that_is_not_an_object_fails(self, output_format: str) -> None:
         fake = FakeK8sClient(responses=[(200, b"[1, 2, 3]")], resources=_PODS)
 
+        params = _list_params(output_format=output_format)
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            await _execute(fake, _list_params(output_format=output_format))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     async def test_an_empty_body_stays_a_success(self, output_format: str) -> None:
@@ -1644,8 +1674,9 @@ class TestOutputCore:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_record_mode_keeps_a_happy_read_green(self) -> None:
         fake = FakeK8sClient(responses=[(200, _POD_LIST)], resources=_PODS)
@@ -1693,8 +1724,9 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_PODS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _name_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_tls_failure_raises(self, on_error: str) -> None:
@@ -1704,8 +1736,9 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_PODS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _name_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_timeout_raises(self, on_error: str) -> None:
@@ -1715,15 +1748,18 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_PODS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _name_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_invalid_params_raise_from_validate(self, on_error: str) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        plugin = K8sGetPlugin()
+        params = _name_params(timeout=0, on_error=on_error)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sGetPlugin().validate(_name_params(timeout=0, on_error=on_error))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_missing_required_param_raises_from_validate(self, on_error: str) -> None:
@@ -1874,15 +1910,17 @@ class TestDiscoveryDenied:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_403_renders_the_permission_row(self) -> None:
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", _DISCOVERY_FORBIDDEN, 403))
         message = f"Kubernetes API permission denied: {_DISCOVERY_FORBIDDEN}"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_a_denied_walk_is_never_reported_as_a_kind_miss(self) -> None:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
@@ -2005,8 +2043,9 @@ class TestPathEncoding:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
 
+        params = _name_params(name="web 1?", namespace="my ns?")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params(name="web 1?", namespace="my ns?"))
+            await _execute(fake, params)
 
         assert fake.last.path == "/api/v1/namespaces/my%20ns%3F/pods/web%201%3F"
 
@@ -2118,8 +2157,9 @@ class TestRecordedFailureIsAmber:
         fake = FakeK8sClient(responses=[(404, body)], resources=_PODS)
         logger = MagicMock()
 
+        params = _name_params(on_error="fail")
         with pytest.raises(ValueError):
-            await _execute(fake, _name_params(on_error="fail"), logger=logger)
+            await _execute(fake, params, logger=logger)
 
         assert logger.warn.call_count == 0
 

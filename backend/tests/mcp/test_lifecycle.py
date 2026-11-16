@@ -785,8 +785,9 @@ class TestUndeclaredArguments:
 
         from wavecore.mcp import server as mcp_server
 
+        server = mcp_server._build_server()
         with pytest.raises(ToolError) as refused:
-            await mcp_server._build_server().call_tool(tool, arguments)
+            await server.call_tool(tool, arguments)
         return str(refused.value)
 
     async def test_a_tool_without_arguments_refuses_one(self) -> None:

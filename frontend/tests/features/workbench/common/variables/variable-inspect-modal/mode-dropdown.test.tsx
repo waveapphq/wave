@@ -119,40 +119,20 @@ describe('ModeDropdown - menu items', () => {
 })
 
 describe('ModeDropdown - selection', () => {
-  it('fires onValueChange with "initial" when Initial is picked', async () => {
+  it.each<[InspectMode, string, InspectMode]>([
+    ['initial', 'Initial', 'current'],
+    ['current', 'Current', 'initial'],
+    ['compare', 'Compare', 'current'],
+  ])('fires onValueChange with "%s" when %s is picked', async (mode, label, start) => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
-    renderDropdown('current', onValueChange)
+    renderDropdown(start, onValueChange)
 
     await user.click(screen.getByTestId('mode-dropdown'))
-    await user.click(await screen.findByRole('option', { name: 'Initial' }))
+    await user.click(await screen.findByRole('option', { name: label }))
 
     expect(onValueChange).toHaveBeenCalledTimes(1)
-    expect(onValueChange).toHaveBeenCalledWith('initial')
-  })
-
-  it('fires onValueChange with "current" when Current is picked', async () => {
-    const user = userEvent.setup()
-    const onValueChange = vi.fn()
-    renderDropdown('initial', onValueChange)
-
-    await user.click(screen.getByTestId('mode-dropdown'))
-    await user.click(await screen.findByRole('option', { name: 'Current' }))
-
-    expect(onValueChange).toHaveBeenCalledTimes(1)
-    expect(onValueChange).toHaveBeenCalledWith('current')
-  })
-
-  it('fires onValueChange with "compare" when Compare is picked', async () => {
-    const user = userEvent.setup()
-    const onValueChange = vi.fn()
-    renderDropdown('current', onValueChange)
-
-    await user.click(screen.getByTestId('mode-dropdown'))
-    await user.click(await screen.findByRole('option', { name: 'Compare' }))
-
-    expect(onValueChange).toHaveBeenCalledTimes(1)
-    expect(onValueChange).toHaveBeenCalledWith('compare')
+    expect(onValueChange).toHaveBeenCalledWith(mode)
   })
 })
 

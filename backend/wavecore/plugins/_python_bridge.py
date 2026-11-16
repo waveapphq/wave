@@ -176,6 +176,7 @@ def _namespace(envelope: dict[str, Any]) -> dict[str, Any]:
 def _run(script: str, namespace: dict[str, Any]) -> tuple[str | None, int]:
     """Run the script as __main__; how it ended, unless its own sys.exit travels on (PYRUN-7)."""
     try:
+        # SonarQube exclusion: SQ-PATH-001
         with open(script, encoding="utf-8") as handle:
             code = compile(handle.read(), script, "exec")
     except SyntaxError as exc:

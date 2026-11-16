@@ -168,26 +168,32 @@ class TestValidation:
         params = _valid()
         params.pop("release")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_missing_chart_is_refused(self) -> None:
         params = _valid()
         params.pop("chart")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'chart' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_non_positive_timeout_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_valid(timeout=0))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("cleanup_timeout", [0, -1])
     async def test_a_non_positive_cleanup_timeout_is_refused(self, cleanup_timeout: int) -> None:
         message = "Parameter 'cleanup_timeout' must be positive"
 
+        plugin = _plugin()
+        params = _valid(cleanup_timeout=cleanup_timeout)
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_valid(cleanup_timeout=cleanup_timeout))
+            await plugin.validate(params)
 
     async def test_reuse_values_on_its_own_passes(self) -> None:
         await _plugin().validate(_valid(reuse_values=True))
@@ -199,8 +205,10 @@ class TestValidation:
         await _plugin().validate(_valid(reuse_values=False, reset_values=False))
 
     async def test_both_set_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(reuse_values=True, reset_values=True)
         with pytest.raises(ValueError, match=exact(BOTH_SET_MESSAGE)):
-            await _plugin().validate(_valid(reuse_values=True, reset_values=True))
+            await plugin.validate(params)
 
 
 class TestExecute:

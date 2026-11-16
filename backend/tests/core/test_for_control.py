@@ -152,24 +152,34 @@ class TestForControlValidation:
             _run_fill({"mode": "invalid", "count": 1})
 
     def test_validate_count_mode_requires_count(self) -> None:
+        validation = self.control.validate({"mode": "count"})
+
         with pytest.raises(ValueError, match="^count is required when mode is 'count'$"):
-            asyncio.run(self.control.validate({"mode": "count"}))
+            asyncio.run(validation)
 
     def test_validate_range_mode_requires_start(self) -> None:
+        validation = self.control.validate({"mode": "range", "end": 5})
+
         with pytest.raises(ValueError, match="^start is required when mode is 'range'$"):
-            asyncio.run(self.control.validate({"mode": "range", "end": 5}))
+            asyncio.run(validation)
 
     def test_validate_range_mode_requires_end(self) -> None:
+        validation = self.control.validate({"mode": "range", "start": 0})
+
         with pytest.raises(ValueError, match="^end is required when mode is 'range'$"):
-            asyncio.run(self.control.validate({"mode": "range", "start": 0}))
+            asyncio.run(validation)
 
     def test_validate_step_zero(self) -> None:
+        validation = self.control.validate({"mode": "count", "count": 5, "step": 0})
+
         with pytest.raises(ValueError, match="^step must not be zero$"):
-            asyncio.run(self.control.validate({"mode": "count", "count": 5, "step": 0}))
+            asyncio.run(validation)
 
     def test_validate_negative_count(self) -> None:
+        validation = self.control.validate({"mode": "count", "count": -1})
+
         with pytest.raises(ValueError, match="^count must be >= 0$"):
-            asyncio.run(self.control.validate({"mode": "count", "count": -1}))
+            asyncio.run(validation)
 
     def test_validate_passes_count_mode(self) -> None:
         asyncio.run(self.control.validate({"mode": "count", "count": 5}))
@@ -179,8 +189,10 @@ class TestForControlValidation:
 
     def test_validate_default_mode_is_count(self) -> None:
         """The run fill gives a missing mode its declared default 'count', so count is required."""
+        validation = self.control.validate(_run_fill({}))
+
         with pytest.raises(ValueError, match="^count is required when mode is 'count'$"):
-            asyncio.run(self.control.validate(_run_fill({})))
+            asyncio.run(validation)
 
     def test_validate_count_zero_passes(self) -> None:
         asyncio.run(self.control.validate({"mode": "count", "count": 0}))
@@ -396,8 +408,9 @@ class TestForRunFloor:
         resolved = _run_fill({"mode": "count", "count": "start - 5"}, {"count"}, {"start": 2})
 
         assert resolved["count"] == -3
+        validation = ForControl().validate(resolved)
         with pytest.raises(ValueError, match="^count must be >= 0$"):
-            asyncio.run(ForControl().validate(resolved))
+            asyncio.run(validation)
 
     def test_a_count_that_is_not_an_integer_is_left_to_the_shared_check(self) -> None:
         assert (

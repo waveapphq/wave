@@ -687,10 +687,12 @@ class TestWriteFlavorRefusesTheTestDataZone:
         artifacts.mkdir()
         climb = "../" * len(artifacts.resolve().parts[1:])
 
+        path = f"artifact://{climb}{str(other.resolve()).lstrip('/')}/out.csv"
+        artifacts_dir = str(artifacts)
         with pytest.raises(ValueError, match=_exact(_READ_ONLY_MESSAGE)):
             resolve_plugin_path(
-                f"artifact://{climb}{str(other.resolve()).lstrip('/')}/out.csv",
-                str(artifacts),
+                path,
+                artifacts_dir,
                 None,
                 read_only_ok=False,
             )

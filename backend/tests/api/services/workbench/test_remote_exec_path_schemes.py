@@ -352,14 +352,10 @@ class TestAWaveSidePayloadFailureFollowsOnError:
         testdata.mkdir()
         message = f"Remote Execution failed on host '{HOST}': {NOT_FOUND}"
 
+        values = _talk_file(MISSING_PAYLOAD)
+        session = _session(testdata)
         with pytest.raises(RuntimeError, match=exact(message)):
-            await _run_body(
-                _talk_file(MISSING_PAYLOAD),
-                [],
-                {},
-                element_type="netcat",
-                session=_session(testdata),
-            )
+            await _run_body(values, [], {}, element_type="netcat", session=session)
 
     async def test_record_and_continue_records_start_failed_with_empty_results(
         self, tmp_path: Path

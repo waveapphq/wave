@@ -39,9 +39,13 @@ describe('QuickActions Section', () => {
   })
 
   describe('Default Actions (Populated State)', () => {
-    it('renders New Test action', () => {
+    it.each([
+      ['New Test', 'quick-action-new-test'],
+      ['Run Regression', 'quick-action-run-regression'],
+      ['View Reports', 'quick-action-view-reports'],
+    ])('renders %s action', (_label, testId) => {
       render(<QuickActions />)
-      expect(screen.getByTestId('quick-action-new-test')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('New Test action has correct content', () => {
@@ -51,25 +55,11 @@ describe('QuickActions Section', () => {
       expect(action).toHaveTextContent(/Create/i)
     })
 
-    it('renders Run Regression action', () => {
-      render(<QuickActions />)
-      expect(
-        screen.getByTestId('quick-action-run-regression')
-      ).toBeInTheDocument()
-    })
-
     it('Run Regression action has correct content', () => {
       render(<QuickActions />)
       const action = screen.getByTestId('quick-action-run-regression')
       expect(action).toHaveTextContent(/Run Regression/i)
       expect(action).toHaveTextContent(/Execute/i)
-    })
-
-    it('renders View Reports action', () => {
-      render(<QuickActions />)
-      expect(
-        screen.getByTestId('quick-action-view-reports')
-      ).toBeInTheDocument()
     })
 
     it('View Reports action has correct content', () => {
@@ -95,39 +85,17 @@ describe('QuickActions Section', () => {
       expect(section).toHaveClass('flex-col')
     })
 
-    it('card element has card styling', () => {
+    it.each([
+      ['card element has card styling', 'card'],
+      ['card element has rounded corners', 'rounded-lg'],
+      ['card element has border', 'border'],
+      ['card element has card background', 'bg-card'],
+      ['card element has no outer padding', 'p-0'],
+    ])('%s', (_name, className) => {
       render(<QuickActions />)
       const section = screen.getByTestId('quick-actions-section')
       const card = section.querySelector('.card')
-      expect(card).toHaveClass('card')
-    })
-
-    it('card element has rounded corners', () => {
-      render(<QuickActions />)
-      const section = screen.getByTestId('quick-actions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('rounded-lg')
-    })
-
-    it('card element has border', () => {
-      render(<QuickActions />)
-      const section = screen.getByTestId('quick-actions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('border')
-    })
-
-    it('card element has card background', () => {
-      render(<QuickActions />)
-      const section = screen.getByTestId('quick-actions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('bg-card')
-    })
-
-    it('card element has no outer padding', () => {
-      render(<QuickActions />)
-      const section = screen.getByTestId('quick-actions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('p-0')
+      expect(card).toHaveClass(className)
     })
   })
 
@@ -152,12 +120,16 @@ describe('QuickActions Section', () => {
   })
 
   describe('Grid Layout', () => {
-    it('actions container has grid layout', () => {
+    it.each([
+      ['actions container has grid layout', 'grid'],
+      ['grid has gap between cards', 'gap-4'],
+      ['grid container has padding', 'p-4'],
+    ])('%s', (_name, className) => {
       render(<QuickActions />)
       const container = screen
         .getByTestId('quick-actions-section')
         .querySelector('[data-actions-grid]')
-      expect(container).toHaveClass('grid')
+      expect(container).toHaveClass(className)
     })
 
     it('grid has responsive columns for 3 actions', () => {
@@ -167,22 +139,6 @@ describe('QuickActions Section', () => {
         .querySelector('[data-actions-grid]')
       expect(container).toHaveClass('grid-cols-1')
       expect(container).toHaveClass('sm:grid-cols-3')
-    })
-
-    it('grid has gap between cards', () => {
-      render(<QuickActions />)
-      const container = screen
-        .getByTestId('quick-actions-section')
-        .querySelector('[data-actions-grid]')
-      expect(container).toHaveClass('gap-4')
-    })
-
-    it('grid container has padding', () => {
-      render(<QuickActions />)
-      const container = screen
-        .getByTestId('quick-actions-section')
-        .querySelector('[data-actions-grid]')
-      expect(container).toHaveClass('p-4')
     })
   })
 
@@ -217,53 +173,34 @@ describe('QuickActions Section', () => {
       expect(handleViewReports).toHaveBeenCalledTimes(1)
     })
 
-    it('handles click on New Test without callback (fallback)', async () => {
-      const user = userEvent.setup()
-      render(<QuickActions />)
-      // Should not throw when clicking without a callback
-      const button = screen.getByTestId('quick-action-new-test')
-      await user.click(button)
-      expect(button).toBeInTheDocument()
-    })
-
-    it('handles click on Run Regression without callback (fallback)', async () => {
-      const user = userEvent.setup()
-      render(<QuickActions />)
-      const button = screen.getByTestId('quick-action-run-regression')
-      await user.click(button)
-      expect(button).toBeInTheDocument()
-    })
-
-    it('handles click on View Reports without callback (fallback)', async () => {
-      const user = userEvent.setup()
-      render(<QuickActions />)
-      const button = screen.getByTestId('quick-action-view-reports')
-      await user.click(button)
-      expect(button).toBeInTheDocument()
-    })
+    it.each([
+      ['New Test', 'quick-action-new-test'],
+      ['Run Regression', 'quick-action-run-regression'],
+      ['View Reports', 'quick-action-view-reports'],
+    ])(
+      'handles click on %s without callback (fallback)',
+      async (_label, testId) => {
+        const user = userEvent.setup()
+        render(<QuickActions />)
+        // Should not throw when clicking without a callback
+        const button = screen.getByTestId(testId)
+        await user.click(button)
+        expect(button).toBeInTheDocument()
+      }
+    )
 
   })
 
   describe('Action Icons', () => {
-    it('New Test has plus icon', () => {
+    it.each([
+      ['New Test', 'plus', 'quick-action-new-test'],
+      ['Run Regression', 'play', 'quick-action-run-regression'],
+      ['View Reports', 'bar-chart', 'quick-action-view-reports'],
+    ])('%s has %s icon', (_label, icon, testId) => {
       render(<QuickActions />)
-      const action = screen.getByTestId('quick-action-new-test')
-      const icon = action.querySelector('[data-action-icon]')
-      expect(icon).toHaveAttribute('data-icon-name', 'plus')
-    })
-
-    it('Run Regression has play icon', () => {
-      render(<QuickActions />)
-      const action = screen.getByTestId('quick-action-run-regression')
-      const icon = action.querySelector('[data-action-icon]')
-      expect(icon).toHaveAttribute('data-icon-name', 'play')
-    })
-
-    it('View Reports has bar-chart icon', () => {
-      render(<QuickActions />)
-      const action = screen.getByTestId('quick-action-view-reports')
-      const icon = action.querySelector('[data-action-icon]')
-      expect(icon).toHaveAttribute('data-icon-name', 'bar-chart')
+      const action = screen.getByTestId(testId)
+      const actionIcon = action.querySelector('[data-action-icon]')
+      expect(actionIcon).toHaveAttribute('data-icon-name', icon)
     })
 
   })

@@ -225,7 +225,7 @@ describe('ListLoadingPagination', () => {
     const { container } = render(<ListLoadingPagination />)
     // Three skeleton divs: one for item count, one for page size, one for navigation
     const skeletons = container.querySelectorAll('.skeleton')
-    expect(skeletons.length).toBe(3)
+    expect(skeletons).toHaveLength(3)
   })
 
   it('pagination container has correct layout classes', () => {

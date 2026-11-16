@@ -280,7 +280,8 @@ class TestJobStates:
         started = start(connection())
 
         assert started == {"job_id": started["job_id"], "cached": False}
-        assert isinstance(started["job_id"], str) and started["job_id"]
+        assert isinstance(started["job_id"], str)
+        assert started["job_id"]
 
     def test_the_pull_steps_through_connecting_and_reading_to_done(
         self, reads: Callable[..., SteppedReads]
@@ -631,9 +632,10 @@ class TestResolution:
         self, reads: Callable[..., SteppedReads], url: str
     ) -> None:
         stepped = reads(stepped=False)
+        rows = connection(url=url)
 
         with pytest.raises(UnprocessableEntityException, match=exact("Cluster URL is required")):
-            start(connection(url=url))
+            start(rows)
 
         assert catalog_jobs._JOBS == {}
         assert stepped.clients == []
@@ -752,11 +754,12 @@ class TestResolution:
         self, reads: Callable[..., SteppedReads]
     ) -> None:
         stepped = reads(stepped=False)
+        rows = connection()
 
         with pytest.raises(
             UnprocessableEntityException, match=exact("Environment with ID 'e1' not found")
         ):
-            start(connection(), environment_id="e1")
+            start(rows, environment_id="e1")
 
         assert catalog_jobs._JOBS == {}
         assert stepped.clients == []
@@ -767,9 +770,10 @@ class TestResolution:
     ) -> None:
         stepped = reads(stepped=False)
         expected = f"Cannot resolve {label}: {resolver_text(row, 'later_value', declared)}"
+        rows = connection(**{row: "later_value"})
 
         with pytest.raises(UnprocessableEntityException, match=exact(expected)):
-            start(connection(**{row: "later_value"}), expression_fields=[row])
+            start(rows, expression_fields=[row])
 
         assert catalog_jobs._JOBS == {}
         assert stepped.clients == []

@@ -267,8 +267,11 @@ class TestTestFailure:
     """A failed test still hands back the data the test exists to produce."""
 
     def test_a_failed_hook_stops_the_block(self) -> None:
+        params = _params()
+        results = _failed_test()
+
         with pytest.raises(ValueError, match=exact("pod web-wave-demo-test failed")):
-            run_verb(test_verb, _params(), _failed_test())
+            run_verb(test_verb, params, results)
 
     def test_a_failed_hook_is_still_read_back(self) -> None:
         fake = run_verb(test_verb, _params(on_error="record"), _failed_test())
@@ -330,16 +333,18 @@ class TestTestFailure:
 
     def test_a_read_back_failure_after_a_passing_test_is_the_blocks_failure(self) -> None:
         results = [helm_ok(TEST_STDOUT), helm_failed(STDERR_NOT_FOUND)]
+        params = _params()
 
         with pytest.raises(ValueError, match="^uninstall: Release not loaded"):
-            run_verb(test_verb, _params(), results)
+            run_verb(test_verb, params, results)
 
     def test_the_process_deadline_names_itself(self) -> None:
         message = "helm test did not finish within 300 s"
         results = [helm_timed_out(), helm_ok(release_json())]
+        params = _params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(test_verb, _params(), results)
+            run_verb(test_verb, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         results = [

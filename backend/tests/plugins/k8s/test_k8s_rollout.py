@@ -670,12 +670,16 @@ class TestValidation:
             await K8sRolloutPlugin().validate({"kind": "Deployment", "name": "web"})
 
     async def test_empty_session_reports_the_empty_case(self) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(session="")
         with pytest.raises(ValueError, match=exact(EMPTY_SESSION_MESSAGE)):
-            await K8sRolloutPlugin().validate(_params(session=""))
+            await plugin.validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(impersonate_groups="qa, ops")
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await K8sRolloutPlugin().validate(_params(impersonate_groups="qa, ops"))
+            await plugin.validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await K8sRolloutPlugin().validate(
@@ -688,8 +692,10 @@ class TestValidation:
             "Actual value was 'history'."
         )
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="history")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(operation="history"))
+            await plugin.validate(params)
 
     async def test_kind_enum(self) -> None:
         message = (
@@ -697,14 +703,18 @@ class TestValidation:
             "Actual value was 'ReplicaSet'."
         )
 
+        plugin = K8sRolloutPlugin()
+        params = _params(kind="ReplicaSet")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(kind="ReplicaSet"))
+            await plugin.validate(params)
 
     async def test_on_error_enum(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        plugin = K8sRolloutPlugin()
+        params = _params(on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(on_error="ignore"))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("kind", ["Deployment", "StatefulSet", "DaemonSet"])
     async def test_every_declared_kind_passes(self, kind: str) -> None:
@@ -719,16 +729,22 @@ class TestValidation:
             await K8sRolloutPlugin().validate(block_params(kind="Deployment"))
 
     async def test_empty_name_counts_as_missing(self) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(name="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await K8sRolloutPlugin().validate(_params(name=""))
+            await plugin.validate(params)
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await K8sRolloutPlugin().validate(_params(timeout=0))
+            await plugin.validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(timeout=-5)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await K8sRolloutPlugin().validate(_params(timeout=-5))
+            await plugin.validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sRolloutPlugin().validate(_params(timeout=1))
@@ -736,20 +752,26 @@ class TestValidation:
     async def test_zero_to_revision_is_rejected(self) -> None:
         message = "Parameter 'to_revision' must be 1 or greater"
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="undo", to_revision=0)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(operation="undo", to_revision=0))
+            await plugin.validate(params)
 
     async def test_negative_to_revision_is_rejected(self) -> None:
         message = "Parameter 'to_revision' must be 1 or greater"
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="undo", to_revision=-2)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(operation="undo", to_revision=-2))
+            await plugin.validate(params)
 
     async def test_a_stale_to_revision_is_rejected_under_any_operation(self) -> None:
         message = "Parameter 'to_revision' must be 1 or greater"
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="restart", to_revision=0)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(operation="restart", to_revision=0))
+            await plugin.validate(params)
 
     async def test_the_first_revision_passes(self) -> None:
         await K8sRolloutPlugin().validate(_params(operation="undo", to_revision=1))
@@ -964,8 +986,9 @@ class TestExecuteStatus:
         fake = FakeK8sClient(responses=[(404, body)], resources=_WORKLOADS)
         message = "K8s Deployment 'web' not found in namespace 'apps'"
 
+        params = _params(operation="status")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="status"))
+            await _execute(fake, params)
 
 
 class TestStatusVerdict:
@@ -1161,14 +1184,16 @@ class TestExecuteUndo:
         fake = _undo_client(_deployment(), _REPLICA_SETS)
         message = "No revision 7 found for Deployment 'web'"
 
+        params = _params(operation="undo", to_revision=7)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo", to_revision=7))
+            await _execute(fake, params)
 
     async def test_an_unknown_revision_never_reaches_a_write(self) -> None:
         fake = _undo_client(_deployment(), _REPLICA_SETS)
 
+        params = _params(operation="undo", to_revision=7)
         with pytest.raises(ValueError):
-            await _execute(fake, _params(operation="undo", to_revision=7))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1185,8 +1210,9 @@ class TestExecuteUndo:
         fake = _undo_client(_deployment(), only_current)
         message = "No earlier revision found for Deployment 'web'"
 
+        params = _params(operation="undo")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo"))
+            await _execute(fake, params)
 
     async def test_a_workload_with_no_earlier_revision_is_recordable(self) -> None:
         only_current = _listed("ReplicaSet", [_replica_set("1", "nginx:1.25", "5f4")])
@@ -1233,10 +1259,9 @@ class TestExecuteUndo:
         fake = _undo_client(_stateful_set(), _CONTROLLER_REVISIONS)
         message = "No revision 9 found for StatefulSet 'db'"
 
+        params = _params(operation="undo", kind="StatefulSet", name="db", to_revision=9)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(
-                fake, _params(operation="undo", kind="StatefulSet", name="db", to_revision=9)
-            )
+            await _execute(fake, params)
 
     async def test_a_daemonset_rolls_back_through_its_controller_revisions(self) -> None:
         revisions = _listed(
@@ -1264,10 +1289,9 @@ class TestExecuteUndo:
         fake = _undo_client(_daemon_set(), revisions)
         message = "No revision 4 found for DaemonSet 'agent'"
 
+        params = _params(operation="undo", kind="DaemonSet", name="agent", to_revision=4)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(
-                fake, _params(operation="undo", kind="DaemonSet", name="agent", to_revision=4)
-            )
+            await _execute(fake, params)
 
 
 class TestUndoSelector:
@@ -1378,8 +1402,9 @@ class TestUndoRevisionHistory:
         fake = _undo_client(_deployment(), revisions)
         message = "No revision 9 found for Deployment 'web'"
 
+        params = _params(operation="undo", to_revision=9)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo", to_revision=9))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1390,8 +1415,9 @@ class TestUndoRevisionHistory:
         fake = _undo_client(_deployment(), revisions)
         message = "No earlier revision found for Deployment 'web'"
 
+        params = _params(operation="undo")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo"))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1402,8 +1428,9 @@ class TestUndoRevisionHistory:
         fake = _undo_client(_deployment(revision="1"), revisions)
         message = "No earlier revision found for Deployment 'web'"
 
+        params = _params(operation="undo")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo"))
+            await _execute(fake, params)
 
     async def test_a_replicaset_owned_as_controller_is_history(self) -> None:
         revisions = _listed(
@@ -1441,8 +1468,9 @@ class TestUndoRevisionHistory:
         fake = _undo_client(_deployment(), _listed("ReplicaSet", [demoted]))
         message = "No revision 3 found for Deployment 'web'"
 
+        params = _params(operation="undo", to_revision=3)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo", to_revision=3))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1568,14 +1596,18 @@ class TestGuardRails:
             "Actual value was 'Pod'."
         )
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="undo", kind="Pod")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sRolloutPlugin().validate(_params(operation="undo", kind="Pod"))
+            await plugin.validate(params)
 
     async def test_a_kind_outside_the_three_never_touches_the_cluster(self) -> None:
         fake = FakeK8sClient(resources=_WORKLOADS)
 
+        plugin = K8sRolloutPlugin()
+        params = _params(operation="undo", kind="Job")
         with patch_verb_client("rollout", fake), pytest.raises(ValueError):
-            await K8sRolloutPlugin().validate(_params(operation="undo", kind="Job"))
+            await plugin.validate(params)
 
         assert fake.calls == []
         assert fake.factory.call_count == 0
@@ -1584,14 +1616,16 @@ class TestGuardRails:
         fake = _status_client(_deployment(paused=True))
         message = "Deployment 'web' is paused - resume the rollout before restarting it"
 
+        params = _params(operation="restart")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="restart"))
+            await _execute(fake, params)
 
     async def test_a_paused_deployment_is_never_patched(self) -> None:
         fake = _status_client(_deployment(paused=True))
 
+        params = _params(operation="restart")
         with pytest.raises(ValueError):
-            await _execute(fake, _params(operation="restart"))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1631,8 +1665,9 @@ class TestGuardRails:
             "which has no rollout to report on"
         )
 
+        params = _params(operation="status", kind="StatefulSet", name="db")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="status", kind="StatefulSet", name="db"))
+            await _execute(fake, params)
 
     async def test_a_daemonset_off_rolling_update_has_no_status_to_report(self) -> None:
         fake = FakeK8sClient(
@@ -1643,16 +1678,18 @@ class TestGuardRails:
             "which has no rollout to report on"
         )
 
+        params = _params(operation="status", kind="DaemonSet", name="agent")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="status", kind="DaemonSet", name="agent"))
+            await _execute(fake, params)
 
     async def test_an_update_strategy_refusal_never_writes(self) -> None:
         fake = FakeK8sClient(
             responses=[(200, _daemon_set(strategy="OnDelete"))], resources=_WORKLOADS
         )
 
+        params = _params(operation="status", kind="DaemonSet", name="agent")
         with pytest.raises(ValueError):
-            await _execute(fake, _params(operation="status", kind="DaemonSet", name="agent"))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -1705,8 +1742,9 @@ class TestClusterRefusals:
             "etcd is unavailable"
         )
 
+        params = _params(operation="restart")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="restart"))
+            await _execute(fake, params)
 
     async def test_a_status_failure_names_the_read(self) -> None:
         body = _failure("InternalError", "etcd is unavailable", 500)
@@ -1715,8 +1753,9 @@ class TestClusterRefusals:
             "Kubernetes could not read Deployment 'web' in namespace 'apps': etcd is unavailable"
         )
 
+        params = _params(operation="status")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="status"))
+            await _execute(fake, params)
 
     async def test_an_undo_failure_names_the_roll_back(self) -> None:
         body = _failure("InternalError", "etcd is unavailable", 500)
@@ -1729,8 +1768,9 @@ class TestClusterRefusals:
             "etcd is unavailable"
         )
 
+        params = _params(operation="undo")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="undo"))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("operation", ["restart", "status", "undo"])
     async def test_the_recorded_line_is_headed_by_the_block_not_the_operation(
@@ -1807,8 +1847,9 @@ class TestClusterRefusals:
             "- check the spelling, or whether the CRD is installed"
         )
 
+        params = _params(operation="restart")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation="restart"))
+            await _execute(fake, params)
 
 
 class TestErrorReasonGate:
@@ -1820,8 +1861,9 @@ class TestErrorReasonGate:
         fake = FakeK8sClient(responses=[(403, body)], resources=_WORKLOADS)
         message = "Kubernetes API permission denied: deployments.apps is forbidden"
 
+        params = _params(operation=operation)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(operation=operation))
+            await _execute(fake, params)
 
     async def test_a_raised_refusal_binds_nothing_at_all(self) -> None:
         """The engine binds outputs after execute() returns, and it never returns."""
@@ -1830,8 +1872,9 @@ class TestErrorReasonGate:
         logger = MagicMock()
         bound: dict[str, Any] = {}
 
+        params = _params(operation="restart")
         with pytest.raises(ValueError):
-            bound = await _execute(fake, _params(operation="restart"), logger=logger)
+            bound = await _execute(fake, params, logger=logger)
 
         assert bound == {}
         assert "error" not in bound
@@ -1853,8 +1896,9 @@ class TestErrorReasonGate:
         body = _failure("Forbidden", "deployments.apps is forbidden", 403)
         fake = FakeK8sClient(responses=[(403, body)], resources=_WORKLOADS)
 
+        params = _params()
         with pytest.raises(ValueError):
-            await _execute(fake, _params())
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("operation", ["restart", "status", "undo"])
     async def test_a_happy_run_carries_the_full_core(self, operation: str) -> None:
@@ -1888,8 +1932,9 @@ class TestAlwaysHardFail:
             "use the 'session' output of a K8s Connect block"
         )
 
+        params = _params(session="not-a-kubeconfig", on_error=on_error)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _params(session="not-a-kubeconfig", on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_missing_session_raises(self, on_error: str) -> None:
@@ -1910,21 +1955,25 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_WORKLOADS)
 
+        params = _params(operation="restart", on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _params(operation="restart", on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_timeout_raises(self, on_error: str) -> None:
         message = f"Kubernetes API request PATCH {DEPLOYMENT_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_WORKLOADS)
 
+        params = _params(operation="restart", on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _params(operation="restart", on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_invalid_params_raise_from_validate(self, on_error: str) -> None:
+        plugin = K8sRolloutPlugin()
+        params = _params(timeout=0, on_error=on_error)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await K8sRolloutPlugin().validate(_params(timeout=0, on_error=on_error))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_missing_name_raises_from_validate(self, on_error: str) -> None:

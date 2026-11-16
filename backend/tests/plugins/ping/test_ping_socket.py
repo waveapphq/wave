@@ -212,7 +212,8 @@ class TestSendingAndReading:
 
         received = await echo.receive(deadline(5))
 
-        assert received is not None and received.message == b"late"
+        assert received is not None
+        assert received.message == b"late"
 
 
 class TestTheErrorQueue:

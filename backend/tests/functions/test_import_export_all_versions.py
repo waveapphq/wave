@@ -84,7 +84,8 @@ class TestExportEmitsAllVersions:
         by_version = {entry["version"]: entry for entry in (doc.get("versions") or [])}
         assert "1.1.0" in by_version, by_version
         entry = by_version["1.1.0"]
-        assert "definition" in entry and "metadata" in entry, entry
+        assert "definition" in entry, entry
+        assert "metadata" in entry, entry
         # The 1.1.0 body added the optional input y.
         input_names = {item["name"] for item in entry["definition"]["inputs"]}
         assert "y" in input_names

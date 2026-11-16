@@ -344,8 +344,10 @@ class TestStatusFailure:
     def test_a_missing_release_stops_the_block(self) -> None:
         message = "uninstall: Release not loaded: web: release: not found"
 
+        params = _params()
+        results = [helm_failed(STDERR_NOT_FOUND)]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(status, _params(), [helm_failed(STDERR_NOT_FOUND)])
+            run_verb(status, params, results)
 
     def test_a_recorded_missing_release_is_the_existence_check(self) -> None:
         outputs = outputs_of(status, _params(on_error="record"), [helm_failed(STDERR_NOT_FOUND)])
@@ -377,8 +379,10 @@ class TestStatusFailure:
     def test_the_process_deadline_is_the_read_budget_itself(self) -> None:
         message = "helm status did not finish within 30 s"
 
+        params = _params()
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(status, _params(), [helm_timed_out()])
+            run_verb(status, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         outputs = outputs_of(status, _params(on_error="record"), [helm_timed_out()])
@@ -388,11 +392,15 @@ class TestStatusFailure:
     def test_a_one_second_read_is_killed_at_one_second(self) -> None:
         message = "helm status did not finish within 1 s"
 
+        params = _params(timeout=1)
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(status, _params(timeout=1), [helm_timed_out()])
+            run_verb(status, params, results)
 
     def test_a_read_that_printed_no_document_is_a_failure(self) -> None:
         message = "helm status printed no release document"
 
+        params = _params()
+        results = [helm_ok("NAME: web\nSTATUS: deployed\n")]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(status, _params(), [helm_ok("NAME: web\nSTATUS: deployed\n")])
+            run_verb(status, params, results)

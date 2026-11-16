@@ -19,6 +19,7 @@ import {
   Command,
   CommandInput,
   CommandList,
+  CommandEmpty,
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command'
@@ -430,5 +431,29 @@ describe('CommandItem chosen', () => {
       const item = screen.getByRole('option', { name: /marked/ })
       expect(within(item).getByTestId('caller-marker')).toBeInTheDocument()
     })
+  })
+})
+
+describe('CommandEmpty', () => {
+  it('shows its message when the filter matches no item', async () => {
+    const user = userEvent.setup()
+    render(
+      <Command>
+        <CommandInput placeholder="Search" />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup>
+            <CommandItem value="alpha">alpha</CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    )
+
+    expect(screen.queryByText('No results found.')).toBeNull()
+    await user.type(screen.getByPlaceholderText('Search'), 'zzz')
+
+    const empty = await screen.findByText('No results found.')
+    expect(empty).toHaveAttribute('data-slot', 'command-empty')
+    expect(empty).toHaveClass('py-6', 'text-center', 'text-sm')
   })
 })

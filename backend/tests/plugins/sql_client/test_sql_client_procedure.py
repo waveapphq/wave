@@ -513,10 +513,11 @@ class TestRowsAProcedureReturns:
         connection = FakeConnection([Result(error=missing), Result(error=not_selectable)])
         use_fake("postgresql", connection)
 
+        params = call_params("postgresql", out_arguments=[])
         with pytest.raises(
             ValueError, match=exact("42883: procedure app.p(a => unknown) does not exist")
         ):
-            _sql_core.run(call_params("postgresql", out_arguments=[]), log)
+            _sql_core.run(params, log)
 
         assert len(connection.executed) == 2
 
@@ -529,8 +530,9 @@ class TestRowsAProcedureReturns:
         connection = FakeConnection([Result(error=not_a_procedure), Result(error=failed)])
         use_fake("postgresql", connection)
 
+        params = call_params("postgresql", out_arguments=[])
         with pytest.raises(ValueError, match=exact("22012: division by zero")):
-            _sql_core.run(call_params("postgresql", out_arguments=[]), log)
+            _sql_core.run(params, log)
 
     def test_postgresql_function_out_parameters_fill_out_values(
         self, use_fake: Any, log: LogRecorder
@@ -557,8 +559,9 @@ class TestRowsAProcedureReturns:
         connection = FakeConnection([Result(error=no_match), Result(columns=["x"], rows=[(1,)])])
         use_fake("postgresql", connection)
 
+        params = call_params("postgresql")
         with pytest.raises(ValueError, match=exact("Out argument 'o' is not a parameter of app.p")):
-            _sql_core.run(call_params("postgresql"), log)
+            _sql_core.run(params, log)
 
     def test_postgresql_has_no_fallback_for_any_other_error(
         self, use_fake: Any, log: LogRecorder
@@ -567,8 +570,9 @@ class TestRowsAProcedureReturns:
         connection = FakeConnection([Result(error=failed)])
         use_fake("postgresql", connection)
 
+        params = call_params("postgresql", out_arguments=[])
         with pytest.raises(ValueError, match=exact("22012: division by zero")):
-            _sql_core.run(call_params("postgresql", out_arguments=[]), log)
+            _sql_core.run(params, log)
 
         assert len(connection.executed) == 1
 

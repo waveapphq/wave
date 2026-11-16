@@ -120,14 +120,13 @@ function LaneCard({
       onLabelChange={onRename}
       headerExtra={
         // Every lane's box is named Time Limit, so the group names the lane it belongs to.
-        <div
+        <fieldset
           data-testid={`parallel-branch-limit-cell-${lane.id}`}
-          role="group"
           aria-label={`Time limit for ${noun}`}
-          className={LIMIT_CELL_COLUMN}
+          className={cn(LIMIT_CELL_COLUMN, 'min-w-0')}
         >
           <FieldCellView state={limitCell} />
-        </div>
+        </fieldset>
       }
       headerGrows={limitCell.hasMessage}
       canMove

@@ -482,7 +482,7 @@ describe('Execution Store', () => {
       expect(useExecutionStore.getState().executions).toEqual({})
     })
 
-    it('sets execution status to success', async () => {
+    it.each(['success', 'failed', 'stopped'] as const)('sets execution status to %s', async (status) => {
       const { useExecutionStore } = await import('../../../../src/features/workbench/stores/execution-store')
       useExecutionStore.setState({
         executions: {},
@@ -493,41 +493,9 @@ describe('Execution Store', () => {
 
       const executionId = useExecutionStore.getState().startExecution('test-1')
 
-      useExecutionStore.getState().completeExecution(executionId, 'success')
+      useExecutionStore.getState().completeExecution(executionId, status)
 
-      expect(useExecutionStore.getState().getExecution(executionId)?.status).toBe('success')
-    })
-
-    it('sets execution status to failed', async () => {
-      const { useExecutionStore } = await import('../../../../src/features/workbench/stores/execution-store')
-      useExecutionStore.setState({
-        executions: {},
-        activeExecutionId: null,
-        isConnected: true,
-        lastEventTime: null,
-      })
-
-      const executionId = useExecutionStore.getState().startExecution('test-1')
-
-      useExecutionStore.getState().completeExecution(executionId, 'failed')
-
-      expect(useExecutionStore.getState().getExecution(executionId)?.status).toBe('failed')
-    })
-
-    it('sets execution status to stopped', async () => {
-      const { useExecutionStore } = await import('../../../../src/features/workbench/stores/execution-store')
-      useExecutionStore.setState({
-        executions: {},
-        activeExecutionId: null,
-        isConnected: true,
-        lastEventTime: null,
-      })
-
-      const executionId = useExecutionStore.getState().startExecution('test-1')
-
-      useExecutionStore.getState().completeExecution(executionId, 'stopped')
-
-      expect(useExecutionStore.getState().getExecution(executionId)?.status).toBe('stopped')
+      expect(useExecutionStore.getState().getExecution(executionId)?.status).toBe(status)
     })
 
     it('sets end time', async () => {

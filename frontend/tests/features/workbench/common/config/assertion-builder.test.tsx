@@ -1302,7 +1302,7 @@ describe('AssertionBuilder', () => {
       // The empty group should follow without an operator between them
       const groupItem = call.find((it: AssertionItem) => it.type === 'group')
       expect(groupItem).toBeDefined()
-      expect(groupItem.items.length).toBe(0)
+      expect(groupItem.items).toHaveLength(0)
     })
 
     it('moves down last item in group - pops out below (items after group)', async () => {
@@ -1398,7 +1398,7 @@ describe('AssertionBuilder', () => {
       expect(call[call.length - 1]).toEqual(expect.objectContaining({ id: 'lit-g1' }))
       const groupItem = call.find((it: AssertionItem) => it.type === 'group')
       expect(groupItem).toBeDefined()
-      expect(groupItem.items.length).toBe(0)
+      expect(groupItem.items).toHaveLength(0)
     })
 
     it('moves root item UP into a neighboring group above', async () => {

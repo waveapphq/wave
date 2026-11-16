@@ -134,8 +134,10 @@ class TestScalarConversion:
 
     @pytest.mark.parametrize("text", ["7.0", "abc", "", "   ", "1e3"])
     def test_integer_rejects_anything_else(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(scalar_message("COUNT", "integer"))):
-            coerce("COUNT", scalar(text), "integer")
+            coerce("COUNT", captured, "integer")
 
     def test_float_is_an_exact_decimal(self) -> None:
         value = coerce("RATE", scalar("1.50"), "float")
@@ -148,8 +150,10 @@ class TestScalarConversion:
 
     @pytest.mark.parametrize("text", ["abc", "", "Infinity", "-Infinity", "NaN"])
     def test_float_rejects_anything_that_is_not_a_finite_number(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(scalar_message("RATE", "float"))):
-            coerce("RATE", scalar(text), "float")
+            coerce("RATE", captured, "float")
 
     @pytest.mark.parametrize("text", ["true", "TRUE", "True", "1", "yes", "Yes", " true "])
     def test_boolean_true_words(self, text: str) -> None:
@@ -161,8 +165,10 @@ class TestScalarConversion:
 
     @pytest.mark.parametrize("text", ["maybe", "", "2", "y"])
     def test_boolean_rejects_anything_else(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(scalar_message("OK", "boolean"))):
-            coerce("OK", scalar(text), "boolean")
+            coerce("OK", captured, "boolean")
 
 
 class TestStructuredFromScalarText:
@@ -196,26 +202,36 @@ class TestStructuredFromScalarText:
 
     @pytest.mark.parametrize("text", ['{"a": 1}', "not json", "['a']", "[True]", ""])
     def test_array_rejects_anything_that_is_not_a_json_array(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(ARRAY_MESSAGE)):
-            coerce("X", scalar(text), "array")
+            coerce("X", captured, "array")
 
     @pytest.mark.parametrize("text", ['["a"]', "not json", "{'k': 'v'}", '{"k": None}', ""])
     def test_map_rejects_anything_that_is_not_a_json_object(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(MAP_MESSAGE)):
-            coerce("X", scalar(text), "map")
+            coerce("X", captured, "map")
 
     @pytest.mark.parametrize("text", ['{"n": 1}', '["a"]', "not json", "[{'n': 1}]", ""])
     def test_table_rejects_anything_that_is_not_a_json_array_of_objects(self, text: str) -> None:
+        captured = scalar(text)
+
         with pytest.raises(CaptureError, match=exact(TABLE_MESSAGE)):
-            coerce("X", scalar(text), "table")
+            coerce("X", captured, "table")
 
     def test_a_later_table_row_must_match_the_first_row_types(self) -> None:
+        captured = scalar('[{"n": 1}, {"n": "text"}]')
+
         with pytest.raises(CaptureError, match=exact(TABLE_MESSAGE)):
-            coerce("X", scalar('[{"n": 1}, {"n": "text"}]'), "table")
+            coerce("X", captured, "table")
 
     def test_a_later_table_row_must_match_the_first_row_columns(self) -> None:
+        captured = scalar('[{"n": 1}, {"m": 2}]')
+
         with pytest.raises(CaptureError, match=exact(TABLE_MESSAGE)):
-            coerce("X", scalar('[{"n": 1}, {"m": 2}]'), "table")
+            coerce("X", captured, "table")
 
 
 class TestConversionFromShellArray:
@@ -229,16 +245,22 @@ class TestConversionFromShellArray:
 
     @pytest.mark.parametrize("declared_type", ["string", "integer", "float", "boolean"])
     def test_a_scalar_type_refuses_a_shell_array(self, declared_type: str) -> None:
+        captured = items("x")
+
         with pytest.raises(CaptureError, match=exact(scalar_message("X", declared_type))):
-            coerce("X", items("x"), declared_type)
+            coerce("X", captured, declared_type)
 
     def test_map_refuses_a_shell_array(self) -> None:
+        captured = items("x")
+
         with pytest.raises(CaptureError, match=exact(MAP_MESSAGE)):
-            coerce("X", items("x"), "map")
+            coerce("X", captured, "map")
 
     def test_table_refuses_a_shell_array(self) -> None:
+        captured = items("x")
+
         with pytest.raises(CaptureError, match=exact(TABLE_MESSAGE)):
-            coerce("X", items("x"), "table")
+            coerce("X", captured, "table")
 
 
 class TestConversionFromAssociativeArray:
@@ -252,16 +274,22 @@ class TestConversionFromAssociativeArray:
 
     @pytest.mark.parametrize("declared_type", ["string", "integer", "float", "boolean"])
     def test_a_scalar_type_refuses_an_associative_array(self, declared_type: str) -> None:
+        captured = pairs({"k": "v"})
+
         with pytest.raises(CaptureError, match=exact(scalar_message("X", declared_type))):
-            coerce("X", pairs({"k": "v"}), declared_type)
+            coerce("X", captured, declared_type)
 
     def test_array_refuses_an_associative_array(self) -> None:
+        captured = pairs({"k": "v"})
+
         with pytest.raises(CaptureError, match=exact(ARRAY_MESSAGE)):
-            coerce("X", pairs({"k": "v"}), "array")
+            coerce("X", captured, "array")
 
     def test_table_refuses_an_associative_array(self) -> None:
+        captured = pairs({"k": "v"})
+
         with pytest.raises(CaptureError, match=exact(TABLE_MESSAGE)):
-            coerce("X", pairs({"k": "v"}), "table")
+            coerce("X", captured, "table")
 
 
 class TestUnknownOrMissingType:
@@ -305,29 +333,39 @@ class TestMessagesNeverEchoTheValue:
     """A conversion failure names the type, never the value it read."""
 
     def test_the_scalar_message(self) -> None:
+        captured = scalar("s3cr3t")
+
         with pytest.raises(CaptureError) as caught:
-            coerce("COUNT", scalar("s3cr3t"), "integer")
+            coerce("COUNT", captured, "integer")
 
         assert str(caught.value) == scalar_message("COUNT", "integer")
 
     def test_the_array_message(self) -> None:
+        captured = scalar("['s3cr3t']")
+
         with pytest.raises(CaptureError) as caught:
-            coerce("X", scalar("['s3cr3t']"), "array")
+            coerce("X", captured, "array")
 
         assert str(caught.value) == ARRAY_MESSAGE
 
     def test_the_map_message(self) -> None:
+        captured = scalar("{'k': 's3cr3t'}")
+
         with pytest.raises(CaptureError) as caught:
-            coerce("X", scalar("{'k': 's3cr3t'}"), "map")
+            coerce("X", captured, "map")
 
         assert str(caught.value) == MAP_MESSAGE
 
     def test_the_table_message(self) -> None:
+        captured = scalar("[{'k': 's3cr3t'}]")
+
         with pytest.raises(CaptureError) as caught:
-            coerce("X", scalar("[{'k': 's3cr3t'}]"), "table")
+            coerce("X", captured, "table")
 
         assert str(caught.value) == TABLE_MESSAGE
 
     def test_a_capture_error_is_a_value_error(self) -> None:
+        captured = scalar("abc")
+
         with pytest.raises(ValueError, match=exact(scalar_message("COUNT", "integer"))):
-            coerce("COUNT", scalar("abc"), "integer")
+            coerce("COUNT", captured, "integer")

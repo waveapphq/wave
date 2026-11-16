@@ -159,7 +159,7 @@ describe('RecentExecutions Section', () => {
         .getByTestId('recent-executions-section')
         .querySelectorAll('[data-skeleton-item]')
       // Should show 3 skeleton items
-      expect(skeletons.length).toBe(3)
+      expect(skeletons).toHaveLength(3)
     })
 
     it('hides execution cards when loading', () => {
@@ -189,39 +189,17 @@ describe('RecentExecutions Section', () => {
       expect(section).toHaveClass('flex-col')
     })
 
-    it('card element has card styling', () => {
+    it.each([
+      ['card element has card styling', 'card'],
+      ['card element has rounded corners', 'rounded-lg'],
+      ['card element has border', 'border'],
+      ['card element has card background', 'bg-card'],
+      ['card element has no outer padding (content handles it)', 'p-0'],
+    ])('%s', (_name, className) => {
       render(<RecentExecutions executions={mockExecutions} />)
       const section = screen.getByTestId('recent-executions-section')
       const card = section.querySelector('.card')
-      expect(card).toHaveClass('card')
-    })
-
-    it('card element has rounded corners', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const section = screen.getByTestId('recent-executions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('rounded-lg')
-    })
-
-    it('card element has border', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const section = screen.getByTestId('recent-executions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('border')
-    })
-
-    it('card element has card background', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const section = screen.getByTestId('recent-executions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('bg-card')
-    })
-
-    it('card element has no outer padding (content handles it)', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const section = screen.getByTestId('recent-executions-section')
-      const card = section.querySelector('.card')
-      expect(card).toHaveClass('p-0')
+      expect(card).toHaveClass(className)
     })
   })
 
@@ -254,28 +232,16 @@ describe('RecentExecutions Section', () => {
       expect(container).toBeInTheDocument()
     })
 
-    it('list has dividers between items', () => {
+    it.each([
+      ['list has dividers between items', 'divide-y'],
+      ['list container has horizontal padding', 'px-4'],
+      ['list container allows vertical scroll', 'overflow-y-auto'],
+    ])('%s', (_name, className) => {
       render(<RecentExecutions executions={mockExecutions} />)
       const container = screen
         .getByTestId('recent-executions-section')
         .querySelector('[data-executions-list]')
-      expect(container).toHaveClass('divide-y')
-    })
-
-    it('list container has horizontal padding', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const container = screen
-        .getByTestId('recent-executions-section')
-        .querySelector('[data-executions-list]')
-      expect(container).toHaveClass('px-4')
-    })
-
-    it('list container allows vertical scroll', () => {
-      render(<RecentExecutions executions={mockExecutions} />)
-      const container = screen
-        .getByTestId('recent-executions-section')
-        .querySelector('[data-executions-list]')
-      expect(container).toHaveClass('overflow-y-auto')
+      expect(container).toHaveClass(className)
     })
   })
 

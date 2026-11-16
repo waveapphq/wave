@@ -109,9 +109,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
   }
 
   /** Apply response interceptors and return the final result */
-  async function applyResponseInterceptors<T, P>(
+  function applyResponseInterceptors<T, P>(
     result: ApiResponse<T, P>,
-  ): Promise<ApiResponse<T, P>> {
+  ): ApiResponse<T, P> {
     if (!config.interceptors?.response) return result
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let interceptedResponse: any = result
@@ -209,7 +209,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
         circuitBreaker.recordSuccess(path)
         reportConnectionSuccess()
         const result = await buildApiResponse<T, P>(response, requestConfig)
-        return { response: await applyResponseInterceptors(result) }
+        return { response: applyResponseInterceptors(result) }
       }
 
       // 502/504 from Vite's proxy mean the BE is unreachable from Vite -
@@ -272,29 +272,31 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
 
     const interceptedConfig = prepareRequest(method, path, body, requestConfig)
     const maxAttempts = resolveMaxAttempts(method, requestConfig)
-    let lastError: ApiError | undefined
     const timeout = requestConfig?.timeout ?? resolvedConfig.timeout!
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // One attempt, then the next one after the retry delay, until one succeeds,
+    // the error is not retryable, or the attempts run out.
+    const attemptRequest = async (
+      attempt: number,
+    ): Promise<{ response: ApiResponse<T, P> } | { error: ApiError }> => {
       const result = await executeSingleRequest<T, P>(
         interceptedConfig, body, method, path, timeout, requestConfig,
       )
-
-      if ('response' in result) return result.response
-
-      lastError = result.error
-      if (!isRetryableError(lastError)) break
+      if ('response' in result || !isRetryableError(result.error)) return result
+      if (attempt >= maxAttempts - 1) return result
 
       // Wait before retry if we have more attempts
-      const canRetry = attempt < maxAttempts - 1 && config.retry
-      if (canRetry) {
-        await sleep(calculateRetryDelay(attempt, config.retry!))
+      if (config.retry) {
+        await sleep(calculateRetryDelay(attempt, config.retry))
       }
+      return attemptRequest(attempt + 1)
     }
 
-    // Apply error interceptors (may recover) - lastError is always set after retry loop
-    // (set in both try-catch branches of every iteration)
-    const interceptResult = await applyErrorInterceptors<T, P>(lastError!, method, path, body, requestConfig)
+    const result = await attemptRequest(0)
+    if ('response' in result) return result.response
+
+    // Apply error interceptors (may recover) with the error of the last attempt
+    const interceptResult = await applyErrorInterceptors<T, P>(result.error, method, path, body, requestConfig)
     if ('data' in interceptResult) return interceptResult
     if (interceptResult.type === 'network') {
       interceptResult.message = await resolveOfflineReason(config.baseUrl)

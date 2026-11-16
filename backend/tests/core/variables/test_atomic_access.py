@@ -89,9 +89,10 @@ class TestVariableAccessBasics:
         """Verify an exception inside the block does not strand the variable."""
         variables: dict[str, Any] = {"count": 1}
         access = variable_access(variables)
+        failure = RuntimeError("boom")
         with pytest.raises(RuntimeError, match="^boom$"):
             async with access.update(["count"]):
-                raise RuntimeError("boom")
+                raise failure
         assert await asyncio.wait_for(access.read("count"), timeout=1.0) == 1
 
 

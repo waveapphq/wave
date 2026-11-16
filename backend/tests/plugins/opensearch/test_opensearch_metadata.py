@@ -441,7 +441,8 @@ class TestOpenSearchOutputs:
     def test_success_and_error_have_a_description(self, name: str) -> None:
         description = _outputs()[name]["description"]
 
-        assert isinstance(description, str) and description.strip()
+        assert isinstance(description, str)
+        assert description.strip()
 
     @pytest.mark.parametrize("name", OUTPUT_ORDER)
     def test_output_entry_keys(self, name: str) -> None:

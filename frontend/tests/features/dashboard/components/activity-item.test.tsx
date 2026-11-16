@@ -50,28 +50,15 @@ describe('ActivityItem Component', () => {
   })
 
   describe('Type Icons', () => {
-    it('renders test-tube icon for test type', () => {
-      render(<ActivityItem {...defaultProps} type="test" />)
+    it.each([
+      ['renders test-tube icon for test type', 'test', 'test-tube-2'],
+      ['renders folder-kanban icon for suite type', 'suite', 'folder-kanban'],
+      ['renders git-branch icon for regression type', 'regression', 'git-branch'],
+      ['renders play icon for execution type', 'execution', 'play'],
+    ] as const)('%s', (_title, type, iconName) => {
+      render(<ActivityItem {...defaultProps} type={type} />)
       const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-name', 'test-tube-2')
-    })
-
-    it('renders folder-kanban icon for suite type', () => {
-      render(<ActivityItem {...defaultProps} type="suite" />)
-      const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-name', 'folder-kanban')
-    })
-
-    it('renders git-branch icon for regression type', () => {
-      render(<ActivityItem {...defaultProps} type="regression" />)
-      const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-name', 'git-branch')
-    })
-
-    it('renders play icon for execution type', () => {
-      render(<ActivityItem {...defaultProps} type="execution" />)
-      const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-name', 'play')
+      expect(icon).toHaveAttribute('data-icon-name', iconName)
     })
 
     it('icon has appropriate size', () => {
@@ -88,22 +75,14 @@ describe('ActivityItem Component', () => {
       expect(icon).toHaveStyle({ color: '#4ADE80' })
     })
 
-    it('suite icon has amber color matching navigation', () => {
-      render(<ActivityItem {...defaultProps} type="suite" />)
+    it.each([
+      ['suite icon has amber color matching navigation', 'suite', '#F59E0B'],
+      ['regression icon has purple color matching navigation', 'regression', '#A78BFA'],
+      ['execution icon has blue color matching navigation', 'execution', '#60A5FA'],
+    ] as const)('%s', (_title, type, color) => {
+      render(<ActivityItem {...defaultProps} type={type} />)
       const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-color', '#F59E0B')
-    })
-
-    it('regression icon has purple color matching navigation', () => {
-      render(<ActivityItem {...defaultProps} type="regression" />)
-      const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-color', '#A78BFA')
-    })
-
-    it('execution icon has blue color matching navigation', () => {
-      render(<ActivityItem {...defaultProps} type="execution" />)
-      const icon = screen.getByTestId('activity-icon')
-      expect(icon).toHaveAttribute('data-icon-color', '#60A5FA')
+      expect(icon).toHaveAttribute('data-icon-color', color)
     })
   })
 
@@ -121,28 +100,15 @@ describe('ActivityItem Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('applies green color for passed status', () => {
-      render(<ActivityItem {...defaultProps} status="passed" />)
+    it.each([
+      ['applies green color for passed status', 'passed', 'bg-success'],
+      ['applies red color for failed status', 'failed', 'bg-error'],
+      ['applies blue color for running status', 'running', 'bg-info'],
+      ['applies gray color for idle status', 'idle', 'bg-muted'],
+    ] as const)('%s', (_title, status, className) => {
+      render(<ActivityItem {...defaultProps} status={status} />)
       const indicator = screen.getByTestId('activity-status-indicator')
-      expect(indicator).toHaveClass('bg-success')
-    })
-
-    it('applies red color for failed status', () => {
-      render(<ActivityItem {...defaultProps} status="failed" />)
-      const indicator = screen.getByTestId('activity-status-indicator')
-      expect(indicator).toHaveClass('bg-error')
-    })
-
-    it('applies blue color for running status', () => {
-      render(<ActivityItem {...defaultProps} status="running" />)
-      const indicator = screen.getByTestId('activity-status-indicator')
-      expect(indicator).toHaveClass('bg-info')
-    })
-
-    it('applies gray color for idle status', () => {
-      render(<ActivityItem {...defaultProps} status="idle" />)
-      const indicator = screen.getByTestId('activity-status-indicator')
-      expect(indicator).toHaveClass('bg-muted')
+      expect(indicator).toHaveClass(className)
     })
 
     it('status indicator is a small dot', () => {
@@ -155,23 +121,15 @@ describe('ActivityItem Component', () => {
   })
 
   describe('Name Styling', () => {
-    it('name has theme-aware card title color', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const name = screen.getByTestId('activity-name')
+    it.each([
       // Uses text-card-title class: dark in light theme, light in dark theme
-      expect(name).toHaveClass('text-card-title')
-    })
-
-    it('name has medium font weight', () => {
+      ['name has theme-aware card title color', 'text-card-title'],
+      ['name has medium font weight', 'font-medium'],
+      ['name has base text size', 'text-sm'],
+    ])('%s', (_title, className) => {
       render(<ActivityItem {...defaultProps} />)
       const name = screen.getByTestId('activity-name')
-      expect(name).toHaveClass('font-medium')
-    })
-
-    it('name has base text size', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const name = screen.getByTestId('activity-name')
-      expect(name).toHaveClass('text-sm')
+      expect(name).toHaveClass(className)
     })
 
     it('name truncates long text', () => {
@@ -212,34 +170,16 @@ describe('ActivityItem Component', () => {
   })
 
   describe('Layout', () => {
-    it('applies flex layout for horizontal arrangement', () => {
+    it.each([
+      ['applies flex layout for horizontal arrangement', 'flex'],
+      ['aligns items to center', 'items-center'],
+      ['has gap between icon and text', 'gap-3'],
+      ['has vertical padding', 'py-2'],
+      ['has horizontal padding', 'px-3'],
+    ])('%s', (_title, className) => {
       render(<ActivityItem {...defaultProps} />)
       const item = screen.getByTestId('activity-item')
-      expect(item).toHaveClass('flex')
-    })
-
-    it('aligns items to center', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const item = screen.getByTestId('activity-item')
-      expect(item).toHaveClass('items-center')
-    })
-
-    it('has gap between icon and text', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const item = screen.getByTestId('activity-item')
-      expect(item).toHaveClass('gap-3')
-    })
-
-    it('has vertical padding', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const item = screen.getByTestId('activity-item')
-      expect(item).toHaveClass('py-2')
-    })
-
-    it('has horizontal padding', () => {
-      render(<ActivityItem {...defaultProps} />)
-      const item = screen.getByTestId('activity-item')
-      expect(item).toHaveClass('px-3')
+      expect(item).toHaveClass(className)
     })
   })
 

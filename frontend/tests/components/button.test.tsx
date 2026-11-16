@@ -108,44 +108,21 @@ describe('Button Component', () => {
   })
 
   describe('Design System Compliance', () => {
-    it('has inline-flex display', () => {
+    it.each([
+      ['has inline-flex display', 'inline-flex'],
+      ['centers content with items-center', 'items-center'],
+      ['centers content with justify-center', 'justify-center'],
+      ['applies gap-2 (8px) between icon and text', 'gap-2'],
+      ['applies semibold font weight (600)', 'font-semibold'],
+      ['applies rounded-md border radius (6px)', 'rounded-md'],
+      [
+        'applies transition for smooth state changes',
+        'transition-[background-color,border-color,box-shadow,opacity,transform]',
+      ],
+      ['shows focus ring on focus-visible', 'focus-visible:ring-2'],
+    ])('%s', (_name, className) => {
       render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('inline-flex')
-    })
-
-    it('centers content with items-center', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('items-center')
-    })
-
-    it('centers content with justify-center', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('justify-center')
-    })
-
-    it('applies gap-2 (8px) between icon and text', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('gap-2')
-    })
-
-    it('applies semibold font weight (600)', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('font-semibold')
-    })
-
-    it('applies rounded-md border radius (6px)', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('rounded-md')
-    })
-
-    it('applies transition for smooth state changes', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('transition-[background-color,border-color,box-shadow,opacity,transform]')
-    })
-
-    it('shows focus ring on focus-visible', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('focus-visible:ring-2')
+      expect(screen.getByRole('button')).toHaveClass(className)
     })
   })
 
@@ -388,24 +365,14 @@ describe('Button Component', () => {
   })
 
   describe('Animation and Transitions', () => {
-    it('applies duration-150 for default transition speed', () => {
+    it.each([
+      ['applies duration-150 for default transition speed', 'duration-150'],
+      ['applies ease timing function', 'ease-out'],
+      ['respects reduced-motion preference', 'motion-reduce:transition-none'],
+      ['applies motion-reduce:duration-0 for reduced motion', 'motion-reduce:duration-0'],
+    ])('%s', (_name, className) => {
       render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('duration-150')
-    })
-
-    it('applies ease timing function', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('ease-out')
-    })
-
-    it('respects reduced-motion preference', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('motion-reduce:transition-none')
-    })
-
-    it('applies motion-reduce:duration-0 for reduced motion', () => {
-      render(<Button>Label</Button>)
-      expect(screen.getByRole('button')).toHaveClass('motion-reduce:duration-0')
+      expect(screen.getByRole('button')).toHaveClass(className)
     })
   })
 

@@ -367,7 +367,7 @@ describe('query-dsl-mode warning underlines', () => {
     await Promise.resolve()
 
     expect(diagnosticCount(view.state)).toBe(0)
-    expect(view.dom.querySelectorAll('.cm-lintRange-error').length).toBe(0)
+    expect(view.dom.querySelectorAll('.cm-lintRange-error')).toHaveLength(0)
   })
 
   it('styles the amber mark in the body', () => {
@@ -404,13 +404,13 @@ describe('query-dsl-mode editor facilities', () => {
   })
 
   it('adds no line-number gutter of its own', () => {
-    expect(mount(SAMPLE_QUERY_DSL).dom.querySelectorAll('.cm-lineNumbers').length).toBe(0)
+    expect(mount(SAMPLE_QUERY_DSL).dom.querySelectorAll('.cm-lineNumbers')).toHaveLength(0)
   })
 
   it('marks the bracket matching the one at the cursor', () => {
     const view = mount('{"match_all": {}}', { selection: { anchor: 0, head: 0 } })
 
-    expect(view.dom.querySelectorAll('.cm-matchingBracket').length).toBe(2)
+    expect(view.dom.querySelectorAll('.cm-matchingBracket')).toHaveLength(2)
   })
 
   it('holds the view while it is mounted and null after it is destroyed', () => {

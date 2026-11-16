@@ -554,7 +554,7 @@ describe('CanvasContextMenu', () => {
       })
     })
 
-    it('shows Reset as aria-disabled when executionStatus is idle', async () => {
+    it.each(['idle', 'running', 'paused'])('shows Reset as aria-disabled when executionStatus is %s', async (status) => {
       const { CanvasContextMenu } = await import(
         '@/features/workbench/common/canvas/menus/canvas-context-menu'
       )
@@ -563,7 +563,7 @@ describe('CanvasContextMenu', () => {
           open={true}
           position={{ x: 200, y: 300 }}
           onClose={vi.fn()}
-          executionStatus="idle"
+          executionStatus={status}
           onReset={vi.fn()}
         />
       )
@@ -576,7 +576,7 @@ describe('CanvasContextMenu', () => {
       expect(resetItem).toHaveAttribute('aria-disabled', 'true')
     })
 
-    it('shows Reset as aria-disabled when executionStatus is running', async () => {
+    it.each(['passed', 'failed', 'stopped'])('shows Reset as enabled when executionStatus is %s', async (status) => {
       const { CanvasContextMenu } = await import(
         '@/features/workbench/common/canvas/menus/canvas-context-menu'
       )
@@ -585,95 +585,7 @@ describe('CanvasContextMenu', () => {
           open={true}
           position={{ x: 200, y: 300 }}
           onClose={vi.fn()}
-          executionStatus="running"
-          onReset={vi.fn()}
-        />
-      )
-
-      await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /reset/i })).toBeInTheDocument()
-      })
-
-      const resetItem = screen.getByRole('menuitem', { name: /reset/i })
-      expect(resetItem).toHaveAttribute('aria-disabled', 'true')
-    })
-
-    it('shows Reset as aria-disabled when executionStatus is paused', async () => {
-      const { CanvasContextMenu } = await import(
-        '@/features/workbench/common/canvas/menus/canvas-context-menu'
-      )
-      render(
-        <CanvasContextMenu
-          open={true}
-          position={{ x: 200, y: 300 }}
-          onClose={vi.fn()}
-          executionStatus="paused"
-          onReset={vi.fn()}
-        />
-      )
-
-      await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /reset/i })).toBeInTheDocument()
-      })
-
-      const resetItem = screen.getByRole('menuitem', { name: /reset/i })
-      expect(resetItem).toHaveAttribute('aria-disabled', 'true')
-    })
-
-    it('shows Reset as enabled when executionStatus is passed', async () => {
-      const { CanvasContextMenu } = await import(
-        '@/features/workbench/common/canvas/menus/canvas-context-menu'
-      )
-      render(
-        <CanvasContextMenu
-          open={true}
-          position={{ x: 200, y: 300 }}
-          onClose={vi.fn()}
-          executionStatus="passed"
-          onReset={vi.fn()}
-        />
-      )
-
-      await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /reset/i })).toBeInTheDocument()
-      })
-
-      const resetItem = screen.getByRole('menuitem', { name: /reset/i })
-      expect(resetItem).not.toHaveAttribute('aria-disabled', 'true')
-    })
-
-    it('shows Reset as enabled when executionStatus is failed', async () => {
-      const { CanvasContextMenu } = await import(
-        '@/features/workbench/common/canvas/menus/canvas-context-menu'
-      )
-      render(
-        <CanvasContextMenu
-          open={true}
-          position={{ x: 200, y: 300 }}
-          onClose={vi.fn()}
-          executionStatus="failed"
-          onReset={vi.fn()}
-        />
-      )
-
-      await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /reset/i })).toBeInTheDocument()
-      })
-
-      const resetItem = screen.getByRole('menuitem', { name: /reset/i })
-      expect(resetItem).not.toHaveAttribute('aria-disabled', 'true')
-    })
-
-    it('shows Reset as enabled when executionStatus is stopped', async () => {
-      const { CanvasContextMenu } = await import(
-        '@/features/workbench/common/canvas/menus/canvas-context-menu'
-      )
-      render(
-        <CanvasContextMenu
-          open={true}
-          position={{ x: 200, y: 300 }}
-          onClose={vi.fn()}
-          executionStatus="stopped"
+          executionStatus={status}
           onReset={vi.fn()}
         />
       )

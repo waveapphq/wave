@@ -36,67 +36,18 @@ describe('AST-based Expression Validation', () => {
   })
 
   describe('Complex Nested Comprehensions (regex struggled with these)', () => {
-    it('correctly handles deeply nested list comprehension', () => {
+    it.each([
       // Regex parser had difficulty with multiple levels of nesting
-      const issues = validateExpressions(
-        '[[y for y in x] for x in matrix]',
-        availableVars
-      )
-
       // x and y are local loop variables, matrix is external - should be valid
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles comprehension with multiple for clauses', () => {
-      const issues = validateExpressions(
-        '[a + b for a in items for b in items]',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles comprehension with condition', () => {
-      const issues = validateExpressions(
-        '[x for x in items if x > 0]',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles dict comprehension', () => {
-      const issues = validateExpressions(
-        '{k: v for k, v in config.items()}',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles set comprehension', () => {
-      const issues = validateExpressions(
-        '{x for x in items}',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles generator expression', () => {
-      const issues = validateExpressions(
-        'sum(x * 2 for x in items)',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles comprehension with tuple unpacking', () => {
-      const issues = validateExpressions(
-        '[(k, v) for k, v in config.items()]',
-        availableVars
-      )
+      { name: 'deeply nested list comprehension', expression: '[[y for y in x] for x in matrix]' },
+      { name: 'comprehension with two for clauses', expression: '[a + b for a in items for b in items]' },
+      { name: 'comprehension with condition', expression: '[x for x in items if x > 0]' },
+      { name: 'dict comprehension', expression: '{k: v for k, v in config.items()}' },
+      { name: 'set comprehension', expression: '{x for x in items}' },
+      { name: 'generator expression', expression: 'sum(x * 2 for x in items)' },
+      { name: 'comprehension with tuple unpacking', expression: '[(k, v) for k, v in config.items()]' },
+    ])('correctly handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -113,49 +64,16 @@ describe('AST-based Expression Validation', () => {
   })
 
   describe('Complex Lambda Expressions (regex struggled with these)', () => {
-    it('correctly handles nested lambdas', () => {
-      const issues = validateExpressions(
-        '(lambda x: lambda y: x + y)(1)(2)',
-        availableVars
-      )
-
+    it.each([
       // x and y are lambda parameters - valid
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles lambda with default argument', () => {
-      const issues = validateExpressions(
-        '(lambda x, y=count: x + y)(5)',
-        availableVars
-      )
-
+      { name: 'nested lambdas', expression: '(lambda x: lambda y: x + y)(1)(2)' },
       // count is used as default value, x and y are parameters
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles lambda in sorted key', () => {
-      const issues = validateExpressions(
-        'sorted(items, key=lambda item: item.name)',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles lambda with *args', () => {
-      const issues = validateExpressions(
-        '(lambda *args: sum(args))(1, 2, 3)',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('correctly handles lambda with **kwargs', () => {
-      const issues = validateExpressions(
-        '(lambda **kwargs: len(kwargs))(a=1, b=2)',
-        availableVars
-      )
+      { name: 'lambda with default argument', expression: '(lambda x, y=count: x + y)(5)' },
+      { name: 'lambda in sorted key', expression: 'sorted(items, key=lambda item: item.name)' },
+      { name: 'lambda with *args', expression: '(lambda *args: sum(args))(1, 2, 3)' },
+      { name: 'lambda with **kwargs', expression: '(lambda **kwargs: len(kwargs))(a=1, b=2)' },
+    ])('correctly handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -182,13 +100,17 @@ describe('AST-based Expression Validation', () => {
       expect(issues).toHaveLength(0)
     })
 
-    it('correctly handles f-string with variable', () => {
-      const issues = validateExpressions(
-        'f"Hello {username}!"',
-        availableVars
-      )
-
+    it.each([
       // username inside f-string IS a reference
+      { name: 'f-string with variable', expression: 'f"Hello {username}!"' },
+      // {{literal}} is escaped, username is a reference
+      { name: 'escaped braces in f-strings', expression: 'f"{{literal}} {username}"' },
+      { name: 'nested expressions in f-strings', expression: 'f"{username.upper()}"' },
+      { name: 'string concatenation', expression: '"prefix" + username + "suffix"' },
+      { name: 'multiline strings', expression: '"""line1\nline2"""' },
+    ])('handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
+
       expect(issues).toHaveLength(0)
     })
 
@@ -201,51 +123,16 @@ describe('AST-based Expression Validation', () => {
       expect(issues).toHaveLength(1)
       expect(issues[0].identifier).toBe('unknown')
     })
-
-    it('handles escaped braces in f-strings', () => {
-      const issues = validateExpressions(
-        'f"{{literal}} {username}"',
-        availableVars
-      )
-
-      // {{literal}} is escaped, username is a reference
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles nested expressions in f-strings', () => {
-      const issues = validateExpressions(
-        'f"{username.upper()}"',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles string concatenation', () => {
-      const issues = validateExpressions(
-        '"prefix" + username + "suffix"',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles multiline strings', () => {
-      const issues = validateExpressions(
-        '"""line1\nline2"""',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
   })
 
   describe('Method Chain Validation (enhanced with AST)', () => {
-    it('validates long method chains correctly', () => {
-      const issues = validateExpressions(
-        'username.strip().lower().replace("a", "b").upper()',
-        availableVars
-      )
+    it.each([
+      { name: 'long method chains', expression: 'username.strip().lower().replace("a", "b").upper()' },
+      { name: 'method call on function result', expression: 'str(count).zfill(5)' },
+      { name: 'method call on comprehension result', expression: '[x for x in items].count(0)' },
+      { name: 'method call on string literal', expression: '"hello".upper()' },
+    ])('handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -260,33 +147,6 @@ describe('AST-based Expression Validation', () => {
       expect(issues[0].identifier).toBe('fake_method')
     })
 
-    it('handles method call on function result', () => {
-      const issues = validateExpressions(
-        'str(count).zfill(5)',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles method call on comprehension result', () => {
-      const issues = validateExpressions(
-        '[x for x in items].count(0)',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles method call on string literal', () => {
-      const issues = validateExpressions(
-        '"hello".upper()',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
     it('flags unknown variables in method arguments', () => {
       const issues = validateExpressions(
         'username.replace(OLD_VAR, NEW_VAR)',
@@ -297,35 +157,20 @@ describe('AST-based Expression Validation', () => {
       expect(issues.map(i => i.identifier).sort()).toEqual(['NEW_VAR', 'OLD_VAR'])
     })
 
-    it('flags unknown variables in method call followed by expression', () => {
-      const issues = validateExpressions(
-        'my_var.upper(NO_VAR) - NO_VAR',
-        new Set(['my_var'])
-      )
-
+    it.each([
       // NO_VAR appears twice but should only be flagged once (deduped)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].identifier).toBe('NO_VAR')
-    })
-
-    it('flags unknown variables in method call argument only', () => {
-      const issues = validateExpressions(
-        'my_var.replace(UNKNOWN, "b")',
-        new Set(['my_var'])
-      )
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].identifier).toBe('UNKNOWN')
-    })
-
-    it('flags unknown variables in expression after method call', () => {
-      const issues = validateExpressions(
-        'my_var.upper() + UNKNOWN',
-        new Set(['my_var'])
-      )
+      {
+        name: 'method call followed by expression',
+        expression: 'my_var.upper(NO_VAR) - NO_VAR',
+        identifier: 'NO_VAR',
+      },
+      { name: 'method call argument only', expression: 'my_var.replace(UNKNOWN, "b")', identifier: 'UNKNOWN' },
+      { name: 'expression after method call', expression: 'my_var.upper() + UNKNOWN', identifier: 'UNKNOWN' },
+    ])('flags unknown variables in $name', ({ expression, identifier }) => {
+      const issues = validateExpressions(expression, new Set(['my_var']))
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].identifier).toBe('UNKNOWN')
+      expect(issues[0].identifier).toBe(identifier)
     })
 
     it('validates variables in complex method chain with arguments', () => {
@@ -349,43 +194,31 @@ describe('AST-based Expression Validation', () => {
   })
 
   describe('Keyword Argument Detection (enhanced with AST)', () => {
-    it('does not flag keyword argument names as unknown variables', () => {
-      const issues = validateExpressions(
-        'sorted(items, key=lambda x: x, reverse=True)',
-        availableVars
-      )
-
+    it.each([
       // key and reverse are keyword args, not variable references
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles nested function calls with keyword args', () => {
-      const issues = validateExpressions(
-        'max(items, key=lambda x: min(x, default=0))',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('distinguishes keyword arg from equality comparison', () => {
-      const issues = validateExpressions(
-        'count == 5',
-        availableVars
-      )
-
+      { name: 'keyword argument names', expression: 'sorted(items, key=lambda x: x, reverse=True)' },
+      { name: 'nested calls with keyword args', expression: 'max(items, key=lambda x: min(x, default=0))' },
       // count is a variable reference (equality check), not keyword arg
+      { name: 'equality comparison vs keyword arg', expression: 'count == 5' },
+    ])('handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
+
       expect(issues).toHaveLength(0)
     })
   })
 
   describe('Syntax Error Detection (AST advantage)', () => {
-    it('detects unbalanced parentheses with precise position', () => {
-      const issues = validateExpressions('func((x)', availableVars)
+    it.each([
+      // AST should provide better position info
+      { name: 'unbalanced parentheses', expression: 'func((x)', message: 'Unbalanced' },
+      { name: 'unterminated triple-quoted string', expression: '"""hello', message: 'Invalid Python syntax' },
+      { name: 'assignment statement', expression: 'x = 5', message: 'Assignment' },
+      { name: 'walrus operator', expression: '(x := 5)', message: 'Assignment' },
+    ])('detects $name', ({ expression, message }) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Unbalanced')
-      // AST should provide better position info
+      expect(issues[0].message).toContain(message)
     })
 
     it('detects unterminated string in method argument', () => {
@@ -401,27 +234,6 @@ describe('AST-based Expression Validation', () => {
 
       expect(issues).toHaveLength(1)
       expect(issues[0].message).toContain('Invalid Python syntax')
-    })
-
-    it('detects unterminated triple-quoted string', () => {
-      const issues = validateExpressions('"""hello', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Invalid Python syntax')
-    })
-
-    it('detects assignment statement', () => {
-      const issues = validateExpressions('x = 5', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Assignment')
-    })
-
-    it('detects walrus operator', () => {
-      const issues = validateExpressions('(x := 5)', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Assignment')
     })
 
     it('detects invalid syntax precisely', () => {
@@ -449,41 +261,13 @@ describe('AST-based Expression Validation', () => {
   })
 
   describe('Security Pattern Detection (AST advantage)', () => {
-    it('detects dunder access in complex expression', () => {
-      const issues = validateExpressions(
-        'items.__class__.__mro__',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('detects blocked function in nested call', () => {
-      const issues = validateExpressions(
-        'str(eval("code"))',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('detects blocked function in lambda', () => {
-      const issues = validateExpressions(
-        '(lambda x: exec(x))("code")',
-        availableVars
-      )
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('detects blocked function in comprehension', () => {
-      const issues = validateExpressions(
-        '[eval(x) for x in items]',
-        availableVars
-      )
+    it.each([
+      { name: 'dunder access in complex expression', expression: 'items.__class__.__mro__' },
+      { name: 'blocked function in nested call', expression: 'str(eval("code"))' },
+      { name: 'blocked function in lambda', expression: '(lambda x: exec(x))("code")' },
+      { name: 'blocked function in comprehension', expression: '[eval(x) for x in items]' },
+    ])('detects $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('blocked_function')
@@ -577,28 +361,31 @@ describe('AST-based Expression Validation', () => {
   })
 
   describe('Edge Cases That Regex Struggled With', () => {
-    it('handles parenthesized expression', () => {
-      const issues = validateExpressions('(count + 1)', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles double parentheses', () => {
-      const issues = validateExpressions('((count))', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles string with special characters', () => {
-      const issues = validateExpressions('"hello\\nworld"', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles raw string', () => {
-      const issues = validateExpressions('r"hello\\nworld"', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles bytes literal', () => {
-      const issues = validateExpressions('b"bytes"', availableVars)
+    it.each([
+      { name: 'parenthesized expression', expression: '(count + 1)' },
+      { name: 'double parentheses', expression: '((count))' },
+      { name: 'string with special characters', expression: '"hello\\nworld"' },
+      { name: 'raw string', expression: 'r"hello\\nworld"' },
+      { name: 'bytes literal', expression: 'b"bytes"' },
+      { name: 'subscript with negative index', expression: 'items[-1]' },
+      { name: 'subscript with slice', expression: 'items[1:3:2]' },
+      { name: 'attribute access on subscript', expression: 'items[0].upper()' },
+      { name: 'star expression in call', expression: 'max(*items)' },
+      { name: 'double star expression in call', expression: 'dict(**config)' },
+      { name: 'comparison operators', expression: 'count >= 0 and count <= 100' },
+      { name: 'identity operators', expression: 'username is not None' },
+      { name: 'membership operators', expression: 'username in items' },
+      { name: 'bitwise operators', expression: 'count & 0xFF | 0x100 ^ 0x10' },
+      { name: 'shift operators', expression: 'count << 2 >> 1' },
+      { name: 'power operator', expression: 'count ** 2' },
+      { name: 'floor division', expression: 'count // 2' },
+      { name: 'modulo', expression: 'count % 2' },
+      {
+        name: 'complex mixed expression',
+        expression: 'sorted([x.strip() for x in items if len(x) > 0], key=lambda y: y.lower())',
+      },
+    ])('handles $name', ({ expression }) => {
+      const issues = validateExpressions(expression, availableVars)
       expect(issues).toHaveLength(0)
     })
 
@@ -609,103 +396,6 @@ describe('AST-based Expression Validation', () => {
       )
       expect(issues).toHaveLength(0)
     })
-
-    it('handles subscript with negative index', () => {
-      const issues = validateExpressions('items[-1]', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles subscript with slice', () => {
-      const issues = validateExpressions('items[1:3:2]', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles attribute access on subscript', () => {
-      const issues = validateExpressions('items[0].upper()', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles star expression in call', () => {
-      const issues = validateExpressions('max(*items)', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles double star expression in call', () => {
-      const issues = validateExpressions('dict(**config)', availableVars)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles comparison operators', () => {
-      const issues = validateExpressions(
-        'count >= 0 and count <= 100',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles identity operators', () => {
-      const issues = validateExpressions(
-        'username is not None',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles membership operators', () => {
-      const issues = validateExpressions(
-        'username in items',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles bitwise operators', () => {
-      const issues = validateExpressions(
-        'count & 0xFF | 0x100 ^ 0x10',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles shift operators', () => {
-      const issues = validateExpressions(
-        'count << 2 >> 1',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles power operator', () => {
-      const issues = validateExpressions(
-        'count ** 2',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles floor division', () => {
-      const issues = validateExpressions(
-        'count // 2',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles modulo', () => {
-      const issues = validateExpressions(
-        'count % 2',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles complex mixed expression', () => {
-      const issues = validateExpressions(
-        'sorted([x.strip() for x in items if len(x) > 0], key=lambda y: y.lower())',
-        availableVars
-      )
-      expect(issues).toHaveLength(0)
-    })
   })
 })
 
@@ -713,72 +403,55 @@ describe('Expression Type Checking (Level 3)', () => {
   const availableVars = new Set(['my_var', 'count', 'name', 'items', 'data'])
 
   describe('Method Argument Count Validation', () => {
-    it('flags .upper() called with arguments when it takes 0', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.upper(1)', availableVars, varTypes)
+    it.each([
+      {
+        name: '.upper() with 1 argument (takes 0)',
+        variable: 'my_var',
+        expression: 'my_var.upper(1)',
+        message: "Method 'upper' takes 0 arguments, got 1",
+      },
+      {
+        name: '.replace() with 1 argument (takes 2-3)',
+        variable: 'my_var',
+        expression: 'my_var.replace("a")',
+        message: "Method 'replace' takes 2-3 arguments, got 1",
+      },
+      {
+        name: '.replace() with too many arguments',
+        variable: 'my_var',
+        expression: 'my_var.replace("a", "b", 1, "extra")',
+        message: "Method 'replace' takes 2-3 arguments, got 4",
+      },
+      {
+        name: '.split() with too many arguments',
+        variable: 'my_var',
+        expression: 'my_var.split(",", 5, "extra")',
+        message: "Method 'split' takes 0-2 arguments, got 3",
+      },
+      {
+        name: 'wrong arg count in complex expression',
+        variable: 'data',
+        expression: 'data.strip().upper(1).lower()',
+        message: "Method 'upper' takes 0 arguments, got 1",
+      },
+    ])('flags $name', ({ variable, expression, message }) => {
+      const varTypes = new Map([[variable, 'str']])
+      const issues = validateExpressions(expression, availableVars, varTypes)
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Method 'upper' takes 0 arguments, got 1")
+      expect(issues[0].message).toBe(message)
     })
 
-    it('flags .replace() called with 1 argument when it takes 2-3', () => {
+    it.each([
+      { name: '.strip() with 0 arguments', expression: 'my_var.strip()' },
+      { name: '.strip() with 1 argument', expression: 'my_var.strip(" ")' },
+      { name: '.replace() with 2 arguments', expression: 'my_var.replace("a", "b")' },
+      { name: '.replace() with 3 arguments', expression: 'my_var.replace("a", "b", 1)' },
+    ])('allows $name', ({ expression }) => {
       const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.replace("a")', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Method 'replace' takes 2-3 arguments, got 1")
-    })
-
-    it('flags .replace() called with too many arguments', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.replace("a", "b", 1, "extra")', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Method 'replace' takes 2-3 arguments, got 4")
-    })
-
-    it('allows .strip() with 0 arguments', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.strip()', availableVars, varTypes)
+      const issues = validateExpressions(expression, availableVars, varTypes)
 
       expect(issues).toHaveLength(0)
-    })
-
-    it('allows .strip() with 1 argument', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.strip(" ")', availableVars, varTypes)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows .replace() with 2 arguments', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.replace("a", "b")', availableVars, varTypes)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows .replace() with 3 arguments', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.replace("a", "b", 1)', availableVars, varTypes)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('flags .split() called with too many arguments', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.split(",", 5, "extra")', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Method 'split' takes 0-2 arguments, got 3")
-    })
-
-    it('validates method arg count in complex expressions', () => {
-      const varTypes = new Map([['data', 'str']])
-      const issues = validateExpressions('data.strip().upper(1).lower()', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Method 'upper' takes 0 arguments, got 1")
     })
 
     it('validates list method arg counts', () => {
@@ -799,20 +472,37 @@ describe('Expression Type Checking (Level 3)', () => {
   })
 
   describe('Operator Type Checking', () => {
-    it('flags string - int operation', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var - 1', availableVars, varTypes)
+    it.each([
+      {
+        name: 'string - int operation',
+        variable: 'my_var',
+        expression: 'my_var - 1',
+        message: "Cannot use '-' with str and int",
+      },
+      {
+        name: 'string - int after method call',
+        variable: 'my_var',
+        expression: 'my_var.upper() - 1',
+        message: "Cannot use '-' with str and int",
+      },
+      {
+        name: 'string / int operation',
+        variable: 'name',
+        expression: 'name / 2',
+        message: "Cannot use '/' with str and int",
+      },
+      {
+        name: 'string + int (type mismatch)',
+        variable: 'name',
+        expression: 'name + 1',
+        message: "Cannot use '+' with str and int - use str() to convert",
+      },
+    ])('flags $name', ({ variable, expression, message }) => {
+      const varTypes = new Map([[variable, 'str']])
+      const issues = validateExpressions(expression, availableVars, varTypes)
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Cannot use '-' with str and int")
-    })
-
-    it('flags string - int after method call', () => {
-      const varTypes = new Map([['my_var', 'str']])
-      const issues = validateExpressions('my_var.upper() - 1', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Cannot use '-' with str and int")
+      expect(issues[0].message).toBe(message)
     })
 
     it('flags int - string literal operation', () => {
@@ -855,14 +545,6 @@ describe('Expression Type Checking (Level 3)', () => {
       expect(issues).toHaveLength(0)
     })
 
-    it('flags string / int operation', () => {
-      const varTypes = new Map([['name', 'str']])
-      const issues = validateExpressions('name / 2', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Cannot use '/' with str and int")
-    })
-
     it('flags list - list operation', () => {
       const varTypes = new Map([['items', 'list']])
       const issues = validateExpressions('items - items', availableVars, varTypes)
@@ -876,14 +558,6 @@ describe('Expression Type Checking (Level 3)', () => {
       const issues = validateExpressions('items + items', availableVars, varTypes)
 
       expect(issues).toHaveLength(0)
-    })
-
-    it('flags string + int (type mismatch)', () => {
-      const varTypes = new Map([['name', 'str']])
-      const issues = validateExpressions('name + 1', availableVars, varTypes)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toBe("Cannot use '+' with str and int - use str() to convert")
     })
 
     it('skips type checking when types are unknown', () => {

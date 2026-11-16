@@ -377,7 +377,8 @@ class TestExecuteWiring:
         out = await PingPlugin().execute(ping_context(params, log))
 
         assert seen == [params]
-        assert isinstance(out["summary"], Table) and isinstance(out["replies"], Table)
+        assert isinstance(out["summary"], Table)
+        assert isinstance(out["replies"], Table)
         assert out["summary"].col_names() == [name for name, _ in SUMMARY_COLUMNS]
         assert out["replies"].col_types() == [kind for _, kind in REPLY_COLUMNS]
         assert out["replies"].row_count() == 1

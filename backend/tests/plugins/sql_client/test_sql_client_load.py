@@ -365,8 +365,9 @@ class TestBatches:
     ) -> None:
         path = orders_db(tmp_path)
 
+        params = load_params(path, id_rows(1, 100))
         with pytest.raises(ValueError, match=exact(duplicate(2))):
-            _sql_core.run(load_params(path, id_rows(1, 100)), log)
+            _sql_core.run(params, log)
 
         assert log.at("INFO")[1:] == ["Transaction rolled back: 0 rows into orders"]
 

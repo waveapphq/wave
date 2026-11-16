@@ -77,35 +77,14 @@ describe('getRegressionsColumns', () => {
   })
 
   describe('Sortable columns', () => {
-    it('name column is sortable', () => {
-      const col = findColumn('name')
-      expect(col).toBeDefined()
-      expect(col!.enableSorting).not.toBe(false)
-    })
-
-    it('suitesCount column is sortable', () => {
-      const col = findColumn('suitesCount')
-      expect(col).toBeDefined()
-      expect(col!.enableSorting).not.toBe(false)
-    })
-
-    it('testsCount column is sortable', () => {
-      const col = findColumn('testsCount')
-      expect(col).toBeDefined()
-      expect(col!.enableSorting).not.toBe(false)
-    })
-
-    it('status column is sortable', () => {
-      const col = findColumn('status')
-      expect(col).toBeDefined()
-      expect(col!.enableSorting).not.toBe(false)
-    })
-
-    it('lastRun column is sortable', () => {
-      const col = findColumn('lastRun')
-      expect(col).toBeDefined()
-      expect(col!.enableSorting).not.toBe(false)
-    })
+    it.each(['name', 'suitesCount', 'testsCount', 'status', 'lastRun'])(
+      '%s column is sortable',
+      (columnId) => {
+        const col = findColumn(columnId)
+        expect(col).toBeDefined()
+        expect(col!.enableSorting).not.toBe(false)
+      }
+    )
   })
 
   describe('Non-sortable columns', () => {

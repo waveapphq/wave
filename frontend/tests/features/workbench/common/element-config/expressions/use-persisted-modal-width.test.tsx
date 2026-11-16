@@ -23,50 +23,27 @@ describe('usePersistedModalWidth', () => {
     expect(result.current[0]).toBe(768)
   })
 
-  it('reads the persisted value when within bounds', () => {
-    window.localStorage.setItem(KEY, '900')
+  it.each([
+    ['reads the persisted value when within bounds', '900', 900],
+    ['falls back to defaultWidth when persisted value is non-numeric', 'corrupt', 768],
+    ['falls back to defaultWidth when persisted value is below MIN_WIDTH', '100', 768],
+    ['falls back to defaultWidth when persisted value is above MAX_WIDTH', '99999', 768],
+  ])('%s', (_title, stored, expected) => {
+    window.localStorage.setItem(KEY, stored)
     const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-    expect(result.current[0]).toBe(900)
-  })
-
-  it('falls back to defaultWidth when persisted value is non-numeric', () => {
-    window.localStorage.setItem(KEY, 'corrupt')
-    const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-    expect(result.current[0]).toBe(768)
-  })
-
-  it('falls back to defaultWidth when persisted value is below MIN_WIDTH', () => {
-    window.localStorage.setItem(KEY, '100')
-    const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-    expect(result.current[0]).toBe(768)
-  })
-
-  it('falls back to defaultWidth when persisted value is above MAX_WIDTH', () => {
-    window.localStorage.setItem(KEY, '99999')
-    const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-    expect(result.current[0]).toBe(768)
+    expect(result.current[0]).toBe(expected)
   })
 
   describe('setWidth', () => {
-    it('persists writes that are in-bounds', () => {
+    it.each([
+      ['persists writes that are in-bounds', 900, 900, '900'],
+      ['clamps writes below MIN_WIDTH (480)', 100, 480, '480'],
+      ['clamps writes above MAX_WIDTH (1600)', 99999, 1600, '1600'],
+    ])('%s', (_title, requested, expected, persisted) => {
       const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-      act(() => result.current[1](900))
-      expect(result.current[0]).toBe(900)
-      expect(window.localStorage.getItem(KEY)).toBe('900')
-    })
-
-    it('clamps writes below MIN_WIDTH (480)', () => {
-      const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-      act(() => result.current[1](100))
-      expect(result.current[0]).toBe(480)
-      expect(window.localStorage.getItem(KEY)).toBe('480')
-    })
-
-    it('clamps writes above MAX_WIDTH (1600)', () => {
-      const { result } = renderHook(() => usePersistedModalWidth(KEY, 768))
-      act(() => result.current[1](99999))
-      expect(result.current[0]).toBe(1600)
-      expect(window.localStorage.getItem(KEY)).toBe('1600')
+      act(() => result.current[1](requested))
+      expect(result.current[0]).toBe(expected)
+      expect(window.localStorage.getItem(KEY)).toBe(persisted)
     })
 
     it('handles repeated writes', () => {

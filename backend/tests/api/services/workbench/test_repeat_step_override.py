@@ -233,10 +233,11 @@ class TestARepeatWithAScriptOverride:
 
     async def test_an_override_that_names_another_block_is_refused(self, tmp_path: Path) -> None:
         async with _paused_at(_source_node(tmp_path)) as run:
+            override = _script_override(OTHER_NODE_ID)
             with pytest.raises(ConflictException, match=_WRONG_NODE_RE):
                 workbench_service.repeat_step(
                     session_id=run.session_id,
-                    override=_script_override(OTHER_NODE_ID),
+                    override=override,
                 )
 
 

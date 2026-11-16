@@ -768,9 +768,13 @@ class Table:
         ]
 
         lines = [f"Table ({self.row_count()} rows x {self.col_count()} columns)"]
-        lines.append(self._render_line(names, widths, rights))
-        lines.append(self._render_line(types, widths, rights))
-        lines.append(_COLUMN_GAP.join("-" * width for width in widths))
+        lines.extend(
+            [
+                self._render_line(names, widths, rights),
+                self._render_line(types, widths, rights),
+                _COLUMN_GAP.join("-" * width for width in widths),
+            ]
+        )
         lines.extend(self._render_line(row, widths, rights) for row in cells)
 
         if len(self._rows) > MAX_DISPLAY_ROWS:

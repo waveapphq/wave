@@ -358,23 +358,17 @@ describe('SystemVariablesTab', () => {
   // 4. Populated (read-only) state
   // --------------------------------------------------------------------------
   describe('Populated State', () => {
-    it('shows VariableReadonlyTable when variables exist', async () => {
+    it.each([
+      ['shows VariableReadonlyTable when variables exist', 'variable-readonly-table'],
+      ['shows "Edit Variables" button when variables exist', 'system-variables-edit-btn'],
+      ['shows Import button in header', 'system-variables-import-btn'],
+    ])('%s', async (_name, testId) => {
       setupWithVariables()
 
       render(<SystemVariablesTab />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('variable-readonly-table')).toBeInTheDocument()
-      })
-    })
-
-    it('shows "Edit Variables" button when variables exist', async () => {
-      setupWithVariables()
-
-      render(<SystemVariablesTab />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('system-variables-edit-btn')).toBeInTheDocument()
+        expect(screen.getByTestId(testId)).toBeInTheDocument()
       })
     })
 
@@ -386,16 +380,6 @@ describe('SystemVariablesTab', () => {
       await waitFor(() => {
         expect(screen.getByText('System Variables')).toBeInTheDocument()
         expect(screen.getByText('Variables available to all tests, suites, and regressions')).toBeInTheDocument()
-      })
-    })
-
-    it('shows Import button in header', async () => {
-      setupWithVariables()
-
-      render(<SystemVariablesTab />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('system-variables-import-btn')).toBeInTheDocument()
       })
     })
   })

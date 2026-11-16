@@ -65,7 +65,8 @@ class TestEncodedText:
         rendered = log_safe(f"a{character}b")
 
         assert rendered.startswith("base64:")
-        assert rendered.isascii() and rendered.isprintable()
+        assert rendered.isascii()
+        assert rendered.isprintable()
         assert base64.b64decode(rendered.removeprefix("base64:")).decode("utf-8") == (
             f"a{character}b"
         )

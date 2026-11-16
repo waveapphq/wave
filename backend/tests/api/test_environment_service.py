@@ -2114,8 +2114,9 @@ class TestPersistEnvironmentDocument:
         from wavecore.api.services.environments import service as environment_service
 
         environment_service._clear_storage()
+        document = _environment_document("Solo")
         with pytest.raises(TypeError):
-            environment_service.persist_environment_document(_environment_document("Solo"), {})
+            environment_service.persist_environment_document(document, {})
 
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w") as members:

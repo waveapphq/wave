@@ -322,8 +322,9 @@ class TestTheListener:
             async with forwarding(session_record(channel_connection(far.port)), RunLog()) as fwd:
                 async with client(fwd.get_port()) as (reader, writer):
                     assert await exchange(reader, writer, b"ping") == b"ping"
+                port = fwd.get_port()
                 with pytest.raises(ConnectionRefusedError):
-                    await asyncio.open_connection("127.0.0.2", fwd.get_port())
+                    await asyncio.open_connection("127.0.0.2", port)
 
     async def test_a_given_local_port_is_the_one_bound(self) -> None:
         wanted = free_port()
@@ -339,10 +340,10 @@ class TestTheListener:
             taken.bind(("127.0.0.1", 0))
             taken.listen()
             record = session_record(channel_connection())
+            local_port = taken.getsockname()[1]
+            log = RunLog()
             with pytest.raises(OSError) as failed:
-                await start_forwarder(
-                    record, TUNNEL_ID, taken.getsockname()[1], DB, DB_PORT, RunLog()
-                )
+                await start_forwarder(record, TUNNEL_ID, local_port, DB, DB_PORT, log)
 
         assert type(failed.value) is OSError
         assert failed.value.errno == errno.EADDRINUSE
@@ -448,11 +449,12 @@ class TestAFailedConnection:
                 forwarding(session_record(conn), RunLog()) as fwd,
                 httpx.AsyncClient(timeout=1, trust_env=False) as http,
             ):
+                url = f"http://127.0.0.1:{fwd.get_port()}/"
                 with pytest.raises(
                     httpx.RemoteProtocolError,
                     match=exact("Server disconnected without sending a response."),
                 ):
-                    await http.get(f"http://127.0.0.1:{fwd.get_port()}/")
+                    await http.get(url)
 
 
 class TestTheTunnelWarning:
@@ -737,8 +739,9 @@ class TestValidateTarget:
         self, forwarding_ssh: ForwardingSSH, refuse: tuple[int, str], cause: str
     ) -> None:
         async with forwarding_ssh(refuse=refuse) as conn:
+            record = session_record(conn)
             with pytest.raises(ConnectionError, match=exact(check_failed(cause))):
-                await validate_target(session_record(conn), DB, DB_PORT)
+                await validate_target(record, DB, DB_PORT)
 
     @pytest.mark.parametrize(
         ("code", "reason", "retryable"),
@@ -754,8 +757,9 @@ class TestValidateTarget:
     ) -> None:
         connection = channel_connection(refuse=reason, code=code)
 
+        record = session_record(connection)
         with pytest.raises(ConnectionError) as failed:
-            await validate_target(session_record(connection), DB, DB_PORT)
+            await validate_target(record, DB, DB_PORT)
 
         assert ErrorClassifier().classify(failed.value).is_retryable is retryable
 
@@ -763,8 +767,9 @@ class TestValidateTarget:
         connection = channel_connection(refuse="Unknown channel type", code=3)
         cause = "bastion refused the connection (Unknown channel type)"
 
+        record = session_record(connection)
         with pytest.raises(ConnectionError, match=exact(check_failed(cause))):
-            await validate_target(session_record(connection), DB, DB_PORT)
+            await validate_target(record, DB, DB_PORT)
 
     async def test_a_closed_session_connection_fails_the_check_as_closed(
         self, forwarding_ssh: ForwardingSSH
@@ -773,12 +778,14 @@ class TestValidateTarget:
             conn.close()
             await conn.wait_closed()
 
+            record = session_record(conn)
             with pytest.raises(ConnectionError, match=exact(check_failed(CLOSED))):
-                await validate_target(session_record(conn), DB, DB_PORT)
+                await validate_target(record, DB, DB_PORT)
 
     async def test_a_connection_asyncssh_reports_closed_fails_the_check_as_closed(self) -> None:
+        record = session_record(channel_connection(closed=True))
         with pytest.raises(ConnectionError, match=exact(check_failed(CLOSED))):
-            await validate_target(session_record(channel_connection(closed=True)), DB, DB_PORT)
+            await validate_target(record, DB, DB_PORT)
 
     @pytest.mark.parametrize(
         ("connect_timeout", "within"),

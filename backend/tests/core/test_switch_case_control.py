@@ -139,32 +139,37 @@ class TestSwitchCaseControlValidation:
     def test_validate_rejects_missing_branches(self) -> None:
         """Verify validation fails when branches parameter is missing."""
         control = SwitchCaseControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^branches parameter is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_rejects_string_branches(self) -> None:
         """Verify validation rejects a string as branches."""
         control = SwitchCaseControl()
+        validation = control.validate({"branches": "not a list"})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": "not a list"}))
+            asyncio.run(validation)
 
     def test_validate_rejects_dict_branches(self) -> None:
         """Verify validation rejects a dict as branches."""
         control = SwitchCaseControl()
+        validation = control.validate({"branches": {"a": 1}})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": {"a": 1}}))
+            asyncio.run(validation)
 
     def test_validate_rejects_integer_branches(self) -> None:
         """Verify validation rejects an integer as branches."""
         control = SwitchCaseControl()
+        validation = control.validate({"branches": 42})
         with pytest.raises(ValueError, match="^branches must be a list$"):
-            asyncio.run(control.validate({"branches": 42}))
+            asyncio.run(validation)
 
     def test_validate_rejects_empty_branches(self) -> None:
         """Verify validation fails when branches is an empty list."""
         control = SwitchCaseControl()
+        validation = control.validate({"branches": []})
         with pytest.raises(ValueError, match="^branches must not be empty$"):
-            asyncio.run(control.validate({"branches": []}))
+            asyncio.run(validation)
 
     def test_validate_rejects_invalid_branch_type(self) -> None:
         """Verify validation fails for a branch type outside case/default."""
@@ -175,8 +180,9 @@ class TestSwitchCaseControlValidation:
                 "conditions": [_literal_condition("x", "integer", "equals", 1)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^invalid branch type: 'loop'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_missing_branch_type(self) -> None:
         """Verify validation fails when a branch omits its type."""
@@ -185,8 +191,9 @@ class TestSwitchCaseControlValidation:
         branches = [
             {"conditions": [_literal_condition("x", "integer", "equals", 1)]},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^invalid branch type: None$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_duplicate_branch_ids(self) -> None:
         """Verify validation fails for duplicate branch IDs."""
@@ -203,8 +210,9 @@ class TestSwitchCaseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^duplicate branch id: 'branch_0'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_multiple_defaults(self) -> None:
         """Verify validation fails when more than one default branch exists."""
@@ -218,15 +226,17 @@ class TestSwitchCaseControlValidation:
             {"type": "default", "id": "branch_1"},
             {"type": "default", "id": "branch_2"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^only one default branch allowed$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_default_only_list(self) -> None:
         """Verify a default with no case reports the missing case, not placement."""
         control = SwitchCaseControl()
         branches = [{"type": "default", "id": "branch_0"}]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^at least one case branch is required$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_default_not_last(self) -> None:
         """Verify validation fails when the default branch is not last."""
@@ -239,8 +249,9 @@ class TestSwitchCaseControlValidation:
                 "conditions": [_literal_condition("x", "integer", "equals", 1)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^default branch must be last$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_default_with_conditions(self) -> None:
         """Verify validation fails when the default branch carries conditions."""
@@ -257,8 +268,9 @@ class TestSwitchCaseControlValidation:
                 "conditions": [_literal_condition("y", "integer", "equals", 2)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^default branch must not have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_default_with_break_true(self) -> None:
         """Verify validation fails when the default branch carries break."""
@@ -271,8 +283,9 @@ class TestSwitchCaseControlValidation:
             },
             {"type": "default", "id": "branch_1", "break": True},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^default branch must not have break$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_default_with_break_false(self) -> None:
         """Verify a falsy break key on the default is still rejected."""
@@ -285,22 +298,25 @@ class TestSwitchCaseControlValidation:
             },
             {"type": "default", "id": "branch_1", "break": False},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^default branch must not have break$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_case_without_conditions(self) -> None:
         """Verify validation fails when a case branch omits conditions."""
         control = SwitchCaseControl()
         branches = [{"type": "case", "id": "branch_0"}]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^case branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_case_with_empty_conditions_list(self) -> None:
         """Verify validation fails when a case branch has an empty conditions list."""
         control = SwitchCaseControl()
         branches = [{"type": "case", "id": "branch_0", "conditions": []}]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^case branch must have conditions$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_string_break(self) -> None:
         """Verify validation fails when a case break is a string."""
@@ -313,8 +329,9 @@ class TestSwitchCaseControlValidation:
                 "break": "true",
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^break must be a boolean$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_none_break(self) -> None:
         """Verify validation fails when a case break is None."""
@@ -327,8 +344,9 @@ class TestSwitchCaseControlValidation:
                 "break": None,
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^break must be a boolean$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_integer_break(self) -> None:
         """Verify validation fails when a case break is an integer."""
@@ -341,8 +359,9 @@ class TestSwitchCaseControlValidation:
                 "break": 1,
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^break must be a boolean$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_accepts_a_single_case(self) -> None:
         """Verify validation passes with one case branch only."""
@@ -448,11 +467,12 @@ class TestSwitchCaseControlValidation:
             {"type": "case", "conditions": [one, _expression_condition("x > 2")]},
             {"type": "default"},
         ]
+        validation = SwitchCaseControl().validate({"branches": branches})
         with pytest.raises(
             ValueError,
             match=r"^Condition items in 'branches\.0\.conditions' must be joined by 'and' or 'or'$",
         ):
-            asyncio.run(SwitchCaseControl().validate({"branches": branches}))
+            asyncio.run(validation)
 
 
 # =============================================================================
@@ -475,8 +495,9 @@ class TestSwitchCaseControlValidationOrdering:
                 "conditions": [_literal_condition("x", "integer", "equals", 1)],
             },
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^only one default branch allowed$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_duplicate_id_wins_over_a_later_invalid_type(self) -> None:
         """Verify branches are checked entry by entry, not rule by rule."""
@@ -494,8 +515,9 @@ class TestSwitchCaseControlValidationOrdering:
             },
             {"type": "loop", "id": "branch_2"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^duplicate branch id: 'branch_0'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_invalid_type_wins_over_a_duplicate_id_on_the_same_branch(self) -> None:
         """Verify a branch's type is checked before its id."""
@@ -508,8 +530,9 @@ class TestSwitchCaseControlValidationOrdering:
             },
             {"type": "loop", "id": "branch_0"},
         ]
+        validation = control.validate({"branches": branches})
         with pytest.raises(ValueError, match="^invalid branch type: 'loop'$"):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
 
 # =============================================================================

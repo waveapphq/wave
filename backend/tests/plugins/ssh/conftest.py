@@ -29,7 +29,7 @@ are refused by code, hang on a gate, or meet a closed connection.
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field
 from functools import partial
@@ -491,7 +491,7 @@ async def key_endpoint() -> AsyncIterator[KeyEndpoint]:
 
 
 @pytest.fixture(autouse=True)
-def isolated_home(server_home: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+def isolated_home(server_home: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """HOME is the server_home folder, so the account's SSH files are the spec's own."""
     monkeypatch.setenv("HOME", str(server_home))
-    yield server_home
+    return server_home

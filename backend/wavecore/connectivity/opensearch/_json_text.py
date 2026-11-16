@@ -85,6 +85,7 @@ class _Reader:
     def skip(self, pos: int) -> int:
         """The offset after any whitespace and comments at `pos`."""
         # `_GAP` ends in `*`, so it always matches, if only the empty text.
+        # CodeQL exclusion: CQL-REDOS-001
         end = cast(re.Match[str], _GAP.match(self.text, pos)).end()
         if self.text.startswith("/*", end):
             raise self.fault("Unterminated comment", end)
@@ -113,6 +114,7 @@ class _Reader:
         return JsonNode(kind, plain, pos, literal.end())
 
     def string(self, pos: int) -> JsonNode:
+        # CodeQL exclusion: CQL-REDOS-001
         match = _STRING.match(self.text, pos)
         if match is None:
             raise self.fault("Unterminated string", pos)

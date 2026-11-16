@@ -73,6 +73,17 @@ async function openLevel(level: Scope[], failures: unknown[]): Promise<Scope[]> 
   return next
 }
 
+async function searchLevels(
+  level: Scope[],
+  nodeId: string,
+  failures: unknown[],
+): Promise<DrillSegment[] | undefined> {
+  if (level.length === 0) return undefined
+  const hit = level.find((scope) => scope.nodes.some((node) => node.id === nodeId))
+  if (hit) return hit.path
+  return searchLevels(await openLevel(level, failures), nodeId, failures)
+}
+
 /**
  * Find a node's drill path level by level, opening Shared bodies that are not
  * loaded the way dig-in does. Resolves undefined when no body holds the node,
@@ -83,12 +94,7 @@ export async function resolveNodeAncestors(
   nodeId: string,
 ): Promise<DrillSegment[] | undefined> {
   const failures: unknown[] = []
-  let level: Scope[] = [{ nodes, path: [] }]
-  while (level.length > 0) {
-    const hit = level.find((scope) => scope.nodes.some((node) => node.id === nodeId))
-    if (hit) return hit.path
-    level = await openLevel(level, failures)
-  }
-  if (failures.length > 0) throw failures[0]
-  return undefined
+  const path = await searchLevels([{ nodes, path: [] }], nodeId, failures)
+  if (path === undefined && failures.length > 0) throw failures[0]
+  return path
 }

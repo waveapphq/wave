@@ -48,21 +48,21 @@ describe('LoginContainer', () => {
     expect(screen.getByTestId('login-page')).toBeInTheDocument()
   })
 
-  it('redirects to dashboard when authenticated and no returnUrl', () => {
+  it.each([
+    ['redirects to dashboard when authenticated and no returnUrl', '/login', '/dashboard'],
+    [
+      'redirects to returnUrl when authenticated and valid returnUrl is provided',
+      '/login?returnUrl=/tests',
+      '/tests',
+    ],
+    [
+      'redirects to dashboard when authenticated and returnUrl is invalid',
+      '/login?returnUrl=https://evil.com/phish',
+      '/dashboard',
+    ],
+  ])('%s', (_name, path, expected) => {
     mockAuthState.isAuthenticated = true
-    const { router } = renderLogin('/login')
-    expect(router.state.location.pathname).toBe('/dashboard')
-  })
-
-  it('redirects to returnUrl when authenticated and valid returnUrl is provided', () => {
-    mockAuthState.isAuthenticated = true
-    const { router } = renderLogin('/login?returnUrl=/tests')
-    expect(router.state.location.pathname).toBe('/tests')
-  })
-
-  it('redirects to dashboard when authenticated and returnUrl is invalid', () => {
-    mockAuthState.isAuthenticated = true
-    const { router } = renderLogin('/login?returnUrl=https://evil.com/phish')
-    expect(router.state.location.pathname).toBe('/dashboard')
+    const { router } = renderLogin(path)
+    expect(router.state.location.pathname).toBe(expected)
   })
 })

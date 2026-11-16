@@ -16,7 +16,7 @@ export interface EditModeDraft {
   outputs: FunctionDefinition['outputs']
   dependencies: FunctionDefinition['dependencies']
   workflow: FunctionDefinition['workflow']
-  variables?: FunctionDefinition['variables']
+  variables?: NonNullable<FunctionDefinition['variables']>
 }
 
 export function buildEditModeDraft(definition: FunctionDefinition): EditModeDraft {

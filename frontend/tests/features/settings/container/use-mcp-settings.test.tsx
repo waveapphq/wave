@@ -1400,13 +1400,13 @@ describe('useMcpSettings', () => {
         vi.advanceTimersByTime(5000)
       })
       await flush()
-      expect(mockFetchMcpStatus.mock.calls.length).toBe(statusCallsAfterLoad + 1)
+      expect(mockFetchMcpStatus.mock.calls).toHaveLength(statusCallsAfterLoad + 1)
 
       await act(async () => {
         vi.advanceTimersByTime(5000)
       })
       await flush()
-      expect(mockFetchMcpStatus.mock.calls.length).toBe(statusCallsAfterLoad + 2)
+      expect(mockFetchMcpStatus.mock.calls).toHaveLength(statusCallsAfterLoad + 2)
 
       view.unmount()
     })
@@ -1440,7 +1440,7 @@ describe('useMcpSettings', () => {
       })
       await flush()
 
-      expect(mockFetchMcpStatus.mock.calls.length).toBe(statusCallsAfterLoad + 1)
+      expect(mockFetchMcpStatus.mock.calls).toHaveLength(statusCallsAfterLoad + 1)
       expect(view.result.current.status).toEqual(RUNNING_STATUS)
       expect(view.result.current.staged.port).toBe('9001')
       expect(view.result.current.dirty).toBe(true)
@@ -1461,7 +1461,7 @@ describe('useMcpSettings', () => {
       })
       await flush()
 
-      expect(mockFetchMcpStatus.mock.calls.length).toBe(callsAtDeactivation)
+      expect(mockFetchMcpStatus.mock.calls).toHaveLength(callsAtDeactivation)
       view.unmount()
     })
 
@@ -1478,7 +1478,7 @@ describe('useMcpSettings', () => {
         vi.advanceTimersByTime(20_000)
       })
 
-      expect(mockFetchMcpStatus.mock.calls.length).toBe(callsAtUnmount)
+      expect(mockFetchMcpStatus.mock.calls).toHaveLength(callsAtUnmount)
     })
 
     it('keeps the last known status when a poll fails and names the failure in statusError', async () => {

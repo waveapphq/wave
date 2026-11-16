@@ -408,8 +408,9 @@ class TestWarningTiming:
             outputs=[{"name": "summary", "type": "string"}],
         )
 
+        instance = _local_instance(function_def, {"greeting": "None"})
         with pytest.raises(RuntimeError, match=r"^'greeting' is null$"):
-            await _run_block(session_id, _local_instance(function_def, {"greeting": "None"}))
+            await _run_block(session_id, instance)
 
         _assert_one_function_warn(session_id, UNUSED_INPUT_LINE)
         _assert_one_function_warn(session_id, UNWRITTEN_OUTPUT_LINE)
@@ -426,8 +427,9 @@ class TestWarningTiming:
             nodes=[_log_node("r-log", "'body ' + str(req)")],
         )
 
+        instance = _local_instance(function_def, {"req": "None"})
         with pytest.raises(RuntimeError, match=r"^'req' is null$"):
-            await _run_block(session_id, _local_instance(function_def, {"req": "None"}))
+            await _run_block(session_id, instance)
 
         assert [entry.get("message") for entry in _log(session_id)] == [
             "Entering Function 'fmt'",
@@ -443,8 +445,9 @@ class TestWarningTiming:
             nodes=[_log_node("bad", "undefined_name")],
         )
 
+        instance = _local_instance(function_def)
         with pytest.raises(RuntimeError, match=r"^Variable 'undefined_name' is not defined$"):
-            await _run_block(session_id, _local_instance(function_def))
+            await _run_block(session_id, instance)
 
         _assert_one_function_warn(session_id, UNWRITTEN_OUTPUT_LINE)
 
@@ -504,8 +507,9 @@ class TestResultLineNamesTheCause:
     ) -> None:
         function_def = _fmt_def(inputs=[{"name": "greeting", "type": "string", "required": True}])
 
+        instance = _local_instance(function_def, {"greeting": "None"})
         with pytest.raises(RuntimeError, match=r"^'greeting' is null$"):
-            await _run_block(session_id, _local_instance(function_def, {"greeting": "None"}))
+            await _run_block(session_id, instance)
 
         found = _lines(
             session_id, "Function 'fmt' completed with status failed: 'greeting' is null"

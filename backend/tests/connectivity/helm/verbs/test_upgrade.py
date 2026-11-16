@@ -384,8 +384,10 @@ class TestUpgradeFailure:
     """helm's refusal becomes the block's message and one of the seven Reasons."""
 
     def test_a_rejected_manifest_stops_the_block(self) -> None:
+        params = _params()
+        results = [helm_failed(STDERR_BUILD_OBJECTS)]
         with pytest.raises(ValueError, match="^UPGRADE FAILED: unable to build kubernetes"):
-            run_verb(upgrade, _params(), [helm_failed(STDERR_BUILD_OBJECTS)])
+            run_verb(upgrade, params, results)
 
     def test_a_rejected_manifest_reads_as_invalid(self) -> None:
         outputs = outputs_of(
@@ -421,8 +423,10 @@ class TestUpgradeFailure:
     def test_the_process_deadline_is_the_timeout_itself(self) -> None:
         message = "helm upgrade did not finish within 300 s"
 
+        params = _params()
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(upgrade, _params(), [helm_timed_out()])
+            run_verb(upgrade, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         outputs = outputs_of(upgrade, _params(on_error="record"), [helm_timed_out()])
@@ -470,8 +474,10 @@ class TestUpgradeFailure:
     def test_a_run_that_printed_no_document_is_a_failure(self) -> None:
         message = "helm upgrade printed no release document"
 
+        params = _params()
+        results = [helm_ok('Release "web" has been upgraded.\n')]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(upgrade, _params(), [helm_ok('Release "web" has been upgraded.\n')])
+            run_verb(upgrade, params, results)
 
 
 class TestUpgradeOciCredentials:

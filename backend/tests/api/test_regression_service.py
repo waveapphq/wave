@@ -1883,14 +1883,13 @@ class TestPersistRegressionDocument:
         again = _regression_document("Was Here", id=was_here["id"])
 
         with _failing_regression_history_write():
+            new_copy = copy.deepcopy(new)
+            history = _regression_history(new["suites"][0])
             with pytest.raises(OSError, match=r"^disk full$"):
-                regression_service.persist_regression_document(
-                    copy.deepcopy(new), _regression_history(new["suites"][0])
-                )
+                regression_service.persist_regression_document(new_copy, history)
+            history = _regression_history(again["suites"][0])
             with pytest.raises(OSError, match=r"^disk full$"):
-                regression_service.persist_regression_document(
-                    again, _regression_history(again["suites"][0])
-                )
+                regression_service.persist_regression_document(again, history)
 
         assert not get_regression_dir(new["id"]).exists()
         assert get_regression_dir(was_here["id"]).is_dir()

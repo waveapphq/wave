@@ -140,9 +140,10 @@ class TestMalformedRequests:
 
     async def test_a_part_without_a_name_is_refused(self) -> None:
         body = b"--" + _BOUNDARY.encode() + b"\r\nContent-Disposition: form-data\r\n\r\nx\r\n"
+        chunks = [body + _closing()]
 
         with pytest.raises(ValidationException, match=r"^Malformed multipart request$"):
-            await _events([body + _closing()])
+            await _events(chunks)
 
     async def test_an_oversized_field_value_is_refused(self) -> None:
         body = _part("path", None, b"x" * (1024 * 1024 + 1)) + _closing()

@@ -164,8 +164,10 @@ class TestPatternChecks:
             {"stop_on_pattern": True, "pass_pattern": "^ready", "fail_pattern": "ERROR"}
         )
 
-        assert pass_re is not None and pass_re.search("ready to serve")
-        assert fail_re is not None and fail_re.search("saw ERROR here")
+        assert pass_re is not None
+        assert pass_re.search("ready to serve")
+        assert fail_re is not None
+        assert fail_re.search("saw ERROR here")
 
     def test_a_pass_row_on_its_own_leaves_the_fail_row_unset(self) -> None:
         pass_re, fail_re = compile_patterns({"stop_on_pattern": True, "pass_pattern": "ready"})
@@ -549,9 +551,10 @@ class TestExportCoercionOfNull:
     @pytest.mark.parametrize("declared", DECLARED_TYPES)
     def test_a_value_no_type_can_carry_keeps_its_message(self, declared: str) -> None:
         message = f"Script variable 'v' is not a valid {declared}"
+        value = Opaque()
 
         with pytest.raises(ValueError, match=exact(message)):
-            coerce_typed("v", Opaque(), declared)
+            coerce_typed("v", value, declared)
 
 
 class TestWorkingDirectoryResolution:
@@ -609,9 +612,10 @@ class TestWorkingDirectoryResolution:
         self, tmp_path: Path
     ) -> None:
         message = "Working directory not found: testdata://missing"
+        testdata_context = context(testdata_dirs=[str(tmp_path)])
 
         with pytest.raises(ValueError, match=exact(message)):
-            resolve_working_dir("testdata://missing", context(testdata_dirs=[str(tmp_path)]))
+            resolve_working_dir("testdata://missing", testdata_context)
 
     def test_the_artifacts_root_itself_is_allowed(self, tmp_path: Path) -> None:
         resolved = resolve_working_dir("artifact://", context(artifacts_dir=str(tmp_path)))

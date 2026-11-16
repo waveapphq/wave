@@ -246,8 +246,9 @@ class TestCheckFieldNull:
             plugin_executor.check_field_null("session", None, _policies(K8sEventsPlugin)["session"])
 
     def test_the_refusal_is_a_null_value_error_and_an_expression_failure(self) -> None:
+        policy = _policies(K8sEventsPlugin)["session"]
         with pytest.raises(errors.ExpressionEvaluationError) as raised:
-            plugin_executor.check_field_null("session", None, _policies(K8sEventsPlugin)["session"])
+            plugin_executor.check_field_null("session", None, policy)
 
         assert isinstance(raised.value, errors.NullValueError)
 

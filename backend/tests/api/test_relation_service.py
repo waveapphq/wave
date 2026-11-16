@@ -127,12 +127,12 @@ class TestRebuild:
 
 
 class TestGetSuitesForTest:
-    def test_returns_suites(self):
+    def test_returns_suites(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "Suite A"},
             {"id": "s2", "name": "Suite B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         result = relation_service.get_suites_for_test("t1")
         assert result == [
@@ -140,8 +140,8 @@ class TestGetSuitesForTest:
             {"id": "s2", "name": "Suite B"},
         ]
 
-    def test_returns_empty_for_unknown_test(self):
-        relation_service._initialized = True
+    def test_returns_empty_for_unknown_test(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.get_suites_for_test("unknown") == []
 
     def test_lazy_initializes(self):
@@ -156,44 +156,44 @@ class TestGetSuitesForTest:
 
 
 class TestGetSuiteCountForTest:
-    def test_returns_count(self):
+    def test_returns_count(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "A"},
             {"id": "s2", "name": "B"},
             {"id": "s3", "name": "C"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         assert relation_service.get_suite_count_for_test("t1") == 3
 
-    def test_returns_zero_for_unknown(self):
-        relation_service._initialized = True
+    def test_returns_zero_for_unknown(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.get_suite_count_for_test("unknown") == 0
 
 
 class TestGetSuiteNamesForTest:
-    def test_returns_names(self):
+    def test_returns_names(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "Auth"},
             {"id": "s2", "name": "API"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         assert relation_service.get_suite_names_for_test("t1") == ["Auth", "API"]
 
-    def test_returns_empty_for_unknown(self):
-        relation_service._initialized = True
+    def test_returns_empty_for_unknown(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.get_suite_names_for_test("unknown") == []
 
 
 class TestGetSuiteMembershipBulk:
-    def test_returns_membership_for_multiple_tests(self):
+    def test_returns_membership_for_multiple_tests(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [{"id": "s1", "name": "A"}]
         relation_service._test_to_suites["t2"] = [
             {"id": "s1", "name": "A"},
             {"id": "s2", "name": "B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         result = relation_service.get_suite_membership_bulk(["t1", "t2", "t3"])
         assert result == {
@@ -209,17 +209,17 @@ class TestGetSuiteMembershipBulk:
 
 
 class TestOnTestAddedToSuite:
-    def test_adds_new_entry(self):
-        relation_service._initialized = True
+    def test_adds_new_entry(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_test_added_to_suite("s1", "Auth Suite", "t1")
 
         assert relation_service._test_to_suites["t1"] == [
             {"id": "s1", "name": "Auth Suite"},
         ]
 
-    def test_appends_to_existing(self):
+    def test_appends_to_existing(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [{"id": "s1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_test_added_to_suite("s2", "B", "t1")
 
@@ -228,9 +228,9 @@ class TestOnTestAddedToSuite:
             {"id": "s2", "name": "B"},
         ]
 
-    def test_no_duplicate(self):
+    def test_no_duplicate(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [{"id": "s1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_test_added_to_suite("s1", "A", "t1")
 
@@ -238,12 +238,12 @@ class TestOnTestAddedToSuite:
 
 
 class TestOnTestRemovedFromSuite:
-    def test_removes_entry(self):
+    def test_removes_entry(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "A"},
             {"id": "s2", "name": "B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_test_removed_from_suite("s1", "t1")
 
@@ -251,28 +251,28 @@ class TestOnTestRemovedFromSuite:
             {"id": "s2", "name": "B"},
         ]
 
-    def test_removes_last_entry_cleans_key(self):
+    def test_removes_last_entry_cleans_key(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [{"id": "s1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_test_removed_from_suite("s1", "t1")
 
         assert "t1" not in relation_service._test_to_suites
 
-    def test_noop_for_unknown_test(self):
-        relation_service._initialized = True
+    def test_noop_for_unknown_test(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_test_removed_from_suite("s1", "unknown")
         # No error
 
 
 class TestOnSuiteDeleted:
-    def test_removes_suite_from_all_tests(self):
+    def test_removes_suite_from_all_tests(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "A"},
             {"id": "s2", "name": "B"},
         ]
         relation_service._test_to_suites["t2"] = [{"id": "s1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_deleted("s1")
 
@@ -281,19 +281,19 @@ class TestOnSuiteDeleted:
         ]
         assert "t2" not in relation_service._test_to_suites
 
-    def test_noop_for_unknown_suite(self):
-        relation_service._initialized = True
+    def test_noop_for_unknown_suite(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_suite_deleted("unknown")
 
 
 class TestOnSuiteRenamed:
-    def test_updates_name_in_all_entries(self):
+    def test_updates_name_in_all_entries(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "Old Name"},
             {"id": "s2", "name": "Other"},
         ]
         relation_service._test_to_suites["t2"] = [{"id": "s1", "name": "Old Name"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_renamed("s1", "New Name")
 
@@ -301,26 +301,26 @@ class TestOnSuiteRenamed:
         assert relation_service._test_to_suites["t1"][1]["name"] == "Other"
         assert relation_service._test_to_suites["t2"][0]["name"] == "New Name"
 
-    def test_noop_for_unknown_suite(self):
-        relation_service._initialized = True
+    def test_noop_for_unknown_suite(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_suite_renamed("unknown", "New")
 
 
 class TestOnTestDeleted:
-    def test_returns_affected_suite_ids(self):
+    def test_returns_affected_suite_ids(self, monkeypatch):
         relation_service._test_to_suites["t1"] = [
             {"id": "s1", "name": "A"},
             {"id": "s2", "name": "B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         affected = relation_service.on_test_deleted("t1")
 
         assert set(affected) == {"s1", "s2"}
         assert "t1" not in relation_service._test_to_suites
 
-    def test_returns_empty_for_unknown(self):
-        relation_service._initialized = True
+    def test_returns_empty_for_unknown(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.on_test_deleted("unknown") == []
 
 
@@ -436,12 +436,12 @@ class TestRebuildIncludesSuiteToRegressions:
 
 
 class TestGetRegressionsForSuite:
-    def test_returns_regressions(self):
+    def test_returns_regressions(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [
             {"id": "r1", "name": "Nightly"},
             {"id": "r2", "name": "Smoke"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         result = relation_service.get_regressions_for_suite("s1")
         assert result == [
@@ -449,38 +449,38 @@ class TestGetRegressionsForSuite:
             {"id": "r2", "name": "Smoke"},
         ]
 
-    def test_returns_empty_for_unknown_suite(self):
-        relation_service._initialized = True
+    def test_returns_empty_for_unknown_suite(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.get_regressions_for_suite("unknown") == []
 
 
 class TestGetRegressionCountForSuite:
-    def test_returns_count(self):
+    def test_returns_count(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [
             {"id": "r1", "name": "A"},
             {"id": "r2", "name": "B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         assert relation_service.get_regression_count_for_suite("s1") == 2
 
-    def test_returns_zero_for_unknown(self):
-        relation_service._initialized = True
+    def test_returns_zero_for_unknown(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.get_regression_count_for_suite("unknown") == 0
 
 
 class TestOnSuiteAddedToRegression:
-    def test_adds_new_entry(self):
-        relation_service._initialized = True
+    def test_adds_new_entry(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_suite_added_to_regression("r1", "Nightly", "s1")
 
         assert relation_service._suite_to_regressions["s1"] == [
             {"id": "r1", "name": "Nightly"},
         ]
 
-    def test_appends_to_existing(self):
+    def test_appends_to_existing(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [{"id": "r1", "name": "Nightly"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_added_to_regression("r2", "Smoke", "s1")
 
@@ -489,9 +489,9 @@ class TestOnSuiteAddedToRegression:
             {"id": "r2", "name": "Smoke"},
         ]
 
-    def test_no_duplicate(self):
+    def test_no_duplicate(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [{"id": "r1", "name": "Nightly"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_added_to_regression("r1", "Nightly", "s1")
 
@@ -499,12 +499,12 @@ class TestOnSuiteAddedToRegression:
 
 
 class TestOnSuiteRemovedFromRegression:
-    def test_removes_entry(self):
+    def test_removes_entry(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [
             {"id": "r1", "name": "A"},
             {"id": "r2", "name": "B"},
         ]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_removed_from_regression("r1", "s1")
 
@@ -512,27 +512,27 @@ class TestOnSuiteRemovedFromRegression:
             {"id": "r2", "name": "B"},
         ]
 
-    def test_removes_last_entry_cleans_key(self):
+    def test_removes_last_entry_cleans_key(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [{"id": "r1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_suite_removed_from_regression("r1", "s1")
 
         assert "s1" not in relation_service._suite_to_regressions
 
-    def test_noop_for_unknown_suite(self):
-        relation_service._initialized = True
+    def test_noop_for_unknown_suite(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_suite_removed_from_regression("r1", "unknown")
 
 
 class TestOnRegressionDeleted:
-    def test_removes_regression_from_all_suites(self):
+    def test_removes_regression_from_all_suites(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [
             {"id": "r1", "name": "A"},
             {"id": "r2", "name": "B"},
         ]
         relation_service._suite_to_regressions["s2"] = [{"id": "r1", "name": "A"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         affected = relation_service.on_regression_deleted("r1")
 
@@ -542,19 +542,19 @@ class TestOnRegressionDeleted:
         ]
         assert "s2" not in relation_service._suite_to_regressions
 
-    def test_returns_empty_for_unknown_regression(self):
-        relation_service._initialized = True
+    def test_returns_empty_for_unknown_regression(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         assert relation_service.on_regression_deleted("unknown") == []
 
 
 class TestOnRegressionRenamed:
-    def test_updates_name_in_all_entries(self):
+    def test_updates_name_in_all_entries(self, monkeypatch):
         relation_service._suite_to_regressions["s1"] = [
             {"id": "r1", "name": "Old"},
             {"id": "r2", "name": "Other"},
         ]
         relation_service._suite_to_regressions["s2"] = [{"id": "r1", "name": "Old"}]
-        relation_service._initialized = True
+        monkeypatch.setattr(relation_service, "_initialized", True)
 
         relation_service.on_regression_renamed("r1", "New")
 
@@ -562,6 +562,6 @@ class TestOnRegressionRenamed:
         assert relation_service._suite_to_regressions["s1"][1]["name"] == "Other"
         assert relation_service._suite_to_regressions["s2"][0]["name"] == "New"
 
-    def test_noop_for_unknown_regression(self):
-        relation_service._initialized = True
+    def test_noop_for_unknown_regression(self, monkeypatch):
+        monkeypatch.setattr(relation_service, "_initialized", True)
         relation_service.on_regression_renamed("unknown", "New")

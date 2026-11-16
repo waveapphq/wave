@@ -1,11 +1,13 @@
 #!/bin/bash
 # Detect orphaned frontend files - files in src/ with zero imports from other src/ files - and
-# coverage exclusion IDs that are registered but unused, or used but unregistered.
+# exclusion IDs (frontend and backend coverage, SonarQube Cloud, CodeQL) that are registered
+# but unused, or used but unregistered.
 # Runs as a CI gate to prevent accumulation of dead code.
 #
 # Exit codes:
 #   0 - No orphaned files found (or all orphans are in the known allowlist)
-#   1 - New orphaned files detected, or a KNOWN_ORPHANS entry exempted nothing (CI should fail)
+#   1 - New orphaned files detected, a KNOWN_ORPHANS entry exempted nothing, or an exclusion ID
+#       is registered but unused, or used but unregistered (CI should fail)
 #
 # Exclusions (files that legitimately have zero imports from src/):
 #   - Entry points: main.tsx (referenced by index.html)
@@ -178,7 +180,48 @@ if [ -n "$UNREGISTERED_IDS" ]; then
   printf '  %s\n' $UNREGISTERED_IDS
 fi
 
-if [ ${#ORPHANED_FILES[@]} -gt 0 ] || [ ${#UNUSED_ALLOWLIST[@]} -gt 0 ] || [ -n "$ORPHANED_IDS" ] || [ -n "$UNREGISTERED_IDS" ]; then
+# Other exclusion lists: each listed ID is used in its code folders, each ID used there is listed.
+EXCLUSION_ID_ERRORS=0
+
+# Usage: check_exclusion_ids <list file> <ID prefix> <code folder>...
+check_exclusion_ids() {
+  local list="$1" prefix="$2"
+  shift 2
+  local id="$prefix-[A-Z0-9]+(-[A-Z][A-Z0-9]*)*-[0-9]+"
+  local dirs=() dir registered used orphaned unregistered
+  for dir in "$@"; do
+    dirs+=("$PROJECT_ROOT/$dir")
+  done
+  registered=$(grep -oE "^### $id" "$PROJECT_ROOT/$list" | sed 's/^### //' | sort -u || true)
+  used=$(grep -rhoIE --exclude-dir=node_modules --exclude-dir=__pycache__ --exclude-dir=dist \
+    --exclude-dir=coverage --exclude-dir=test-results --exclude-dir=playwright-report \
+    "\b$id" "${dirs[@]}" | sort -u || true)
+  orphaned=$(comm -23 <(printf '%s\n' "$registered") <(printf '%s\n' "$used") | sed '/^$/d')
+  unregistered=$(comm -13 <(printf '%s\n' "$registered") <(printf '%s\n' "$used") | sed '/^$/d')
+
+  if [ -n "$orphaned" ]; then
+    echo ""
+    echo "ERROR: exclusion ID(s) in $list but used nowhere in $*:"
+    printf '  %s\n' $orphaned
+    echo "Delete their entries from $list, or put each ID back in a comment at its place in the code."
+    EXCLUSION_ID_ERRORS=1
+  fi
+
+  if [ -n "$unregistered" ]; then
+    echo ""
+    echo "ERROR: exclusion ID(s) used in $* but missing from $list:"
+    printf '  %s\n' $unregistered
+    echo "Each ID in the code needs an entry in $list."
+    EXCLUSION_ID_ERRORS=1
+  fi
+}
+
+ALL_CODE=(backend/wavecore backend/tests frontend/src frontend/tests tests/e2e)
+check_exclusion_ids tests/exclusions/backend-coverage.md BCOV backend/wavecore
+check_exclusion_ids tests/exclusions/sonarqube-cloud.md SQ "${ALL_CODE[@]}"
+check_exclusion_ids tests/exclusions/codeql.md CQL "${ALL_CODE[@]}"
+
+if [ ${#ORPHANED_FILES[@]} -gt 0 ] || [ ${#UNUSED_ALLOWLIST[@]} -gt 0 ] || [ -n "$ORPHANED_IDS" ] || [ -n "$UNREGISTERED_IDS" ] || [ "$EXCLUSION_ID_ERRORS" -ne 0 ]; then
   exit 1
 fi
 

@@ -738,16 +738,21 @@ class TestValidation:
         )
 
     async def test_missing_session(self) -> None:
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact(MISSING_SESSION_MESSAGE)):
-            await _plugin().validate({"define_with": "manifest", "manifest": _MANIFEST_ONE})
+            await plugin.validate({"define_with": "manifest", "manifest": _MANIFEST_ONE})
 
     async def test_empty_session_reports_the_empty_case(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(session="")
         with pytest.raises(ValueError, match=exact(EMPTY_SESSION_MESSAGE)):
-            await _plugin().validate(_manifest_params(session=""))
+            await plugin.validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(impersonate_groups="qa, ops")
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await _plugin().validate(_manifest_params(impersonate_groups="qa, ops"))
+            await plugin.validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await _plugin().validate(
@@ -759,14 +764,18 @@ class TestValidation:
             "Parameter 'define_with' must be one of: manifest, form; Actual value was 'wizard'."
         )
 
+        plugin = _plugin()
+        params = _manifest_params(define_with="wizard")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_manifest_params(define_with="wizard"))
+            await plugin.validate(params)
 
     async def test_kind_enum(self) -> None:
         message = "Parameter 'kind' must be one of: ConfigMap, Secret, Job; Actual value was 'Pod'."
 
+        plugin = _plugin()
+        params = _form_params(kind="Pod")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_form_params(kind="Pod"))
+            await plugin.validate(params)
 
     async def test_a_namespace_kind_is_rejected_by_the_kind_enum(self) -> None:
         message = (
@@ -774,8 +783,10 @@ class TestValidation:
             "Actual value was 'Namespace'."
         )
 
+        plugin = _plugin()
+        params = _form_params(kind="Namespace")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_form_params(kind="Namespace"))
+            await plugin.validate(params)
 
     async def test_secret_type_enum(self) -> None:
         message = (
@@ -783,36 +794,44 @@ class TestValidation:
             "kubernetes.io/dockerconfigjson; Actual value was 'kubernetes.io/basic-auth'."
         )
 
+        plugin = _plugin()
+        params = _form_params(kind="Secret", secret_type="kubernetes.io/basic-auth")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(
-                _form_params(kind="Secret", secret_type="kubernetes.io/basic-auth")
-            )
+            await plugin.validate(params)
 
     async def test_job_from_enum(self) -> None:
         message = "Parameter 'job_from' must be one of: image, cronjob; Actual value was 'chart'."
 
+        plugin = _plugin()
+        params = _job_params(job_from="chart")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_job_params(job_from="chart"))
+            await plugin.validate(params)
 
     async def test_if_exists_enum(self) -> None:
         message = "Parameter 'if_exists' must be one of: update, fail; Actual value was 'skip'."
 
+        plugin = _plugin()
+        params = _manifest_params(if_exists="skip")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_manifest_params(if_exists="skip"))
+            await plugin.validate(params)
 
     async def test_output_format_enum_names_only_three_options(self) -> None:
         message = (
             "Parameter 'output_format' must be one of: map, json, yaml; Actual value was 'table'."
         )
 
+        plugin = _plugin()
+        params = _manifest_params(output_format="table")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_manifest_params(output_format="table"))
+            await plugin.validate(params)
 
     async def test_on_error_enum(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        plugin = _plugin()
+        params = _manifest_params(on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_manifest_params(on_error="ignore"))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("name, allowed", BLANK_ENUM_ROWS)
     async def test_a_blank_enum_row_is_rejected_rather_than_defaulted(
@@ -820,60 +839,84 @@ class TestValidation:
     ) -> None:
         message = f"Parameter '{name}' must be one of: {allowed}; Actual value was ''."
 
+        plugin = _plugin()
+        params = _manifest_params(**{name: ""})
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_manifest_params(**{name: ""}))
+            await plugin.validate(params)
 
     async def test_a_blank_job_from_never_builds_a_job_with_no_image(self) -> None:
         message = "Parameter 'job_from' must be one of: image, cronjob; Actual value was ''."
 
+        plugin = _plugin()
+        params = _form_params(kind="Job", name="probe", job_from="")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(_form_params(kind="Job", name="probe", job_from=""))
+            await plugin.validate(params)
 
     async def test_missing_manifest_in_manifest_mode(self) -> None:
+        plugin = _plugin()
+        params = block_params(define_with="manifest")
         with pytest.raises(ValueError, match=r"^Missing required parameter: manifest$"):
-            await _plugin().validate(block_params(define_with="manifest"))
+            await plugin.validate(params)
 
     async def test_blank_manifest_counts_as_missing(self) -> None:
+        plugin = _plugin()
+        params = block_params(define_with="manifest", manifest="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: manifest$"):
-            await _plugin().validate(block_params(define_with="manifest", manifest=""))
+            await plugin.validate(params)
 
     async def test_manifest_is_required_when_define_with_is_absent(self) -> None:
+        plugin = _plugin()
+        params = block_params()
         with pytest.raises(ValueError, match=r"^Missing required parameter: manifest$"):
-            await _plugin().validate(block_params())
+            await plugin.validate(params)
 
     async def test_manifest_is_not_required_in_form_mode(self) -> None:
         await _plugin().validate(_form_params())
 
     async def test_missing_kind_in_form_mode(self) -> None:
+        plugin = _plugin()
+        params = block_params(define_with="form", name="probe-a")
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind$"):
-            await _plugin().validate(block_params(define_with="form", name="probe-a"))
+            await plugin.validate(params)
 
     async def test_blank_kind_counts_as_missing(self) -> None:
+        plugin = _plugin()
+        params = _form_params(kind="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind$"):
-            await _plugin().validate(_form_params(kind=""))
+            await plugin.validate(params)
 
     async def test_missing_name_in_form_mode(self) -> None:
+        plugin = _plugin()
+        params = block_params(define_with="form", kind="ConfigMap")
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await _plugin().validate(block_params(define_with="form", kind="ConfigMap"))
+            await plugin.validate(params)
 
     async def test_blank_name_counts_as_missing(self) -> None:
+        plugin = _plugin()
+        params = _form_params(name="   ")
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await _plugin().validate(_form_params(name="   "))
+            await plugin.validate(params)
 
     async def test_neither_kind_nor_name_is_required_in_manifest_mode(self) -> None:
         await _plugin().validate(_manifest_params())
 
     async def test_missing_image_for_a_job_built_from_an_image(self) -> None:
+        plugin = _plugin()
+        params = _form_params(kind="Job", name="probe", job_from="image")
         with pytest.raises(ValueError, match=r"^Missing required parameter: image$"):
-            await _plugin().validate(_form_params(kind="Job", name="probe", job_from="image"))
+            await plugin.validate(params)
 
     async def test_image_is_required_when_job_from_is_absent(self) -> None:
+        plugin = _plugin()
+        params = _form_params(kind="Job", name="probe")
         with pytest.raises(ValueError, match=r"^Missing required parameter: image$"):
-            await _plugin().validate(_form_params(kind="Job", name="probe"))
+            await plugin.validate(params)
 
     async def test_missing_cronjob_name_for_a_job_built_from_a_cronjob(self) -> None:
+        plugin = _plugin()
+        params = _form_params(kind="Job", name="probe", job_from="cronjob")
         with pytest.raises(ValueError, match=r"^Missing required parameter: cronjob_name$"):
-            await _plugin().validate(_form_params(kind="Job", name="probe", job_from="cronjob"))
+            await plugin.validate(params)
 
     async def test_a_job_built_from_a_cronjob_needs_no_image(self) -> None:
         await _plugin().validate(
@@ -890,12 +933,16 @@ class TestValidation:
         await _plugin().validate(_manifest_params(kind="Job", job_from="image"))
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_manifest_params(timeout=0))
+            await plugin.validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(timeout=-5)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_manifest_params(timeout=-5))
+            await plugin.validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await _plugin().validate(_manifest_params(timeout=1))
@@ -915,24 +962,32 @@ class TestManifestValidation:
     """A hand-typed manifest is parsed and vetted before the block ever runs."""
 
     async def test_an_unparsable_manifest_names_the_parser_detail(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest=_NOT_JSON)
         with pytest.raises(ValueError, match=exact(_unparsable_message(_NOT_JSON))):
-            await _plugin().validate(_manifest_params(manifest=_NOT_JSON))
+            await plugin.validate(params)
 
     async def test_text_that_is_valid_yaml_but_not_json_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest=_YAML_NOT_JSON)
         with pytest.raises(ValueError, match=exact(_unparsable_message(_YAML_NOT_JSON))):
-            await _plugin().validate(_manifest_params(manifest=_YAML_NOT_JSON))
+            await plugin.validate(params)
 
     async def test_a_manifest_without_an_api_version_is_refused(self) -> None:
         text = json.dumps({"kind": "ConfigMap", "metadata": {"name": "probe-a"}})
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     async def test_a_manifest_without_a_kind_is_refused(self) -> None:
         text = json.dumps({"apiVersion": "v1", "metadata": {"name": "probe-a"}})
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize(
         "text",
@@ -944,8 +999,10 @@ class TestManifestValidation:
         ids=["blank", "whitespace", "null"],
     )
     async def test_a_manifest_whose_api_version_holds_no_text_is_refused(self, text: str) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize(
         "text",
@@ -953,14 +1010,17 @@ class TestManifestValidation:
         ids=["blank", "null"],
     )
     async def test_a_manifest_whose_kind_holds_no_text_is_refused(self, text: str) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     async def test_an_api_version_holding_no_text_never_reaches_the_cluster(self) -> None:
         fake = FakeK8sClient(resources=_CONFIGMAPS)
 
+        params = _manifest_params(manifest=_document_with(apiVersion=None))
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _execute(fake, _manifest_params(manifest=_document_with(apiVersion=None)))
+            await _execute(fake, params)
 
         assert fake.lookups == []
         assert fake.calls == []
@@ -968,37 +1028,48 @@ class TestManifestValidation:
     async def test_a_manifest_without_a_metadata_name_is_refused(self) -> None:
         text = json.dumps({"apiVersion": "v1", "kind": "ConfigMap", "metadata": {}})
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_NAME_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     async def test_a_manifest_with_no_metadata_at_all_is_refused(self) -> None:
         text = json.dumps({"apiVersion": "v1", "kind": "ConfigMap"})
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_NAME_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     async def test_every_document_is_vetted_not_only_the_first(self) -> None:
         text = json.dumps([_document("probe-a"), {"apiVersion": "v1"}])
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=text))
+            await plugin.validate(params)
 
     async def test_a_json_array_is_read_as_one_document_per_element(self) -> None:
         await _plugin().validate(_manifest_params(manifest=_MANIFEST_THREE))
 
     async def test_a_top_level_scalar_is_one_document_that_declares_no_kind(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest="42")
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest="42"))
+            await plugin.validate(params)
 
     async def test_a_manifest_that_declares_no_object_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest="[]")
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest="[]"))
+            await plugin.validate(params)
 
     async def test_a_manifest_that_declares_no_object_never_reaches_the_cluster(self) -> None:
         fake = FakeK8sClient(resources=_CONFIGMAPS)
 
+        params = _manifest_params(manifest="[]", output_format="yaml")
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _execute(fake, _manifest_params(manifest="[]", output_format="yaml"))
+            await _execute(fake, params)
 
         assert fake.lookups == []
         assert fake.calls == []
@@ -1009,14 +1080,16 @@ class TestManifestValidation:
     async def test_the_enum_check_runs_before_the_manifest_check(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        plugin = _plugin()
+        params = _manifest_params(manifest=_NO_KIND_DOCUMENT, on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await _plugin().validate(
-                _manifest_params(manifest=_NO_KIND_DOCUMENT, on_error="ignore")
-            )
+            await plugin.validate(params)
 
     async def test_the_manifest_check_runs_before_the_timeout_check(self) -> None:
+        plugin = _plugin()
+        params = _manifest_params(manifest=_NO_KIND_DOCUMENT, timeout=0)
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(_manifest_params(manifest=_NO_KIND_DOCUMENT, timeout=0))
+            await plugin.validate(params)
 
 
 class TestManifestValidationAcrossTheEngine:
@@ -1042,8 +1115,10 @@ class TestManifestValidationAcrossTheEngine:
         )
 
     async def test_a_manifest_of_only_a_separator_is_refused_as_declaring_no_kind(self) -> None:
+        plugin = _plugin()
+        params = self._resolved("---\n")
         with pytest.raises(ValueError, match=exact(_MANIFEST_KIND_MESSAGE)):
-            await _plugin().validate(self._resolved("---\n"))
+            await plugin.validate(params)
 
     async def test_a_document_followed_by_a_trailing_separator_passes(self) -> None:
         await _plugin().validate(self._resolved(_YAML_NOT_JSON + "---\n"))
@@ -1088,8 +1163,10 @@ class TestCommandSplitting:
 
     @pytest.mark.parametrize("text", ['echo "unclosed', "echo 'unclosed"], ids=["double", "single"])
     async def test_an_unclosed_quote_is_refused_at_validate_time(self, text: str) -> None:
+        plugin = _plugin()
+        params = _job_params(command=text)
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE_MESSAGE)):
-            await _plugin().validate(_job_params(command=text))
+            await plugin.validate(params)
 
     async def test_a_leftover_command_is_never_split_for_a_config_map(self) -> None:
         await _plugin().validate(_form_params(command='echo "unclosed'))
@@ -1334,8 +1411,9 @@ class TestIfExistsFail:
         )
         message = f"Kubernetes could not apply ConfigMap 'probe-a' in namespace 'apps': {detail}"
 
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(if_exists="fail"))
+            await _execute(fake, params)
 
     async def test_the_post_carries_the_default_content_type(self) -> None:
         fake = FakeK8sClient(responses=[(201, _applied("probe-a"))], resources=_CONFIGMAPS)
@@ -1371,16 +1449,18 @@ class TestIfExistsFail:
         fake = FakeK8sClient(responses=[(409, body)], resources=_CONFIGMAPS)
         message = "K8s ConfigMap 'probe-a' already exists in namespace 'apps'"
 
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(if_exists="fail"))
+            await _execute(fake, params)
 
     async def test_the_already_exists_row_is_chosen_on_the_body_reason_not_the_status(self) -> None:
         body = _failure("AlreadyExists", 'configmaps "probe-a" already exists', 500)
         fake = FakeK8sClient(responses=[(500, body)], resources=_CONFIGMAPS)
         message = "K8s ConfigMap 'probe-a' already exists in namespace 'apps'"
 
+        params = _manifest_params(if_exists="fail")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(if_exists="fail"))
+            await _execute(fake, params)
 
     async def test_an_existing_object_is_recordable_with_its_reason(self) -> None:
         body = _failure("AlreadyExists", 'configmaps "probe-a" already exists', 409)
@@ -1473,8 +1553,9 @@ class TestMultiDocumentManifest:
         )
         message = "Kubernetes API permission denied: configmaps is forbidden"
 
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(manifest=_MANIFEST_THREE))
+            await _execute(fake, params)
 
     async def test_a_failure_at_the_second_document_stops_before_the_third(self) -> None:
         body = _failure("Forbidden", "configmaps is forbidden", 403)
@@ -1482,8 +1563,9 @@ class TestMultiDocumentManifest:
             responses=[(201, _applied("probe-a")), (403, body)], resources=_CONFIGMAPS
         )
 
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError):
-            await _execute(fake, _manifest_params(manifest=_MANIFEST_THREE))
+            await _execute(fake, params)
 
         assert [_split(entry.path)[0] for entry in _writes(fake)] == [
             f"{_CONFIGMAP_COLLECTION}/probe-a",
@@ -1496,8 +1578,9 @@ class TestMultiDocumentManifest:
             responses=[(201, _applied("probe-a")), (403, body)], resources=_CONFIGMAPS
         )
 
+        params = _manifest_params(manifest=_MANIFEST_THREE)
         with pytest.raises(ValueError):
-            await _execute(fake, _manifest_params(manifest=_MANIFEST_THREE))
+            await _execute(fake, params)
 
         assert [entry.method for entry in fake.calls if entry.method == "DELETE"] == []
 
@@ -2146,15 +2229,17 @@ class TestApiErrors:
         )
         message = f"Kubernetes could not apply ConfigMap 'probe-a' in namespace 'apps': {detail}"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_a_server_error_without_a_cluster_message_names_the_status(self) -> None:
         fake = FakeK8sClient(responses=[(502, {})], resources=_CONFIGMAPS)
         message = "Kubernetes could not apply ConfigMap 'probe-a' in namespace 'apps' (HTTP 502)"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_401_renders_the_authentication_row(self) -> None:
         fake = FakeK8sClient(
@@ -2163,8 +2248,9 @@ class TestApiErrors:
         )
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_403_renders_the_permission_row(self) -> None:
         detail = 'configmaps is forbidden: user cannot patch resource "configmaps"'
@@ -2173,8 +2259,9 @@ class TestApiErrors:
         )
         message = f"Kubernetes API permission denied: {detail}"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_the_recorded_warn_line_names_the_apply_action(self) -> None:
         detail = "the server is currently unable to handle the request"
@@ -2196,8 +2283,9 @@ class TestApiErrors:
         fake = FakeK8sClient(responses=[(404, body)], resources=_CONFIGMAPS)
         message = "K8s namespace 'ghost' not found"
 
+        params = _manifest_params(namespace="ghost")
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(namespace="ghost"))
+            await _execute(fake, params)
 
     async def test_a_malformed_manifest_answered_as_a_500_reads_as_a_rejection(self) -> None:
         detail = ".data.count: expected string, got &value.valueUnstructured{Value:3}"
@@ -2210,8 +2298,9 @@ class TestApiErrors:
         )
         message = f"Kubernetes rejected the manifest: {detail}"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_a_discovery_miss_names_the_kind_and_its_api_version(self) -> None:
         text = _widget_text("example.com/v1")
@@ -2221,15 +2310,17 @@ class TestApiErrors:
             "- check the spelling, or whether the CRD is installed"
         )
 
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(manifest=text))
+            await _execute(fake, params)
 
     async def test_a_discovery_miss_issues_no_write_request(self) -> None:
         text = _widget_text("example.com/v1")
         fake = FakeK8sClient(resources={})
 
+        params = _manifest_params(manifest=text)
         with pytest.raises(ValueError):
-            await _execute(fake, _manifest_params(manifest=text))
+            await _execute(fake, params)
 
         assert _writes(fake) == []
 
@@ -2252,16 +2343,18 @@ class TestErrorReasonGate:
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
         message = "Kubernetes API permission denied: configmaps is forbidden"
 
+        params = _manifest_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params())
+            await _execute(fake, params)
 
     async def test_no_error_or_reason_value_is_bound_when_the_block_raises(self) -> None:
         body = _failure("Forbidden", "configmaps is forbidden", 403)
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
         outputs: dict[str, Any] | None = None
 
+        params = _manifest_params()
         with pytest.raises(ValueError):
-            outputs = await _execute(fake, _manifest_params())
+            outputs = await _execute(fake, params)
 
         assert outputs is None
 
@@ -2280,8 +2373,9 @@ class TestErrorReasonGate:
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
         logger = MagicMock()
 
+        params = _manifest_params()
         with pytest.raises(ValueError):
-            await _execute(fake, _manifest_params(), logger=logger)
+            await _execute(fake, params, logger=logger)
 
         assert logger.warn.call_count == 0
 
@@ -2385,8 +2479,9 @@ class TestAlwaysHardFail:
             "use the 'session' output of a K8s Connect block"
         )
 
+        params = _manifest_params(session="not-a-kubeconfig", on_error=on_error)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _manifest_params(session="not-a-kubeconfig", on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_transport_failure_raises(self, on_error: str) -> None:
@@ -2396,18 +2491,23 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_CONFIGMAPS)
 
+        params = _manifest_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _manifest_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_invalid_params_raise_from_validate(self, on_error: str) -> None:
+        plugin = _plugin()
+        params = _manifest_params(timeout=0, on_error=on_error)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_manifest_params(timeout=0, on_error=on_error))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_missing_required_param_raises_from_validate(self, on_error: str) -> None:
+        plugin = _plugin()
+        params = block_params(define_with="manifest", on_error=on_error)
         with pytest.raises(ValueError, match=r"^Missing required parameter: manifest$"):
-            await _plugin().validate(block_params(define_with="manifest", on_error=on_error))
+            await plugin.validate(params)
 
 
 class TestNamespaceDescription:

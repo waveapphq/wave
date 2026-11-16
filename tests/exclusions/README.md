@@ -35,8 +35,8 @@ Each entry in the SonarQube Cloud, CodeQL and backend coverage lists names one o
 |---|---|
 | Frontend coverage | `/* v8 ignore next - COV-XXX-NNN */` |
 | Backend coverage | `# pragma: no cover - BCOV-XXX-NNN` |
-| SonarQube Cloud and CodeQL, Python | `# SQ-XXX-NNN` or `# CQL-XXX-NNN` |
-| SonarQube Cloud and CodeQL, TypeScript | `// SQ-XXX-NNN` or `// CQL-XXX-NNN` |
+| SonarQube Cloud and CodeQL, Python | `# SonarQube exclusion: SQ-XXX-NNN` or `# CodeQL exclusion: CQL-XXX-NNN` |
+| SonarQube Cloud and CodeQL, TypeScript | `// SonarQube exclusion: SQ-XXX-NNN` or `// CodeQL exclusion: CQL-XXX-NNN` |
 
 ## Find a place
 

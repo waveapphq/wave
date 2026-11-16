@@ -487,7 +487,8 @@ class TestFanOutSurvivesConnectionChurn:
 
         assert healthy.messages == ["line-1", "line-2"]
         drainer = log_streaming_service._session_drainers.get(session_id)
-        assert drainer is not None and drainer.done() is False
+        assert drainer is not None
+        assert drainer.done() is False
 
     @pytest.mark.parametrize(
         ("session", "logged_session"),

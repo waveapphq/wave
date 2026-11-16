@@ -1396,10 +1396,10 @@ class TestAdditionalCoverage:
         assert result is not None
         assert result["parameters"] == {"new_param": {"required": True}}
 
-    def test_get_storage_creates_instance_lazily(self) -> None:
+    def test_get_storage_creates_instance_lazily(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that _get_storage creates FileBasedStorage on first call."""
         # Reset storage instance
-        _block_storage._storage = None
+        monkeypatch.setattr(_block_storage, "_storage", None)
 
         # Call _get_storage - should create instance
         storage = _block_storage._get_storage()
@@ -1407,10 +1407,10 @@ class TestAdditionalCoverage:
         assert storage is not None
         assert _block_storage._storage is not None
 
-    def test_get_storage_returns_cached_instance(self) -> None:
+    def test_get_storage_returns_cached_instance(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that _get_storage returns same instance on subsequent calls."""
         # Reset storage instance
-        _block_storage._storage = None
+        monkeypatch.setattr(_block_storage, "_storage", None)
 
         # First call creates instance
         storage1 = _block_storage._get_storage()

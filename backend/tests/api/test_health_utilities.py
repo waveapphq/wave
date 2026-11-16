@@ -14,11 +14,13 @@ from wavecore.api.routes import health
 class TestHealthUtilities:
     """Test suite for health utility functions."""
 
-    def test_invalidate_health_cache_clears_timestamps(self) -> None:
+    def test_invalidate_health_cache_clears_timestamps(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that invalidate_health_cache resets cache timestamps."""
         # Set some non-zero values
-        health._cache_timestamp = 12345.0
-        health._detailed_cache_timestamp = 67890.0
+        monkeypatch.setattr(health, "_cache_timestamp", 12345.0)
+        monkeypatch.setattr(health, "_detailed_cache_timestamp", 67890.0)
 
         # Invalidate cache
         health.invalidate_health_cache()
@@ -27,11 +29,13 @@ class TestHealthUtilities:
         assert health._cache_timestamp == 0.0
         assert health._detailed_cache_timestamp == 0.0
 
-    def test_on_health_state_change_invalidates_cache(self) -> None:
+    def test_on_health_state_change_invalidates_cache(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that on_health_state_change calls invalidate_health_cache."""
         # Set cache timestamps
-        health._cache_timestamp = 12345.0
-        health._detailed_cache_timestamp = 67890.0
+        monkeypatch.setattr(health, "_cache_timestamp", 12345.0)
+        monkeypatch.setattr(health, "_detailed_cache_timestamp", 67890.0)
 
         # Call state change hook
         health.on_health_state_change()
@@ -40,11 +44,11 @@ class TestHealthUtilities:
         assert health._cache_timestamp == 0.0
         assert health._detailed_cache_timestamp == 0.0
 
-    def test_on_config_change_invalidates_cache(self) -> None:
+    def test_on_config_change_invalidates_cache(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that on_config_change calls invalidate_health_cache."""
         # Set cache timestamps
-        health._cache_timestamp = 12345.0
-        health._detailed_cache_timestamp = 67890.0
+        monkeypatch.setattr(health, "_cache_timestamp", 12345.0)
+        monkeypatch.setattr(health, "_detailed_cache_timestamp", 67890.0)
 
         # Call config change hook
         health.on_config_change()

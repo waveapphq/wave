@@ -795,8 +795,10 @@ class TestTimestampNormalization:
             "2026-08-20T12:00:00+02:00",
         ],
     )
-    def test_the_string_that_reaches_the_parser_is_one_3_10_accepts(self, stamp: str) -> None:
-        _RecordingDatetime.parsed = []
+    def test_the_string_that_reaches_the_parser_is_one_3_10_accepts(
+        self, stamp: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(_RecordingDatetime, "parsed", [])
 
         with patch.object(events, "datetime", _RecordingDatetime):
             events._seen_at(_event("evt", stamp))
@@ -807,9 +809,10 @@ class TestTimestampNormalization:
 
     def test_a_malformed_stamp_still_raises_the_interpreter_message(self) -> None:
         message = "Invalid isoformat string: 'not-a-timestamp'"
+        event = _event("bad-evt", "not-a-timestamp")
 
         with pytest.raises(ValueError, match=exact(message)):
-            events._seen_at(_event("bad-evt", "not-a-timestamp"))
+            events._seen_at(event)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_malformed_stamp_hard_fails_the_read_in_both_modes(self, on_error: str) -> None:
@@ -836,9 +839,9 @@ class TestOffsetNormalization:
         ],
     )
     def test_the_string_that_reaches_the_parser_is_one_3_10_accepts(
-        self, stamp: str, normalized: str
+        self, stamp: str, normalized: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _RecordingDatetime.parsed = []
+        monkeypatch.setattr(_RecordingDatetime, "parsed", [])
 
         with patch.object(events, "datetime", _RecordingDatetime):
             events._seen_at(_event("evt", stamp))
@@ -905,8 +908,10 @@ class TestEventsWithNoTimestamp:
 
         assert seen == datetime(1970, 1, 1, 0, 0, 0, tzinfo=UTC)
 
-    def test_the_epoch_sentinel_reaches_the_parser_normalized(self) -> None:
-        _RecordingDatetime.parsed = []
+    def test_the_epoch_sentinel_reaches_the_parser_normalized(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(_RecordingDatetime, "parsed", [])
 
         with patch.object(events, "datetime", _RecordingDatetime):
             events._seen_at(_undated_event("undated-evt"))
@@ -996,8 +1001,10 @@ class TestFailurePaths:
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_missing_session_raises_in_both_modes(self, on_error: str) -> None:
+        fake = _listing()
+
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run({"on_error": on_error}, _listing())
+            _run({"on_error": on_error}, fake)
 
     def test_a_kind_the_cluster_does_not_serve_fails_the_read(self) -> None:
         fake = _listing(_event("new-evt", _NEWEST), resources={})
@@ -1025,15 +1032,19 @@ class TestFailurePaths:
 
     def test_a_406_says_the_cluster_will_not_print_a_table(self) -> None:
         body = {"kind": "Status", "reason": "NotAcceptable", "message": "not acceptable"}
+        params = block_params(output_format="table")
+        fake = _serving(406, body)
 
         with pytest.raises(ValueError, match=exact(_TABLE_UNSUPPORTED_MESSAGE)):
-            _run(block_params(output_format="table"), _serving(406, body))
+            _run(params, fake)
 
     def test_a_plain_list_body_says_the_cluster_will_not_print_a_table(self) -> None:
         body = _event_list(_event("new-evt", _NEWEST))
+        params = block_params(output_format="table")
+        fake = _serving(200, body)
 
         with pytest.raises(ValueError, match=exact(_TABLE_UNSUPPORTED_MESSAGE)):
-            _run(block_params(output_format="table"), _serving(200, body))
+            _run(params, fake)
 
     def test_the_other_formats_never_meet_the_table_arm(self) -> None:
         body = _event_list(_event("new-evt", _NEWEST))
@@ -1043,49 +1054,69 @@ class TestFailurePaths:
         assert _names(envelope) == ["new-evt"]
 
     def test_a_permission_denial_renders_the_shared_row(self) -> None:
+        params = block_params()
+        fake = _serving(403, _FORBIDDEN_BODY)
+
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            _run(block_params(), _serving(403, _FORBIDDEN_BODY))
+            _run(params, fake)
 
     def test_an_authentication_failure_renders_the_shared_row(self) -> None:
+        params = block_params()
+        fake = _serving(401, _UNAUTHORIZED_BODY)
+
         with pytest.raises(ValueError, match=exact(_UNAUTHORIZED_MESSAGE)):
-            _run(block_params(), _serving(401, _UNAUTHORIZED_BODY))
+            _run(params, fake)
 
     def test_a_server_error_names_the_kind_and_the_namespace_once(self) -> None:
         detail = "the server is currently unable to handle the request"
         body = {"kind": "Status", "reason": "ServiceUnavailable", "message": detail, "code": 503}
         message = f"Kubernetes could not list Event objects in namespace '{NAMESPACE}': {detail}"
+        params = block_params()
+        fake = _serving(503, body)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(block_params(), _serving(503, body))
+            _run(params, fake)
 
     def test_a_cluster_wide_server_error_leaves_the_namespace_out(self) -> None:
         detail = "the server is currently unable to handle the request"
         body = {"kind": "Status", "reason": "ServiceUnavailable", "message": detail}
         message = f"Kubernetes could not list Event objects: {detail}"
+        params = block_params(all_namespaces=True)
+        fake = _serving(503, body)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(block_params(all_namespaces=True), _serving(503, body))
+            _run(params, fake)
 
     def test_a_gateway_answer_at_401_ends_with_the_http_status(self) -> None:
+        params = block_params()
+        fake = _serving(401, {})
+
         with pytest.raises(ValueError, match=exact(_GATEWAY_401_MESSAGE)):
-            _run(block_params(), _serving(401, {}))
+            _run(params, fake)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_a_gateway_page_at_200_fails_the_read(self, output_format: str) -> None:
+        params = block_params(output_format=output_format)
+        fake = _serving(200, GATEWAY_HTML)
+
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            _run(block_params(output_format=output_format), _serving(200, GATEWAY_HTML))
+            _run(params, fake)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_record_mode_does_not_soften_an_unreadable_body(self, output_format: str) -> None:
         params = block_params(output_format=output_format, on_error="record")
+        fake = _serving(200, GATEWAY_HTML)
 
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            _run(params, _serving(200, GATEWAY_HTML))
+            _run(params, fake)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_a_gateway_page_at_401_still_reads_as_the_status_row(self, output_format: str) -> None:
+        params = block_params(output_format=output_format)
+        fake = _serving(401, GATEWAY_HTML)
+
         with pytest.raises(ValueError, match=exact(_GATEWAY_401_MESSAGE)):
-            _run(block_params(output_format=output_format), _serving(401, GATEWAY_HTML))
+            _run(params, fake)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_transport_failure_raises_in_both_modes(self, on_error: str) -> None:
@@ -1229,9 +1260,11 @@ class TestLogCalls:
 
     def test_fail_mode_logs_nothing(self) -> None:
         log = _Recorder()
+        params = block_params()
+        fake = _serving(403, _FORBIDDEN_BODY)
 
         with pytest.raises(ValueError):
-            _run(block_params(), _serving(403, _FORBIDDEN_BODY), log)
+            _run(params, fake, log)
 
         assert log.entries == []
 

@@ -267,7 +267,7 @@ describe('ExecutionDetailPage', () => {
     // Polling stays off for terminal runs - the page must not keep refetching.
     const callsAtStart = vi.mocked(fetchExecution).mock.calls.length
     await new Promise((resolve) => setTimeout(resolve, 2000))
-    expect(vi.mocked(fetchExecution).mock.calls.length).toBe(callsAtStart)
+    expect(vi.mocked(fetchExecution).mock.calls).toHaveLength(callsAtStart)
   })
 
   it('navigates back to the Executions list after confirming Delete', async () => {
@@ -391,7 +391,7 @@ describe('ExecutionDetailPage', () => {
     // Give real time past the poll interval; a terminal execution must not
     // schedule any refetch.
     await new Promise((resolve) => setTimeout(resolve, 2000))
-    expect(vi.mocked(fetchExecution).mock.calls.length).toBe(callsAtStart)
+    expect(vi.mocked(fetchExecution).mock.calls).toHaveLength(callsAtStart)
   })
 
   it('shows an error state when fetchExecution throws', async () => {
@@ -883,7 +883,7 @@ describe('ExecutionDetailPage', () => {
     expect(waitingName.tagName).toBe('SPAN')
   })
 
-  it('per-test row download button triggers exportExecution', async () => {
+  it('per-test row download button in a regression suite triggers exportExecution', async () => {
     const user = (await import('@testing-library/user-event')).default.setup()
     const { downloadExecutionExport } = await import('@/features/executions/api/export')
     vi.mocked(downloadExecutionExport).mockResolvedValue(undefined as never)

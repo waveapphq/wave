@@ -500,14 +500,16 @@ class TestFailurePaths:
     def test_a_container_the_pod_does_not_have_surfaces_the_cluster_message(self) -> None:
         message = f"Kubernetes rejected the log request: {_BAD_CONTAINER}"
 
+        body = _status_body(_BAD_CONTAINER, "BadRequest", 400)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(400, _status_body(_BAD_CONTAINER, "BadRequest", 400), container="nope")
+            _run_error(400, body, container="nope")
 
     def test_previous_without_a_restart_surfaces_the_cluster_message(self) -> None:
         message = f"Kubernetes rejected the log request: {_NO_PREVIOUS}"
 
+        body = _status_body(_NO_PREVIOUS, "BadRequest", 400)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(400, _status_body(_NO_PREVIOUS, "BadRequest", 400), previous=True)
+            _run_error(400, body, previous=True)
 
     def test_a_400_without_a_cluster_message_takes_the_shared_row(self) -> None:
         message = f"Kubernetes could not read Pod '{_POD}' in namespace '{NAMESPACE}' (HTTP 400)"
@@ -516,35 +518,38 @@ class TestFailurePaths:
             _run_error(400, GATEWAY_HTML)
 
     def test_a_missing_pod_renders_the_shared_not_found_row(self) -> None:
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            _run_error(404, _status_body('pods "web-1" not found', "NotFound", 404))
+            _run_error(404, body)
 
     def test_a_missing_pod_in_a_typed_namespace_names_that_namespace(self) -> None:
         message = f"K8s Pod '{_POD}' not found in namespace 'prod'"
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(
-                404, _status_body('pods "web-1" not found', "NotFound", 404), namespace="prod"
-            )
+            _run_error(404, body, namespace="prod")
 
     def test_unauthorized_renders_the_shared_authentication_row(self) -> None:
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        body = _status_body("Unauthorized", "Unauthorized", 401)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(401, _status_body("Unauthorized", "Unauthorized", 401))
+            _run_error(401, body)
 
     def test_forbidden_renders_the_shared_permission_row(self) -> None:
         message = f"Kubernetes API permission denied: {_FORBIDDEN}"
 
+        body = _status_body(_FORBIDDEN, "Forbidden", 403)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(403, _status_body(_FORBIDDEN, "Forbidden", 403))
+            _run_error(403, body)
 
     def test_a_server_error_names_the_pod_once(self) -> None:
         detail = "the server is currently unable to handle the request"
         message = f"Kubernetes could not read Pod '{_POD}' in namespace '{NAMESPACE}': {detail}"
 
+        body = _status_body(detail, "ServiceUnavailable", 503)
         with pytest.raises(ValueError, match=exact(message)):
-            _run_error(503, _status_body(detail, "ServiceUnavailable", 503))
+            _run_error(503, body)
 
     def test_a_gateway_answer_at_401_ends_with_the_http_status(self) -> None:
         message = f"Kubernetes could not read Pod '{_POD}' in namespace '{NAMESPACE}' (HTTP 401)"
@@ -556,8 +561,9 @@ class TestFailurePaths:
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
         fake = _serving(404, _status_body('pods "web 1?" not found', "NotFound", 404))
 
+        params = _params(pod="web 1?", namespace="my ns?")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(pod="web 1?", namespace="my ns?"), fake)
+            _run(params, fake)
 
         assert _path(fake.last) == "/api/v1/namespaces/my%20ns%3F/pods/web%201%3F/log"
 
@@ -566,24 +572,27 @@ class TestFailurePaths:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(_params(on_error=on_error), fake)
+            _run(params, fake)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_tls_failure_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: unknown issuer"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(_params(on_error=on_error), fake)
+            _run(params, fake)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_timeout_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Kubernetes API request GET {_LOG_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(_params(on_error=on_error), fake)
+            _run(params, fake)
 
 
 class TestRecordAndContinue:
@@ -734,8 +743,9 @@ class TestLogCalls:
     def test_fail_mode_logs_nothing(self) -> None:
         log = _Recorder()
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError):
-            _run_error(404, _status_body('pods "web-1" not found', "NotFound", 404), log)
+            _run_error(404, body, log)
 
         assert log.entries == []
 

@@ -40,7 +40,7 @@ export function FieldSuggestInput({
   value: string
   onChange: (value: string) => void
   source: FieldSuggestPolicy['source']
-  types?: FieldSuggestPolicy['types']
+  types?: NonNullable<FieldSuggestPolicy['types']>
   placeholder?: string
   ariaLabel: string
   invalid?: boolean

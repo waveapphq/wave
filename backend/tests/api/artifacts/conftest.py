@@ -2,7 +2,6 @@
 
 import os
 import uuid
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -13,10 +12,9 @@ from wavecore.api.services.storage_paths import get_artifacts_storage_path
 
 
 @pytest.fixture(autouse=True)
-def clear_execution_storage(temp_storage_path: Path) -> Generator[None, None, None]:
+def clear_execution_storage(temp_storage_path: Path) -> None:
     """Isolate the executions cache/disk state per test."""
     exec_storage._clear_storage()
-    yield
 
 
 @pytest.fixture

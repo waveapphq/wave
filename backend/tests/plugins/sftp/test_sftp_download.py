@@ -807,12 +807,10 @@ class TestOrderOfChecks:
         self, sftp_endpoint: SFTPEndpoint, log: LogRecorder
     ) -> None:
         settings, message = _testdata_scheme(sftp_endpoint)
+        params = sftp_endpoint.params("download", **settings)
+        empty_registry = SSHSessionRegistry()
         with pytest.raises(ValueError, match=_exact(message)):
-            await sftp_endpoint.run(
-                sftp_endpoint.params("download", **settings),
-                log,
-                ssh_session_registry=SSHSessionRegistry(),
-            )
+            await sftp_endpoint.run(params, log, ssh_session_registry=empty_registry)
 
     async def test_the_destination_shape_comes_before_a_collision(
         self, sftp_endpoint: SFTPEndpoint, log: LogRecorder

@@ -320,8 +320,11 @@ class TestRollbackFailure:
     """A refused rollback never reaches the read-back."""
 
     def test_a_missing_release_stops_the_block(self) -> None:
+        params = _params()
+        results = [helm_failed(STDERR_NOT_FOUND)]
+
         with pytest.raises(ValueError, match="^uninstall: Release not loaded"):
-            run_verb(rollback, _params(), [helm_failed(STDERR_NOT_FOUND)])
+            run_verb(rollback, params, results)
 
     def test_a_refused_rollback_is_not_read_back(self) -> None:
         fake = run_verb(rollback, _params(on_error="record"), [helm_failed(STDERR_NOT_FOUND)])
@@ -348,9 +351,11 @@ class TestRollbackFailure:
 
     def test_the_process_deadline_is_the_timeout_itself(self) -> None:
         message = "helm rollback did not finish within 300 s"
+        params = _params()
+        results = [helm_timed_out()]
 
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(rollback, _params(), [helm_timed_out()])
+            run_verb(rollback, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         outputs = outputs_of(rollback, _params(on_error="record"), [helm_timed_out()])
@@ -373,9 +378,10 @@ class TestRollbackFailure:
 
     def test_a_failed_read_back_is_the_blocks_failure(self) -> None:
         results = [helm_ok("Rollback was a success!\n"), helm_failed(STDERR_UNCLASSIFIED)]
+        params = _params()
 
         with pytest.raises(ValueError, match=exact("the classifier has no row for this line")):
-            run_verb(rollback, _params(), results)
+            run_verb(rollback, params, results)
 
     def test_a_recorded_read_back_failure_empties_the_outputs(self) -> None:
         results = [helm_ok("Rollback was a success!\n"), helm_failed(STDERR_NOT_FOUND)]
@@ -388,6 +394,7 @@ class TestRollbackFailure:
     def test_a_read_back_that_printed_no_document_is_a_failure(self) -> None:
         results = [helm_ok("Rollback was a success!\n"), helm_ok("NAME: web\n")]
         message = "helm status printed no release document"
+        params = _params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(rollback, _params(), results)
+            run_verb(rollback, params, results)

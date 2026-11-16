@@ -226,8 +226,9 @@ def _bundle() -> list[x509.Certificate]:
 
 def _load_error(block: str) -> str:
     """What cryptography says when it refuses ``block``."""
+    encoded = block.encode("utf-8")
     with pytest.raises(ValueError) as refused:
-        x509.load_pem_x509_certificate(block.encode("utf-8"))
+        x509.load_pem_x509_certificate(encoded)
     return str(refused.value)
 
 
@@ -502,8 +503,9 @@ class TestApplyChanges:
     def test_an_addition_that_is_not_one_pem_certificate(
         self, chain: _Chain, make_text: Callable[[_Chain], str]
     ) -> None:
+        text = make_text(chain)
         with pytest.raises(ValidationException, match=r"^Addition 1: not a PEM certificate$"):
-            certificates.apply_changes(None, [make_text(chain)], [])
+            certificates.apply_changes(None, [text], [])
 
     def test_additions_are_numbered_in_request_order(self, chain: _Chain) -> None:
         with pytest.raises(ValidationException, match=r"^Addition 2: not a PEM certificate$"):
@@ -538,9 +540,11 @@ class TestApplyChanges:
         certificates.apply_changes(None, [chain.root.cert_pem, chain.intermediate.cert_pem], [])
         before = store_file.read_bytes()
         writes.clear()
+        additions = make_additions(chain)
+        removals = [_id(chain.root)]
 
         with pytest.raises(ValidationException):
-            certificates.apply_changes(source, make_additions(chain), [_id(chain.root)])
+            certificates.apply_changes(source, additions, removals)
 
         assert store_file.read_bytes() == before
         assert writes == []
@@ -710,9 +714,10 @@ class TestTwoStoreSave:
         data_before = store_file.read_bytes()
         config_before = config_file.read_bytes()
         writes.clear()
+        removals = [_id(chain.root)]
 
         with pytest.raises(ValidationException, match=r"^Addition 1: not a CA certificate$"):
-            certificates.apply_changes("host", [chain.leaf.cert_pem], [_id(chain.root)])
+            certificates.apply_changes("host", [chain.leaf.cert_pem], removals)
 
         assert config_file.read_bytes() == config_before
         assert store_file.read_bytes() == data_before
@@ -984,9 +989,10 @@ class TestCertificateDetail:
         certificates.apply_changes(None, [chain.intermediate.cert_pem], [])
         certificates.apply_changes(None, [], [_id(chain.intermediate)])
         message = rf"^Certificate with ID '{_id(chain.intermediate)}' not found$"
+        removed_id = _id(chain.intermediate)
 
         with pytest.raises(NotFoundException, match=message):
-            certificates.certificate_detail(_id(chain.intermediate))
+            certificates.certificate_detail(removed_id)
 
 
 @pytest.mark.usefixtures("certifi_june_2026")

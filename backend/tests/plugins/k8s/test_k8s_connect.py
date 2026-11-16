@@ -431,35 +431,37 @@ class TestValidation:
     async def test_client_cert_without_key_is_rejected(self) -> None:
         message = "Parameters 'client_cert' and 'client_key' must be supplied together"
 
+        params = _valid_params(client_cert=_CERT_PEM)
         with pytest.raises(ValueError, match=_exact(message)):
-            await K8sConnectPlugin().validate(_valid_params(client_cert=_CERT_PEM))
+            await K8sConnectPlugin().validate(params)
 
     async def test_client_key_without_cert_is_rejected(self) -> None:
         message = "Parameters 'client_cert' and 'client_key' must be supplied together"
 
+        params = _valid_params(client_key=_KEY_PEM)
         with pytest.raises(ValueError, match=_exact(message)):
-            await K8sConnectPlugin().validate(_valid_params(client_key=_KEY_PEM))
+            await K8sConnectPlugin().validate(params)
 
     async def test_empty_client_cert_with_key_is_rejected(self) -> None:
         message = "Parameters 'client_cert' and 'client_key' must be supplied together"
 
+        params = _valid_params(client_cert="", client_key=_KEY_PEM)
         with pytest.raises(ValueError, match=_exact(message)):
-            await K8sConnectPlugin().validate(_valid_params(client_cert="", client_key=_KEY_PEM))
+            await K8sConnectPlugin().validate(params)
 
     async def test_client_cert_pair_together_passes(self) -> None:
         await K8sConnectPlugin().validate(_valid_params(client_cert=_CERT_PEM, client_key=_KEY_PEM))
 
     async def test_run_token_duration_below_minimum_is_rejected(self) -> None:
+        params = _valid_params(
+            acquire_run_token=True,
+            run_token_service_account="wave-tests",
+            run_token_duration=599,
+        )
         with pytest.raises(
             ValueError, match=r"^Parameter 'run_token_duration' must be at least 600$"
         ):
-            await K8sConnectPlugin().validate(
-                _valid_params(
-                    acquire_run_token=True,
-                    run_token_service_account="wave-tests",
-                    run_token_duration=599,
-                )
-            )
+            await K8sConnectPlugin().validate(params)
 
     async def test_run_token_duration_at_minimum_passes(self) -> None:
         await K8sConnectPlugin().validate(
@@ -474,29 +476,31 @@ class TestValidation:
         await K8sConnectPlugin().validate(_valid_params(run_token_duration=599))
 
     async def test_missing_service_account_when_acquiring(self) -> None:
+        params = _valid_params(acquire_run_token=True)
         with pytest.raises(
             ValueError, match=r"^Missing required parameter: run_token_service_account$"
         ):
-            await K8sConnectPlugin().validate(_valid_params(acquire_run_token=True))
+            await K8sConnectPlugin().validate(params)
 
     async def test_empty_service_account_counts_as_missing(self) -> None:
+        params = _valid_params(acquire_run_token=True, run_token_service_account="")
         with pytest.raises(
             ValueError, match=r"^Missing required parameter: run_token_service_account$"
         ):
-            await K8sConnectPlugin().validate(
-                _valid_params(acquire_run_token=True, run_token_service_account="")
-            )
+            await K8sConnectPlugin().validate(params)
 
     async def test_service_account_not_required_while_toggle_off(self) -> None:
         await K8sConnectPlugin().validate(_valid_params(acquire_run_token=False))
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=0)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sConnectPlugin().validate(_valid_params(timeout=0))
+            await K8sConnectPlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=-5)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sConnectPlugin().validate(_valid_params(timeout=-5))
+            await K8sConnectPlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sConnectPlugin().validate(_valid_params(timeout=45))
@@ -507,8 +511,9 @@ class TestValidation:
             "Actual value was 'ssl3'."
         )
 
+        params = _valid_params(tls_min_version="ssl3")
         with pytest.raises(ValueError, match=_exact(message)):
-            await K8sConnectPlugin().validate(_valid_params(tls_min_version="ssl3"))
+            await K8sConnectPlugin().validate(params)
 
     async def test_invalid_tls_max_version_is_rejected(self) -> None:
         message = (
@@ -516,8 +521,9 @@ class TestValidation:
             "Actual value was '2.0'."
         )
 
+        params = _valid_params(tls_max_version="2.0")
         with pytest.raises(ValueError, match=_exact(message)):
-            await K8sConnectPlugin().validate(_valid_params(tls_max_version="2.0"))
+            await K8sConnectPlugin().validate(params)
 
 
 class TestExecuteSession:
@@ -666,8 +672,10 @@ class TestExecuteVersionFloor:
     async def test_version_below_the_floor_reports_the_raw_git_version(self) -> None:
         message = "WAVE needs Kubernetes 1.19 or newer - this cluster reports v1.18.3"
 
+        params = _valid_params()
+        client_cls = _client_mock(version="v1.18.3")
         with pytest.raises(Exception, match=_exact(message)):
-            await _execute(_valid_params(), _client_mock(version="v1.18.3"))
+            await _execute(params, client_cls)
 
     async def test_version_at_the_floor_passes(self) -> None:
         result = await _execute(_valid_params(), _client_mock(version="v1.19.0"))
@@ -689,15 +697,18 @@ class TestExecuteVersionFloor:
         client_cls.return_value.server_version.side_effect = RuntimeError("connection reset")
         message = f"Could not read the Kubernetes version from {_API_URL}: connection reset"
 
+        params = _valid_params()
         with pytest.raises(Exception, match=_exact(message)):
-            await _execute(_valid_params(), client_cls)
+            await _execute(params, client_cls)
 
     async def test_unparsable_git_version_is_unreadable(self) -> None:
+        params = _valid_params()
+        client_cls = _client_mock(version="unknown")
         with pytest.raises(
             Exception,
             match=rf"^Could not read the Kubernetes version from {re.escape(_API_URL)}: .+$",
         ):
-            await _execute(_valid_params(), _client_mock(version="unknown"))
+            await _execute(params, client_cls)
 
 
 class TestExecuteRunToken:
@@ -775,15 +786,13 @@ class TestExecuteRunToken:
             "wave-tests/token failed (403): tokenrequests is forbidden"
         )
 
+        params = _valid_params(
+            acquire_run_token=True,
+            run_token_service_account="wave-tests",
+            run_token_namespace="ops",
+        )
         with pytest.raises(Exception, match=_exact(message)):
-            await _execute(
-                _valid_params(
-                    acquire_run_token=True,
-                    run_token_service_account="wave-tests",
-                    run_token_namespace="ops",
-                ),
-                client_cls,
-            )
+            await _execute(params, client_cls)
 
 
 class TestClientConstruction:
@@ -864,6 +873,5 @@ class TestNullCipherEntry:
 
         with pytest.raises(NullValueError, match=_exact(f"Row {row} in 'cipher_suites' is null")):
             await K8sConnectPlugin().validate(params)
-            await _execute(params, client_cls)
 
         client_cls.assert_not_called()

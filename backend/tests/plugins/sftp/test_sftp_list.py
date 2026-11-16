@@ -472,8 +472,9 @@ class TestRecordedFailure:
         self, sftp_endpoint: SFTPEndpoint, log: LogRecorder
     ) -> None:
         folder = sftp_endpoint.write("/outbound/a.txt", "a").parent
+        params = sftp_endpoint.params("list", path="/outbound")
         with _locked(folder), pytest.raises(ValueError, match=_exact(self.MESSAGE)):
-            await sftp_endpoint.run(sftp_endpoint.params("list", path="/outbound"), log)
+            await sftp_endpoint.run(params, log)
         assert log == []
 
     async def test_record_returns_the_empties(

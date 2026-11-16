@@ -250,47 +250,15 @@ describe('Toast Component', () => {
   })
 
   describe('Design System Compliance', () => {
-    it('applies rounded-lg border radius', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('rounded-lg')
-    })
-
-    it('applies p-4 padding (16px)', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('p-4')
-    })
-
-    it('applies shadow via CSS (per design system)', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
+    it.each([
+      ['applies rounded-lg border radius', 'rounded-lg'],
+      ['applies p-4 padding (16px)', 'p-4'],
       // Shadow is applied via CSS .toast class, not Tailwind
-      expect(screen.getByTestId('toast')).toHaveClass('toast')
-    })
-
-    it('applies flex layout', () => {
+      ['applies shadow via CSS (per design system)', 'toast'],
+      ['applies flex layout', 'flex'],
+      ['aligns items at start', 'items-start'],
+      ['applies maximum width of 400px (per design system)', 'max-w-[400px]'],
+    ])('%s', (_title, className) => {
       render(
         <Toast
           id="test-1"
@@ -300,33 +268,7 @@ describe('Toast Component', () => {
           data-testid="toast"
         />
       )
-      expect(screen.getByTestId('toast')).toHaveClass('flex')
-    })
-
-    it('aligns items at start', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('items-start')
-    })
-
-    it('applies maximum width of 400px (per design system)', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('max-w-[400px]')
+      expect(screen.getByTestId('toast')).toHaveClass(className)
     })
   })
 
@@ -636,7 +578,12 @@ describe('Toast Component', () => {
   })
 
   describe('Animation', () => {
-    it('applies enter animation class', () => {
+    it.each([
+      ['applies enter animation class', 'toast-enter'],
+      ['applies duration-300 for toast transitions', 'duration-300'],
+      ['applies ease-out timing function', 'ease-out'],
+      ['respects reduced-motion preference', 'motion-reduce:transition-none'],
+    ])('%s', (_title, className) => {
       render(
         <Toast
           id="test-1"
@@ -646,46 +593,7 @@ describe('Toast Component', () => {
           data-testid="toast"
         />
       )
-      expect(screen.getByTestId('toast')).toHaveClass('toast-enter')
-    })
-
-    it('applies duration-300 for toast transitions', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('duration-300')
-    })
-
-    it('applies ease-out timing function', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('ease-out')
-    })
-
-    it('respects reduced-motion preference', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          data-testid="toast"
-        />
-      )
-      expect(screen.getByTestId('toast')).toHaveClass('motion-reduce:transition-none')
+      expect(screen.getByTestId('toast')).toHaveClass(className)
     })
   })
 
@@ -853,46 +761,32 @@ describe('ToastContainer', () => {
     expect(container).toHaveClass('right-4')
   })
 
-  it('supports top-right position', () => {
+  it.each([
+    ['supports top-right position', 'top-right', 'top-4', 'right-4'],
+    ['supports top-left position', 'top-left', 'top-4', 'left-4'],
+    ['supports bottom-left position', 'bottom-left', 'bottom-4', 'left-4'],
+  ] as const)('%s', (_title, position, verticalClass, horizontalClass) => {
     render(
       <ToastProvider>
-        <ToastContainer position="top-right" data-testid="container" />
+        <ToastContainer position={position} data-testid="container" />
       </ToastProvider>
     )
     const container = screen.getByTestId('container')
-    expect(container).toHaveClass('top-4')
-    expect(container).toHaveClass('right-4')
+    expect(container).toHaveClass(verticalClass)
+    expect(container).toHaveClass(horizontalClass)
   })
 
-  it('supports top-left position', () => {
-    render(
-      <ToastProvider>
-        <ToastContainer position="top-left" data-testid="container" />
-      </ToastProvider>
-    )
-    const container = screen.getByTestId('container')
-    expect(container).toHaveClass('top-4')
-    expect(container).toHaveClass('left-4')
-  })
-
-  it('supports bottom-left position', () => {
-    render(
-      <ToastProvider>
-        <ToastContainer position="bottom-left" data-testid="container" />
-      </ToastProvider>
-    )
-    const container = screen.getByTestId('container')
-    expect(container).toHaveClass('bottom-4')
-    expect(container).toHaveClass('left-4')
-  })
-
-  it('applies fixed positioning', () => {
+  it.each([
+    ['applies fixed positioning', 'fixed'],
+    ['applies gap-2 (8px) between stacked toasts', 'gap-2'],
+    ['applies flex-col layout', 'flex-col'],
+  ])('%s', (_title, className) => {
     render(
       <ToastProvider>
         <ToastContainer data-testid="container" />
       </ToastProvider>
     )
-    expect(screen.getByTestId('container')).toHaveClass('fixed')
+    expect(screen.getByTestId('container')).toHaveClass(className)
   })
 
   it('applies z-index 9999 for proper stacking above dialogs', () => {
@@ -902,24 +796,6 @@ describe('ToastContainer', () => {
       </ToastProvider>
     )
     expect(screen.getByTestId('container')).toHaveStyle({ zIndex: 9999 })
-  })
-
-  it('applies gap-2 (8px) between stacked toasts', () => {
-    render(
-      <ToastProvider>
-        <ToastContainer data-testid="container" />
-      </ToastProvider>
-    )
-    expect(screen.getByTestId('container')).toHaveClass('gap-2')
-  })
-
-  it('applies flex-col layout', () => {
-    render(
-      <ToastProvider>
-        <ToastContainer data-testid="container" />
-      </ToastProvider>
-    )
-    expect(screen.getByTestId('container')).toHaveClass('flex-col')
   })
 })
 
@@ -1749,7 +1625,11 @@ describe('REQ-5.2.1.19 Complete Coverage', () => {
   })
 
   describe('Action Button Styling', () => {
-    it('action button has primary text color', () => {
+    it.each([
+      ['action button has primary text color', 'text-primary'],
+      ['action button has hover underline style', 'hover:underline'],
+      ['action button has margin top', 'mt-2'],
+    ])('%s', (_title, className) => {
       render(
         <Toast
           id="test-1"
@@ -1760,35 +1640,7 @@ describe('REQ-5.2.1.19 Complete Coverage', () => {
         />
       )
       const actionButton = screen.getByRole('button', { name: 'Undo' })
-      expect(actionButton).toHaveClass('text-primary')
-    })
-
-    it('action button has hover underline style', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          action={{ label: 'Undo', onClick: () => {} }}
-        />
-      )
-      const actionButton = screen.getByRole('button', { name: 'Undo' })
-      expect(actionButton).toHaveClass('hover:underline')
-    })
-
-    it('action button has margin top', () => {
-      render(
-        <Toast
-          id="test-1"
-          message="Message"
-          variant="info"
-          onDismiss={() => {}}
-          action={{ label: 'Undo', onClick: () => {} }}
-        />
-      )
-      const actionButton = screen.getByRole('button', { name: 'Undo' })
-      expect(actionButton).toHaveClass('mt-2')
+      expect(actionButton).toHaveClass(className)
     })
   })
 

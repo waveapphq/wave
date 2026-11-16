@@ -99,6 +99,7 @@ def get_status() -> dict[str, Any]:
     running = is_running()
     port = settings["port"]
     if running:
+        # SonarQube exclusion: SQ-HTTP-002
         urls = [f"http://{host}:{port}/mcp" for host in _machine_hosts(settings["bind"])]
     else:
         urls = []
@@ -477,6 +478,7 @@ def _bind_socket(host: str, port: int) -> socket.socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
+        # CodeQL exclusion: CQL-BIND-001
         sock.bind((host, port))
         sock.listen(128)
     except OSError:
@@ -509,7 +511,7 @@ async def start() -> None:
         sock = _bind_socket(host, port)
     except OSError as exc:
         mcp_state.set_last_error(str(exc))
-        logger.error("MCP listener failed to bind %s:%s: %s", host, port, exc)
+        logger.exception("MCP listener failed to bind %s:%s: %s", host, port, exc)
         return
 
     config = uvicorn.Config(

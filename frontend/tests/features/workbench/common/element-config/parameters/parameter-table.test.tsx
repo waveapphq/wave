@@ -1097,7 +1097,7 @@ describe('ParameterTable Component', () => {
       // Should NOT show ${ and } wrapper labels (clean expression editor)
       await waitFor(() => {
         const spans = urlRow.querySelectorAll('span.font-mono.shrink-0')
-        expect(spans.length).toBe(0)
+        expect(spans).toHaveLength(0)
       })
     })
 
@@ -1191,7 +1191,11 @@ describe('ParameterTable Component', () => {
   })
 
   describe('URL Validation', () => {
-    it('shows error for invalid URL scheme in literal mode', async () => {
+    it.each([
+      ['shows error for invalid URL scheme in literal mode', 'htps://example.com'],
+      ['shows error for URL without scheme in literal mode', 'example.com'],
+      ['shows error for URL with missing double-slash', 'http:localhost:8000/health'],
+    ])('%s', async (_title, url) => {
       const { ParameterTable } = await import(
         '@/features/workbench/common/element-config/parameters/parameter-table'
       )
@@ -1199,7 +1203,7 @@ describe('ParameterTable Component', () => {
         <ParameterTable
           mode="input"
           parameters={[mockInputParameters[0]]}
-          values={{ url: 'htps://example.com' }}
+          values={{ url }}
           onChange={vi.fn()}
           availableVariables={mockAvailableVariables}
         />
@@ -1207,49 +1211,6 @@ describe('ParameterTable Component', () => {
 
       const urlRow = screen.getByTestId('param-row-url')
 
-      await waitFor(() => {
-        const alert = within(urlRow).getByRole('alert')
-        expect(alert).toHaveTextContent('URL must start with http:// or https://')
-      })
-    })
-
-    it('shows error for URL without scheme in literal mode', async () => {
-      const { ParameterTable } = await import(
-        '@/features/workbench/common/element-config/parameters/parameter-table'
-      )
-      render(
-        <ParameterTable
-          mode="input"
-          parameters={[mockInputParameters[0]]}
-          values={{ url: 'example.com' }}
-          onChange={vi.fn()}
-          availableVariables={mockAvailableVariables}
-        />
-      )
-
-      const urlRow = screen.getByTestId('param-row-url')
-
-      await waitFor(() => {
-        const alert = within(urlRow).getByRole('alert')
-        expect(alert).toHaveTextContent('URL must start with http:// or https://')
-      })
-    })
-
-    it('shows error for URL with missing double-slash', async () => {
-      const { ParameterTable } = await import(
-        '@/features/workbench/common/element-config/parameters/parameter-table'
-      )
-      render(
-        <ParameterTable
-          mode="input"
-          parameters={[mockInputParameters[0]]}
-          values={{ url: 'http:localhost:8000/health' }}
-          onChange={vi.fn()}
-          availableVariables={mockAvailableVariables}
-        />
-      )
-
-      const urlRow = screen.getByTestId('param-row-url')
       await waitFor(() => {
         const alert = within(urlRow).getByRole('alert')
         expect(alert).toHaveTextContent('URL must start with http:// or https://')

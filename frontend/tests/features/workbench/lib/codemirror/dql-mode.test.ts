@@ -585,14 +585,14 @@ describe('dql-mode editor facilities', () => {
   })
 
   it('adds no line-number gutter of its own', () => {
-    expect(mount(`${SAMPLE_DQL}\nor host.name: web-01`).dom.querySelectorAll('.cm-lineNumbers').length).toBe(0)
+    expect(mount(`${SAMPLE_DQL}\nor host.name: web-01`).dom.querySelectorAll('.cm-lineNumbers')).toHaveLength(0)
   })
 
   it('highlights the active line', () => {
     const view = mount(`${SAMPLE_DQL}\nor host.name: web-01`, { selection: { anchor: 0, head: 0 } })
     const active = view.dom.querySelectorAll('.cm-activeLine')
 
-    expect(active.length).toBe(1)
+    expect(active).toHaveLength(1)
     expect(active[0].textContent).toBe(SAMPLE_DQL)
   })
 

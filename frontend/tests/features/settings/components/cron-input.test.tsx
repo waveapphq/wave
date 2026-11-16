@@ -81,8 +81,12 @@ describe('CronInput', () => {
       expect(description.textContent).toBeTruthy()
     })
 
-    it('shows error for invalid cron expression', () => {
-      renderCronInput({ value: 'invalid cron' })
+    it.each([
+      ['shows error for invalid cron expression', 'invalid cron'],
+      ['shows error when a cron field does not match any valid pattern', 'abc * * * *'],
+      ['shows error for cron field with special characters', '* * * * @invalid'],
+    ])('%s', (_name, value) => {
+      renderCronInput({ value })
       expect(screen.getByTestId('cron-error')).toBeInTheDocument()
     })
 
@@ -95,16 +99,6 @@ describe('CronInput', () => {
       renderCronInput({ value: '*/5 * * * *' })
       expect(screen.queryByTestId('cron-error')).not.toBeInTheDocument()
       expect(screen.getByTestId('cron-description')).toBeInTheDocument()
-    })
-
-    it('shows error when a cron field does not match any valid pattern', () => {
-      renderCronInput({ value: 'abc * * * *' })
-      expect(screen.getByTestId('cron-error')).toBeInTheDocument()
-    })
-
-    it('shows error for cron field with special characters', () => {
-      renderCronInput({ value: '* * * * @invalid' })
-      expect(screen.getByTestId('cron-error')).toBeInTheDocument()
     })
 
     it('ties the description to the field and leaves it valid', () => {
@@ -132,46 +126,26 @@ describe('CronInput', () => {
   })
 
   describe('Cron Description', () => {
-    it('describes every N hours pattern', () => {
-      renderCronInput({ value: '* */2 * * *' })
+    it.each([
+      ['describes every N hours pattern', '* */2 * * *', 'Every 2 hours'],
+      ['describes at minute N when only minute is specified', '30 * * * *', 'At minute 30'],
+      [
+        'describes every minute when both minute and hour are wildcards',
+        '* * * * *',
+        'Every minute',
+      ],
+      ['includes day of month in description', '0 2 15 * *', 'At 02:00 on day 15'],
+      ['includes month in description', '0 2 * 6 *', 'At 02:00 in month 6'],
+      ['includes named weekday for numeric day of week (0-6)', '0 2 * * 1', 'At 02:00 on Monday'],
+      [
+        'includes raw weekday value for out-of-range day of week',
+        '0 2 * * 7',
+        'At 02:00 on weekday 7',
+      ],
+    ])('%s', (_name, value, expected) => {
+      renderCronInput({ value })
       const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('Every 2 hours')
-    })
-
-    it('describes at minute N when only minute is specified', () => {
-      renderCronInput({ value: '30 * * * *' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('At minute 30')
-    })
-
-    it('describes every minute when both minute and hour are wildcards', () => {
-      renderCronInput({ value: '* * * * *' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('Every minute')
-    })
-
-    it('includes day of month in description', () => {
-      renderCronInput({ value: '0 2 15 * *' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('At 02:00 on day 15')
-    })
-
-    it('includes month in description', () => {
-      renderCronInput({ value: '0 2 * 6 *' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('At 02:00 in month 6')
-    })
-
-    it('includes named weekday for numeric day of week (0-6)', () => {
-      renderCronInput({ value: '0 2 * * 1' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('At 02:00 on Monday')
-    })
-
-    it('includes raw weekday value for out-of-range day of week', () => {
-      renderCronInput({ value: '0 2 * * 7' })
-      const desc = screen.getByTestId('cron-description')
-      expect(desc.textContent).toBe('At 02:00 on weekday 7')
+      expect(desc.textContent).toBe(expected)
     })
   })
 

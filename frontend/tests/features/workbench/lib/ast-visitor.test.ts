@@ -240,36 +240,30 @@ describe('AST Visitor', () => {
   })
 
   describe('extractLocalScopes', () => {
-    it('extracts loop variable from list comprehension', () => {
-      const scopes = extractLocalScopes('[x for x in items]')
+    it.each([
+      ['extracts loop variable from list comprehension', '[x for x in items]', 'x', 'comprehension'],
+      ['extracts lambda parameters', 'lambda x: x * 2', 'x', 'lambda'],
+      ['extracts generator expression variables', 'sum(x for x in numbers)', 'x', 'generator'],
+    ])('%s', (_name, expression, variable, scopeType) => {
+      const scopes = extractLocalScopes(expression)
 
       expect(scopes).toHaveLength(1)
-      expect(scopes[0].variables).toContain('x')
-      expect(scopes[0].type).toBe('comprehension')
+      expect(scopes[0].variables).toContain(variable)
+      expect(scopes[0].type).toBe(scopeType)
     })
 
-    it('extracts multiple loop variables from nested comprehension', () => {
-      const scopes = extractLocalScopes('[y for x in matrix for y in x]')
+    it.each([
+      ['extracts multiple loop variables from nested comprehension', '[y for x in matrix for y in x]', 'x', 'y'],
+      ['extracts tuple-unpacked loop variables', '[a + b for a, b in pairs]', 'a', 'b'],
+      ['handles nested lambda in comprehension', '[f(x) for x in map(lambda y: y * 2, items)]', 'x', 'y'],
+      ['extracts dict comprehension variables', '{k: v for k, v in items.items()}', 'k', 'v'],
+      ['handles parenthesized tuple unpacking', '[a for (a, b) in pairs]', 'a', 'b'],
+    ])('%s', (_name, expression, firstVariable, secondVariable) => {
+      const scopes = extractLocalScopes(expression)
 
       const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('x')
-      expect(allVars).toContain('y')
-    })
-
-    it('extracts tuple-unpacked loop variables', () => {
-      const scopes = extractLocalScopes('[a + b for a, b in pairs]')
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('a')
-      expect(allVars).toContain('b')
-    })
-
-    it('extracts lambda parameters', () => {
-      const scopes = extractLocalScopes('lambda x: x * 2')
-
-      expect(scopes).toHaveLength(1)
-      expect(scopes[0].variables).toContain('x')
-      expect(scopes[0].type).toBe('lambda')
+      expect(allVars).toContain(firstVariable)
+      expect(allVars).toContain(secondVariable)
     })
 
     it('extracts multiple lambda parameters', () => {
@@ -281,44 +275,12 @@ describe('AST Visitor', () => {
       expect(allVars).toContain('c')
     })
 
-    it('handles nested lambda in comprehension', () => {
-      const scopes = extractLocalScopes('[f(x) for x in map(lambda y: y * 2, items)]')
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('x')
-      expect(allVars).toContain('y')
-    })
-
     it('provides scope range information', () => {
       const scopes = extractLocalScopes('[x for x in items]')
 
       expect(scopes[0].startIndex).toBeDefined()
       expect(scopes[0].endIndex).toBeDefined()
       // Scope should cover the comprehension body where x is valid
-    })
-
-    it('extracts generator expression variables', () => {
-      const scopes = extractLocalScopes('sum(x for x in numbers)')
-
-      expect(scopes).toHaveLength(1)
-      expect(scopes[0].variables).toContain('x')
-      expect(scopes[0].type).toBe('generator')
-    })
-
-    it('extracts dict comprehension variables', () => {
-      const scopes = extractLocalScopes('{k: v for k, v in items.items()}')
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('k')
-      expect(allVars).toContain('v')
-    })
-
-    it('handles parenthesized tuple unpacking', () => {
-      const scopes = extractLocalScopes('[a for (a, b) in pairs]')
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('a')
-      expect(allVars).toContain('b')
     })
   })
 
@@ -413,13 +375,18 @@ describe('AST Visitor Edge Cases', () => {
   })
 
   describe('Complex nested expressions', () => {
-    it('handles deeply nested comprehensions', () => {
-      const expr = '[[y for y in x] for x in matrix]'
+    it.each([
+      ['handles deeply nested comprehensions', '[[y for y in x] for x in matrix]', 'x', 'y'],
+      ['handles comprehension with multiple for clauses', '[a + b for a in range(3) for b in range(3)]', 'a', 'b'],
+      ['handles nested lambdas', 'lambda x: lambda y: x + y', 'x', 'y'],
+      ['handles lambda with default argument', 'lambda x, y=10: x + y', 'x', 'y'],
+      ['handles lambda with *args and **kwargs', 'lambda *args, **kwargs: args', 'args', 'kwargs'],
+    ])('%s', (_name, expr, firstVariable, secondVariable) => {
       const scopes = extractLocalScopes(expr)
 
       const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('x')
-      expect(allVars).toContain('y')
+      expect(allVars).toContain(firstVariable)
+      expect(allVars).toContain(secondVariable)
     })
 
     it('handles comprehension with condition', () => {
@@ -429,42 +396,6 @@ describe('AST Visitor Edge Cases', () => {
       const names = identifiers.map((i) => i.name)
       expect(names).toContain('x')
       expect(names).toContain('items')
-    })
-
-    it('handles comprehension with multiple for clauses', () => {
-      const expr = '[a + b for a in range(3) for b in range(3)]'
-      const scopes = extractLocalScopes(expr)
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('a')
-      expect(allVars).toContain('b')
-    })
-
-    it('handles nested lambdas', () => {
-      const expr = 'lambda x: lambda y: x + y'
-      const scopes = extractLocalScopes(expr)
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('x')
-      expect(allVars).toContain('y')
-    })
-
-    it('handles lambda with default argument', () => {
-      const expr = 'lambda x, y=10: x + y'
-      const scopes = extractLocalScopes(expr)
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('x')
-      expect(allVars).toContain('y')
-    })
-
-    it('handles lambda with *args and **kwargs', () => {
-      const expr = 'lambda *args, **kwargs: args'
-      const scopes = extractLocalScopes(expr)
-
-      const allVars = scopes.flatMap((s) => s.variables)
-      expect(allVars).toContain('args')
-      expect(allVars).toContain('kwargs')
     })
   })
 
@@ -504,7 +435,7 @@ describe('AST Visitor Edge Cases', () => {
     it('handles long method chains', () => {
       const methods = extractMethodCalls('a.b().c().d().e()')
 
-      expect(methods.length).toBe(4)
+      expect(methods).toHaveLength(4)
     })
 
     it('handles method call on function result', () => {
@@ -637,65 +568,33 @@ describe('AST Visitor Edge Cases', () => {
       expect(ops[0].rightNode.text).toBe('b')
     })
 
-    it('extracts subtraction', () => {
-      const ops = extractBinaryOperations('x - y')
+    it.each([
+      ['extracts subtraction', 'x - y', '-'],
+      ['extracts multiplication', 'a * b', '*'],
+      ['extracts division', 'a / b', '/'],
+      ['extracts floor division', 'a // b', '//'],
+      ['extracts modulo', 'a % b', '%'],
+      ['extracts power operator', 'a ** b', '**'],
+      ['extracts binary ops inside function call', 'func(a + b)', '+'],
+    ])('%s', (_name, expression, operator) => {
+      const ops = extractBinaryOperations(expression)
 
       expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('-')
+      expect(ops[0].operator).toBe(operator)
     })
 
-    it('extracts multiplication', () => {
-      const ops = extractBinaryOperations('a * b')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('*')
-    })
-
-    it('extracts division', () => {
-      const ops = extractBinaryOperations('a / b')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('/')
-    })
-
-    it('extracts floor division', () => {
-      const ops = extractBinaryOperations('a // b')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('//')
-    })
-
-    it('extracts modulo', () => {
-      const ops = extractBinaryOperations('a % b')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('%')
-    })
-
-    it('extracts power operator', () => {
-      const ops = extractBinaryOperations('a ** b')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('**')
-    })
-
-    it('extracts multiple operations in chain', () => {
-      const ops = extractBinaryOperations('a + b - c')
+    it.each([
+      ['extracts multiple operations in chain', 'a + b - c', '+', '-'],
+      ['extracts nested binary operations', '(a + b) * c', '+', '*'],
+      ['extracts binary ops with numeric literals', '1 + 2 * 3', '+', '*'],
+    ])('%s', (_name, expression, firstOperator, secondOperator) => {
+      const ops = extractBinaryOperations(expression)
 
       expect(ops).toHaveLength(2)
       // Order may vary depending on AST traversal
       const operators = ops.map(o => o.operator)
-      expect(operators).toContain('+')
-      expect(operators).toContain('-')
-    })
-
-    it('extracts nested binary operations', () => {
-      const ops = extractBinaryOperations('(a + b) * c')
-
-      expect(ops).toHaveLength(2)
-      const operators = ops.map(o => o.operator)
-      expect(operators).toContain('+')
-      expect(operators).toContain('*')
+      expect(operators).toContain(firstOperator)
+      expect(operators).toContain(secondOperator)
     })
 
     it('extracts bitwise operators', () => {
@@ -729,13 +628,6 @@ describe('AST Visitor Edge Cases', () => {
       expect(ops).toHaveLength(0)
     })
 
-    it('extracts binary ops inside function call', () => {
-      const ops = extractBinaryOperations('func(a + b)')
-
-      expect(ops).toHaveLength(1)
-      expect(ops[0].operator).toBe('+')
-    })
-
     it('extracts binary ops with string literals', () => {
       const ops = extractBinaryOperations('"hello" + " world"')
 
@@ -743,15 +635,6 @@ describe('AST Visitor Edge Cases', () => {
       expect(ops[0].operator).toBe('+')
       expect(ops[0].leftNode.type).toBe('string')
       expect(ops[0].rightNode.type).toBe('string')
-    })
-
-    it('extracts binary ops with numeric literals', () => {
-      const ops = extractBinaryOperations('1 + 2 * 3')
-
-      expect(ops).toHaveLength(2)
-      const operators = ops.map(o => o.operator)
-      expect(operators).toContain('+')
-      expect(operators).toContain('*')
     })
 
     it('provides position information', () => {

@@ -92,20 +92,12 @@ describe('Expression Validation', () => {
       expect(issues[0].identifier).toBe('fake_function')
     })
 
-    it('allows valid builtin function', () => {
-      const issues = validateExpressions('len(username)', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows abs function', () => {
-      const issues = validateExpressions('abs(count)', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows str function', () => {
-      const issues = validateExpressions('str(count)', availableVars)
+    it.each([
+      ['valid builtin', 'len(username)'],
+      ['abs', 'abs(count)'],
+      ['str', 'str(count)'],
+    ])('allows %s function', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -199,74 +191,21 @@ describe('Expression Validation', () => {
     })
 
     describe('blocked functions (noise removed)', () => {
-      it('blocks tuple function', () => {
-        const issues = validateExpressions('tuple(items)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks pow function', () => {
-        const issues = validateExpressions('pow(2, 3)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks divmod function', () => {
-        const issues = validateExpressions('divmod(10, 3)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks enumerate function', () => {
-        const issues = validateExpressions('list(enumerate(items))', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks zip function', () => {
-        const issues = validateExpressions('list(zip(items, items))', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks chr function', () => {
-        const issues = validateExpressions('chr(65)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks ord function', () => {
-        const issues = validateExpressions('ord("A")', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks bin function', () => {
-        const issues = validateExpressions('bin(10)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks hex function', () => {
-        const issues = validateExpressions('hex(255)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks oct function', () => {
-        const issues = validateExpressions('oct(8)', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks ascii function', () => {
-        const issues = validateExpressions('ascii("hello")', availableVars)
-        expect(issues).toHaveLength(1)
-        expect(issues[0].type).toBe('blocked_function')
-      })
-
-      it('blocks repr function', () => {
-        const issues = validateExpressions('repr(count)', availableVars)
+      it.each([
+        ['tuple', 'tuple(items)'],
+        ['pow', 'pow(2, 3)'],
+        ['divmod', 'divmod(10, 3)'],
+        ['enumerate', 'list(enumerate(items))'],
+        ['zip', 'list(zip(items, items))'],
+        ['chr', 'chr(65)'],
+        ['ord', 'ord("A")'],
+        ['bin', 'bin(10)'],
+        ['hex', 'hex(255)'],
+        ['oct', 'oct(8)'],
+        ['ascii', 'ascii("hello")'],
+        ['repr', 'repr(count)'],
+      ])('blocks %s function', (_name, expression) => {
+        const issues = validateExpressions(expression, availableVars)
         expect(issues).toHaveLength(1)
         expect(issues[0].type).toBe('blocked_function')
       })
@@ -282,8 +221,12 @@ describe('Expression Validation', () => {
       expect(issues[0].message.toLowerCase()).toContain('not supported')
     })
 
-    it('detects blocked exec function', () => {
-      const issues = validateExpressions("exec('code')", availableVars)
+    it.each([
+      ['exec function', "exec('code')"],
+      ['dunder patterns', 'x.__class__'],
+      ['open function', "open('file.txt')"],
+    ])('detects blocked %s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('blocked_function')
@@ -295,20 +238,6 @@ describe('Expression Validation', () => {
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('blocked_function')
       expect(issues[0].identifier).toBe('__')
-    })
-
-    it('detects blocked dunder patterns', () => {
-      const issues = validateExpressions('x.__class__', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('detects blocked open function', () => {
-      const issues = validateExpressions("open('file.txt')", availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
     })
 
     it('allows exit as variable name (not in backend whitelist anyway)', () => {
@@ -405,14 +334,13 @@ describe('Expression Validation', () => {
       expect(issues[0].message).toContain("Did you mean 'username'")
     })
 
-    it('allows known variables in complex expression', () => {
-      const issues = validateExpressions('len(username)', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles expression with operators', () => {
-      const issues = validateExpressions('count + 1', availableVars)
+    it.each([
+      ['allows known variables in complex expression', 'len(username)'],
+      ['handles expression with operators', 'count + 1'],
+      // Should not flag 'if', 'else' as unknown
+      ['skips Python keywords in complex expressions', 'count if count > 0 else 0'],
+    ])('%s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -422,13 +350,6 @@ describe('Expression Validation', () => {
 
       expect(issues).toHaveLength(1)
       expect(issues[0].identifier).toBe('unknown')
-    })
-
-    it('skips Python keywords in complex expressions', () => {
-      const issues = validateExpressions('count if count > 0 else 0', availableVars)
-
-      // Should not flag 'if', 'else' as unknown
-      expect(issues).toHaveLength(0)
     })
   })
 
@@ -570,32 +491,18 @@ describe('Expression Validation', () => {
   })
 
   describe('Invalid String Operations', () => {
-    it('detects string divided by number', () => {
-      const issues = validateExpressions('"a" / 0', availableVars)
+    it.each([
+      ['detects string divided by number', '"a" / 0', 'Cannot divide string'],
+      ['detects division by string', '1 / "a"', 'Cannot divide by string'],
+      ['detects string subtraction', '"a" - 1', 'Cannot subtract from string'],
+      ['detects subtraction of string', '1 - "a"', 'Cannot subtract string'],
+      // This is the user's example
+      ['detects invalid string ops in complex expressions', 'username.isupper() - 1/1 + "a"/0', 'Cannot divide string'],
+    ])('%s', (_name, expression, message) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Cannot divide string')
-    })
-
-    it('detects division by string', () => {
-      const issues = validateExpressions('1 / "a"', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Cannot divide by string')
-    })
-
-    it('detects string subtraction', () => {
-      const issues = validateExpressions('"a" - 1', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Cannot subtract from string')
-    })
-
-    it('detects subtraction of string', () => {
-      const issues = validateExpressions('1 - "a"', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Cannot subtract string')
+      expect(issues[0].message).toContain(message)
     })
 
     it('allows string concatenation with +', () => {
@@ -622,43 +529,20 @@ describe('Expression Validation', () => {
       expect(issues).toHaveLength(1)
       expect(issues[0].message).toBe('Cannot subtract from string')
     })
-
-    it('detects invalid string ops in complex expressions', () => {
-      // This is the user's example
-      const issues = validateExpressions('username.isupper() - 1/1 + "a"/0', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Cannot divide string')
-    })
   })
 
   describe('Syntax Validation', () => {
-    it('detects backticks as invalid', () => {
-      const issues = validateExpressions('11````43', availableVars)
+    it.each([
+      ['detects backticks as invalid', '11````43', 'Backticks'],
+      ['detects unbalanced parentheses', 'func((x)', 'Unbalanced'],
+      ['detects semicolons as invalid', 'x; y', 'Semicolons'],
+      ['detects comments as invalid', 'x # comment', 'Comments'],
+      ['detects assignment with variable as invalid', 'count = count + 1', 'Assignment statements are not allowed'],
+    ])('%s', (_name, expression, message) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Backticks')
-    })
-
-    it('detects unbalanced parentheses', () => {
-      const issues = validateExpressions('func((x)', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Unbalanced')
-    })
-
-    it('detects semicolons as invalid', () => {
-      const issues = validateExpressions('x; y', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Semicolons')
-    })
-
-    it('detects comments as invalid', () => {
-      const issues = validateExpressions('x # comment', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Comments')
+      expect(issues[0].message).toContain(message)
     })
 
     it('detects assignment statement as invalid', () => {
@@ -667,13 +551,6 @@ describe('Expression Validation', () => {
       expect(issues).toHaveLength(1)
       expect(issues[0].message).toContain('Assignment statements are not allowed')
       expect(issues[0].message).toContain('Var Setter')
-    })
-
-    it('detects assignment with variable as invalid', () => {
-      const issues = validateExpressions('count = count + 1', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].message).toContain('Assignment statements are not allowed')
     })
 
     it('detects walrus operator as invalid', () => {
@@ -696,36 +573,17 @@ describe('Expression Validation', () => {
       expect(issues).toHaveLength(0)
     })
 
-    it('detects dot followed by operator as invalid syntax', () => {
-      const issues = validateExpressions('username. + 1', availableVars)
+    it.each([
+      ['detects dot followed by operator as invalid syntax', 'username. + 1', 'Invalid syntax: expected attribute or method name after dot'],
+      ['detects operator followed by dot as invalid syntax', '1 + .something', 'Invalid syntax: unexpected dot after operator'],
+      ['detects multiple operators in a row as invalid', '1 +++ 2', 'Invalid operator sequence'],
+      ['detects decorators as invalid', '@decorator', 'Decorators (@) are not valid'],
+    ])('%s', (_name, expression, message) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain('Invalid syntax: expected attribute or method name after dot')
-    })
-
-    it('detects operator followed by dot as invalid syntax', () => {
-      const issues = validateExpressions('1 + .something', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain('Invalid syntax: unexpected dot after operator')
-    })
-
-    it('detects multiple operators in a row as invalid', () => {
-      const issues = validateExpressions('1 +++ 2', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain('Invalid operator sequence')
-    })
-
-    it('detects decorators as invalid', () => {
-      const issues = validateExpressions('@decorator', availableVars)
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('invalid_function')
-      expect(issues[0].message).toContain('Decorators (@) are not valid')
+      expect(issues[0].message).toContain(message)
     })
   })
 
@@ -791,14 +649,14 @@ describe('Expression Validation', () => {
   })
 
   describe('Method Validation', () => {
-    it('allows valid string methods', () => {
-      const issues = validateExpressions('username.upper()', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows chained valid methods', () => {
-      const issues = validateExpressions('username.strip().upper()', availableVars)
+    it.each([
+      ['allows valid string methods', 'username.upper()'],
+      ['allows chained valid methods', 'username.strip().upper()'],
+      ['allows valid list methods', 'items.append(1)'],
+      ['allows valid dict methods', 'config.keys()'],
+      ['allows methods with arguments', "username.replace('a', 'b')"],
+    ])('%s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -817,24 +675,6 @@ describe('Expression Validation', () => {
 
       expect(issues).toHaveLength(1)
       expect(issues[0].identifier).toBe('foo')
-    })
-
-    it('allows valid list methods', () => {
-      const issues = validateExpressions('items.append(1)', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows valid dict methods', () => {
-      const issues = validateExpressions('config.keys()', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows methods with arguments', () => {
-      const issues = validateExpressions("username.replace('a', 'b')", availableVars)
-
-      expect(issues).toHaveLength(0)
     })
 
     it('validates methods against variable type when types provided', () => {
@@ -890,32 +730,14 @@ describe('Expression Validation', () => {
   })
 
   describe('Edge Cases', () => {
-    it('handles empty expression gracefully', () => {
-      const issues = validateExpressions('', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles whitespace-only expression', () => {
-      const issues = validateExpressions('  ', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles chained methods on known variable', () => {
-      const issues = validateExpressions('username.strip().upper()', availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles method with arguments', () => {
-      const issues = validateExpressions("username.replace('a', 'b')", availableVars)
-
-      expect(issues).toHaveLength(0)
-    })
-
-    it('handles nested function calls', () => {
-      const issues = validateExpressions('str(len(items))', availableVars)
+    it.each([
+      ['handles empty expression gracefully', ''],
+      ['handles whitespace-only expression', '  '],
+      ['handles chained methods on known variable', 'username.strip().upper()'],
+      ['handles method with arguments', "username.replace('a', 'b')"],
+      ['handles nested function calls', 'str(len(items))'],
+    ])('%s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars)
 
       expect(issues).toHaveLength(0)
     })
@@ -969,60 +791,28 @@ describe('Field Expression Validation (mutation blocking)', () => {
       expect(issues[0].message).toContain('pop')
     })
 
-    it('blocks list.sort()', () => {
-      const issues = validateExpressions('my_list.sort()', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('blocks list.clear()', () => {
-      const issues = validateExpressions('my_list.clear()', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('blocks dict.pop()', () => {
-      const issues = validateExpressions('my_dict.pop("key")', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('blocks dict.update()', () => {
-      const issues = validateExpressions('my_dict.update(my_dict)', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].type).toBe('blocked_function')
-    })
-
-    it('blocks set.add()', () => {
-      const issues = validateExpressions('my_set.add(1)', availableVars, variableTypes, true)
+    it.each([
+      ['list.sort()', 'my_list.sort()'],
+      ['list.clear()', 'my_list.clear()'],
+      ['dict.pop()', 'my_dict.pop("key")'],
+      ['dict.update()', 'my_dict.update(my_dict)'],
+      ['set.add()', 'my_set.add(1)'],
+    ])('blocks %s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars, variableTypes, true)
       expect(issues).toHaveLength(1)
       expect(issues[0].type).toBe('blocked_function')
     })
   })
 
   describe('allows non-mutating methods in field expressions', () => {
-    it('allows str.upper()', () => {
-      const issues = validateExpressions('my_str.upper()', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows str.split()', () => {
-      const issues = validateExpressions('my_str.split(",")', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows dict.keys()', () => {
-      const issues = validateExpressions('my_dict.keys()', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows dict.get()', () => {
-      const issues = validateExpressions('my_dict.get("key")', availableVars, variableTypes, true)
-      expect(issues).toHaveLength(0)
-    })
-
-    it('allows list indexing (not a method call)', () => {
-      const issues = validateExpressions('my_list[0]', availableVars, variableTypes, true)
+    it.each([
+      ['allows str.upper()', 'my_str.upper()'],
+      ['allows str.split()', 'my_str.split(",")'],
+      ['allows dict.keys()', 'my_dict.keys()'],
+      ['allows dict.get()', 'my_dict.get("key")'],
+      ['allows list indexing (not a method call)', 'my_list[0]'],
+    ])('%s', (_name, expression) => {
+      const issues = validateExpressions(expression, availableVars, variableTypes, true)
       expect(issues).toHaveLength(0)
     })
   })
@@ -1284,7 +1074,7 @@ describe('Field Expression Helpers (read-only context)', () => {
     it('returns Set of method names', () => {
       const names = getFieldMethodNamesForType('list')
 
-      expect(names instanceof Set).toBe(true)
+      expect(names).toBeInstanceOf(Set)
       expect(names.has('index')).toBe(true)
       expect(names.has('count')).toBe(true)
       expect(names.has('append')).toBe(false)
@@ -1308,7 +1098,7 @@ describe('Field Expression Helpers (read-only context)', () => {
 
   describe('FIELD_ALLOWED_METHOD_NAMES', () => {
     it('is a Set', () => {
-      expect(FIELD_ALLOWED_METHOD_NAMES instanceof Set).toBe(true)
+      expect(FIELD_ALLOWED_METHOD_NAMES).toBeInstanceOf(Set)
     })
 
     it('includes non-mutating methods', () => {

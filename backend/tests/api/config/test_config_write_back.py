@@ -959,10 +959,11 @@ class TestRefusals:
         before = _state(read_only_config)
         moves = _watch_replace(monkeypatch)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError, match=_refusal(f"{_named(read_only_config)} is read-only")
         ):
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert moves == []
         assert _state(read_only_config) == before
@@ -971,8 +972,9 @@ class TestRefusals:
     def test_refusal_is_an_internal_server_error_carrying_the_message(
         self, read_only_config: Path
     ) -> None:
+        config = get_config()
         with pytest.raises(ConfigWriteError) as caught:
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         error = caught.value
         assert isinstance(error, InternalServerException)
@@ -986,10 +988,11 @@ class TestRefusals:
         config_file.write_text("logging: [unclosed\n", encoding="utf-8")
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError, match=_refusal(f"{_named(config_file)} cannot be read: .+")
         ) as caught:
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert "\n" not in caught.value.message
         assert _state(config_file) == before
@@ -1006,10 +1009,11 @@ class TestRefusals:
         config_file.write_bytes(content)
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError, match=_refusal(f"{_named(config_file)} cannot be read: .+")
         ) as caught:
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert "\n" not in caught.value.message
         assert _state(config_file) == before
@@ -1021,8 +1025,9 @@ class TestRefusals:
         config_file.write_bytes(b"mcp:\n  port: 1\n  port: 2\n")
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(ConfigWriteError) as caught:
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert caught.value.message == (
             f"Settings cannot be saved: the config file {config_file} cannot be read: "
@@ -1034,11 +1039,12 @@ class TestRefusals:
     def test_file_deleted_after_loading_is_refused_as_unreadable(self, config_file: Path) -> None:
         config_file.unlink()
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError,
             match=_refusal(f"{_named(config_file)} cannot be read: No such file or directory"),
         ):
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert list(config_file.parent.iterdir()) == []
         assert get_config().get(_FLAG) is False
@@ -1047,10 +1053,11 @@ class TestRefusals:
         config_file.chmod(0o200)
 
         try:
+            config = get_config()
             with pytest.raises(
                 ConfigWriteError, match=_refusal(f"{_named(config_file)} cannot be read: .+")
             ):
-                get_config().save({_FLAG: True})
+                config.save({_FLAG: True})
         finally:
             config_file.chmod(0o600)
 
@@ -1065,11 +1072,12 @@ class TestRefusals:
         config_file.write_text(text, encoding="utf-8")
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError,
             match=_refusal(f"{_named(config_file)} does not hold a YAML mapping"),
         ):
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert _state(config_file) == before
         assert get_config().get(_FLAG) is False
@@ -1089,11 +1097,12 @@ class TestRefusals:
         config_file.write_text(text, encoding="utf-8")
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError,
             match=_refusal(f"{re.escape(prefix)} in {_named(config_file)} is not a section"),
         ):
-            get_config().save({_FLAG: True, _LOCK: True})
+            config.save({_FLAG: True, _LOCK: True})
 
         assert _state(config_file) == before
         assert get_config().get(_FLAG) is False
@@ -1111,11 +1120,12 @@ class TestRefusals:
 
         monkeypatch.setattr(os, "replace", refuse)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError,
             match=_refusal(f"{_named(config_file)} cannot be written: No space left on device"),
         ):
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert len(temp_files) == 1
         assert not temp_files[0].exists()
@@ -1129,11 +1139,12 @@ class TestRefusals:
         folder.chmod(0o500)
 
         try:
+            config = get_config()
             with pytest.raises(
                 ConfigWriteError,
                 match=_refusal(f"{_named(config_file)} cannot be written: Permission denied"),
             ):
-                get_config().save({_FLAG: True})
+                config.save({_FLAG: True})
         finally:
             folder.chmod(0o700)
 
@@ -1201,19 +1212,22 @@ class TestSettingTheNextStartWouldRefuse:
     ) -> None:
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(ValidationException, match=f"^{re.escape(problem)}$"):
-            get_config().save({key: value})
+            config.save({key: value})
 
         assert _state(config_file) == before
+        content = _nest(key, value)
         with pytest.raises(
             ConfigValidationError,
             match=f"^Config file {re.escape(str(config_file))}: {re.escape(problem)}$",
         ):
-            load_config(_nest(key, value))
+            load_config(content)
 
     def test_refusal_is_a_validation_error_carrying_the_rule(self) -> None:
+        config = get_config()
         with pytest.raises(ValidationException) as caught:
-            get_config().save({"mcp.enabled": "yes"})
+            config.save({"mcp.enabled": "yes"})
 
         error = caught.value
         assert (error.status_code, error.error_code) == (400, "VALIDATION_ERROR")
@@ -1224,8 +1238,9 @@ class TestSettingTheNextStartWouldRefuse:
     ) -> None:
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(ValidationException, match="^mcp.enabled must be true or false$"):
-            get_config().save({_FLAG: True, "mcp.enabled": "yes"})
+            config.save({_FLAG: True, "mcp.enabled": "yes"})
 
         assert _state(config_file) == before
 
@@ -1234,8 +1249,9 @@ class TestSettingTheNextStartWouldRefuse:
     ) -> None:
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(ValidationException, match=f"^{_ACTION_PROBLEM}$"):
-            get_config().save({_LOCK: True, _ACTION: "accept-new"})
+            config.save({_LOCK: True, _ACTION: "accept-new"})
 
         assert _state(config_file) == before
 
@@ -1245,8 +1261,9 @@ class TestSettingTheNextStartWouldRefuse:
         get_config().save({_LOCK: True, _ACTION: "strict"})
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(ValidationException, match=f"^{_ACTION_PROBLEM}$"):
-            get_config().save({_ACTION: "accept-new"})
+            config.save({_ACTION: "accept-new"})
 
         assert _state(config_file) == before
 
@@ -1416,10 +1433,11 @@ class TestSaveChanged:
     def test_read_only_file_is_refused_as_a_save_is(self, read_only_config: Path) -> None:
         before = _state(read_only_config)
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError, match=_refusal(f"{_named(read_only_config)} is read-only")
         ):
-            get_config().save_changed("mcp", {"enabled": True, "port": 8765})
+            config.save_changed("mcp", {"enabled": True, "port": 8765})
 
         assert _state(read_only_config) == before
         assert get_config().get("mcp.enabled") is False
@@ -1429,10 +1447,11 @@ class TestSaveChanged:
     ) -> None:
         before = _state(config_file)
 
+        config = get_config()
         with pytest.raises(
             ValidationException, match="^mcp\\.port must be a whole number from 1024 to 65535$"
         ):
-            get_config().save_changed("mcp", {"enabled": True, "port": "8765.0"})
+            config.save_changed("mcp", {"enabled": True, "port": "8765.0"})
 
         assert _state(config_file) == before
 
@@ -1454,8 +1473,9 @@ class TestSaveChanged:
         assert _state(config_file) == before
 
     def test_text_that_is_not_digits_is_compared_as_it_is(self) -> None:
+        config = get_config()
         with pytest.raises(ValidationException, match="^mcp\\.port must be a whole number"):
-            get_config().save_changed("mcp", {"port": "port"})
+            config.save_changed("mcp", {"port": "port"})
 
 
 class TestFileIdentity:
@@ -1506,11 +1526,12 @@ class TestFileIdentity:
     ) -> None:
         linked_target.write_text("- a\n", encoding="utf-8")
 
+        config = get_config()
         with pytest.raises(
             ConfigWriteError,
             match=_refusal(f"{_named(config_file)} does not hold a YAML mapping"),
         ):
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         assert config_file.is_symlink()
         assert linked_target.read_text(encoding="utf-8") == "- a\n"
@@ -1646,8 +1667,9 @@ class TestRefusedSaveKeepsTheFileValuesToItself:
     def test_refusal_does_not_carry_the_values_of_a_duplicated_key(self, config_file: Path) -> None:
         config_file.write_text(_TWICE, encoding="utf-8")
 
+        config = get_config()
         with pytest.raises(ConfigWriteError) as caught:
-            get_config().save({_FLAG: True})
+            config.save({_FLAG: True})
 
         trace = "".join(traceback.format_exception(caught.value))
         assert "found duplicate key" in trace

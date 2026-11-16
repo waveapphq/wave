@@ -160,8 +160,9 @@ class TestParseManifest:
             parse_manifest(_TRUNCATED_JSON)
 
     def test_every_document_is_vetted_not_only_the_first(self) -> None:
+        text = _text(_CONFIG_MAP, {"apiVersion": "v1"})
         with pytest.raises(ValueError, match=exact(_KIND_MESSAGE)):
-            parse_manifest(_text(_CONFIG_MAP, {"apiVersion": "v1"}))
+            parse_manifest(text)
 
     def test_a_name_with_spaces_around_it_is_kept_verbatim(self) -> None:
         documents = parse_manifest(_text(_named({"name": " probe-a "})))
@@ -193,8 +194,9 @@ class TestManifestVetting:
         ],
     )
     def test_a_document_with_no_api_version_or_kind_is_refused(self, document: Any) -> None:
+        text = _text(document)
         with pytest.raises(ValueError, match=exact(_KIND_MESSAGE)):
-            parse_manifest(_text(document))
+            parse_manifest(text)
 
     @pytest.mark.parametrize(
         "text",
@@ -206,8 +208,9 @@ class TestManifestVetting:
             parse_manifest(text)
 
     def test_the_api_version_check_runs_before_the_name_check(self) -> None:
+        text = _text({"metadata": {}})
         with pytest.raises(ValueError, match=exact(_KIND_MESSAGE)):
-            parse_manifest(_text({"metadata": {}}))
+            parse_manifest(text)
 
     @pytest.mark.parametrize(
         "metadata",
@@ -222,12 +225,14 @@ class TestManifestVetting:
         ],
     )
     def test_a_document_with_no_metadata_name_is_refused(self, metadata: Any) -> None:
+        text = _text(_named(metadata))
         with pytest.raises(ValueError, match=exact(_NAME_MESSAGE)):
-            parse_manifest(_text(_named(metadata)))
+            parse_manifest(text)
 
     def test_a_document_with_no_metadata_at_all_is_refused(self) -> None:
+        text = _text({"apiVersion": "v1", "kind": "ConfigMap"})
         with pytest.raises(ValueError, match=exact(_NAME_MESSAGE)):
-            parse_manifest(_text({"apiVersion": "v1", "kind": "ConfigMap"}))
+            parse_manifest(text)
 
 
 class TestFilled:
@@ -362,8 +367,9 @@ class TestSynthesizeManifest:
         assert "command" not in _first_container(obj)
 
     def test_a_job_command_with_an_unclosed_quote_is_refused(self) -> None:
+        params = _job_params(command='sh -c "echo hi')
         with pytest.raises(ValueError, match=exact(_UNCLOSED_COMMAND_MESSAGE)):
-            synthesize_manifest(_job_params(command='sh -c "echo hi'))
+            synthesize_manifest(params)
 
 
 class TestSplitCommand:

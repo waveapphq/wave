@@ -2350,7 +2350,11 @@ class TestStartExecutionWorkbenchIntegration:
                 )
 
                 lineage = mock_start.call_args.kwargs.get("lineage")
-                assert lineage is not None and lineage.execution_id == created["id"], (
+                assert lineage is not None, (
+                    "start_execution must forward execution_id to workbench (via RunLineage) so "
+                    "session_data records the tracked-execution linkage"
+                )
+                assert lineage.execution_id == created["id"], (
                     "start_execution must forward execution_id to workbench (via RunLineage) so "
                     "session_data records the tracked-execution linkage"
                 )
@@ -3543,7 +3547,8 @@ class TestEnrichmentRegressionPath:
             detail = execution_service.get_execution(exec_id)
 
         assert detail is not None
-        assert detail["suites"] and detail["suites"][0]["id"] == "s1"
+        assert detail["suites"]
+        assert detail["suites"][0]["id"] == "s1"
         assert detail["suites"][0]["tests"][0]["id"] == "t1"
         assert detail["duplicate_tests"] == {"t1": ["s1"]}
 

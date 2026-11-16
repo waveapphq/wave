@@ -208,24 +208,27 @@ class TestBuildConnectKwargsPrivateKey:
     def test_a_missing_key_file_is_refused_with_its_absolute_path(self, server_home: Path) -> None:
         missing = server_home / "keys" / "id_lab"
 
+        params = _base_params(private_key="keys/id_lab")
         with pytest.raises(ValueError, match=exact(f"Private Key file not found: {missing}")):
-            build_connect_kwargs(_base_params(private_key="keys/id_lab"), None)
+            build_connect_kwargs(params, None)
 
     def test_the_missing_path_is_shown_with_dot_dot_collapsed(self, server_home: Path) -> None:
         missing = server_home / "keys" / "id_lab"
 
+        params = _base_params(private_key="other/../keys/id_lab")
         with pytest.raises(ValueError, match=exact(f"Private Key file not found: {missing}")):
-            build_connect_kwargs(_base_params(private_key="other/../keys/id_lab"), None)
+            build_connect_kwargs(params, None)
 
     def test_an_unreadable_key_file_is_refused_with_the_reason(self, server_home: Path) -> None:
         unreadable = server_home / "keys" / "id_lab"
         unreadable.mkdir(parents=True)
 
+        params = _base_params(private_key="keys/id_lab")
         with pytest.raises(
             ValueError,
             match="^" + re.escape(f"Private Key file {unreadable} cannot be read: ") + ".+$",
         ):
-            build_connect_kwargs(_base_params(private_key="keys/id_lab"), None)
+            build_connect_kwargs(params, None)
 
     def test_passphrase_maps_when_private_key_present(self) -> None:
         kwargs = build_connect_kwargs(_base_params(private_key=_PEM, passphrase="unlock-me"), None)
@@ -967,6 +970,7 @@ class TestOpenConnection:
         assert connect_mock.call_args.kwargs["tunnel"] is parent_conn
 
     async def test_failure_raises_safe_connection_error(self) -> None:
+        params = _base_params()
         with (
             patch(
                 "wavecore.plugins._ssh_session.asyncssh.connect",
@@ -977,9 +981,10 @@ class TestOpenConnection:
                 match=r"^SSH connection to node-1\.example\.com:22 failed: connection refused$",
             ),
         ):
-            await open_connection(_base_params(), None)
+            await open_connection(params, None)
 
     async def test_failure_detail_includes_the_explicit_port(self) -> None:
+        params = _base_params(port=2222)
         with (
             patch(
                 "wavecore.plugins._ssh_session.asyncssh.connect",
@@ -990,13 +995,14 @@ class TestOpenConnection:
                 match=r"^SSH connection to node-1\.example\.com:2222 failed: no route to host$",
             ),
         ):
-            await open_connection(_base_params(port=2222), None)
+            await open_connection(params, None)
 
     async def test_a_wrong_passphrase_that_reads_as_invalid_pem_is_named_as_not_decrypted(
         self,
     ) -> None:
         # A wrong passphrase on a legacy encrypted PEM unpads cleanly about once in 370 tries.
         exported = _exported_key("pkcs1-pem", passphrase="right")
+        params = _base_params(private_key=exported, passphrase="wrong")
         with (
             _connect_raising_invalid_pem(),
             pytest.raises(
@@ -1005,7 +1011,7 @@ class TestOpenConnection:
                 r"Unable to decrypt PKCS#1 private key$",
             ),
         ):
-            await open_connection(_base_params(private_key=exported, passphrase="wrong"), None)
+            await open_connection(params, None)
 
     @pytest.mark.parametrize(
         ("export_format", "passphrase"),
@@ -1016,6 +1022,7 @@ class TestOpenConnection:
         self, export_format: str, passphrase: str | None
     ) -> None:
         exported = _exported_key(export_format, passphrase=passphrase)
+        params = _base_params(private_key=exported, passphrase="wrong")
         with (
             _connect_raising_invalid_pem(),
             pytest.raises(
@@ -1024,9 +1031,10 @@ class TestOpenConnection:
                 r"Invalid PEM private key$",
             ),
         ):
-            await open_connection(_base_params(private_key=exported, passphrase="wrong"), None)
+            await open_connection(params, None)
 
     async def test_empty_error_text_falls_back_to_the_exception_class(self) -> None:
+        params = _base_params()
         with (
             patch(
                 "wavecore.plugins._ssh_session.asyncssh.connect",
@@ -1037,7 +1045,7 @@ class TestOpenConnection:
                 match=r"^SSH connection to node-1\.example\.com:22 failed: ValueError$",
             ),
         ):
-            await open_connection(_base_params(), None)
+            await open_connection(params, None)
 
     @pytest.mark.parametrize("mode", ["strict", "accept-new"])
     async def test_an_unreadable_trusted_hosts_list_stops_the_connection(self, mode: str) -> None:
@@ -1046,13 +1054,14 @@ class TestOpenConnection:
         ssh_hosts_file().mkdir(parents=True)
         connect_mock = AsyncMock(return_value=MagicMock())
 
+        params = _base_params(host_key_verification=mode)
         with (
             patch("wavecore.plugins._ssh_session.asyncssh.connect", new=connect_mock),
             pytest.raises(
                 (ConnectionError, TrustedHostsUnreadable), match=_unreadable(ssh_hosts_file())
             ),
         ):
-            await open_connection(_base_params(host_key_verification=mode), None)
+            await open_connection(params, None)
 
         connect_mock.assert_not_called()
 
@@ -1386,8 +1395,9 @@ class TestHostKeyVerificationAcrossAChain:
         opened = await open_connection(_endpoint_params(ssh_endpoint, "disabled"), None)
         parent = opened.connection
         try:
+            params = _endpoint_params(ssh_endpoint, "accept-new")
             with pytest.raises(ConnectionError, match=_refused_at(ssh_endpoint, KEY_CHANGED)):
-                await _open_and_hang_up(_endpoint_params(ssh_endpoint, "accept-new"), parent)
+                await _open_and_hang_up(params, parent)
         finally:
             parent.close()
             await parent.wait_closed()
@@ -1397,10 +1407,11 @@ class TestHostKeyVerificationAcrossAChain:
         opened = await open_connection(_endpoint_params(ssh_endpoint, "disabled"), None)
         parent = opened.connection
         try:
+            params = _endpoint_params(ssh_endpoint, "accept-new")
             with pytest.raises(
                 ConnectionError, match=_refused_at(ssh_endpoint, NOT_TRUSTED_LOCKED)
             ):
-                await _open_and_hang_up(_endpoint_params(ssh_endpoint, "accept-new"), parent)
+                await _open_and_hang_up(params, parent)
         finally:
             parent.close()
             await parent.wait_closed()
@@ -1459,18 +1470,19 @@ class TestTheAccountsSSHFilesNeverTakePart:
         folder.mkdir()
         (folder / "id_ed25519").write_bytes(key.export_private_key("openssh"))
 
+        params = _key_login(key_endpoint)
         with pytest.raises(
             ConnectionError,
             match=rf"^SSH connection to 127\.0\.0\.1:{key_endpoint.port} failed: .+$",
         ):
-            await _open_and_hang_up(_key_login(key_endpoint))
+            await _open_and_hang_up(params)
 
         assert key_endpoint.offered_keys == []
 
     async def test_the_accounts_ssh_agent_is_never_asked(
         self,
         key_endpoint: KeyEndpoint,
-        tmp_path_factory: pytest.TempPathFactory,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         asked: list[bool] = []
@@ -1479,15 +1491,16 @@ class TestTheAccountsSSHFilesNeverTakePart:
             asked.append(True)
             writer.close()
 
-        socket_path = tmp_path_factory.mktemp("agent") / "agent.sock"
+        socket_path = tmp_path / "agent.sock"
         server = await asyncio.start_unix_server(agent, path=str(socket_path))
         monkeypatch.setenv("SSH_AUTH_SOCK", str(socket_path))
         try:
+            params = _key_login(key_endpoint)
             with pytest.raises(
                 ConnectionError,
                 match=rf"^SSH connection to 127\.0\.0\.1:{key_endpoint.port} failed: .+$",
             ):
-                await _open_and_hang_up(_key_login(key_endpoint))
+                await _open_and_hang_up(params)
         finally:
             server.close()
             await server.wait_closed()
@@ -1861,14 +1874,14 @@ class TestOutputThatIsNotUTF8AgainstARealSSHChannel:
         async with _connected_as_wave_connects(_prints_bytes_that_are_not_utf8) as conn:
             result = await run_with_timeout(conn, "report", 30)
 
-        assert (result.stdout, result.stderr, result.exit_status) == _REPLACED_OUTPUT
+        assert _REPLACED_OUTPUT == (result.stdout, result.stderr, result.exit_status)
 
     async def test_the_session_runs_its_next_command(self) -> None:
         async with _connected_as_wave_connects(_prints_bytes_that_are_not_utf8) as conn:
             await run_with_timeout(conn, "report", 30)
             result = await run_with_timeout(conn, "report", 30)
 
-        assert (result.stdout, result.stderr, result.exit_status) == _REPLACED_OUTPUT
+        assert _REPLACED_OUTPUT == (result.stdout, result.stderr, result.exit_status)
 
 
 def exact(message: str) -> str:
@@ -1932,10 +1945,9 @@ class TestOpenTunnelChannel:
             open_connection=AsyncMock(side_effect=asyncssh.ChannelOpenError(code, reason))
         )
 
+        record = _tunnel_session(connection)
         with pytest.raises(ConnectionRefusedError, match=exact(reason)) as refused:
-            await _ssh_session.open_tunnel_channel(
-                _tunnel_session(connection), "db.internal.net", 5432
-            )
+            await _ssh_session.open_tunnel_channel(record, "db.internal.net", 5432)
 
         assert refused.value.errno is None
         assert isinstance(refused.value.__cause__, asyncssh.ChannelOpenError)
@@ -1944,11 +1956,11 @@ class TestOpenTunnelChannel:
         """The caller's bound ends the open, and the late channel is closed once (NETCAT-6)."""
         gated = _GatedChannelOpen()
 
+        deadline = asyncio.timeout(0.05)
+        record = _tunnel_session(gated.connection)
         with pytest.raises(TimeoutError):
-            async with asyncio.timeout(0.05):
-                await _ssh_session.open_tunnel_channel(
-                    _tunnel_session(gated.connection), "db.internal.net", 5432
-                )
+            async with deadline:
+                await _ssh_session.open_tunnel_channel(record, "db.internal.net", 5432)
 
         assert gated.writer.close.call_count == 0
         gated.gate.set()
@@ -2041,10 +2053,13 @@ class TestOpenTunnelStream:
         setattr(failing, method, kind(side_effect=error))
         stream = await _open_stream(_channel(**{side: failing}))
 
-        with pytest.raises(ConnectionResetError, match=exact(LOST)) as reset:
+        async def use_the_stream() -> None:
             outcome = call(stream)
             if asyncio.iscoroutine(outcome):
                 await outcome
+
+        with pytest.raises(ConnectionResetError, match=exact(LOST)) as reset:
+            await use_the_stream()
 
         assert reset.value.errno is None
         assert reset.value.__cause__ is error
@@ -2073,10 +2088,9 @@ class TestOpenTunnelStream:
         lost = asyncssh.ConnectionLost(LOST)
         connection = MagicMock(open_connection=AsyncMock(side_effect=lost))
 
+        record = _tunnel_session(connection)
         with pytest.raises(ConnectionResetError, match=exact(LOST)) as reset:
-            await _ssh_session.open_tunnel_channel(
-                _tunnel_session(connection), "db.internal.net", 5432
-            )
+            await _ssh_session.open_tunnel_channel(record, "db.internal.net", 5432)
 
         assert reset.value.errno is None
         assert reset.value.__cause__ is lost
@@ -2978,8 +2992,9 @@ class TestOpenSFTPClient:
     ) -> None:
         connection = MagicMock(start_sftp_client=AsyncMock(side_effect=failure))
 
+        record = _tunnel_session(connection)
         with pytest.raises(_ssh_session.SFTPUnavailable) as raised:
-            await _ssh_session.open_sftp_client(_tunnel_session(connection))
+            await _ssh_session.open_sftp_client(record)
 
         assert raised.value.detail == failure.reason
         assert str(raised.value) == failure.reason
@@ -2994,9 +3009,11 @@ class TestOpenSFTPClient:
     async def test_a_timeout_releases_the_client_once_it_opens(self) -> None:
         gated = _GatedSFTPOpen()
 
+        deadline = asyncio.timeout(0.05)
+        record = _tunnel_session(gated.connection)
         with pytest.raises(TimeoutError):
-            async with asyncio.timeout(0.05):
-                await _ssh_session.open_sftp_client(_tunnel_session(gated.connection))
+            async with deadline:
+                await _ssh_session.open_sftp_client(record)
 
         assert gated.client.exit.call_count == 0
         gated.gate.set()
@@ -3023,8 +3040,9 @@ class TestOpenSFTPClient:
         async with _sftp_ready_session() as record:
             held = _HeldSFTPOpen(record["connection"])
 
+            deadline = asyncio.timeout(0.05)
             with pytest.raises(TimeoutError):
-                async with asyncio.timeout(0.05):
+                async with deadline:
                     await _ssh_session.open_sftp_client({**record, "connection": held})
             await asyncio.wait_for(held.opened.wait(), 5)
             held.release.set()

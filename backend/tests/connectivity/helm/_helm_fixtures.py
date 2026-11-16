@@ -450,7 +450,8 @@ def patch_floor_probe(verb: str, message: str | None) -> Any:
     """Patch one verb module's floor_message so the version probe answers as scripted."""
     return patch(
         f"wavecore.connectivity.helm.verbs.{verb}.floor_message",
-        lambda helm_path, kubeconfig, log: message,
+        autospec=True,
+        return_value=message,
     )
 
 

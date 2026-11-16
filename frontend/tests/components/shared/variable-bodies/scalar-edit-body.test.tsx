@@ -228,37 +228,15 @@ describe('ScalarEditBody - numeric editing', () => {
     expect(onValidChange).not.toHaveBeenCalled()
   })
 
-  it('rejects non-numeric input in a float field (the chars never enter)', () => {
+  it.each([
+    ['rejects non-numeric input in a float field (the chars never enter)', 'abc'],
+    ['rejects valid-prefix garbage rather than silently truncating (0.1234x5678)', '0.1234x5678'],
+    ['blocks the exponent char e (plain decimal only)', '1e'],
+    ['blocks the exponent char E (plain decimal only)', '1E'],
+    ['blocks a leading plus sign (only a leading minus is plain decimal)', '+1'],
+  ])('%s', (_name, input) => {
     const { onChange } = renderBody({ value: 1, type: 'float' })
-    fireEvent.change(getInput(), { target: { value: 'abc' } })
-    expect(getInput().value).toBe('1')
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('rejects valid-prefix garbage rather than silently truncating (0.1234x5678)', () => {
-    const { onChange } = renderBody({ value: 1, type: 'float' })
-    fireEvent.change(getInput(), { target: { value: '0.1234x5678' } })
-    expect(getInput().value).toBe('1')
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('blocks the exponent char e (plain decimal only)', () => {
-    const { onChange } = renderBody({ value: 1, type: 'float' })
-    fireEvent.change(getInput(), { target: { value: '1e' } })
-    expect(getInput().value).toBe('1')
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('blocks the exponent char E (plain decimal only)', () => {
-    const { onChange } = renderBody({ value: 1, type: 'float' })
-    fireEvent.change(getInput(), { target: { value: '1E' } })
-    expect(getInput().value).toBe('1')
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('blocks a leading plus sign (only a leading minus is plain decimal)', () => {
-    const { onChange } = renderBody({ value: 1, type: 'float' })
-    fireEvent.change(getInput(), { target: { value: '+1' } })
+    fireEvent.change(getInput(), { target: { value: input } })
     expect(getInput().value).toBe('1')
     expect(onChange).not.toHaveBeenCalled()
   })

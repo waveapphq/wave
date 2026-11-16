@@ -172,17 +172,19 @@ class TestOpenModes:
 
     def test_a_missing_read_only_file_cannot_be_opened(self, tmp_path: Path) -> None:
         path = tmp_path / "missing.db"
+        rows = _rows(path, read_only=True)
 
         with pytest.raises(apsw.CantOpenError, match=r"^unable to open database file$"):
-            sqlite.connect(_rows(path, read_only=True), 1)
+            sqlite.connect(rows, 1)
 
         assert not path.exists()
 
     def test_a_file_in_a_missing_folder_cannot_be_opened(self, tmp_path: Path) -> None:
         folder = tmp_path / "missing"
+        rows = _rows(folder / "orders.db")
 
         with pytest.raises(apsw.CantOpenError, match=r"^unable to open database file$"):
-            sqlite.connect(_rows(folder / "orders.db"), 1)
+            sqlite.connect(rows, 1)
 
         assert not folder.exists()
 
@@ -197,9 +199,10 @@ class TestOpenModes:
         self, tmp_path: Path, name: str, read_only: bool
     ) -> None:
         path = tmp_path / name
+        rows = _rows(path, read_only=read_only)
 
         with pytest.raises(apsw.Error) as raised:
-            sqlite.connect(_rows(path, read_only=read_only), 1)
+            sqlite.connect(rows, 1)
 
         assert map_error("sqlite", raised.value, _connect_context(path)) == (
             f"Could not open the SQLite file {path}: unable to open database file",
@@ -308,26 +311,28 @@ class TestRefusedOptions:
         self, tmp_path: Path, name: str, value: Any
     ) -> None:
         path = tmp_path / "orders.db"
+        rows = _rows(path, **{name: value})
 
         with pytest.raises(
             SqlFailure,
             match=rf"^SQLite Driver option '{name}' is not supported: "
             r"SQLite takes timeout and cached_statements$",
         ) as raised:
-            sqlite.connect(_rows(path, **{name: value}), 1).close()
+            sqlite.connect(rows, 1)
 
         assert raised.value.reason == VALIDATION
         assert not path.exists()
 
     def test_an_unknown_option_is_refused_beside_the_two_known_ones(self, tmp_path: Path) -> None:
         path = tmp_path / "orders.db"
+        rows = _rows(path, timeout=2, cached_statements=16, uri=True)
 
         with pytest.raises(
             SqlFailure,
             match=r"^SQLite Driver option 'uri' is not supported: "
             r"SQLite takes timeout and cached_statements$",
         ) as raised:
-            sqlite.connect(_rows(path, timeout=2, cached_statements=16, uri=True), 1).close()
+            sqlite.connect(rows, 1)
 
         assert raised.value.reason == VALIDATION
         assert not path.exists()
@@ -346,13 +351,14 @@ class TestRefusedOptions:
         self, tmp_path: Path, options: dict[str, Any], shown: str
     ) -> None:
         path = tmp_path / "orders.db"
+        rows = _rows(path, **options)
 
         with pytest.raises(
             SqlFailure,
             match=rf"^SQLite Driver option '{shown}' is not supported: "
             r"SQLite takes timeout and cached_statements$",
         ) as raised:
-            sqlite.connect(_rows(path, **options), 1).close()
+            sqlite.connect(rows, 1)
 
         assert raised.value.reason == VALIDATION
         assert not path.exists()
@@ -372,13 +378,14 @@ class TestRefusedOptions:
         self, tmp_path: Path, value: Any, shown: str
     ) -> None:
         path = tmp_path / "orders.db"
+        rows = _rows(path, timeout=value)
 
         with pytest.raises(
             SqlFailure,
             match=r"^SQLite Driver option timeout must be a number of seconds, "
             rf"got '{re.escape(shown)}'$",
         ) as raised:
-            sqlite.connect(_rows(path, timeout=value), 1).close()
+            sqlite.connect(rows, 1)
 
         assert raised.value.reason == VALIDATION
         assert not path.exists()
@@ -398,13 +405,14 @@ class TestRefusedOptions:
         self, tmp_path: Path, value: Any, shown: str
     ) -> None:
         path = tmp_path / "orders.db"
+        rows = _rows(path, cached_statements=value)
 
         with pytest.raises(
             SqlFailure,
             match=r"^SQLite Driver option cached_statements must be a whole number, "
             rf"got '{re.escape(shown)}'$",
         ) as raised:
-            sqlite.connect(_rows(path, cached_statements=value), 1).close()
+            sqlite.connect(rows, 1)
 
         assert raised.value.reason == VALIDATION
         assert not path.exists()

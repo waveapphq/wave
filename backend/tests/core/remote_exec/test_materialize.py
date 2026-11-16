@@ -242,16 +242,19 @@ class TestAResultEnvelopeWithNoOutputs:
     def test_a_missing_outputs_key_raises(self) -> None:
         envelope = _result_envelope(secrets=["planted"], omit=("outputs",))
 
+        recorder = _Recorder()
         with pytest.raises(ValueError, match=_exact(_NO_OUTPUTS_MESSAGE)):
-            materialize(envelope, _Recorder())
+            materialize(envelope, recorder)
 
     @pytest.mark.parametrize(
         "outputs",
         [None, [], ["result"], "", "outputs", 0, 7, 1.5, (), Table(columns=[])],
     )
     def test_an_outputs_value_that_is_not_a_mapping_raises(self, outputs: Any) -> None:
+        envelope = _envelope_carrying(outputs)
+        recorder = _Recorder()
         with pytest.raises(ValueError, match=_exact(_NO_OUTPUTS_MESSAGE)):
-            materialize(_envelope_carrying(outputs), _Recorder())
+            materialize(envelope, recorder)
 
     def test_the_secrets_it_already_declared_stay_registered(self) -> None:
         """A credential the envelope named is scrubbed even though the read failed."""

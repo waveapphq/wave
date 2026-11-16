@@ -142,7 +142,8 @@ def _carried(site: ImportSite) -> bool:
 
 
 def _present(dotted: str, path: Path | None) -> Path:
-    assert path is not None and path.is_file(), f"{dotted} is not on disk where the bundle reads it"
+    assert path is not None, f"{dotted} is not on disk where the bundle reads it"
+    assert path.is_file(), f"{dotted} is not on disk where the bundle reads it"
     return path
 
 

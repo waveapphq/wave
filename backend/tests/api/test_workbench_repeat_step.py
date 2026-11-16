@@ -368,7 +368,8 @@ class TestPauseForDebugRepeatLoopUnit:
         assert repeat_hit["exception_class"] == "RuntimeError"
         assert repeat_hit["exception_message"] == "boom"
         assert session["block_states"]["node-x"] == "failed"
-        assert block.latest is not None and str(block.latest.error) == "boom"
+        assert block.latest is not None
+        assert str(block.latest.error) == "boom"
 
 
 class TestRepeatStepEngineIntegration:

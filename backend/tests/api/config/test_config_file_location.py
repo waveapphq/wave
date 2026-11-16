@@ -209,8 +209,10 @@ class TestConfigLoadsTheLocatedFile:
         assert config.server.port == 4101
         assert config.server.host == "0.0.0.0"
 
-    def test_singleton_loads_the_located_file(self, located_file: Path) -> None:
-        loader._config_instance = None
+    def test_singleton_loads_the_located_file(
+        self, located_file: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(loader, "_config_instance", None)
 
         config = loader.get_config()
 
@@ -346,7 +348,7 @@ class TestMissingFile:
     ) -> None:
         path = tmp_path / "missing.yaml"
         monkeypatch.setenv("WAVE_CONFIG_FILE", str(path))
-        loader._config_instance = None
+        monkeypatch.setattr(loader, "_config_instance", None)
 
         with pytest.raises(ConfigValidationError, match=_not_found(path)):
             loader.get_config()

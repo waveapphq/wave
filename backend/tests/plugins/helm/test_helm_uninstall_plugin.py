@@ -133,20 +133,25 @@ class TestValidation:
         params = _valid()
         params.pop("release")
 
+        plugin = _plugin()
         with pytest.raises(ValueError, match=exact("Parameter 'release' is required")):
-            await _plugin().validate(params)
+            await plugin.validate(params)
 
     async def test_a_non_positive_timeout_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'timeout' must be positive")):
-            await _plugin().validate(_valid(timeout=0))
+            await plugin.validate(params)
 
     @pytest.mark.parametrize("cascade", ["background", "foreground", "orphan"])
     async def test_every_cascade_value_passes(self, cascade: str) -> None:
         await _plugin().validate(_valid(cascade=cascade))
 
     async def test_an_unknown_cascade_value_is_refused(self) -> None:
+        plugin = _plugin()
+        params = _valid(cascade="delete")
         with pytest.raises(ValueError, match="cascade"):
-            await _plugin().validate(_valid(cascade="delete"))
+            await plugin.validate(params)
 
 
 class TestExecute:
@@ -176,8 +181,11 @@ class TestExecute:
     async def test_a_missing_release_stops_the_block(self) -> None:
         message = "uninstall: Release not loaded: web: release: not found"
 
+        plugin = _plugin()
+        params = _valid()
+        results = [helm_failed(STDERR_NOT_FOUND)]
         with pytest.raises(ValueError, match=exact(message)):
-            await execute_verb(_plugin(), "uninstall", _valid(), [helm_failed(STDERR_NOT_FOUND)])
+            await execute_verb(plugin, "uninstall", params, results)
 
     async def test_a_recorded_missing_release_reads_as_not_found(self) -> None:
         outputs, _fake = await execute_verb(

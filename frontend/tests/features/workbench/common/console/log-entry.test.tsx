@@ -355,59 +355,21 @@ describe('LogEntry Component', () => {
   })
 
   describe('Level-Based Row Coloring (REQ-3.7.2.6)', () => {
-    it('applies DEBUG styling - muted gray text', async () => {
+    it.each<[string, LogLevel, string]>([
+      ['applies DEBUG styling - muted gray text', 'DEBUG', 'log-level-debug'],
+      ['applies INFO styling - cyan text', 'INFO', 'log-level-info'],
+      ['applies WARN styling - amber text', 'WARN', 'log-level-warn'],
+      ['applies ERROR styling - red text', 'ERROR', 'log-level-error'],
+      ['applies FATAL styling - red text with background tint', 'FATAL', 'log-level-fatal'],
+    ])('%s', async (_title, level, className) => {
       const { LogEntry } = await import('../../../../../src/components/shared/console/log-entry')
 
-      const entry: LogEntry = { ...defaultEntry, level: 'DEBUG' }
+      const entry: LogEntry = { ...defaultEntry, level }
 
       render(<LogEntry entry={entry} displaySettings={defaultSettings} />)
 
       const row = screen.getByTestId('log-entry-log-1')
-      expect(row).toHaveClass('log-level-debug')
-    })
-
-    it('applies INFO styling - cyan text', async () => {
-      const { LogEntry } = await import('../../../../../src/components/shared/console/log-entry')
-
-      const entry: LogEntry = { ...defaultEntry, level: 'INFO' }
-
-      render(<LogEntry entry={entry} displaySettings={defaultSettings} />)
-
-      const row = screen.getByTestId('log-entry-log-1')
-      expect(row).toHaveClass('log-level-info')
-    })
-
-    it('applies WARN styling - amber text', async () => {
-      const { LogEntry } = await import('../../../../../src/components/shared/console/log-entry')
-
-      const entry: LogEntry = { ...defaultEntry, level: 'WARN' }
-
-      render(<LogEntry entry={entry} displaySettings={defaultSettings} />)
-
-      const row = screen.getByTestId('log-entry-log-1')
-      expect(row).toHaveClass('log-level-warn')
-    })
-
-    it('applies ERROR styling - red text', async () => {
-      const { LogEntry } = await import('../../../../../src/components/shared/console/log-entry')
-
-      const entry: LogEntry = { ...defaultEntry, level: 'ERROR' }
-
-      render(<LogEntry entry={entry} displaySettings={defaultSettings} />)
-
-      const row = screen.getByTestId('log-entry-log-1')
-      expect(row).toHaveClass('log-level-error')
-    })
-
-    it('applies FATAL styling - red text with background tint', async () => {
-      const { LogEntry } = await import('../../../../../src/components/shared/console/log-entry')
-
-      const entry: LogEntry = { ...defaultEntry, level: 'FATAL' }
-
-      render(<LogEntry entry={entry} displaySettings={defaultSettings} />)
-
-      const row = screen.getByTestId('log-entry-log-1')
-      expect(row).toHaveClass('log-level-fatal')
+      expect(row).toHaveClass(className)
     })
 
     it('row coloring applies regardless of hidden columns', async () => {

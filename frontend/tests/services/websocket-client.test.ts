@@ -1040,39 +1040,17 @@ describe('WebSocket Client - REQ-5.2.1.4', () => {
       )
     })
 
-    it('subscribes to system topic', () => {
+    it.each([
+      ['system', 'system'],
+      ['debug', 'debug:execution:abc123'],
+      ['variable', 'variable:execution:abc123'],
+      ['error', 'error'],
+    ])('subscribes to %s topic', (_name, topic) => {
       const handler = vi.fn()
-      client.subscribe('system', handler)
+      client.subscribe(topic, handler)
 
       expect(mockWebSocketInstance!.send).toHaveBeenCalledWith(
-        expect.stringContaining('"topic":"system"')
-      )
-    })
-
-    it('subscribes to debug topic', () => {
-      const handler = vi.fn()
-      client.subscribe('debug:execution:abc123', handler)
-
-      expect(mockWebSocketInstance!.send).toHaveBeenCalledWith(
-        expect.stringContaining('"topic":"debug:execution:abc123"')
-      )
-    })
-
-    it('subscribes to variable topic', () => {
-      const handler = vi.fn()
-      client.subscribe('variable:execution:abc123', handler)
-
-      expect(mockWebSocketInstance!.send).toHaveBeenCalledWith(
-        expect.stringContaining('"topic":"variable:execution:abc123"')
-      )
-    })
-
-    it('subscribes to error topic', () => {
-      const handler = vi.fn()
-      client.subscribe('error', handler)
-
-      expect(mockWebSocketInstance!.send).toHaveBeenCalledWith(
-        expect.stringContaining('"topic":"error"')
+        expect.stringContaining(`"topic":"${topic}"`)
       )
     })
 

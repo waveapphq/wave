@@ -1077,9 +1077,10 @@ class TestOracleHostIndependence:
         connection = _connection()
         connection.cursor.return_value.execute.side_effect = failure
         oracledb_driver.module.connect = MagicMock(return_value=connection)
+        rows = _rows(port=1521)
 
         with pytest.raises(Exception) as caught:
-            oracle.connect(_rows(port=1521), 30)
+            oracle.connect(rows, 30)
 
         assert caught.value is failure
         connection.close.assert_called_once_with()
@@ -1092,9 +1093,10 @@ class TestOracleHostIndependence:
         connection.cursor.return_value.execute.side_effect = failure
         connection.close.side_effect = OSError("the socket is gone")
         oracledb_driver.module.connect = MagicMock(return_value=connection)
+        rows = _rows(port=1521)
 
         with pytest.raises(Exception) as caught:
-            oracle.connect(_rows(port=1521), 30)
+            oracle.connect(rows, 30)
 
         assert caught.value is failure
         connection.close.assert_called_once_with()
@@ -1152,8 +1154,9 @@ class TestOracleDsnAndTheTlsRow:
     def test_a_dsn_with_tls_is_refused_while_tls_is_off(
         self, oracledb_parser: _Driver, dsn: str
     ) -> None:
+        rows = self._dsn_rows(dsn)
         with pytest.raises(SqlFailure, match=_oracle_tls_under_plain(dsn)) as refused:
-            oracle.connect(self._dsn_rows(dsn), 30)
+            oracle.connect(rows, 30)
 
         assert refused.value.reason == "Validation"
         assert oracledb_parser.calls == []
@@ -1554,11 +1557,12 @@ class TestTlsContext:
         assert _server_name(context) == "far.internal"
 
     def test_tls_on_reads_the_trust_rows(self) -> None:
+        rows = _rows(tls=True, ca_cert="/nonexistent/ca.pem")
         with pytest.raises(
             FileNotFoundError,
             match=r"^\[Errno 2\] No such file or directory: '/nonexistent/ca\.pem'$",
         ):
-            _common.tls_context(_rows(tls=True, ca_cert="/nonexistent/ca.pem"), "db.internal")
+            _common.tls_context(rows, "db.internal")
 
 
 class TestTrustRule:
@@ -1698,6 +1702,7 @@ def _handshake(
         server_context.set_cipher_list(b"DEFAULT:@SECLEVEL=0")
     client = OpenSSL.SSL.Connection(client_context, None)
     client.set_connect_state()
+    # CodeQL exclusion: CQL-TLS-001
     far = OpenSSL.SSL.Connection(server_context, None)
     far.set_accept_state()
     for _ in range(4):
@@ -1871,9 +1876,10 @@ class TestMssqlServerName:
         self, pytds_over_openssl: _Driver
     ) -> None:
         context = self._context(pytds_over_openssl, "db.internal")
+        credential = self._leaf(dns=["other.internal"], ips=["127.0.0.1"])
 
         with pytest.raises(OpenSSL.SSL.Error) as raised:
-            _handshake(context, self._leaf(dns=["other.internal"], ips=["127.0.0.1"]))
+            _handshake(context, credential)
 
         message, reason = map_error(
             "mssql", raised.value, {"phase": "connect", "host": "127.0.0.1", "port": 1433}

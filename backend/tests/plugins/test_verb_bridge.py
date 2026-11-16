@@ -321,8 +321,10 @@ class TestRunVerb:
         verb = _RecordingVerb(error=ValueError(message))
 
         with patch(_MATERIALIZE, return_value={}) as materialize:
+            bridge = _bridge()
+            context = execute_context({})
             with pytest.raises(ValueError, match=_exact(message)):
-                await _bridge().run_verb(verb, {}, execute_context({}))
+                await bridge.run_verb(verb, {}, context)
 
         assert materialize.call_args_list == []
 
@@ -516,8 +518,9 @@ class TestRunVerbPrepare:
         context = execute_context({}, register_secret=register_secret)
 
         with patch(_MATERIALIZE, return_value={}):
+            bridge = _bridge()
             with pytest.raises(ValueError, match=_exact(message)):
-                await _bridge().run_verb(verb, {}, context, prepare=prepare)
+                await bridge.run_verb(verb, {}, context, prepare=prepare)
 
         assert verb.seen == _MANIFEST_SECRET_VALUES
 
@@ -561,8 +564,10 @@ class TestRunVerbPrepare:
         verb = _RecordingVerb(_VERB_ENVELOPE)
 
         with patch(_MATERIALIZE, return_value={}) as materialize:
+            bridge = _bridge()
+            context = execute_context({})
             with pytest.raises(ValueError, match=_exact(_READ_ONLY_MESSAGE)) as caught:
-                await _bridge().run_verb(verb, {}, execute_context({}), prepare=prepare)
+                await bridge.run_verb(verb, {}, context, prepare=prepare)
 
         assert type(caught.value) is ValueError
         assert verb.params is None
@@ -573,10 +578,12 @@ class TestRunVerbPrepare:
         verb = _RecordingVerb(_VERB_ENVELOPE)
 
         with patch(_MATERIALIZE, return_value={}) as materialize:
+            bridge = _bridge()
+            context = execute_context({})
             with pytest.raises(
                 FileNotFoundError, match=_exact(_TESTDATA_MISSING_MESSAGE)
             ) as caught:
-                await _bridge().run_verb(verb, {}, execute_context({}), prepare=prepare)
+                await bridge.run_verb(verb, {}, context, prepare=prepare)
 
         assert type(caught.value) is FileNotFoundError
         assert verb.params is None
@@ -878,8 +885,10 @@ class TestRunVerbHoldsTheRunLog:
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
         verb = _RecordingVerb(error=ValueError(message))
 
+        bridge = _bridge()
+        context = execute_context({})
         with pytest.raises(ValueError, match=_exact(message)):
-            await _bridge().run_verb(verb, {}, execute_context({}))
+            await bridge.run_verb(verb, {}, context)
 
         assert _run_log().RUN_LOG.get() is None
 
@@ -891,7 +900,8 @@ class TestRunVerbHoldsTheRunLog:
             await _bridge().run_verb(first, {}, execute_context({}))
             await _bridge().run_verb(second, {}, execute_context({}))
 
-        assert first.seen is not None and second.seen is not None
+        assert first.seen is not None
+        assert second.seen is not None
         assert first.seen is not second.seen
 
 

@@ -358,11 +358,13 @@ class TestServerVerification:
         assert raised.value.verify_message == "unable to get local issuer certificate"
 
     def test_a_missing_ca_file_raises_the_open_error(self) -> None:
+        rows = _rows(ca_cert="/nonexistent/ca.pem")
+
         with pytest.raises(
             FileNotFoundError,
             match=r"^\[Errno 2\] No such file or directory: '/nonexistent/ca\.pem'$",
         ):
-            build_context(_rows(ca_cert="/nonexistent/ca.pem"), _SERVER_NAME)
+            build_context(rows, _SERVER_NAME)
 
 
 class TestVerificationOff:
@@ -623,6 +625,7 @@ class TestBlankCaTrust:
         absent = tmp_path / "absent.crt"
         monkeypatch.setattr(trust, "HOST_STORE_PATHS", (str(absent),))
         use_spec("host")
+        rows = _rows()
 
         with pytest.raises(
             ValueError,
@@ -631,7 +634,7 @@ class TestBlankCaTrust:
                 rf"{re.escape(str(absent))}$"
             ),
         ):
-            build_context(_rows(), _SERVER_NAME)
+            build_context(rows, _SERVER_NAME)
 
     def test_one_line_per_run_however_many_connections(
         self, pki: _Pki, use_spec: Callable[..., Any], run_lines: Lines

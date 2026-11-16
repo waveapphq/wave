@@ -388,7 +388,8 @@ class TestVersionConstraintResolution:
             )
 
         error_msg = str(exc_info.value).lower()
-        assert "version" in error_msg and ("not found" in error_msg or "not available" in error_msg)
+        assert "version" in error_msg
+        assert "not found" in error_msg or "not available" in error_msg
 
 
 class TestDependencyGraphConstruction:

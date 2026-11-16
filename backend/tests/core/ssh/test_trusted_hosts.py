@@ -759,6 +759,10 @@ class TestApplyChange:
         )
         original = hosts_file.read_bytes()
 
+        additions = [
+            addition("db3", 22, keys["nistp256"]),
+            addition("db1", 22, keys["ed25519_other"]),
+        ]
         with pytest.raises(
             TrustedHostConflict,
             match=exact(
@@ -766,7 +770,7 @@ class TestApplyChange:
             ),
         ):
             trusted_hosts.apply_change(
-                [addition("db3", 22, keys["nistp256"]), addition("db1", 22, keys["ed25519_other"])],
+                additions,
                 ["b" * 32],
             )
 
@@ -779,6 +783,10 @@ class TestApplyChange:
         write_store(hosts_file, {"hosts": [stored("b" * 32, "db2", 22, keys["rsa"])]})
         original = hosts_file.read_bytes()
 
+        additions = [
+            addition("db1", 22, keys["ed25519"]),
+            addition("db1", 22, keys["ed25519_other"]),
+        ]
         with pytest.raises(
             TrustedHostConflict,
             match=exact(
@@ -786,7 +794,7 @@ class TestApplyChange:
             ),
         ):
             trusted_hosts.apply_change(
-                [addition("db1", 22, keys["ed25519"]), addition("db1", 22, keys["ed25519_other"])],
+                additions,
                 [],
             )
 
@@ -795,9 +803,13 @@ class TestApplyChange:
     def test_conflict_on_an_empty_store_creates_no_file(
         self, hosts_file: Path, keys: dict[str, asyncssh.SSHKey]
     ) -> None:
+        additions = [
+            addition("db1", 22, keys["ed25519"]),
+            addition("db1", 22, keys["ed25519_other"]),
+        ]
         with pytest.raises(TrustedHostConflict):
             trusted_hosts.apply_change(
-                [addition("db1", 22, keys["ed25519"]), addition("db1", 22, keys["ed25519_other"])],
+                additions,
                 [],
             )
 
@@ -822,6 +834,7 @@ class TestApplyChange:
     ) -> None:
         write_store(hosts_file, {"hosts": [stored("a" * 32, host, port, keys[first])]})
 
+        additions = [addition(host, port, keys[second])]
         with pytest.raises(
             TrustedHostConflict,
             match=exact(
@@ -829,7 +842,7 @@ class TestApplyChange:
                 "remove it before adding another"
             ),
         ):
-            trusted_hosts.apply_change([addition(host, port, keys[second])], [])
+            trusted_hosts.apply_change(additions, [])
 
     def test_a_change_set_is_one_write(
         self, hosts_file: Path, keys: dict[str, asyncssh.SSHKey], monkeypatch: pytest.MonkeyPatch

@@ -545,16 +545,18 @@ class TestValidation:
             await K8sDeletePlugin().validate({"kind": "ConfigMap", "name": "probe-a"})
 
     async def test_empty_session_reports_the_empty_case(self) -> None:
+        params = _name_params(session="")
         with pytest.raises(ValueError, match=exact(EMPTY_SESSION_MESSAGE)):
-            await K8sDeletePlugin().validate(_name_params(session=""))
+            await K8sDeletePlugin().validate(params)
 
     async def test_missing_kind_under_the_default_resource_type(self) -> None:
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind$"):
             await K8sDeletePlugin().validate(block_params(name="probe-a"))
 
     async def test_empty_kind_counts_as_missing(self) -> None:
+        params = _name_params(kind="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind$"):
-            await K8sDeletePlugin().validate(_name_params(kind=""))
+            await K8sDeletePlugin().validate(params)
 
     async def test_missing_kind_custom_under_the_custom_resource_type(self) -> None:
         with pytest.raises(ValueError, match=r"^Missing required parameter: kind_custom$"):
@@ -573,8 +575,9 @@ class TestValidation:
             await K8sDeletePlugin().validate(block_params(kind="ConfigMap", delete_by="name"))
 
     async def test_empty_name_counts_as_missing(self) -> None:
+        params = _name_params(name="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
-            await K8sDeletePlugin().validate(_name_params(name=""))
+            await K8sDeletePlugin().validate(params)
 
     async def test_name_defaults_to_required_when_delete_by_is_absent(self) -> None:
         with pytest.raises(ValueError, match=r"^Missing required parameter: name$"):
@@ -588,8 +591,9 @@ class TestValidation:
             await K8sDeletePlugin().validate(block_params(kind="ConfigMap", delete_by="selector"))
 
     async def test_empty_label_selector_counts_as_missing(self) -> None:
+        params = _selector_params(label_selector="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: label_selector$"):
-            await K8sDeletePlugin().validate(_selector_params(label_selector=""))
+            await K8sDeletePlugin().validate(params)
 
     async def test_label_selector_is_not_required_under_delete_by_name(self) -> None:
         await K8sDeletePlugin().validate(_name_params())
@@ -600,18 +604,18 @@ class TestValidation:
             "Actual value was 'bogus'."
         )
 
+        params = _name_params(resource_type="bogus", kind_custom="widgets")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(
-                _name_params(resource_type="bogus", kind_custom="widgets")
-            )
+            await K8sDeletePlugin().validate(params)
 
     async def test_delete_by_enum(self) -> None:
         message = (
             "Parameter 'delete_by' must be one of: name, selector; Actual value was 'everything'."
         )
 
+        params = _name_params(delete_by="everything")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(delete_by="everything"))
+            await K8sDeletePlugin().validate(params)
 
     async def test_cascade_enum(self) -> None:
         message = (
@@ -619,26 +623,30 @@ class TestValidation:
             "Actual value was 'Background'."
         )
 
+        params = _name_params(cascade="Background")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(cascade="Background"))
+            await K8sDeletePlugin().validate(params)
 
     async def test_on_error_enum(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
 
+        params = _name_params(on_error="ignore")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(on_error="ignore"))
+            await K8sDeletePlugin().validate(params)
 
     async def test_zero_timeout_is_rejected(self) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        params = _name_params(timeout=0)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(timeout=0))
+            await K8sDeletePlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        params = _name_params(timeout=-5)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(timeout=-5))
+            await K8sDeletePlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sDeletePlugin().validate(_name_params(timeout=1))
@@ -660,12 +668,14 @@ class TestValidation:
     async def test_a_negative_grace_period_is_rejected(self) -> None:
         message = "Parameter 'grace_period_seconds' must be non-negative"
 
+        params = _name_params(grace_period_seconds=-1)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(grace_period_seconds=-1))
+            await K8sDeletePlugin().validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        params = _name_params(impersonate_groups="qa, ops")
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await K8sDeletePlugin().validate(_name_params(impersonate_groups="qa, ops"))
+            await K8sDeletePlugin().validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await K8sDeletePlugin().validate(
@@ -901,14 +911,16 @@ class TestMissingTarget:
     async def test_a_missing_name_fails_the_block_by_default(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_a_missing_name_fails_with_ignore_not_found_unticked(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
 
+        params = _name_params(ignore_not_found=False)
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            await _execute(fake, _name_params(ignore_not_found=False))
+            await _execute(fake, params)
 
     async def test_a_missing_name_is_recordable(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
@@ -1116,14 +1128,16 @@ class TestWaitUntilGone:
     async def test_a_refused_selector_poll_is_not_read_as_gone(self) -> None:
         fake = _selector_poll_client(_refused_poll())
 
+        params = _selector_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_SELECTOR_WAIT_TIMEOUT)):
-            await _run_until_deadline(fake, _selector_params(timeout=5))
+            await _run_until_deadline(fake, params)
 
     async def test_a_broken_selector_poll_is_not_read_as_gone(self) -> None:
         fake = _selector_poll_client(_broken_poll())
 
+        params = _selector_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_SELECTOR_WAIT_TIMEOUT)):
-            await _run_until_deadline(fake, _selector_params(timeout=5))
+            await _run_until_deadline(fake, params)
 
         assert [call.method for call in fake.calls] == ["DELETE", "GET"]
 
@@ -1141,21 +1155,24 @@ class TestWaitUntilGone:
         fake = _never_gone_client()
         message = "Timed out after 5 seconds waiting for configmap/probe-a to be deleted"
 
+        params = _name_params(timeout=5)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_until_deadline(fake, _name_params(timeout=5))
+            await _run_until_deadline(fake, params)
 
     async def test_running_out_of_time_names_the_block_timeout(self) -> None:
         fake = _never_gone_client()
         message = "Timed out after 30 seconds waiting for configmap/probe-a to be deleted"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_until_deadline(fake, _name_params())
+            await _run_until_deadline(fake, params)
 
     async def test_running_out_of_time_polled_at_least_once(self) -> None:
         fake = _never_gone_client()
 
+        params = _name_params(timeout=5)
         with pytest.raises(ValueError):
-            await _run_until_deadline(fake, _name_params(timeout=5))
+            await _run_until_deadline(fake, params)
 
         assert [call.method for call in fake.calls] == ["DELETE", "GET"]
 
@@ -1163,9 +1180,10 @@ class TestWaitUntilGone:
         fake = _never_gone_client()
         message = "Timed out after 0.05 seconds waiting for configmap/probe-a to be deleted"
 
+        params = _name_params(timeout=0.05)
         with pytest.raises(ValueError, match=exact(message)):
             # No seam here: the block's own timeout is the deadline under test.
-            await _execute(fake, _name_params(timeout=0.05), poll_interval=_PAUSE_PAST_DEADLINE)
+            await _execute(fake, params, poll_interval=_PAUSE_PAST_DEADLINE)
 
     @pytest.mark.parametrize(("timeout", "expected"), [(5, 5), (120, 120), (None, 30)])
     async def test_the_deadline_is_the_block_timeout(
@@ -1266,8 +1284,9 @@ class TestClusterRefusal:
         body = _failure("ServiceUnavailable", _SERVER_DETAIL, 503)
         fake = FakeK8sClient(responses=[(503, body)], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_SERVER_MESSAGE)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_a_server_error_on_a_selector_delete_names_the_kind_not_an_object(self) -> None:
         body = _failure("ServiceUnavailable", _SERVER_DETAIL, 503)
@@ -1277,15 +1296,17 @@ class TestClusterRefusal:
             f"{_SERVER_DETAIL}"
         )
 
+        params = _selector_params()
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _selector_params())
+            await _execute(fake, params)
 
     async def test_403_renders_the_permission_row(self) -> None:
         body = _failure("Forbidden", _FORBIDDEN_DETAIL, 403)
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
     async def test_403_is_recordable_with_its_reason(self) -> None:
         body = _failure("Forbidden", _FORBIDDEN_DETAIL, 403)
@@ -1381,8 +1402,9 @@ class TestClusterRefusal:
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
         logger = MagicMock()
 
+        params = _name_params()
         with pytest.raises(ValueError):
-            await _execute(fake, _name_params(), logger=logger)
+            await _execute(fake, params, logger=logger)
 
         assert logger.warn.call_count == 0
 
@@ -1395,8 +1417,9 @@ class TestErrorAndReasonGate:
         fake = FakeK8sClient(responses=[(403, body)], resources=_CONFIGMAPS)
         bound: dict[str, Any] | None = None
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            bound = await _execute(fake, _name_params())
+            bound = await _execute(fake, params)
 
         assert bound is None
 
@@ -1404,8 +1427,9 @@ class TestErrorAndReasonGate:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
         bound: dict[str, Any] | None = None
 
+        params = _name_params(on_error="fail")
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            bound = await _execute(fake, _name_params(on_error="fail"))
+            bound = await _execute(fake, params)
 
         assert bound is None
 
@@ -1432,8 +1456,9 @@ class TestErrorAndReasonGate:
     async def test_fail_is_the_default_mode(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            await _execute(fake, _name_params())
+            await _execute(fake, params)
 
 
 class TestAlwaysHardFail:
@@ -1447,8 +1472,9 @@ class TestAlwaysHardFail:
             "use the 'session' output of a K8s Connect block"
         )
 
+        params = _name_params(session="not-a-kubeconfig", on_error=on_error)
         with pytest.raises(ValueError, match=exact(message)):
-            await _execute(fake, _name_params(session="not-a-kubeconfig", on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_transport_failure_raises(self, on_error: str) -> None:
@@ -1458,8 +1484,9 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_CONFIGMAPS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _name_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_request_timeout_raises(self, on_error: str) -> None:
@@ -1469,15 +1496,17 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_CONFIGMAPS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _execute(fake, _name_params(on_error=on_error))
+            await _execute(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_invalid_params_raise_from_validate(self, on_error: str) -> None:
         message = "Parameter 'timeout' must be positive"
 
+        params = _name_params(timeout=0, on_error=on_error)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sDeletePlugin().validate(_name_params(timeout=0, on_error=on_error))
+            await K8sDeletePlugin().validate(params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     async def test_a_missing_required_param_raises_from_validate(self, on_error: str) -> None:

@@ -269,56 +269,64 @@ class TestParallelControlValidation:
     def test_validate_rejects_missing_branches(self) -> None:
         """Verify validation fails when the branches parameter is missing."""
         control = ParallelControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_single_branch(self) -> None:
         """Verify one branch is rejected - a lone branch is a sequence."""
         control = ParallelControl()
         params = {"branches": [_branch("branch_1", "only")]}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     def test_validate_rejects_an_empty_branch_list(self) -> None:
         """Verify an empty branch list is rejected."""
         control = ParallelControl()
+        validation = control.validate({"branches": []})
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate({"branches": []}))
+            asyncio.run(validation)
 
     def test_validate_rejects_an_integer_branch_count(self) -> None:
         """Verify an integer branch count is rejected outright."""
         # Guard: branches is a list of records, never a count.
         control = ParallelControl()
+        validation = control.validate({"branches": 2})
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate({"branches": 2}))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_string_branch_list(self) -> None:
         """Verify a string is rejected as a branch list."""
         control = ParallelControl()
+        validation = control.validate({"branches": "branch_1,branch_2"})
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate({"branches": "branch_1,branch_2"}))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_zero_section_limit(self) -> None:
         """Verify a zero section limit is rejected."""
         control = ParallelControl()
         params = {"branches": _two_branches(), "time_limit": 0}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel time limit must be a positive integer$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_negative_section_limit(self) -> None:
         """Verify a negative section limit is rejected."""
         control = ParallelControl()
         params = {"branches": _two_branches(), "time_limit": -1}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel time limit must be a positive integer$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     @pytest.mark.parametrize("limit", ["30s", "+30", "1e3", " 30", "30.0"])
     def test_validate_rejects_a_section_limit_that_is_no_whole_number(self, limit: str) -> None:
         """Verify text that breaks the number rule is rejected as a section limit (REQ-3.1.3.14)."""
         control = ParallelControl()
         params = {"branches": _two_branches(), "time_limit": limit}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel time limit must be a positive integer$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     def test_validate_takes_a_section_limit_written_as_its_digits(self) -> None:
         """Verify digit text is the limit it spells (REQ-3.1.3.14)."""
@@ -330,36 +338,40 @@ class TestParallelControlValidation:
         # Guard: bool is an int in Python; the limit check must exclude it.
         control = ParallelControl()
         params = {"branches": _two_branches(), "time_limit": True}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel time limit must be a positive integer$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_zero_branch_limit(self) -> None:
         """Verify a zero per-branch limit is rejected."""
         control = ParallelControl()
         branches = [_branch("branch_1", "ingest", 0), _branch("branch_2", "probe")]
+        validation = control.validate({"branches": branches})
         with pytest.raises(
             ValueError, match="^Parallel branch time limit must be a positive integer$"
         ):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_rejects_a_negative_branch_limit(self) -> None:
         """Verify a negative per-branch limit is rejected."""
         control = ParallelControl()
         branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", -5)]
+        validation = control.validate({"branches": branches})
         with pytest.raises(
             ValueError, match="^Parallel branch time limit must be a positive integer$"
         ):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     @pytest.mark.parametrize("limit", ["30s", "+30", "1e3", " 30", "0", "12345678901234567890"])
     def test_validate_rejects_a_branch_limit_that_is_no_whole_number(self, limit: str) -> None:
         """Verify text that breaks the number rule or is not above 0 is rejected (REQ-3.1.3.14)."""
         control = ParallelControl()
         branches = [_branch("branch_1", "ingest", limit), _branch("branch_2", "probe")]
+        validation = control.validate({"branches": branches})
         with pytest.raises(
             ValueError, match="^Parallel branch time limit must be a positive integer$"
         ):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_takes_a_branch_limit_written_as_its_digits(self) -> None:
         """Verify digit text, as the canvas sends a limit no JS number holds, is the limit."""
@@ -374,10 +386,11 @@ class TestParallelControlValidation:
         """Verify True is not accepted as a branch limit of 1 ms."""
         control = ParallelControl()
         branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", True)]
+        validation = control.validate({"branches": branches})
         with pytest.raises(
             ValueError, match="^Parallel branch time limit must be a positive integer$"
         ):
-            asyncio.run(control.validate({"branches": branches}))
+            asyncio.run(validation)
 
     def test_validate_ignores_the_limit_check_for_a_non_mapping_branch(self) -> None:
         """Verify a branch that is not a record carries no limit to check.
@@ -396,16 +409,18 @@ class TestParallelControlValidationOrdering:
         """Verify a single branch wins over an invalid section limit."""
         control = ParallelControl()
         params = {"branches": [_branch("branch_1")], "time_limit": 0}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel requires at least 2 branches$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
     def test_section_limit_is_checked_before_the_branch_limits(self) -> None:
         """Verify an invalid section limit wins over an invalid branch limit."""
         control = ParallelControl()
         branches = [_branch("branch_1", "ingest", 0), _branch("branch_2", "probe")]
         params = {"branches": branches, "time_limit": -1}
+        validation = control.validate(params)
         with pytest.raises(ValueError, match="^Parallel time limit must be a positive integer$"):
-            asyncio.run(control.validate(params))
+            asyncio.run(validation)
 
 
 # =============================================================================
@@ -446,8 +461,9 @@ class TestParallelStructureProblems:
     def test_validate_rejects_two_lanes_of_one_id_with_the_save_text(self) -> None:
         params = {"branches": [_branch("branch_1", "A"), _branch("branch_1", "B")], "join": "all"}
 
+        validation = ParallelControl().validate(params)
         with pytest.raises(ValueError, match="^duplicate branch id: 'branch_1'$"):
-            asyncio.run(ParallelControl().validate(params))
+            asyncio.run(validation)
 
     @pytest.mark.parametrize("limit", [0, -1, "0"], ids=["zero", "negative", "zero-as-digits"])
     def test_the_section_limit_is_no_structure_problem(self, limit: int | str) -> None:

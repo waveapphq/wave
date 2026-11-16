@@ -61,8 +61,7 @@ export function validateLoopTarget(
     return { valid: false, error: 'Block is not inside any loop' }
   }
 
-  const match = enclosingLoops.find((l) => l.nodeId === targetLoop)
-  if (!match) {
+  if (!enclosingLoops.some((l) => l.nodeId === targetLoop)) {
     return { valid: false, error: 'Target is not an enclosing loop' }
   }
 

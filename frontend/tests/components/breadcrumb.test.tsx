@@ -286,7 +286,13 @@ describe('Breadcrumb Component', () => {
       expect(screen.getByTestId('breadcrumb')).toHaveClass('py-2')
     })
 
-    it('applies text-sm (14px) to link text', () => {
+    it.each([
+      ['applies text-sm (14px) to link text', 'text-sm'],
+      ['applies font-medium (500) to link text', 'font-medium'],
+      ['applies text-secondary color to link text', 'text-secondary'],
+      ['applies hover:text-primary to link', 'hover:text-primary'],
+      ['applies hover:underline to link', 'hover:underline'],
+    ])('%s', (_title, className) => {
       render(
         <Breadcrumb>
           <BreadcrumbList>
@@ -296,59 +302,7 @@ describe('Breadcrumb Component', () => {
           </BreadcrumbList>
         </Breadcrumb>
       )
-      expect(screen.getByTestId('link')).toHaveClass('text-sm')
-    })
-
-    it('applies font-medium (500) to link text', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('font-medium')
-    })
-
-    it('applies text-secondary color to link text', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('text-secondary')
-    })
-
-    it('applies hover:text-primary to link', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('hover:text-primary')
-    })
-
-    it('applies hover:underline to link', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('hover:underline')
+      expect(screen.getByTestId('link')).toHaveClass(className)
     })
 
     it('applies font-normal (400) to current page text', () => {
@@ -414,7 +368,12 @@ describe('Breadcrumb Component', () => {
       expect(icon).toHaveClass('w-4')
     })
 
-    it('applies gap-1 (4px) between items', () => {
+    it.each([
+      ['applies gap-1 (4px) between items', 'gap-1'],
+      ['applies flex layout to list', 'flex'],
+      ['applies items-center to list for vertical alignment', 'items-center'],
+      ['applies flex-wrap to allow wrapping on narrow screens', 'flex-wrap'],
+    ])('%s', (_title, className) => {
       render(
         <Breadcrumb>
           <BreadcrumbList data-testid="list">
@@ -424,7 +383,7 @@ describe('Breadcrumb Component', () => {
           </BreadcrumbList>
         </Breadcrumb>
       )
-      expect(screen.getByTestId('list')).toHaveClass('gap-1')
+      expect(screen.getByTestId('list')).toHaveClass(className)
     })
 
     it('applies mx-2 (8px margins) to separator', () => {
@@ -442,45 +401,6 @@ describe('Breadcrumb Component', () => {
         </Breadcrumb>
       )
       expect(screen.getByTestId('separator')).toHaveClass('mx-2')
-    })
-
-    it('applies flex layout to list', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList data-testid="list">
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('list')).toHaveClass('flex')
-    })
-
-    it('applies items-center to list for vertical alignment', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList data-testid="list">
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('list')).toHaveClass('items-center')
-    })
-
-    it('applies flex-wrap to allow wrapping on narrow screens', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList data-testid="list">
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('list')).toHaveClass('flex-wrap')
     })
 
     it('applies inline-flex to BreadcrumbItem for proper inline flow', () => {
@@ -511,7 +431,12 @@ describe('Breadcrumb Component', () => {
   })
 
   describe('Interaction Behavior', () => {
-    it('link transitions to primary color on hover', () => {
+    it.each([
+      ['link transitions to primary color on hover', 'hover:text-primary'],
+      ['link gains underline on hover', 'hover:underline'],
+      ['link shows focus ring for keyboard navigation', 'focus-visible:ring-2'],
+      ['link applies transition for smooth state changes', 'transition-colors'],
+    ])('%s', (_title, className) => {
       render(
         <Breadcrumb>
           <BreadcrumbList>
@@ -521,46 +446,7 @@ describe('Breadcrumb Component', () => {
           </BreadcrumbList>
         </Breadcrumb>
       )
-      expect(screen.getByTestId('link')).toHaveClass('hover:text-primary')
-    })
-
-    it('link gains underline on hover', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('hover:underline')
-    })
-
-    it('link shows focus ring for keyboard navigation', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('focus-visible:ring-2')
-    })
-
-    it('link applies transition for smooth state changes', () => {
-      render(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/" data-testid="link">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )
-      expect(screen.getByTestId('link')).toHaveClass('transition-colors')
+      expect(screen.getByTestId('link')).toHaveClass(className)
     })
 
     it('current page is visually static (no hover effects)', () => {

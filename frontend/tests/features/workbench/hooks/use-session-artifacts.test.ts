@@ -274,19 +274,19 @@ describe('useSessionArtifacts - polling', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000)
     })
-    expect(listMock.mock.calls.length).toBe(baseline + 1)
+    expect(listMock.mock.calls).toHaveLength(baseline + 1)
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000)
     })
-    expect(listMock.mock.calls.length).toBe(baseline + 2)
+    expect(listMock.mock.calls).toHaveLength(baseline + 2)
 
     // Closing the sheet stops the poll even though the run continues.
     rerender({ sessionActive: true, running: true, sheetOpen: false })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(6000)
     })
-    expect(listMock.mock.calls.length).toBe(baseline + 2)
+    expect(listMock.mock.calls).toHaveLength(baseline + 2)
   })
 
   it('does not poll while the sheet is open on a non-running session', async () => {
@@ -301,7 +301,7 @@ describe('useSessionArtifacts - polling', () => {
       await vi.advanceTimersByTimeAsync(6000)
     })
 
-    expect(listMock.mock.calls.length).toBe(baseline)
+    expect(listMock.mock.calls).toHaveLength(baseline)
   })
 })
 

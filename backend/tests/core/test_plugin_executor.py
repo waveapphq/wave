@@ -3357,8 +3357,10 @@ class TestFillFieldDefaultsRefusesARequiredFieldWithNothing:
     def test_a_required_function_input_is_never_filled(self) -> None:
         from wavecore.core.expressions.errors import NullValueError
 
+        fields = [_function_input("count", "integer")]
+
         with pytest.raises(NullValueError, match=r"^'count' is null$"):
-            _fill_defaults({}, [_function_input("count", "integer")])
+            _fill_defaults({}, fields)
 
     def test_a_required_function_input_declared_with_a_default_is_never_filled(self) -> None:
         """REQ-3.1.2.10: the declared default serves only a Function run on its own."""
@@ -3755,10 +3757,12 @@ class TestAValueGivenToAFunctionInputIsCheckedByItsType:
     ) -> None:
         from wavecore.core.expressions.errors import ExpressionTypeError
 
+        fields = [_function_input("n", "integer")]
+
         with pytest.raises(ExpressionTypeError, match=r"^Parameter 'n' expects integer, got str$"):
             await _resolve_fields(
                 {"n": "label"},
-                [_function_input("n", "integer")],
+                fields,
                 expression_fields={"n"},
                 variables={"label": "abc"},
                 exact_numbers=True,

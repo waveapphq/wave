@@ -442,8 +442,10 @@ class TestValidation:
             await K8sLogsPlugin().validate(block_params(pod=_POD))
 
     async def test_empty_container_counts_as_missing(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(container="")
         with pytest.raises(ValueError, match=r"^Missing required parameter: container$"):
-            await K8sLogsPlugin().validate(_logs_params(container=""))
+            await plugin.validate(params)
 
     async def test_missing_session(self) -> None:
         with pytest.raises(ValueError, match=exact(MISSING_SESSION_MESSAGE)):
@@ -454,45 +456,61 @@ class TestValidation:
             await K8sLogsPlugin().validate({"session": "", "pod": _POD})
 
     async def test_zero_tail_lines_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(tail_lines=0)
         with pytest.raises(ValueError, match=r"^Parameter 'tail_lines' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(tail_lines=0))
+            await plugin.validate(params)
 
     async def test_negative_tail_lines_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(tail_lines=-10)
         with pytest.raises(ValueError, match=r"^Parameter 'tail_lines' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(tail_lines=-10))
+            await plugin.validate(params)
 
     async def test_positive_tail_lines_passes(self) -> None:
         await K8sLogsPlugin().validate(_logs_params(tail_lines=1))
 
     async def test_zero_since_seconds_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(since_seconds=0)
         with pytest.raises(ValueError, match=r"^Parameter 'since_seconds' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(since_seconds=0))
+            await plugin.validate(params)
 
     async def test_negative_since_seconds_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(since_seconds=-1)
         with pytest.raises(ValueError, match=r"^Parameter 'since_seconds' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(since_seconds=-1))
+            await plugin.validate(params)
 
     async def test_positive_since_seconds_passes(self) -> None:
         await K8sLogsPlugin().validate(_logs_params(since_seconds=1))
 
     async def test_zero_max_bytes_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(max_bytes=0)
         with pytest.raises(ValueError, match=r"^Parameter 'max_bytes' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(max_bytes=0))
+            await plugin.validate(params)
 
     async def test_negative_max_bytes_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(max_bytes=-2048)
         with pytest.raises(ValueError, match=r"^Parameter 'max_bytes' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(max_bytes=-2048))
+            await plugin.validate(params)
 
     async def test_positive_max_bytes_passes(self) -> None:
         await K8sLogsPlugin().validate(_logs_params(max_bytes=1))
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(timeout=0)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(timeout=0))
+            await plugin.validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(timeout=-5)
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(timeout=-5))
+            await plugin.validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sLogsPlugin().validate(_logs_params(timeout=45))
@@ -500,8 +518,10 @@ class TestValidation:
     async def test_invalid_on_error_is_rejected(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'retry'."
 
+        plugin = K8sLogsPlugin()
+        params = _logs_params(on_error="retry")
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sLogsPlugin().validate(_logs_params(on_error="retry"))
+            await plugin.validate(params)
 
     async def test_both_on_error_values_pass(self) -> None:
         await K8sLogsPlugin().validate(_logs_params(on_error="fail"))
@@ -514,8 +534,10 @@ class TestValidation:
             f"Actual value was '{value}'."
         )
 
+        plugin = K8sLogsPlugin()
+        params = _logs_params(output_format=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sLogsPlugin().validate(_logs_params(output_format=value))
+            await plugin.validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
         params = _logs_params(impersonate_groups="qa, ops")
@@ -927,51 +949,56 @@ class TestExecuteClusterErrors:
     async def test_a_container_the_pod_does_not_have_surfaces_the_cluster_message(self) -> None:
         message = f"Kubernetes rejected the log request: {_BAD_CONTAINER}"
 
+        body = _status_body(_BAD_CONTAINER, "BadRequest", 400)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(400, _status_body(_BAD_CONTAINER, "BadRequest", 400), container="nope")
+            await _run_error(400, body, container="nope")
 
     async def test_previous_without_a_restart_surfaces_the_cluster_message(self) -> None:
         message = f"Kubernetes rejected the log request: {_NO_PREVIOUS}"
 
+        body = _status_body(_NO_PREVIOUS, "BadRequest", 400)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(
-                400, _status_body(_NO_PREVIOUS, "BadRequest", 400), container="app", previous=True
-            )
+            await _run_error(400, body, container="app", previous=True)
 
     async def test_missing_pod_renders_the_shared_not_found_row(self) -> None:
         message = f"K8s Pod '{_POD}' not found in namespace '{NAMESPACE}'"
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(404, _status_body('pods "web-1" not found', "NotFound", 404))
+            await _run_error(404, body)
 
     async def test_missing_pod_in_a_specified_namespace_names_that_namespace(self) -> None:
         message = f"K8s Pod '{_POD}' not found in namespace 'prod'"
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(message)):
             await _run_error(
                 404,
-                _status_body('pods "web-1" not found', "NotFound", 404),
+                body,
                 namespace="prod",
             )
 
     async def test_unauthorized_renders_the_shared_authentication_row(self) -> None:
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        body = _status_body("Unauthorized", "Unauthorized", 401)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(401, _status_body("Unauthorized", "Unauthorized", 401))
+            await _run_error(401, body)
 
     async def test_forbidden_renders_the_shared_permission_row(self) -> None:
         message = f"Kubernetes API permission denied: {_FORBIDDEN}"
 
+        body = _status_body(_FORBIDDEN, "Forbidden", 403)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(403, _status_body(_FORBIDDEN, "Forbidden", 403))
+            await _run_error(403, body)
 
     async def test_a_server_error_says_the_read_failed_and_names_the_pod_once(self) -> None:
         detail = "the server is currently unable to handle the request"
         message = f"Kubernetes could not read Pod '{_POD}' in namespace '{NAMESPACE}': {detail}"
 
+        body = _status_body(detail, "ServiceUnavailable", 503)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(503, _status_body(detail, "ServiceUnavailable", 503))
+            await _run_error(503, body)
 
     async def test_a_server_error_is_recorded_with_its_reason(self) -> None:
         detail = "Internal error occurred: rpc error: code = Unknown"
@@ -1071,16 +1098,16 @@ class TestOutputCore:
     async def test_fail_is_the_default_mode(self) -> None:
         message = f"K8s Pod '{_POD}' not found in namespace '{NAMESPACE}'"
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(404, _status_body('pods "web-1" not found', "NotFound", 404))
+            await _run_error(404, body)
 
     async def test_explicit_fail_mode_raises(self) -> None:
         message = f"K8s Pod '{_POD}' not found in namespace '{NAMESPACE}'"
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError, match=exact(message)):
-            await _run_error(
-                404, _status_body('pods "web-1" not found', "NotFound", 404), on_error="fail"
-            )
+            await _run_error(404, body, on_error="fail")
 
 
 class TestAlwaysHardFail:
@@ -1132,47 +1159,55 @@ class TestAlwaysHardFail:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params()
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(), fake)
+            await _run(params, fake)
 
     async def test_a_transport_failure_raises_in_record_mode(self) -> None:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params(on_error="record")
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(on_error="record"), fake)
+            await _run(params, fake)
 
     async def test_a_tls_failure_raises_in_fail_mode(self) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: unknown issuer"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params()
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(), fake)
+            await _run(params, fake)
 
     async def test_a_tls_failure_raises_in_record_mode(self) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: unknown issuer"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params(on_error="record")
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(on_error="record"), fake)
+            await _run(params, fake)
 
     async def test_a_timeout_raises_in_fail_mode(self) -> None:
         message = f"Kubernetes API request GET {_LOG_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params()
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(), fake)
+            await _run(params, fake)
 
     async def test_a_timeout_raises_in_record_mode(self) -> None:
         message = f"Kubernetes API request GET {_LOG_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _logs_params(on_error="record")
         with pytest.raises(K8sApiError, match=exact(message)):
-            await _run(_logs_params(on_error="record"), fake)
+            await _run(params, fake)
 
     async def test_invalid_parameters_are_rejected_in_record_mode(self) -> None:
+        plugin = K8sLogsPlugin()
+        params = _logs_params(tail_lines=0, on_error="record")
         with pytest.raises(ValueError, match=r"^Parameter 'tail_lines' must be positive$"):
-            await K8sLogsPlugin().validate(_logs_params(tail_lines=0, on_error="record"))
+            await plugin.validate(params)
 
     async def test_a_missing_pod_is_rejected_in_record_mode(self) -> None:
         with pytest.raises(ValueError, match=r"^Missing required parameter: pod$"):
@@ -1226,8 +1261,9 @@ class TestPathEncoding:
         )
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
 
+        params = _logs_params(pod="web 1?", namespace="my ns?")
         with pytest.raises(ValueError, match=exact(message)):
-            await _run(_logs_params(pod="web 1?", namespace="my ns?"), fake)
+            await _run(params, fake)
 
         assert _path(fake.last) == "/api/v1/namespaces/my%20ns%3F/pods/web%201%3F/log"
 
@@ -1277,7 +1313,8 @@ class TestRecordedFailureIsAmber:
     async def test_fail_mode_logs_no_warn_line(self) -> None:
         logger = MagicMock()
 
+        body = _status_body('pods "web-1" not found', "NotFound", 404)
         with pytest.raises(ValueError):
-            await _run_error(404, _status_body('pods "web-1" not found', "NotFound", 404), logger)
+            await _run_error(404, body, logger)
 
         assert logger.warn.call_count == 0

@@ -369,7 +369,7 @@ describe('WorkbenchContainer - Session Artifacts chip + sheet wiring (ARTIF-14/1
 
     await user.click(within(sheet).getByRole('button', { name: 'Refresh artifacts' }))
     await waitFor(() => {
-      expect(vi.mocked(workbenchApi.listSessionArtifacts).mock.calls.length).toBe(
+      expect(vi.mocked(workbenchApi.listSessionArtifacts).mock.calls).toHaveLength(
         callsAfterOpen + 1
       )
     })
@@ -425,7 +425,7 @@ describe('WorkbenchContainer - Session Artifacts chip + sheet wiring (ARTIF-14/1
       screen.getByText('The file is still in the session: Artifact is locked')
     ).toBeInTheDocument()
     // The list is read again, so the row the delete did not remove is still there.
-    expect(vi.mocked(workbenchApi.listSessionArtifacts).mock.calls.length).toBe(
+    expect(vi.mocked(workbenchApi.listSessionArtifacts).mock.calls).toHaveLength(
       callsAfterOpen + 1
     )
     expect(within(sheet).getByText('report.json')).toBeInTheDocument()

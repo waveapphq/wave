@@ -330,7 +330,8 @@ class TestEverySecretSlot:
         handle = slot.save(client, REAL)
 
         stored = slot.stored(handle)
-        assert is_secret_envelope(stored) and unseal_all(stored) == REAL
+        assert is_secret_envelope(stored)
+        assert unseal_all(stored) == REAL
         read = slot.read(client, handle)
         assert read == (stored if slot.read_shows_the_envelope else MASK_PLACEHOLDER)
         if slot.exported is not None:

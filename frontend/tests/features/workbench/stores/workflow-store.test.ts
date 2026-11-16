@@ -1752,14 +1752,14 @@ describe('Workflow Store', () => {
         })
 
         // Verify history exists before save
-        expect(useWorkflowStore.getState().history.length).toBe(2)
+        expect(useWorkflowStore.getState().history).toHaveLength(2)
         expect(useWorkflowStore.getState().historyIndex).toBe(1)
 
         // Save floors to a single baseline entry seeded from current state
         useWorkflowStore.getState().markSaved()
 
         const state = useWorkflowStore.getState()
-        expect(state.history.length).toBe(1)
+        expect(state.history).toHaveLength(1)
         expect(state.history[0].isInitialState).toBe(true)
         expect(state.history[0].nodes).toEqual(currentNodes)
         expect(state.historyIndex).toBe(0)
@@ -1795,7 +1795,7 @@ describe('Workflow Store', () => {
         const state = useWorkflowStore.getState()
         expect(state.canUndo()).toBe(false)
         expect(state.canRedo()).toBe(false)
-        expect(state.history.length).toBe(1)
+        expect(state.history).toHaveLength(1)
         expect(state.history[0].isInitialState).toBe(true)
       })
 
@@ -1840,7 +1840,7 @@ describe('Workflow Store', () => {
 
         // Verify baseline-seeded clean state after save
         let state = useWorkflowStore.getState()
-        expect(state.history.length).toBe(1)
+        expect(state.history).toHaveLength(1)
         expect(state.history[0].isInitialState).toBe(true)
         expect(state.historyIndex).toBe(0)
 
@@ -1849,7 +1849,7 @@ describe('Workflow Store', () => {
 
         // Should have baseline + new commit = 2 entries
         state = useWorkflowStore.getState()
-        expect(state.history.length).toBe(2)
+        expect(state.history).toHaveLength(2)
         expect(state.historyIndex).toBe(1)
         expect(state.canUndo()).toBe(true)
       })
@@ -1881,7 +1881,7 @@ describe('Workflow Store', () => {
         const state = useWorkflowStore.getState()
         // Post-state baseline model: reset floors to a single empty baseline,
         // not to history=[].
-        expect(state.history.length).toBe(1)
+        expect(state.history).toHaveLength(1)
         expect(state.history[0].isInitialState).toBe(true)
         expect(state.history[0].nodes).toEqual([])
         expect(state.historyIndex).toBe(0)
@@ -2242,7 +2242,7 @@ describe('Workflow Store', () => {
         useWorkflowStore.getState().commitHistory()
 
         // Should still be at max 50, oldest entry removed
-        expect(useWorkflowStore.getState().history.length).toBe(50)
+        expect(useWorkflowStore.getState().history).toHaveLength(50)
       })
 
       it('removes oldest entries when exceeding max depth', async () => {
@@ -2279,7 +2279,7 @@ describe('Workflow Store', () => {
 
         // First entry should be removed (oldest)
         expect(useWorkflowStore.getState().history[0].nodes[0]?.id).not.toBe('first')
-        expect(useWorkflowStore.getState().history.length).toBe(50)
+        expect(useWorkflowStore.getState().history).toHaveLength(50)
       })
     })
 
@@ -2311,7 +2311,7 @@ describe('Workflow Store', () => {
         useWorkflowStore.getState().commitHistory()
 
         // Tail (index 2) dropped; current state appended as new entry 2
-        expect(useWorkflowStore.getState().history.length).toBe(3)
+        expect(useWorkflowStore.getState().history).toHaveLength(3)
         expect(useWorkflowStore.getState().historyIndex).toBe(2)
         // Cannot redo anymore
         expect(useWorkflowStore.getState().canRedo()).toBe(false)

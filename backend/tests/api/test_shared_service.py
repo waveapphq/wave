@@ -297,10 +297,11 @@ class TestParseZipFile:
 
     def test_archive_without_documents_is_rejected(self) -> None:
         """An archive carrying no document raises."""
+        content = _zip({"readme.txt": "text"})
         with pytest.raises(
             ValidationException, match=r"^ZIP archive contains no importable files$"
         ):
-            shared.parse_zip_file(_zip({"readme.txt": "text"}))
+            shared.parse_zip_file(content)
 
     def test_bad_archive_is_rejected(self) -> None:
         """Bytes that are not a ZIP raise."""
@@ -323,10 +324,11 @@ class TestParseZipFile:
 
     def test_skip_dunder_can_empty_the_archive(self) -> None:
         """An archive of nothing but metadata raises."""
+        content = _zip({"__MACOSX/a.yaml": "name: A\n"})
         with pytest.raises(
             ValidationException, match=r"^ZIP archive contains no importable files$"
         ):
-            shared.parse_zip_file(_zip({"__MACOSX/a.yaml": "name: A\n"}), skip_dunder=True)
+            shared.parse_zip_file(content, skip_dunder=True)
 
     def test_claimed_members_are_not_documents(self) -> None:
         """A member the hook claims is consumed before the document scan."""
@@ -378,8 +380,9 @@ class TestParseZipFile:
         class Boom(Exception):
             pass
 
+        content = _zip({"readme.txt": "text"})
         with pytest.raises(Boom, match=r"^ZIP archive contains no importable files$"):
-            shared.parse_zip_file(_zip({"readme.txt": "text"}), error=Boom)
+            shared.parse_zip_file(content, error=Boom)
 
 
 _HINDI_NAME = "हिंदी परीक्षण"

@@ -78,28 +78,16 @@ describe('LastUpdatedIndicator', () => {
       expect(dot).not.toHaveClass('animate-pulse')
     })
 
-    it('uses the info color token when live', () => {
-      render(<LastUpdatedIndicator status="live" />)
+    it.each([
+      { token: 'info', status: 'live' as const, className: 'bg-info' },
+      { token: 'muted', status: 'paused' as const, className: 'bg-muted' },
+      { token: 'warning', status: 'reconnecting' as const, className: 'bg-warning' },
+    ])('uses the $token color token when $status', ({ status, className }) => {
+      render(<LastUpdatedIndicator status={status} />)
       const dot = screen
         .getByTestId('dashboard-live-status')
         .querySelector('[data-badge-dot]')
-      expect(dot).toHaveClass('bg-info')
-    })
-
-    it('uses the muted color token when paused', () => {
-      render(<LastUpdatedIndicator status="paused" />)
-      const dot = screen
-        .getByTestId('dashboard-live-status')
-        .querySelector('[data-badge-dot]')
-      expect(dot).toHaveClass('bg-muted')
-    })
-
-    it('uses the warning color token when reconnecting', () => {
-      render(<LastUpdatedIndicator status="reconnecting" />)
-      const dot = screen
-        .getByTestId('dashboard-live-status')
-        .querySelector('[data-badge-dot]')
-      expect(dot).toHaveClass('bg-warning')
+      expect(dot).toHaveClass(className)
     })
   })
 })

@@ -108,17 +108,16 @@ class TestArtifactSchemeResolution:
     async def test_missing_artifacts_dir_raises_exact_message(self) -> None:
         plugin = FileIOPlugin()
 
+        context = _context(
+            {
+                "operation": "write",
+                "path": "artifact://result.json",
+                "content": "{}",
+            },
+            artifacts_dir=None,
+        )
         with pytest.raises(ValueError, match=_MISSING_DIR_RE):
-            await plugin.execute(
-                _context(
-                    {
-                        "operation": "write",
-                        "path": "artifact://result.json",
-                        "content": "{}",
-                    },
-                    artifacts_dir=None,
-                )
-            )
+            await plugin.execute(context)
 
 
 class TestArtifactSchemeParentSegments:

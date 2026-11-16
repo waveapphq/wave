@@ -840,8 +840,9 @@ class TestNullNeverReachesTheScriptAsText:
     ) -> None:
         arguments = [{"value": value} for value in rows]
 
+        params = {"script": script_of(*NEVER_RUNS), "arguments": arguments}
         with pytest.raises(ValueError, match=exact(message)):
-            await run_python({"script": script_of(*NEVER_RUNS), "arguments": arguments})
+            await run_python(params)
 
         assert launches == []
 
@@ -850,8 +851,9 @@ class TestNullNeverReachesTheScriptAsText:
     ) -> None:
         environment = {"TEAM": "wave", "NOTHING": None}
 
+        params = {"script": script_of(*NEVER_RUNS), "environment": environment}
         with pytest.raises(ValueError, match=exact("'NOTHING' in 'environment' is null")):
-            await run_python({"script": script_of(*NEVER_RUNS), "environment": environment})
+            await run_python(params)
 
         assert launches == []
 
@@ -923,12 +925,13 @@ class TestNullFromAnExpression:
     async def test_an_argument_row_that_is_null_fails_before_the_script_starts(
         self, launches: list[Any]
     ) -> None:
+        params = {
+            "script": script_of(*NEVER_RUNS),
+            "arguments": [{"value": "a"}, {"value": "missing"}],
+        }
         with pytest.raises(ValueError, match=exact("Row 2 in 'arguments' is null")):
             await run_as_resolved(
-                {
-                    "script": script_of(*NEVER_RUNS),
-                    "arguments": [{"value": "a"}, {"value": "missing"}],
-                },
+                params,
                 {"arguments.1.value"},
                 {"missing": None},
             )
@@ -942,10 +945,9 @@ class TestNullFromAnExpression:
     ) -> None:
         entries = {"environment": {"TEAM": text}, "arguments": [{"value": "a"}, {"value": text}]}
 
+        params = {"script": script_of(*NEVER_RUNS), setting: entries[setting]}
         with pytest.raises(ValueError, match=exact(refusal)):
-            await run_as_resolved(
-                {"script": script_of(*NEVER_RUNS), setting: entries[setting]}, {expression}, {}
-            )
+            await run_as_resolved(params, {expression}, {})
 
         assert launches == []
 
@@ -953,8 +955,10 @@ class TestNullFromAnExpression:
     async def test_a_row_or_entry_stored_as_null_fails_before_the_script_starts(
         self, values: dict[str, Any], refusal: str, launches: list[Any]
     ) -> None:
+        params = {"script": script_of(*NEVER_RUNS), **values}
+        expressions: set[str] = set()
         with pytest.raises(ValueError, match=exact(refusal)):
-            await run_as_resolved({"script": script_of(*NEVER_RUNS), **values}, set(), {})
+            await run_as_resolved(params, expressions, {})
 
         assert launches == []
 
@@ -988,9 +992,10 @@ class TestNullFromAnExpression:
     async def test_an_environment_entry_that_is_null_fails_before_the_script_starts(
         self, launches: list[Any]
     ) -> None:
+        params = {"script": script_of(*NEVER_RUNS), "environment": {"TEAM": "missing"}}
         with pytest.raises(ValueError, match=exact("'TEAM' in 'environment' is null")):
             await run_as_resolved(
-                {"script": script_of(*NEVER_RUNS), "environment": {"TEAM": "missing"}},
+                params,
                 {"environment.TEAM"},
                 {"missing": None},
             )
@@ -1002,8 +1007,9 @@ class TestFailureOutcomes:
     """An exception, an exit code and a syntax error each carry their own reason (PYRUN-7)."""
 
     async def test_an_uncaught_exception_fails_the_block(self) -> None:
+        params = {"script": script_of(*BOOM)}
         with pytest.raises(ValueError, match=exact("ValueError: boom")):
-            await run_python({"script": script_of(*BOOM)})
+            await run_python(params)
 
     async def test_a_recorded_exception_carries_its_reason_and_exit_code(self) -> None:
         result = await run_python({"script": script_of(*BOOM), "on_error": "record"})
@@ -1047,8 +1053,9 @@ class TestFailureOutcomes:
         assert result["exit_code"] == 1
 
     async def test_a_non_zero_exit_fails_with_its_code(self) -> None:
+        params = {"script": script_of("import sys", "sys.exit(2)")}
         with pytest.raises(ValueError, match=exact("Script exited with code 2")):
-            await run_python({"script": script_of("import sys", "sys.exit(2)")})
+            await run_python(params)
 
     async def test_a_recorded_non_zero_exit_keeps_the_code(self) -> None:
         result = await run_python(
@@ -1075,8 +1082,9 @@ class TestFailureOutcomes:
         assert result["error"] == "Script exited with code 2"
 
     async def test_sys_exit_with_text_fails_naming_the_text(self) -> None:
+        params = {"script": script_of(*EXIT_WITH_TEXT)}
         with pytest.raises(ValueError, match=exact("Script exited with code 1: stopping here")):
-            await run_python({"script": script_of(*EXIT_WITH_TEXT)})
+            await run_python(params)
 
     async def test_a_recorded_sys_exit_with_text_keeps_the_text_on_stderr(self) -> None:
         result = await run_python({"script": script_of(*EXIT_WITH_TEXT), "on_error": "record"})
@@ -1125,8 +1133,9 @@ class TestFailureOutcomes:
         assert result["success"] is True
 
     async def test_a_syntax_error_names_its_line(self) -> None:
+        params = {"script": script_of(*SYNTAX_ERROR)}
         with pytest.raises(ValueError, match=r"^SyntaxError: .+ \(line 3\)$"):
-            await run_python({"script": script_of(*SYNTAX_ERROR)})
+            await run_python(params)
 
     async def test_a_recorded_syntax_error_reads_as_an_exception(self) -> None:
         result = await run_python({"script": script_of(*SYNTAX_ERROR), "on_error": "record"})
@@ -1291,8 +1300,9 @@ class TestStopOnPattern:
     """A pattern stops the script and decides the outcome (PYRUN-11, SHRUN-13)."""
 
     async def test_a_fail_match_fails_the_block(self) -> None:
+        params = stop_params(PATTERN_FAIL, fail_pattern="ERROR")
         with pytest.raises(ValueError, match=r"^Output matched the fail pattern: .{1,200}$"):
-            await run_python(stop_params(PATTERN_FAIL, fail_pattern="ERROR"))
+            await run_python(params)
 
     async def test_a_recorded_fail_match_names_the_line(self) -> None:
         result = await run_python(
@@ -1349,14 +1359,13 @@ class TestTimeout:
             "time.sleep(30)",
         ]
 
+        params = {
+            "script": script_of(*lines),
+            "arguments": [{"value": str(pid_file)}],
+            "timeout": 1,
+        }
         with pytest.raises(ValueError, match=exact("Script timed out after 1 second")):
-            await run_python(
-                {
-                    "script": script_of(*lines),
-                    "arguments": [{"value": str(pid_file)}],
-                    "timeout": 1,
-                }
-            )
+            await run_python(params)
 
         await wait_until_gone(await pid_from(pid_file))
 
@@ -1582,28 +1591,30 @@ class TestInterpreterStartFailures:
     """A program that is missing, or is not Python, fails the block before the script runs."""
 
     async def test_a_missing_program_is_named(self) -> None:
+        params = {"script": script_of("print('never')"), "interpreter": "nosuchpython"}
         with pytest.raises(
             ValueError, match=exact("Interpreter not found on the WAVE server: nosuchpython")
         ):
-            await run_python({"script": script_of("print('never')"), "interpreter": "nosuchpython"})
+            await run_python(params)
 
     async def test_the_message_names_the_program_and_not_the_whole_row(self) -> None:
+        params = {"script": script_of("print('never')"), "interpreter": "nosuchpython -X utf8"}
         with pytest.raises(
             ValueError, match=exact("Interpreter not found on the WAVE server: nosuchpython")
         ):
-            await run_python(
-                {"script": script_of("print('never')"), "interpreter": "nosuchpython -X utf8"}
-            )
+            await run_python(params)
 
     async def test_a_program_that_is_not_python_is_refused(self) -> None:
+        params = {"script": script_of("print('never')"), "interpreter": "/bin/true"}
         with pytest.raises(ValueError, match=anchored("Interpreter is not Python 3.8 or newer")):
-            await run_python({"script": script_of("print('never')"), "interpreter": "/bin/true"})
+            await run_python(params)
 
     async def test_a_program_that_fails_without_the_bridge_is_refused(self, tmp_path: Path) -> None:
         stub = executable_program(tmp_path / "stub-python", "#!/bin/sh\nexit 3\n")
 
+        params = {"script": script_of("print('never')"), "interpreter": str(stub)}
         with pytest.raises(ValueError, match=anchored("Interpreter is not Python 3.8 or newer")):
-            await run_python({"script": script_of("print('never')"), "interpreter": str(stub)})
+            await run_python(params)
 
     async def test_a_refused_interpreter_records_start_failed(self) -> None:
         result = await run_python(
@@ -1662,5 +1673,6 @@ class TestStartFailures:
     async def test_an_operating_system_refusal_is_reported(
         self, storage_base_is_a_file: Path
     ) -> None:
+        params = {"script": script_of("print(1)")}
         with pytest.raises(ValueError, match=anchored("Could not start the script")):
-            await run_python({"script": script_of("print(1)")})
+            await run_python(params)

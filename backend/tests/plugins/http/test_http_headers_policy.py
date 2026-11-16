@@ -54,6 +54,13 @@ class TestBlockedFramingHeadersAtExecution:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "headers": {"Content-Length": "42"},
+                }
+            )
             with pytest.raises(
                 ValueError,
                 match=(
@@ -62,15 +69,7 @@ class TestBlockedFramingHeadersAtExecution:
                     r"- the HTTP stack blocks length overrides$"
                 ),
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "http://example.com",
-                            "headers": {"Content-Length": "42"},
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
         client.request.assert_not_awaited()
 
@@ -83,6 +82,13 @@ class TestBlockedFramingHeadersAtExecution:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "headers": {"content-length": "10"},
+                }
+            )
             with pytest.raises(
                 ValueError,
                 match=(
@@ -91,15 +97,7 @@ class TestBlockedFramingHeadersAtExecution:
                     r"- the HTTP stack blocks length overrides$"
                 ),
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "http://example.com",
-                            "headers": {"content-length": "10"},
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
 
 class TestContentTypeIsAnOrdinaryHeader:
@@ -294,6 +292,14 @@ class TestSourceAttribution:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "headers": {"Content-Length": "42"},
+                },
+                parameter_sources={"headers": "the headers expression"},
+            )
             with pytest.raises(
                 ValueError,
                 match=(
@@ -302,16 +308,7 @@ class TestSourceAttribution:
                     r"- the HTTP stack blocks length overrides$"
                 ),
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "http://example.com",
-                            "headers": {"Content-Length": "42"},
-                        },
-                        parameter_sources={"headers": "the headers expression"},
-                    )
-                )
+                await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_profile_bound_map_source_is_named(self):
@@ -321,6 +318,14 @@ class TestSourceAttribution:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "http://example.com",
+                    "headers": {"Content-Length": "12"},
+                },
+                parameter_sources={"headers": 'profile "Payments API"'},
+            )
             with pytest.raises(
                 ValueError,
                 match=(
@@ -329,13 +334,4 @@ class TestSourceAttribution:
                     r"- the HTTP stack blocks length overrides$"
                 ),
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "http://example.com",
-                            "headers": {"Content-Length": "12"},
-                        },
-                        parameter_sources={"headers": 'profile "Payments API"'},
-                    )
-                )
+                await plugin.execute(context)

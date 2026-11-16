@@ -32,7 +32,8 @@ def exact(message: str) -> str:
 
 
 def outputs(envelope: dict[str, Any]) -> dict[str, Any]:
-    assert envelope["__wave_type"] == "result" and envelope["secrets"] == []
+    assert envelope["__wave_type"] == "result"
+    assert envelope["secrets"] == []
     return envelope["outputs"]
 
 

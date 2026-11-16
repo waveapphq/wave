@@ -455,7 +455,8 @@ class TestVariables:
         exec_id = str(uuid.uuid4())
         store._save_variables(exec_id, {"keep": 1, "drop": _FakeNS()})
         loaded = store._load_variables(exec_id)
-        assert "keep" in loaded and "drop" not in loaded
+        assert "keep" in loaded
+        assert "drop" not in loaded
 
     def test_dotted_alias_entries_dropped(self, tmp_storage: Any) -> None:
         """Leak guard: injected profile/namespace aliases carry live
@@ -624,7 +625,8 @@ class TestOrphanRecovery:
         )
         store._recover_orphaned_executions()
         loaded = store._load_execution(exec_id)
-        assert loaded is not None and loaded["status"] == "stopped"
+        assert loaded is not None
+        assert loaded["status"] == "stopped"
 
     def test_terminal_untouched(self, tmp_storage: Any) -> None:
         exec_id = str(uuid.uuid4())
@@ -1135,7 +1137,8 @@ class TestUpdateExecutionStatus:
         store._update_execution_status(exec_id, "passed")
         ex = store._execution_storage[exec_id]
         assert ex["status"] == "passed"
-        assert "ended_at" in ex and "duration" in ex
+        assert "ended_at" in ex
+        assert "duration" in ex
 
     def test_non_terminal_status_updates_memory(self, tmp_storage: Any) -> None:
         exec_id, _ = _seed_execution()

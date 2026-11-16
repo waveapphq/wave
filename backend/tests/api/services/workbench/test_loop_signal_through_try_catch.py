@@ -341,7 +341,8 @@ class TestTheLoopAndItsTryCatchInsideAnotherWalker:
     ) -> None:
         run = await _run_shape("if-else-in-try", "for", signal, target, placement)
 
-        assert (run.count("pre"), run.count("fin")) == (_passes(signal),) * 2, run.messages
+        assert run.count("pre") == _passes(signal), run.messages
+        assert run.count("fin") == _passes(signal), run.messages
         assert (run.count("past-sig"), run.count("catch"), run.count("tail")) == (0, 0, 0)
         then = "lp-then" if target == "nearest" else "olp-then"
         assert (run.count(then), run.count("after")) == (1, 1), run.messages

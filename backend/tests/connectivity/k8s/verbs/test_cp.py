@@ -891,8 +891,9 @@ class TestPullMaxFiles:
         target = tmp_path / "out"
         stream, seen = _watched(_tar(THREE_FILES), target / "sub" / "c.txt", chunk_size=512)
 
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, max_files=2))
+            _run(stream, params)
 
         assert seen
         assert not any(landed for _offset, landed in seen)
@@ -942,15 +943,17 @@ class TestPullMaxSize:
         ]
         params = _pull_params(str(tmp_path / "out"), source_path=POD_DIR, max_size_mib=1)
 
+        stream = _pull_stream(_tar(members))
         with pytest.raises(ValueError, match=exact(_pull_message(_over_size_detail(1)))):
-            _run(_pull_stream(_tar(members)), params)
+            _run(stream, params)
 
     def test_a_file_over_max_size_is_refused_on_its_header_alone(self, tmp_path: Any) -> None:
         """No bytes follow the header, so the refusal cannot wait for them."""
         stream = _pull_stream(_header_only(MIB + 1))
 
+        params = _pull_params(str(tmp_path / "out.txt"), max_size_mib=1)
         with pytest.raises(ValueError, match=exact(_pull_message(_over_size_detail(1)))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), max_size_mib=1))
+            _run(stream, params)
 
     def test_the_max_size_refusal_is_recorded_with_its_reason(self, tmp_path: Any) -> None:
         params = _pull_params(str(tmp_path / "out.txt"), max_size_mib=1, on_error="record")
@@ -970,8 +973,9 @@ class TestPullMaxSize:
         )
         stream, seen = _watched(archive, target / "b.bin")
 
+        params = _pull_params(str(target), source_path=POD_DIR, max_size_mib=1)
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, max_size_mib=1))
+            _run(stream, params)
 
         assert seen
         assert not any(landed for _offset, landed in seen)
@@ -990,14 +994,16 @@ class TestPullMaxSize:
             _header_only(MAX_SIZE_MIB_DEFAULT * MIB + 1), stderr=stderr, exit_code=1
         )
 
+        params = _pull_params(str(tmp_path / "out.txt"), max_size_mib=0)
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), max_size_mib=0))
+            _run(stream, params)
 
     def test_zero_on_one_limit_leaves_the_other_in_force(self, tmp_path: Any) -> None:
         params = _pull_params(str(tmp_path / "out.txt"), max_size_mib=1, max_files=0)
 
+        stream = _pull_stream(_header_only(MIB + 1))
         with pytest.raises(ValueError, match=exact(_pull_message(_over_size_detail(1)))):
-            _run(_pull_stream(_header_only(MIB + 1)), params)
+            _run(stream, params)
 
 
 class TestPullTakesBackWhatItWrote:
@@ -1007,8 +1013,9 @@ class TestPullTakesBackWhatItWrote:
         target = tmp_path / "out"
         stream, seen = _watched(_tar(THREE_FILES), target / "a.txt", chunk_size=512)
 
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, max_files=2))
+            _run(stream, params)
 
         assert any(landed for _offset, landed in seen)
         assert not (target / "a.txt").exists()
@@ -1020,10 +1027,12 @@ class TestPullTakesBackWhatItWrote:
             [("srv/work/data/a.bin", HALF_MIB), ("srv/work/data/b.bin", HALF_MIB + b"!")]
         )
 
+        stream = _pull_stream(archive)
+        params = _pull_params(str(target), source_path=POD_DIR, max_size_mib=1)
         with pytest.raises(ValueError):
             _run(
-                _pull_stream(archive),
-                _pull_params(str(target), source_path=POD_DIR, max_size_mib=1),
+                stream,
+                params,
             )
 
         assert not (target / "a.bin").exists()
@@ -1031,10 +1040,12 @@ class TestPullTakesBackWhatItWrote:
     def test_the_folders_the_pull_created_are_removed(self, tmp_path: Any) -> None:
         target = tmp_path / "made" / "out"
 
+        stream = _pull_stream(_tar(THREE_FILES))
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError):
             _run(
-                _pull_stream(_tar(THREE_FILES)),
-                _pull_params(str(target), source_path=POD_DIR, max_files=2),
+                stream,
+                params,
             )
 
         assert list(tmp_path.iterdir()) == []
@@ -1044,10 +1055,12 @@ class TestPullTakesBackWhatItWrote:
         target.mkdir()
         (target / "keep.txt").write_bytes(b"keep")
 
+        stream = _pull_stream(_tar(THREE_FILES))
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError):
             _run(
-                _pull_stream(_tar(THREE_FILES)),
-                _pull_params(str(target), source_path=POD_DIR, max_files=2),
+                stream,
+                params,
             )
 
         assert sorted(entry.name for entry in target.iterdir()) == ["keep.txt"]
@@ -1056,8 +1069,9 @@ class TestPullTakesBackWhatItWrote:
     def test_a_refused_pull_reads_the_stream_no_further(self, tmp_path: Any) -> None:
         stream = _pull_stream(_later_tar())
 
+        params = _pull_params(str(tmp_path / "out"), source_path=POD_DIR, max_files=1)
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(tmp_path / "out"), source_path=POD_DIR, max_files=1))
+            _run(stream, params)
 
         assert stream.handed_out < len(LATER_CONTENT)
         assert stream.finish_calls == 0
@@ -1069,8 +1083,9 @@ class TestPullTakesBackWhatItWrote:
             _tar(THREE_FILES), target / "a.txt", chunk_size=512, stderr=stderr, exit_code=1
         )
 
+        params = _pull_params(str(target), source_path=POD_DIR)
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR))
+            _run(stream, params)
 
         assert any(landed for _offset, landed in seen)
         assert list(tmp_path.iterdir()) == []
@@ -1093,8 +1108,9 @@ class TestPullTakesBackWhatItWrote:
         target = tmp_path / "out"
         stream = _pull_stream(_later_tar()[:CUT_AT], stderr=stderr, exit_code=2)
 
+        params = _pull_params(str(target), source_path=POD_DIR)
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR))
+            _run(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1105,8 +1121,9 @@ class TestPullTakesBackWhatItWrote:
             _later_tar(), read_error=ExecTimeout("timed out"), read_error_at=CUT_AT
         )
 
+        params = _pull_params(str(target), source_path=POD_DIR, on_error=on_error)
         with pytest.raises(ValueError, match=exact("File copy timed out after 60 seconds")):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, on_error=on_error))
+            _run(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1117,8 +1134,9 @@ class TestPullTakesBackWhatItWrote:
         target = tmp_path / "out"
         stream = _pull_stream(_tar(THREE_FILES), finish_error=ExecTimeout("timed out"))
 
+        params = _pull_params(str(target), source_path=POD_DIR, on_error=on_error)
         with pytest.raises(ValueError, match=exact("File copy timed out after 60 seconds")):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, on_error=on_error))
+            _run(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1131,8 +1149,9 @@ class TestPullTakesBackWhatItWrote:
             _later_tar(), read_error=ExecTransportError(CLOSED_EARLY), read_error_at=CUT_AT
         )
 
+        params = _pull_params(str(target), source_path=POD_DIR, on_error=on_error)
         with pytest.raises(ValueError, match=exact(_pull_message(CLOSED_EARLY))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, on_error=on_error))
+            _run(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1176,8 +1195,9 @@ class TestPullPutsBackWhatItReplaced:
         earlier = _earlier_file(target / "a.txt")
         stream, seen = _read_along(_tar(THREE_FILES), earlier, chunk_size=512)
 
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError, match=exact(_pull_message(_over_files_detail(2)))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, max_files=2))
+            _run(stream, params)
 
         assert b"A" in seen
         assert _state(earlier) == (EARLIER, EARLIER_MODE)
@@ -1193,8 +1213,9 @@ class TestPullPutsBackWhatItReplaced:
             _tar(THREE_FILES), earlier, chunk_size=512, stderr=stderr, exit_code=1
         )
 
+        params = _pull_params(str(target), source_path=POD_DIR)
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR))
+            _run(stream, params)
 
         assert b"A" in seen
         assert _state(earlier) == (EARLIER, EARLIER_MODE)
@@ -1216,8 +1237,9 @@ class TestPullPutsBackWhatItReplaced:
         cut = _earlier_file(target / "b.bin")
         stream = _pull_stream(_later_tar(), read_error=error, read_error_at=CUT_AT)
 
+        params = _pull_params(str(target), source_path=POD_DIR)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR))
+            _run(stream, params)
 
         assert _state(whole) == (EARLIER, EARLIER_MODE)
         assert _state(cut) == (EARLIER, EARLIER_MODE)
@@ -1244,8 +1266,9 @@ class TestPullPutsBackWhatItReplaced:
         earlier = _earlier_file(target / "a.txt")
         stream, seen = _read_along(_tar(members), earlier, chunk_size=512)
 
+        params = _pull_params(str(target), source_path=POD_DIR, max_files=2)
         with pytest.raises(ValueError, match=exact(_pull_message(_over_files_detail(2)))):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, max_files=2))
+            _run(stream, params)
 
         assert b"second" in seen
         assert _state(earlier) == (EARLIER, EARLIER_MODE)
@@ -1258,18 +1281,21 @@ class TestPullUnreadableStream:
     def test_an_empty_stream_with_a_non_zero_exit_carries_the_stderr(self, tmp_path: Any) -> None:
         stderr = "tar: /srv/work/src.txt: No such file or directory"
 
+        stream = _pull_stream(b"", stderr=stderr, exit_code=2)
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
             _run(
-                _pull_stream(b"", stderr=stderr, exit_code=2),
-                _pull_params(str(tmp_path / "out.txt")),
+                stream,
+                params,
             )
 
     def test_an_empty_archive_with_a_non_zero_exit_carries_the_stderr(self, tmp_path: Any) -> None:
         stderr = "tar: /srv/work/src.txt: Cannot stat: No such file or directory"
         stream = _pull_stream(b"\0" * 10_240, stderr=stderr, exit_code=2)
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")))
+            _run(stream, params)
 
     def test_a_cut_stream_with_a_non_zero_exit_records_the_non_zero_exit_reason(
         self, tmp_path: Any
@@ -1290,8 +1316,9 @@ class TestPullUnreadableStream:
         target = tmp_path / "out"
         stream = _pull_stream(_later_tar()[:CUT_AT])
 
+        params = _pull_params(str(target), source_path=POD_DIR, on_error=on_error)
         with pytest.raises(tarfile.ReadError, match=exact("unexpected end of data")):
-            _run(stream, _pull_params(str(target), source_path=POD_DIR, on_error=on_error))
+            _run(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1299,14 +1326,17 @@ class TestPullUnreadableStream:
     def test_an_empty_stream_with_a_zero_exit_raises_the_read_error(
         self, on_error: str, tmp_path: Any
     ) -> None:
+        stream = _pull_stream(b"")
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=on_error)
         with pytest.raises(tarfile.ReadError, match=exact("empty file")):
-            _run(_pull_stream(b""), _pull_params(str(tmp_path / "out.txt"), on_error=on_error))
+            _run(stream, params)
 
     def test_the_exit_code_is_read_once_the_read_error_is_met(self, tmp_path: Any) -> None:
         stream = _pull_stream(b"", stderr="tar: not found", exit_code=127)
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")))
+            _run(stream, params)
 
         assert stream.finish_calls == 1
 
@@ -1320,8 +1350,9 @@ class TestPushCeiling:
     def test_a_push_over_the_ceiling_reads_as_a_copy_in(self, tmp_path: Any) -> None:
         channel = FakeExecChannel([ExecOutputTooLarge(CEILING_MESSAGE)])
 
+        params = _push_params(str(_source_file(tmp_path)))
         with pytest.raises(ValueError, match=exact(_push_message(CEILING_MESSAGE))):
-            _run(channel, _push_params(str(_source_file(tmp_path))))
+            _run(channel, params)
 
     def test_a_push_over_the_ceiling_records_the_output_too_large_reason(
         self, tmp_path: Any
@@ -1934,21 +1965,24 @@ class TestFailureMessages:
     def test_a_refusal_on_the_pull_reads_as_a_copy_out(self, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecRejected(NOT_FOUND_DETAIL, "NotFound"))
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError, match=exact(_pull_message(NOT_FOUND_DETAIL))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")))
+            _run(stream, params)
 
     def test_a_refusal_on_the_push_reads_as_a_copy_in(self, tmp_path: Any) -> None:
         channel = FakeExecChannel([ExecRejected(NOT_FOUND_DETAIL, "NotFound")])
 
+        params = _push_params(str(_source_file(tmp_path)))
         with pytest.raises(ValueError, match=exact(_push_message(NOT_FOUND_DETAIL))):
-            _run(channel, _push_params(str(_source_file(tmp_path))))
+            _run(channel, params)
 
     def test_a_refusal_on_the_final_push_exec_still_reads_as_a_copy_in(self, tmp_path: Any) -> None:
         detail = "container not found"
         channel = FakeExecChannel([("", "", 0), ("", "", 0), ExecRejected(detail, "BadRequest")])
 
+        params = _push_params(str(_source_file(tmp_path)))
         with pytest.raises(ValueError, match=exact(_push_message(detail))):
-            _run(channel, _push_params(str(_source_file(tmp_path))))
+            _run(channel, params)
 
     def test_the_pull_message_names_the_container_the_row_selected(self, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecRejected(NOT_FOUND_DETAIL, "NotFound"))
@@ -1987,8 +2021,9 @@ class TestFailureMessages:
         stderr = "tar: /srv/work/src.txt: No such file or directory"
         stream = _pull_stream(b"", stderr=stderr, exit_code=1)
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")))
+            _run(stream, params)
 
     def test_a_non_zero_exit_records_the_non_zero_exit_reason(self, tmp_path: Any) -> None:
         stderr = "tar: /srv/work/src.txt: No such file or directory"
@@ -2003,16 +2038,18 @@ class TestFailureMessages:
         stderr = "tar: can't create directory: Permission denied"
         channel = FakeExecChannel([("", "", 0), ("", "", 0), ("", stderr, 2)])
 
+        params = _push_params(str(_source_file(tmp_path)))
         with pytest.raises(ValueError, match=exact(_push_message(stderr))):
-            _run(channel, _push_params(str(_source_file(tmp_path))))
+            _run(channel, params)
 
     def test_a_non_zero_exit_with_no_stderr_ends_the_message_in_a_colon(
         self, tmp_path: Any
     ) -> None:
         stream = _pull_stream(b"", exit_code=3)
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError, match=exact(_pull_message(""))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")))
+            _run(stream, params)
 
 
 class TestAlwaysHardFail:
@@ -2042,24 +2079,27 @@ class TestAlwaysHardFail:
         detail = "[Errno 111] Connection refused"
         stream = FakeExecStdout(open_error=ExecTransportError(detail))
 
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=on_error)
         with pytest.raises(ValueError, match=exact(_pull_message(detail))):
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), on_error=on_error))
+            _run(stream, params)
 
     @_BOTH_MODES
     def test_a_transport_failure_on_the_push_raises(self, on_error: str, tmp_path: Any) -> None:
         detail = "TLS handshake failed: self-signed certificate"
         channel = FakeExecChannel([ExecTransportError(detail)])
 
+        params = _push_params(str(_source_file(tmp_path)), on_error=on_error)
         with pytest.raises(ValueError, match=exact(_push_message(detail))):
-            _run(channel, _push_params(str(_source_file(tmp_path)), on_error=on_error))
+            _run(channel, params)
 
     @_BOTH_MODES
     def test_a_transport_failure_records_nothing(self, on_error: str, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecTransportError("socket closed"))
         log = RecordingLog()
 
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=on_error)
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), on_error=on_error), log)
+            _run(stream, params, log)
 
         assert log.entries == []
 
@@ -2069,8 +2109,9 @@ class TestAlwaysHardFail:
     ) -> None:
         stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
 
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=on_error)
         with pytest.raises(ValueError, match=exact("File copy timed out after 60 seconds")):
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), on_error=on_error))
+            _run(stream, params)
 
     @_BOTH_MODES
     def test_the_timeout_message_names_the_configured_timeout(
@@ -2107,8 +2148,9 @@ class TestAlwaysHardFail:
     def test_a_timeout_on_the_push_reads_the_same_way(self, on_error: str, tmp_path: Any) -> None:
         channel = FakeExecChannel([ExecTimeout("deadline exceeded")])
 
+        params = _push_params(str(_source_file(tmp_path)), on_error=on_error)
         with pytest.raises(ValueError, match=exact("File copy timed out after 60 seconds")):
-            _run(channel, _push_params(str(_source_file(tmp_path)), on_error=on_error))
+            _run(channel, params)
 
     @_BOTH_MODES
     def test_a_timeout_is_never_nested_in_the_copy_message(
@@ -2116,8 +2158,9 @@ class TestAlwaysHardFail:
     ) -> None:
         stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
 
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=on_error)
         with pytest.raises(ValueError) as caught:
-            _run(stream, _pull_params(str(tmp_path / "out.txt"), on_error=on_error))
+            _run(stream, params)
 
         assert "Could not copy" not in str(caught.value)
 
@@ -2185,8 +2228,9 @@ class TestLogging:
         stream = FakeExecStdout(open_error=ExecRejected("denied", "Forbidden"))
         log = RecordingLog()
 
+        params = _pull_params(str(tmp_path / "out.txt"))
         with pytest.raises(ValueError):
-            _run(stream, _pull_params(str(tmp_path / "out.txt")), log)
+            _run(stream, params, log)
 
         assert log.entries == []
 
@@ -2208,8 +2252,9 @@ class TestWaveSideSchemesOnTheRemoteHost:
         monkeypatch.chdir(tmp_path)
         stream = _pull_stream(_one_file_tar())
 
+        params = _pull_params(f"{scheme}pulled/dst.txt")
         with pytest.raises(ValueError, match=exact(_remote_host_refusal(scheme))):
-            _run(stream, _pull_params(f"{scheme}pulled/dst.txt"))
+            _run(stream, params)
 
         assert stream.calls == []
         assert list(tmp_path.iterdir()) == []
@@ -2221,16 +2266,18 @@ class TestWaveSideSchemesOnTheRemoteHost:
         monkeypatch.chdir(tmp_path)
         channel = _push_channel()
 
+        params = _push_params(f"{scheme}a.txt")
         with pytest.raises(ValueError, match=exact(_remote_host_refusal(scheme))):
-            _run(channel, _push_params(f"{scheme}a.txt"))
+            _run(channel, params)
 
         assert channel.calls == []
 
     def test_the_refusal_ignores_on_error_record(self, tmp_path: Any) -> None:
         channel = _push_channel()
 
+        params = _push_params("testdata://a.txt", on_error="record")
         with pytest.raises(ValueError, match=exact(_remote_host_refusal("testdata://"))):
-            _run(channel, _push_params("testdata://a.txt", on_error="record"))
+            _run(channel, params)
 
     def test_a_pod_side_path_is_never_read_as_a_scheme(self, tmp_path: Any) -> None:
         """Only the side on this machine is a local path; the pod side is the pod's business."""

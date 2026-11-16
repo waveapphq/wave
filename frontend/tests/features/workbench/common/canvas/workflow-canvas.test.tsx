@@ -1714,79 +1714,42 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       expect(screen.getByRole('heading', { name: /edit config/i })).toBeInTheDocument()
     })
 
-    it('uses controlVersions for controls with metadata (Delay control)', async () => {
+    it.each([
       // Use a real control type that has metadata in CONTROL_METADATA
       // This tests the controlVersions.map() branch (line 150)
-      mockWorkflowStore.nodes = [
-        {
-          id: 'delay-node',
-          position: { x: 100, y: 100 },
-          data: {
-            label: 'Delay',
-            elementType: 'delay', // This exists in CONTROL_METADATA with versions
-            version: '1.0.0',
-            displayName: '',
-            config: { values: {}, outputBindings: {} },
-          },
-        },
-      ]
-      mockWorkflowStore.openConfigNodeIds = ['delay-node']
-
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
-      render(<WorkflowCanvas />)
-
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 0))
-      })
-
-      // Modal should render with Delay control
-      expect(screen.getByRole('heading', { name: /edit config/i })).toBeInTheDocument()
-    })
-
-    it('matches version prefix (e.g., "1.0" matches "1.0.0")', async () => {
+      [
+        'uses controlVersions for controls with metadata (Delay control)',
+        'delay-node',
+        '1.0.0', // This exists in CONTROL_METADATA with versions
+      ],
       // Test the version normalization: stored "1.0" matches metadata "1.0.0"
       // This tests line 134's startsWith branch
-      mockWorkflowStore.nodes = [
-        {
-          id: 'delay-prefix-node',
-          position: { x: 100, y: 100 },
-          data: {
-            label: 'Delay',
-            elementType: 'delay',
-            version: '1.0', // Short version - should match 1.0.0 via startsWith
-            displayName: '',
-            config: { values: {}, outputBindings: {} },
-          },
-        },
-      ]
-      mockWorkflowStore.openConfigNodeIds = ['delay-prefix-node']
-
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
-      render(<WorkflowCanvas />)
-
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 0))
-      })
-
-      expect(screen.getByRole('heading', { name: /edit config/i })).toBeInTheDocument()
-    })
-
-    it('falls back to first version when no version matches', async () => {
+      [
+        'matches version prefix (e.g., "1.0" matches "1.0.0")',
+        'delay-prefix-node',
+        '1.0', // Short version - should match 1.0.0 via startsWith
+      ],
       // Test line 136 fallback: when stored version doesn't match any metadata version
+      [
+        'falls back to first version when no version matches',
+        'delay-invalid-version-node',
+        '99.99.99', // Non-existent version
+      ],
+    ])('%s', async (_title, nodeId, version) => {
       mockWorkflowStore.nodes = [
         {
-          id: 'delay-invalid-version-node',
+          id: nodeId,
           position: { x: 100, y: 100 },
           data: {
             label: 'Delay',
             elementType: 'delay',
-            version: '99.99.99', // Non-existent version
+            version,
             displayName: '',
             config: { values: {}, outputBindings: {} },
           },
         },
       ]
-      mockWorkflowStore.openConfigNodeIds = ['delay-invalid-version-node']
+      mockWorkflowStore.openConfigNodeIds = [nodeId]
 
       const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
       render(<WorkflowCanvas />)
@@ -1795,7 +1758,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         await new Promise((r) => setTimeout(r, 0))
       })
 
-      // Modal should still render (using first available version)
+      // Modal should render (using the first available version when none matches)
       expect(screen.getByRole('heading', { name: /edit config/i })).toBeInTheDocument()
     })
 
@@ -2397,7 +2360,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
     })
 
     // Proximity ghost edge element should appear
-    expect(screen.queryByTestId('proximity-ghost-edge')).toBeInTheDocument()
+    expect(screen.getByTestId('proximity-ghost-edge')).toBeInTheDocument()
   })
 
   it('does not render proximity ghost edge when dragging beyond threshold', async () => {
@@ -2444,7 +2407,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
       fireEvent(canvas, nearEvent)
     })
 
-    expect(screen.queryByTestId('proximity-ghost-edge')).toBeInTheDocument()
+    expect(screen.getByTestId('proximity-ghost-edge')).toBeInTheDocument()
 
     // Advance Date.now past the 32ms dragover throttle so the next event is processed
     const originalNow = Date.now

@@ -718,7 +718,8 @@ class TestMaskingPassCost:
 
         assert sealed == ["[2|"]
         assert masked[-1] == MASK_PLACEHOLDER
-        assert len(masked) == 31 and masked[0] != MASK_PLACEHOLDER
+        assert len(masked) == 31
+        assert masked[0] != MASK_PLACEHOLDER
 
     @pytest.mark.parametrize("name", list(_MASK_PASSES))
     def test_lists_starting_with_a_map_with_other_keys_are_never_digested(

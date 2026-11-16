@@ -106,39 +106,24 @@ describe('DashboardPage', () => {
       expect(screen.getByTestId('metric-card-executions')).toBeInTheDocument()
     })
 
-    it('Tests card displays correct count', () => {
+    it.each([
+      ['Tests card displays correct count', 'metric-card-tests', '330'],
+      ['Suites card displays correct count', 'metric-card-suites', '12'],
+      ['Regressions card displays correct count', 'metric-card-regressions', '87'],
+      ['Executions card displays correct count', 'metric-card-executions', '142'],
+    ])('%s', (_title, cardTestId, count) => {
       renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-tests')
-      expect(within(card).getByTestId('metric-count')).toHaveTextContent('330')
+      const card = screen.getByTestId(cardTestId)
+      expect(within(card).getByTestId('metric-count')).toHaveTextContent(count)
     })
 
-    it('Tests card does not display subtitle', () => {
+    it.each([
+      ['Tests card does not display subtitle', 'metric-card-tests'],
+      ['Suites card does not display subtitle', 'metric-card-suites'],
+      ['Regressions card does not display subtitle', 'metric-card-regressions'],
+    ])('%s', (_title, cardTestId) => {
       renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-tests')
-      expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
-    })
-
-    it('Suites card displays correct count', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-suites')
-      expect(within(card).getByTestId('metric-count')).toHaveTextContent('12')
-    })
-
-    it('Suites card does not display subtitle', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-suites')
-      expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
-    })
-
-    it('Regressions card displays correct count', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-regressions')
-      expect(within(card).getByTestId('metric-count')).toHaveTextContent('87')
-    })
-
-    it('Regressions card does not display subtitle', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-regressions')
+      const card = screen.getByTestId(cardTestId)
       expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
     })
 
@@ -146,12 +131,6 @@ describe('DashboardPage', () => {
       renderWithRouter(<DashboardPage data={mockDashboardData} />)
       const card = screen.getByTestId('metric-card-executions')
       expect(card).toHaveTextContent(/Executions.*24h/i)
-    })
-
-    it('Executions card displays correct count', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const card = screen.getByTestId('metric-card-executions')
-      expect(within(card).getByTestId('metric-count')).toHaveTextContent('142')
     })
 
     it('Executions card displays running/passed/failed subtitle', () => {
@@ -164,34 +143,16 @@ describe('DashboardPage', () => {
   })
 
   describe('Metrics Row Layout', () => {
-    it('metrics container has grid layout', () => {
+    it.each([
+      ['metrics container has grid layout', 'grid'],
+      ['metrics has 4 columns on desktop', 'lg:grid-cols-4'],
+      ['metrics has 2 columns on tablet', 'md:grid-cols-2'],
+      ['metrics has 1 column on mobile', 'grid-cols-1'],
+      ['metrics has gap between cards', 'gap-4'],
+    ])('%s', (_title, className) => {
       renderWithRouter(<DashboardPage data={mockDashboardData} />)
       const container = screen.getByTestId('dashboard-metrics-row')
-      expect(container).toHaveClass('grid')
-    })
-
-    it('metrics has 4 columns on desktop', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const container = screen.getByTestId('dashboard-metrics-row')
-      expect(container).toHaveClass('lg:grid-cols-4')
-    })
-
-    it('metrics has 2 columns on tablet', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const container = screen.getByTestId('dashboard-metrics-row')
-      expect(container).toHaveClass('md:grid-cols-2')
-    })
-
-    it('metrics has 1 column on mobile', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const container = screen.getByTestId('dashboard-metrics-row')
-      expect(container).toHaveClass('grid-cols-1')
-    })
-
-    it('metrics has gap between cards', () => {
-      renderWithRouter(<DashboardPage data={mockDashboardData} />)
-      const container = screen.getByTestId('dashboard-metrics-row')
-      expect(container).toHaveClass('gap-4')
+      expect(container).toHaveClass(className)
     })
   })
 
@@ -263,27 +224,14 @@ describe('DashboardPage', () => {
       )
     })
 
-    it('Tests card has no subtitle in empty state', () => {
+    it.each([
+      ['Tests card has no subtitle in empty state', 'metric-card-tests'],
+      ['Suites card has no subtitle in empty state', 'metric-card-suites'],
+      ['Regressions card has no subtitle in empty state', 'metric-card-regressions'],
+      ['Executions card has no subtitle in empty state', 'metric-card-executions'],
+    ])('%s', (_title, cardTestId) => {
       renderWithRouter(<DashboardPage data={emptyDashboardData} />)
-      const card = screen.getByTestId('metric-card-tests')
-      expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
-    })
-
-    it('Suites card has no subtitle in empty state', () => {
-      renderWithRouter(<DashboardPage data={emptyDashboardData} />)
-      const card = screen.getByTestId('metric-card-suites')
-      expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
-    })
-
-    it('Regressions card has no subtitle in empty state', () => {
-      renderWithRouter(<DashboardPage data={emptyDashboardData} />)
-      const card = screen.getByTestId('metric-card-regressions')
-      expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
-    })
-
-    it('Executions card has no subtitle in empty state', () => {
-      renderWithRouter(<DashboardPage data={emptyDashboardData} />)
-      const card = screen.getByTestId('metric-card-executions')
+      const card = screen.getByTestId(cardTestId)
       expect(within(card).queryByTestId('metric-subtitle')).not.toBeInTheDocument()
     })
 
@@ -427,7 +375,15 @@ describe('DashboardPage', () => {
       expect(handleNavigate).toHaveBeenCalledWith('/executions/exec-1')
     })
 
-    it('clicking Tests metric navigates to tests list', async () => {
+    it.each([
+      ['clicking Tests metric navigates to tests list', 'metric-card-tests', '/tests'],
+      ['clicking Suites metric navigates to suites list', 'metric-card-suites', '/suites'],
+      ['clicking Regressions metric navigates to regressions list', 'metric-card-regressions', '/regressions'],
+      ['clicking Executions metric navigates to executions list', 'metric-card-executions', '/executions'],
+      ['clicking New Test action navigates to new test page', 'quick-action-new-test', '/tests/new'],
+      ['clicking Run Regression action navigates to run regression page', 'quick-action-run-regression', '/regressions'],
+      ['clicking View Reports action navigates to reports page', 'quick-action-view-reports', '/reports'],
+    ])('%s', async (_title, targetTestId, path) => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
       const handleNavigate = vi.fn()
@@ -438,105 +394,9 @@ describe('DashboardPage', () => {
           onNavigate={handleNavigate}
         />
       )
-      await user.click(screen.getByTestId('metric-card-tests'))
+      await user.click(screen.getByTestId(targetTestId))
 
-      expect(handleNavigate).toHaveBeenCalledWith('/tests')
-    })
-
-    it('clicking Suites metric navigates to suites list', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('metric-card-suites'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/suites')
-    })
-
-    it('clicking Regressions metric navigates to regressions list', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('metric-card-regressions'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/regressions')
-    })
-
-    it('clicking Executions metric navigates to executions list', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('metric-card-executions'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/executions')
-    })
-
-    it('clicking New Test action navigates to new test page', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('quick-action-new-test'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/tests/new')
-    })
-
-    it('clicking Run Regression action navigates to run regression page', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('quick-action-run-regression'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/regressions')
-    })
-
-    it('clicking View Reports action navigates to reports page', async () => {
-      const { userEvent } = await import('@testing-library/user-event')
-      const user = userEvent.setup()
-      const handleNavigate = vi.fn()
-
-      renderWithRouter(
-        <DashboardPage
-          data={mockDashboardData}
-          onNavigate={handleNavigate}
-        />
-      )
-      await user.click(screen.getByTestId('quick-action-view-reports'))
-
-      expect(handleNavigate).toHaveBeenCalledWith('/reports')
+      expect(handleNavigate).toHaveBeenCalledWith(path)
     })
 
   })
