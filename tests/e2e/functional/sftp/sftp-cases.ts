@@ -236,15 +236,16 @@ export async function fillTextRow(page: Page, sheet: Locator, name: string, text
   await typeIntoValueSheet(page, text)
 }
 
-/** Replace a stored secret row: Edit protected value, Delete & Edit, then the new text. */
+/** Replace a stored secret row: its masked control (named by the row's label), Delete & Edit, then the new text. */
 export async function replaceSecretRow(
   page: Page,
   sheet: Locator,
   name: string,
+  label: string,
   text: string,
 ): Promise<void> {
-  await paramRow(sheet, name).locator('button[aria-label="Edit protected value"]').click()
-  const confirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  await paramRow(sheet, name).getByRole('button', { name: `${label}: Edit protected value`, exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
   await expect(confirm).toBeVisible()
   await confirm.getByRole('button', { name: 'Delete & Edit' }).click()
   // Delete & Edit leaves the row an empty text box with the keyboard in it.

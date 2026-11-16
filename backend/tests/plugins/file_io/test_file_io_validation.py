@@ -293,17 +293,17 @@ class TestParentAndRelativePaths:
     async def test_the_path_is_accepted(self, operation: str, name: str, value: str) -> None:
         await FileIOPlugin().validate(params_for(operation, **{name: value}))
 
-    def test_the_traversal_message_is_gone(self) -> None:
+    def test_the_source_has_no_traversal_message(self) -> None:
         assert "Path traversal not allowed" not in inspect.getsource(file_io)
 
 
 class TestNoSystemDirectoryBlocklist:
-    """The blocklist and its message are gone."""
+    """There is no blocklist and no blocklist message."""
 
-    def test_system_dirs_constant_is_gone(self) -> None:
+    def test_there_is_no_system_dirs_constant(self) -> None:
         assert not hasattr(file_io, "_SYSTEM_DIRS")
 
-    def test_blocklist_message_is_gone(self) -> None:
+    def test_the_source_has_no_blocklist_message(self) -> None:
         source = inspect.getsource(file_io)
 
         assert "Access to system directory not allowed" not in source

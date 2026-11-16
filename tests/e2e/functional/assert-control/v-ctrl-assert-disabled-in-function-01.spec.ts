@@ -45,7 +45,6 @@ function buildFixture(): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             localDefinition: {
               name: 'Function_1',
               workflow: {
@@ -91,7 +90,6 @@ function buildFixture(): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'INNER-PASS-FIRED'", level: 'INFO' },
                         profileBindings: [],
@@ -110,7 +108,6 @@ function buildFixture(): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'INNER-FAIL-FIRED'", level: 'INFO' },
                         profileBindings: [],

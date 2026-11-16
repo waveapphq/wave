@@ -30,7 +30,13 @@ WORKER_REF = "remote-worker"
 _PLUGINS_DIR = Path(wavecore.__file__).parent / "plugins"
 _CONNECTIVITY_DIR = Path(wavecore.__file__).parent / "connectivity"
 # The vendored modules the worker imports at module scope, copied into the stub path.
-_STUB_MODULES = ("_process_group", "_local_process", "_local_process_runtime", "_user_patterns")
+_STUB_MODULES = (
+    "_process_group",
+    "_local_process",
+    "_local_process_runtime",
+    "_plural",
+    "_user_patterns",
+)
 # The vendored trust modules the worker imports at module scope (REQ-4.5.16), copied when present.
 _STUB_CONNECTIVITY_MODULES = ("trust_store", "run_log")
 
@@ -358,7 +364,8 @@ def is_gone(pid: int) -> bool:
     try:
         with open(f"/proc/{pid}/stat", encoding="utf-8") as handle:
             state = handle.read().rsplit(")", 1)[1].split()[0]
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # A process reaped between the open and the read reports ESRCH instead of ENOENT.
         return True
     return state == "Z"
 

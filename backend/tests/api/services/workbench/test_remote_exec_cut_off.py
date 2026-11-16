@@ -148,7 +148,7 @@ async def _run(graph: Graph, process: AsyncWorkerProcess) -> _Outcome:
     session["ssh_session_registry"] = registry
     _wb_common._workbench_sessions[session_id] = session
 
-    async def _open(_connection: Any) -> WorkerHandle:
+    async def _open(_connection: Any, _host: str) -> WorkerHandle:
         return WorkerHandle(process=process, host=HOST, interpreter="python3")
 
     with (

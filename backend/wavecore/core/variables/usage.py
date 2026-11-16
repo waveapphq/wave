@@ -6,15 +6,20 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from wavecore.controls.assertion_evaluator import UNARY_OPERATORS
 from wavecore.core.expressions.template import extract_template_names, template_expressions
 from wavecore.core.variables.computed import extract_expression_names
 from wavecore.models.plugins import get_param_attr
 
 _SETTER = "variable-setter"
 _CONDITION_LISTS = ("assertions", "conditions")
+_CONDITION_HOLDERS = ("branches", "filters")
 _VALUES = ("config", "values")
 # A CSV / Excel filter condition tests the cell under it, bound as `_cell`; it is not a variable.
 _FILTER_CELL = frozenset({"_cell"})
+
+# One condition item: the item, its place under `config.values`, whether a filter holds it.
+ConditionItem = tuple[Mapping[str, Any], tuple[str, ...], bool]
 
 
 class SiteKind(StrEnum):
@@ -112,6 +117,34 @@ def _template_names(text: Any) -> set[str]:
     return extract_template_names(text) if isinstance(text, str) else set()
 
 
+def condition_lists(values: Mapping[str, Any]) -> Iterator[tuple[Any, tuple[str, ...], bool]]:
+    """Each top-level condition list a Block holds, its place under ``config.values`` and whether
+    it is a CSV / Excel filter's (REQ-3.5.1.5)."""
+    for key in _CONDITION_LISTS:
+        yield values.get(key), (key,), False
+    for key in _CONDITION_HOLDERS:
+        holders = values.get(key)
+        for index, holder in enumerate(holders if isinstance(holders, list) else []):
+            place = (key, str(index), "conditions")
+            yield _mapping(holder).get("conditions"), place, key == "filters"
+
+
+def _list_items(items: Any, place: tuple[str, ...], in_filter: bool) -> Iterator[ConditionItem]:
+    for index, item in enumerate(items if isinstance(items, list) else []):
+        row = _mapping(item)
+        at = (*place, str(index))
+        yield row, at, in_filter
+        if row.get("type") == "group":
+            yield from _list_items(row.get("items"), (*at, "items"), in_filter)
+
+
+def iter_condition_items(values: Mapping[str, Any]) -> Iterator[ConditionItem]:
+    """Every condition item in list order, a group before its items: the item, its place under
+    ``config.values`` and whether it is a filter item (REQ-3.5.1.5)."""
+    for items, place, in_filter in condition_lists(values):
+        yield from _list_items(items, place, in_filter)
+
+
 def node_output_bindings(node: Mapping[str, Any]) -> dict[str, str]:
     """A block's output bindings: each output to the variable it writes."""
     bindings = _mapping(_config(node).get("outputBindings"))
@@ -134,12 +167,6 @@ def _field_lookup(values: Any, field_name: str) -> tuple[tuple[str, ...], str] |
         else:
             return None
     return (parts, current) if isinstance(current, str) else None
-
-
-def field_text(values: Any, field_name: str) -> str | None:
-    """The author-written text at a dotted setting name (``map.key``, ``list.0.field``)."""
-    found = _field_lookup(values, field_name)
-    return found[1] if found else None
 
 
 def _parameter_schema(data: Mapping[str, Any]) -> list[Any]:
@@ -174,6 +201,17 @@ def reference_settings(data: Mapping[str, Any]) -> set[str]:
     }
 
 
+def _compare_to_kind(row: Mapping[str, Any]) -> SiteKind | None:
+    """How a literal item's compare-to names variables; None for a plain value or an operator
+    that takes none."""
+    operator = row.get("operator")
+    if isinstance(operator, str) and operator in UNARY_OPERATORS:
+        return None
+    if row.get("reference_is_expression"):
+        return SiteKind.EXPRESSION
+    return SiteKind.TEMPLATE if row.get("reference_is_template") else None
+
+
 class _SiteWalk:
     """The name sites of one block, in a fixed order: condition rows, settings, bindings."""
 
@@ -190,42 +228,24 @@ class _SiteWalk:
         if isinstance(text, str) and text and not (kind == SiteKind.NAME and text in bound):
             yield NameSite(self.node_id, path, kind, text, bound)
 
-    def conditions(
-        self, items: Any, path: tuple[str, ...], bound: frozenset[str] = frozenset()
-    ) -> Iterator[NameSite]:
-        """Condition rows and nested groups; a compare-to value reads only as an expression."""
-        for index, item in enumerate(items if isinstance(items, list) else []):
-            row = _mapping(item)
-            at = (*path, str(index))
+    def checks(self) -> Iterator[NameSite]:
+        """Condition items of Assert, If/Else, Switch, While, Wait Until and table filters; a
+        compare-to is a site only when its operator takes a value."""
+        for row, place, in_filter in iter_condition_items(self.values):
+            bound = _FILTER_CELL if in_filter else frozenset()
+            at = (*_VALUES, *place)
             kind = row.get("type")
-            if kind == "group":
-                yield from self.conditions(row.get("items"), (*at, "items"), bound)
-            elif kind == "expression":
+            if kind == "expression":
                 yield from self.site(
                     (*at, "expression"), SiteKind.EXPRESSION, row.get("expression"), bound
                 )
             elif kind == "literal":
                 yield from self.site((*at, "variable"), SiteKind.NAME, row.get("variable"), bound)
-                if row.get("reference_is_expression"):
+                compare_to = _compare_to_kind(row)
+                if compare_to is not None:
                     yield from self.site(
-                        (*at, "reference_value"),
-                        SiteKind.EXPRESSION,
-                        row.get("reference_value"),
-                        bound,
+                        (*at, "reference_value"), compare_to, row.get("reference_value"), bound
                     )
-
-    def checks(self) -> Iterator[NameSite]:
-        """Condition rows of Assert, If/Else, Switch, While, Wait Until and table filters."""
-        for key in _CONDITION_LISTS:
-            yield from self.conditions(self.values.get(key), (*_VALUES, key))
-        branches = self.values.get("branches")
-        for index, branch in enumerate(branches if isinstance(branches, list) else []):
-            path = (*_VALUES, "branches", str(index), "conditions")
-            yield from self.conditions(_mapping(branch).get("conditions"), path)
-        filters = self.values.get("filters")
-        for index, row in enumerate(filters if isinstance(filters, list) else []):
-            path = (*_VALUES, "filters", str(index), "conditions")
-            yield from self.conditions(_mapping(row).get("conditions"), path, _FILTER_CELL)
 
     def fields(self, names: Any, kind: SiteKind) -> Iterator[NameSite]:
         for name in names or []:
@@ -234,18 +254,11 @@ class _SiteWalk:
                 yield from self.site((*_VALUES, *found[0]), kind, found[1])
 
     def settings(self) -> Iterator[NameSite]:
-        """Expression, reference and template settings, and Variable Setter value rows."""
+        """Expression, reference and template settings and entries, Variable Setter rows too."""
         declared = list(self.data.get("expressionFields") or [])
         references = sorted(reference_settings(self.data) - set(declared))
         yield from self.fields([*declared, *references], SiteKind.EXPRESSION)
         yield from self.fields(self.data.get("templateFields"), SiteKind.TEMPLATE)
-        rows = _mapping(self.values.get("variables"))
-        for keys, kind in (
-            (self.data.get("variableExpressionKeys"), SiteKind.EXPRESSION),
-            (self.data.get("variableTemplateKeys"), SiteKind.TEMPLATE),
-        ):
-            for key in keys or []:
-                yield from self.site((*_VALUES, "variables", str(key)), kind, rows.get(key))
 
     def bindings(self) -> Iterator[NameSite]:
         """Output binding and Variable Setter targets write."""

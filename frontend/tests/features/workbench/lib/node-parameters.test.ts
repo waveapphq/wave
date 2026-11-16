@@ -1433,6 +1433,75 @@ describe('Node Parameters', () => {
       expect(getInputParams('wait-until')).toHaveLength(6)
       expect(getOutputParams('wait-until')).toHaveLength(2)
     })
+
+    it('declares no {x} on fail current scope', () => {
+      expect(waitInput('fail_current_scope')?.noExpression).toBe(true)
+    })
+  })
+
+  // Note text and color are declared fields stored under config.values (REQ-3.5.0.3).
+  describe('note schema', () => {
+    const noteInput = (name: string) => CONTROL_INPUTS['note'].find((p) => p.name === name)
+    const noteColorIds = async () =>
+      ((await import('@/features/workbench/lib/node-parameters/controls/note')) as unknown as {
+        NOTE_COLOR_IDS?: readonly string[]
+      }).NOTE_COLOR_IDS
+
+    it('declares the text and the color', () => {
+      expect(CONTROL_INPUTS['note'].map((p) => p.name).sort()).toEqual(['color', 'text'])
+    })
+
+    it('declares the text as optional text starting empty, with no {x}', () => {
+      expect(noteInput('text')).toMatchObject({
+        type: 'string',
+        required: false,
+        defaultValue: '',
+        noExpression: true,
+      })
+    })
+
+    it('writes the five Note color ids once', async () => {
+      expect(await noteColorIds()).toEqual(['yellow', 'pink', 'blue', 'green', 'slate'])
+    })
+
+    it('declares the color as a choice of the five color ids, defaulting to slate, with no {x}', async () => {
+      const colorIds = await noteColorIds()
+
+      expect(colorIds).toBeDefined()
+      expect(noteInput('color')).toMatchObject({
+        type: 'string',
+        required: false,
+        enumValues: colorIds,
+        defaultValue: 'slate',
+        noExpression: true,
+      })
+    })
+
+    it('declares no outputs', () => {
+      expect(CONTROL_OUTPUTS['note']).toEqual([])
+    })
+  })
+
+  // The collection row's Type picker stores the picked type as collection_type (REQ-3.5.0.3).
+  describe('for-each schema', () => {
+    const forEachInput = (name: string) => CONTROL_INPUTS['for-each'].find((p) => p.name === name)
+
+    it('declares the collection type as an optional choice of array, map or table with no default and no {x}', () => {
+      const collectionType = forEachInput('collection_type')
+
+      // Left out, the picker shows the bound variable's type; the run reads the collection itself.
+      expect(collectionType).toMatchObject({
+        type: 'string',
+        required: false,
+        enumValues: ['array', 'map', 'table'],
+        noExpression: true,
+      })
+      expect(collectionType?.defaultValue).toBeUndefined()
+    })
+
+    it('keeps the collection row offering the same three types', () => {
+      expect(forEachInput('collection')?.selectableType).toEqual({ options: ['array', 'map', 'table'] })
+    })
   })
 
   describe('OUTPUT_TYPE_COMPAT', () => {

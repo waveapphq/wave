@@ -12,7 +12,7 @@
  *   GET  /status/:code        -> responds with the given HTTP status code
  *   *    /retry               -> returns 502 first N times (via ?fail_count=N), then 200
  *   GET  /redirect/:count     -> redirects N times via 302, then returns 200
- *   GET  /redirect-to?url=... -> single redirect to the given URL
+ *   GET  /redirect-to?url=... -> single redirect to a path on this simulator (400 otherwise)
  *   GET  /cookie?value=...    -> responds with a Set-Cookie credential header
  *   GET  /secret-payload      -> secret in the JSON body + a non-catalog custom header
  *
@@ -27,6 +27,7 @@ import path from 'node:path'
 
 const HTTPS_PORT = parseInt(process.env.HTTPS_SIMULATOR_PORT || '9443', 10)
 const HEALTH_PORT = parseInt(process.env.HTTPS_HEALTH_PORT || '9444', 10)
+const SELF_ORIGIN = `https://localhost:${HTTPS_PORT}`
 
 const certsDir = path.join(__dirname, 'certs')
 const tlsOptions = {
@@ -51,6 +52,16 @@ function jsonResponse(res: http.ServerResponse, statusCode: number, body: unknow
   res.end(json)
 }
 
+/** True when `target` is a path on this simulator: one leading slash, no backslash. */
+function isLocalUrl(target: string): boolean {
+  if (!target.startsWith('/') || target.startsWith('//') || target.includes('\\')) return false
+  try {
+    return new URL(target, SELF_ORIGIN).origin === SELF_ORIGIN
+  } catch {
+    return false
+  }
+}
+
 function collectBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = []
@@ -61,7 +72,7 @@ function collectBody(req: http.IncomingMessage): Promise<string> {
 
 // HTTPS request handler
 async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-  const url = new URL(req.url || '/', `https://localhost:${HTTPS_PORT}`)
+  const url = new URL(req.url || '/', SELF_ORIGIN)
   const method = (req.method || 'GET').toUpperCase()
 
   // --- /health ---
@@ -221,15 +232,19 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return res.end(json)
   }
 
-  // --- /redirect-to?url=<target> ---
-  // Single 302 redirect to the target URL
+  // --- /redirect-to?url=<path> ---
+  // Single 302 redirect to a path on this simulator
   if (url.pathname === '/redirect-to') {
     const target = url.searchParams.get('url')
-    if (target) {
-      res.writeHead(302, { Location: target })
-      return res.end()
+    if (!target) {
+      return jsonResponse(res, 400, { error: 'Missing url parameter' })
     }
-    return jsonResponse(res, 400, { error: 'Missing url parameter' })
+    if (!isLocalUrl(target)) {
+      return jsonResponse(res, 400, { error: 'url must be a path on this simulator, such as /health' })
+    }
+    // A './' path can never name another host, which is what CodeQL needs to see.
+    res.writeHead(302, { Location: `./${target.slice(1)}` })
+    return res.end()
   }
 
   // Default catch-all

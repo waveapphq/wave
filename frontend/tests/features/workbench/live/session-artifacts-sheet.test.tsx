@@ -81,7 +81,7 @@ describe('SessionArtifactsSheet - shell', () => {
     renderSheet()
 
     const sheet = screen.getByTestId('session-artifacts-sheet')
-    expect(sheet).toHaveAttribute('aria-label', 'Session Artifacts')
+    expect(screen.getByRole('dialog', { name: 'Session Artifacts' })).toBe(sheet)
     expect(within(sheet).getByText('Session Artifacts')).toBeInTheDocument()
   })
 

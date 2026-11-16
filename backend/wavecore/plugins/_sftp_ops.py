@@ -14,7 +14,7 @@ from typing import Any, NamedTuple
 
 import asyncssh
 
-from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success, summary_table
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
 from wavecore.core.ssh.session_registry import SSHSessionRegistry
 from wavecore.plugins._file_ops import iso_modified
 from wavecore.plugins._file_paths import (
@@ -24,7 +24,8 @@ from wavecore.plugins._file_paths import (
     resolve_plugin_matches,
     resolve_plugin_path,
 )
-from wavecore.plugins._shared_params import number_setting, plural
+from wavecore.plugins._plural import plural
+from wavecore.plugins._shared_params import number_setting
 from wavecore.plugins._ssh_session import (
     SFTPUnavailable,
     close_sftp_client,
@@ -199,8 +200,8 @@ def _server(remote: _Remote, path: str) -> Iterator[None]:
         raise SFTPBlockFailure(f"Not found on the SFTP server: {path}", "NotFound") from exc
     except _LOST as exc:
         raise SFTPBlockFailure(
-            f"SSH session '{remote.session_id}' to {remote.record['host']} was lost during "
-            f"{remote.label}: {str(exc) or type(exc).__name__}",
+            f"SSH session '{remote.session_id}' to {remote.record['host_identity']} was lost "
+            f"during {remote.label}: {str(exc) or type(exc).__name__}",
             "ConnectionLost",
         ) from exc
     except asyncssh.SFTPError as exc:
@@ -827,8 +828,8 @@ async def _operate(
         sftp = await open_sftp_client(record)
     except SFTPUnavailable as exc:
         raise SFTPBlockFailure(
-            f"SFTP is not available on {record['host']} through SSH session '{session_id}': "
-            f"{exc.detail}",
+            f"SFTP is not available on {record['host_identity']} through SSH session "
+            f"'{session_id}': {exc.detail}",
             "SftpUnavailable",
         ) from exc
     try:
@@ -854,8 +855,8 @@ async def run(
     except SFTPBlockFailure as exc:
         failure = exc
     except TimeoutError:
-        message = f"{LABELS[operation]} did not finish within {timeout} seconds"
-        failure = SFTPBlockFailure(message, "Timeout")
+        within = plural(timeout, "second", "seconds")
+        failure = SFTPBlockFailure(f"{LABELS[operation]} did not finish within {within}", "Timeout")
     else:
         return {"__wave_type": "result", "outputs": block_success(outputs), "secrets": []}
     recorded = block_failure(

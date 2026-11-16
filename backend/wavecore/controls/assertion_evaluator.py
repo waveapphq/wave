@@ -22,12 +22,13 @@ A null checked value holds nothing: every operator answers it without an error
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, cast
 
-from wavecore.core.execution.plugin_executor import evaluate_expression
+from wavecore.core.execution.field_checks import FieldFinding
+from wavecore.core.execution.plugin_executor import evaluate_expression, evaluate_template
 from wavecore.core.expressions.errors import NullValueError
 from wavecore.core.number_rule import NumberType
 from wavecore.core.table import Table
@@ -43,6 +44,8 @@ from wavecore.core.variables.value_checks import (
 
 NULL_OPERATORS = frozenset({"is_null", "is_not_null"})
 UNARY_OPERATORS = frozenset({"is_true", "is_false", "is_empty", "is_not_empty", *NULL_OPERATORS})
+# A literal row's compare-to value and the two marks of its mode.
+_COMPARE_TO_KEYS = ("reference_value", "reference_is_expression", "reference_is_template")
 
 _NUMERIC_OPERATORS = frozenset(
     {"equals", "not_equals", "less_than", "greater_than", "less_or_equal", "greater_or_equal"}
@@ -78,17 +81,28 @@ HOLDS_ON_NULL = frozenset({"not_equals", "does_not_contain"})
 _FILTER_CELL = "_cell"
 
 
-def _compared_number_type(row: Mapping[str, Any]) -> NumberType | None:
-    """The number type a literal row's compare-to value is held to, or None."""
+def compare_to_type(row: Mapping[str, Any]) -> str | None:
+    """The type of a row's compare-to value from its value type and operator, or None when the
+    operator takes no value (REQ-3.5.1.5)."""
     operator = row.get("operator")
-    if row.get("reference_is_expression") or operator in UNARY_OPERATORS:
+    if operator in UNARY_OPERATORS:
         return None
     value_type = row.get("value_type")
     if value_type in NUMBER_TYPES:
-        return cast(NumberType, value_type)
+        return str(value_type)
     if value_type == "array" and operator == "length_equals":
         return "integer"
+    if operator in CHECK_OPERATORS.get(str(value_type), frozenset()):
+        return "string"
     return None
+
+
+def _compared_number_type(row: Mapping[str, Any]) -> NumberType | None:
+    """The number type a literal row's compare-to value is held to, or None."""
+    if row.get("reference_is_expression") or row.get("reference_is_template"):
+        return None
+    compared = compare_to_type(row)
+    return cast(NumberType, compared) if compared in NUMBER_TYPES else None
 
 
 def compare_to_problem(row: Mapping[str, Any]) -> ValueProblem | None:
@@ -107,11 +121,59 @@ def compare_to_number(row: Mapping[str, Any], form: NumberForm) -> Any:
     return reference if declared is None else form(reference, (declared,))
 
 
-def compared_subject(row: Mapping[str, Any]) -> str:
-    """What a row's compare-to value is named by in a message."""
+def drop_unused_compare_to(row: dict[str, Any]) -> None:
+    """A literal row whose operator takes no value drops its compare-to value and mode."""
+    operator = row.get("operator")
+    if row.get("type") == "literal" and isinstance(operator, str) and operator in UNARY_OPERATORS:
+        for key in _COMPARE_TO_KEYS:
+            row.pop(key, None)
+
+
+def compared_subject(row: Mapping[str, Any], *, as_setting: bool = False) -> str:
+    """What a row's compare-to value is named by in a message, or as the setting a template
+    names."""
     variable = row.get("variable")
-    shown = "the cell" if variable == _FILTER_CELL else f"'{variable}'"
-    return f"The value compared with {shown}"
+    if variable == _FILTER_CELL:
+        shown = "the cell"
+    else:
+        shown = str(variable) if as_setting else f"'{variable}'"
+    return f"value compared with {shown}" if as_setting else f"The value compared with {shown}"
+
+
+_STRAY_JOIN = "'and' and 'or' go between two conditions"
+
+
+def _is_join(item: Any) -> bool:
+    return isinstance(item, Mapping) and item.get("type") == "operator"
+
+
+def _join_break(items: Sequence[Any], place: str) -> FieldFinding | None:
+    """The first place where a list stops alternating condition, and / or, condition."""
+    previous_is_join: bool | None = None
+    for index, item in enumerate(items):
+        is_join = _is_join(item)
+        if is_join and previous_is_join is not False:
+            return FieldFinding("INVALID_CONDITION", _STRAY_JOIN, None, f"{place}.{index}")
+        if not is_join and previous_is_join is False:
+            message = f"Condition items in '{place}' must be joined by 'and' or 'or'"
+            return FieldFinding("INVALID_CONDITION", message, None, f"{place}.{index}")
+        previous_is_join = is_join
+    if previous_is_join:
+        return FieldFinding("INVALID_CONDITION", _STRAY_JOIN, None, f"{place}.{len(items) - 1}")
+    return None
+
+
+def condition_join_problems(items: Any, place: str) -> list[FieldFinding]:
+    """One finding at the first break of a condition list, then of each group list inside it
+    (REQ-3.5.1.5)."""
+    if not isinstance(items, list):
+        return []
+    found = _join_break(items, place)
+    problems = [] if found is None else [found]
+    for index, item in enumerate(items):
+        if isinstance(item, Mapping) and item.get("type") == "group":
+            problems.extend(condition_join_problems(item.get("items"), f"{place}.{index}.items"))
+    return problems
 
 
 @dataclass
@@ -406,7 +468,7 @@ def _evaluate_literal(assertion: dict[str, Any], variables: dict[str, Any]) -> b
 
     Args:
         assertion: Literal assertion dict with variable, value_type, operator,
-                   reference_value, reference_is_expression
+                   reference_value, reference_is_expression, reference_is_template
         variables: Variable context for lookups
 
     Returns:
@@ -444,12 +506,15 @@ def _compare_to_value(assertion: dict[str, Any], variables: dict[str, Any]) -> A
     reference = assertion.get("reference_value")
     if assertion.get("reference_is_expression", False) and isinstance(reference, str):
         reference = evaluate_expression(reference, variables)
+    elif assertion.get("reference_is_template", False) and isinstance(reference, str):
+        setting = compared_subject(assertion, as_setting=True)
+        reference = evaluate_template(reference, variables, setting=setting)
     elif (problem := compare_to_problem(assertion)) is not None:
         if assertion.get("value_type") == "array" and problem.problem == "type":
             raise _not_a_length(reference)
         raise TypeError(problem.describe(compared_subject(assertion)))
     if reference is None:
-        raise NullValueError(f"The value compared with '{assertion['variable']}' is null")
+        raise NullValueError(f"{compared_subject(assertion)} is null")
     return reference
 
 
@@ -662,7 +727,7 @@ def evaluate_assertions(
     Args:
         items: Interleaved list of assertion and operator items:
             - Literal: {type: "literal", variable, value_type, operator,
-                       reference_value, reference_is_expression}
+                       reference_value, reference_is_expression, reference_is_template}
             - Expression: {type: "expression", expression}
             - Group: {type: "group", items: [...]} (items is interleaved too)
             - Operator: {type: "operator", value: "and"|"or"}

@@ -15,7 +15,7 @@ from typing import Any
 
 import asyncssh
 
-from wavecore.plugins._shared_params import plural
+from wavecore.plugins._plural import plural
 from wavecore.plugins._ssh_session import open_tunnel_stream
 
 _LOOPBACK = "127.0.0.1"
@@ -29,13 +29,18 @@ def tunnel_failed(remote_host: str, remote_port: int, cause: str) -> ConnectionE
     return ConnectionError(f"SSH tunnel to {remote_host}:{remote_port} failed: {cause}")
 
 
+def closed_phrase(record: dict[str, Any]) -> str:
+    """The cause a tunnel names when its SSH connection is closed."""
+    return f"the SSH connection to {record['host_identity']} is closed"
+
+
 def cause_phrase(exc: BaseException, record: dict[str, Any]) -> str:
     """Why the SSH host did not complete a channel, as the WARN and the check name it."""
     ssh_host = record["host_identity"]
     refusal = exc.__cause__
     # asyncssh refuses a channel on a closed connection as code 2, so closed is read first.
     if record["connection"].is_closed() or not isinstance(refusal, asyncssh.ChannelOpenError):
-        return f"the SSH connection to {ssh_host} is closed"
+        return closed_phrase(record)
     if refusal.code == asyncssh.OPEN_ADMINISTRATIVELY_PROHIBITED:
         return f"{ssh_host} refused to forward (administratively prohibited)"
     if refusal.code == asyncssh.OPEN_CONNECT_FAILED:

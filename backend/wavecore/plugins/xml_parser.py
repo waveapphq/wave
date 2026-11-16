@@ -199,7 +199,7 @@ class XMLParserPlugin(QueryParserBase):
         if isinstance(xpath_result, bool):
             return {"type": "bool", "value": xpath_result}
 
-        if isinstance(xpath_result, int | float):
+        if isinstance(xpath_result, float):
             return self._convert_numeric(xpath_result)
 
         if isinstance(xpath_result, str):
@@ -215,15 +215,14 @@ class XMLParserPlugin(QueryParserBase):
         # Fallback for unexpected types - should not occur with XPath 1.0
         # XPath only returns: node-set (list), boolean, number, or string
         # This is defensive programming for future XPath versions or lxml changes
-        return {"type": "string", "value": str(xpath_result)}  # pragma: no cover
+        return {"type": "string", "value": str(xpath_result)}  # pragma: no cover - BCOV-TYPE-001
 
     @staticmethod
-    def _convert_numeric(value: int | float) -> dict[str, Any]:
-        """Convert a numeric XPath result, preferring int for whole numbers."""
-        numeric_value = float(value)
-        if numeric_value.is_integer():
-            return {"type": "int", "value": int(numeric_value)}
-        return {"type": "float", "value": numeric_value}
+    def _convert_numeric(value: float) -> dict[str, Any]:
+        """Convert an XPath number, an IEEE float by the spec, preferring int for whole numbers."""
+        if value.is_integer():
+            return {"type": "int", "value": int(value)}
+        return {"type": "float", "value": value}
 
     @staticmethod
     def _node_to_string(node: Any) -> str:
@@ -238,7 +237,7 @@ class XMLParserPlugin(QueryParserBase):
             return str(node)
         if isinstance(node, etree._Element):
             return str(node.text) if node.text else ""
-        return str(node)  # pragma: no cover
+        return str(node)  # pragma: no cover - BCOV-TYPE-001
 
     def _convert_node_set(self, nodes: list[Any]) -> dict[str, Any]:
         """Convert an XPath node-set (list) to a WAVE-typed result."""

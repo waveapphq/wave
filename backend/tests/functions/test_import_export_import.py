@@ -404,7 +404,7 @@ def _secret_block(place: str, value: Any) -> dict[str, Any]:
             "version": "1.0.0",
             "config": {
                 "values": {"variables": {"set_tok": value}},
-                "variableSecretKeys": ["set_tok"],
+                "secretFields": ["variables.set_tok"],
             },
         }
     else:
@@ -479,8 +479,8 @@ def _function_secret(place: str, definition: Mapping[str, Any]) -> tuple[Any, bo
     if place in ("Setter literal", "plugin credential"):
         config = definition["workflow"]["nodes"][0]["data"]["config"]
         if place == "Setter literal":
-            return config["values"]["variables"]["set_tok"], config["variableSecretKeys"] == [
-                "set_tok"
+            return config["values"]["variables"]["set_tok"], config["secretFields"] == [
+                "variables.set_tok"
             ]
         # The HTTP block declares this field a credential, so it is secret by declaration.
         return config["values"]["auth_token"], True
@@ -515,6 +515,22 @@ class TestCleanImport:
         _import(client, _yaml_bytes(doc), "persisted_import.yaml")
         listed = client.get("/functions?search=persisted_import").json()["data"]
         assert any(row["name"] == "persisted_import" for row in listed)
+
+    def test_an_id_leaving_the_library_folder_is_skipped_and_writes_nothing(
+        self, client: TestClient
+    ) -> None:
+        doc = _export_doc(name="escapes", id="../escaped")
+
+        response = _import(client, _yaml_bytes(doc), "escapes.yaml")
+
+        assert response.status_code == 200, response.text
+        result = response.json()["data"]
+        assert result["imported"] == []
+        assert result["skipped"] == [
+            {"name": "escapes", "reason": "Invalid UUID format for id: '../escaped'"}
+        ]
+        assert _library_files() == {}
+        assert not (get_functions_storage_path().parent / "escaped").exists()
 
     @pytest.mark.usefixtures("http_client_plugin")
     @pytest.mark.parametrize("kind", ["foreign", "masked"])

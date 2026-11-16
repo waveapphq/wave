@@ -175,7 +175,7 @@ export function useRegressionRunDialog({
       setRegressionToRun(null)
       envSelect.selectEnvironment(null)
       setRegressionSuites([])
-      navigate(`/executions/${execution.id}`)
+      void navigate(`/executions/${execution.id}`)
     } catch (err) {
       /* v8 ignore next - COV-BRANCH-029: defensive non-Error fallback */
       setError(err instanceof Error ? err.message : 'Failed to start execution')

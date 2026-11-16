@@ -761,7 +761,7 @@ class TestTimeout:
     """The deadline bounds the whole run (SHRUN-14)."""
 
     async def test_timeout_message(self) -> None:
-        with pytest.raises(ValueError, match=exact("Script timed out after 1 seconds")):
+        with pytest.raises(ValueError, match=exact("Script timed out after 1 second")):
             await run_script({"script": "sleep 5", "timeout": 1})
 
 

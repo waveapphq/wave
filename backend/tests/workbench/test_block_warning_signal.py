@@ -213,7 +213,6 @@ def _k8s_get_node(node_id: str, on_error: str) -> dict[str, Any]:
             "displayName": "Read the pod",
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

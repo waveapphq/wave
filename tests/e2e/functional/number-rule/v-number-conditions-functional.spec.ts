@@ -14,11 +14,15 @@
  *    `1e5,000x` as typed.
  * 2. The float compare-to stored as `1e-7` shows `0.0000001`, and a digit typed at its end is kept.
  * 3. The sort's column Index box refuses a minus, a dot and letters (`-1.x2` leaves `12`).
- * 3a. Picking the integer `n` on the string row comparing to `1e5` keeps `1e5`, shows
- *    `Enter a valid integer value` under the box and holds the window's Save; with `5` typed the message goes,
- *    Save works and the stored row compares `n` to 5.
- * 3b. Turning the As Float filter holding `2.0` As Integer keeps `2.0`, shows `Enter a valid integer value` under
- *    the box and holds the window's Save; with `2` typed the message goes and Save is on again.
+ * 3a. Picking the integer `n` on the string row comparing to `1e5` asks `Change entry type?` first: Cancel keeps
+ *    `s` and `1e5`; Change type picks `n` and drops the value, the box shows `Value is required` under it and the
+ *    window's Save is held; with `5` typed the message goes, Save works and the stored row compares `n` to 5.
+ * 3b. Turning the As Float filter holding `2.0` As Integer asks first: Cancel keeps Float and `2.0`; Change type
+ *    drops the value, the box shows `Value is required` and the window's Save is held; with `2` typed the message
+ *    goes and Save is on again.
+ * 3c. A stored compare-to value the rule refuses (`1e5` on the integer Assert row and the As Integer filter, the
+ *    Test stored without its save check) opens with `Enter a valid integer value` under its box and holds the
+ *    window's Save; with `5` typed the message goes and Save is on again.
  * 4. A Test whose stored compare-to value breaks the rule is refused at Save naming the variable
  *    (`The value compared with 'n' is not a valid integer`, `... 'f' is not a valid float`) or the cell
  *    (`The value compared with the cell is not a valid integer` / `... float`), on each Block.
@@ -35,15 +39,20 @@ import { test, expect, type Locator, type Page } from '../../helpers/playwright-
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import {
   openConditionBody,
-  pickConditionVariable,
+  pickConditionVariableAsked,
   rowPath,
   valueBox,
   type ConditionBlock,
 } from '../../helpers/condition-builder'
-import { getActiveSessionId, getSessionVariables, importValidateAndNavigate } from '../../helpers/fixture-import'
+import {
+  getActiveSessionId,
+  getSessionVariables,
+  importExpectingErrors,
+  importValidateAndNavigate,
+} from '../../helpers/fixture-import'
 import { expectNodesSuccess, finishRun, startRun } from '../../helpers/k8s-run'
 import { discardBlockSheet, expectTypedAs, messagesOf, refusalOf, typeAtEnd, typeKeys } from '../../helpers/number-entry'
-import { keptIds, setFilterAsType } from '../../helpers/table-transform'
+import { keptIds, setFilterAsTypeAsked } from '../../helpers/table-transform'
 import { runToken } from '../../helpers/element-types'
 import { openBlockSheet, saveBlockSheet, saveTest } from '../../helpers/workbench'
 import { persistedValues } from '../file-picker/picker'
@@ -147,15 +156,17 @@ test.describe('V-NUMBER-CONDITIONS: compare-to values and column indexes', () =>
         await discardBlockSheet(page, sheet)
       })
 
-      await test.step('3a. picking an integer variable keeps the text, names it under the box and holds Save until a number is typed', async () => {
+      await test.step('3a. picking an integer variable asks before it drops the text, then holds Save until a number is typed', async () => {
         const sheet = await openBlockSheet(page, ASSERT)
         const path = rowPath(2)
-        await pickConditionVariable(page, sheet, path, 'n')
-        await expect(sheet.locator(`[data-testid="assert-type-badge-${path}"]`)).toHaveText('integer')
         const box = valueBox(sheet, path)
-        await expect(box).toHaveValue('1e5')
-        const message = sheet.locator('[data-testid="assert-value-error-cond-assert-s"]')
-        await expect(message).toHaveText('Enter a valid integer value')
+        await pickConditionVariableAsked(page, sheet, path, 'n', 'Cancel')
+        await expect(box, 'Cancel keeps the text value').toHaveValue('1e5')
+        await pickConditionVariableAsked(page, sheet, path, 'n', 'Change type')
+        await expect(sheet.locator(`[data-testid="assert-type-badge-${path}"]`)).toHaveText('integer')
+        await expect(box, 'Change type drops the text value').toHaveValue('')
+        const message = sheet.locator(`[data-testid="param-error-assert-value-${path}"]`)
+        await expect(message).toHaveText('Value is required')
         await expect(box).toHaveAttribute('aria-invalid', 'true')
         await expect(sheet.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
         await expectTypedAs(box, '5', '5')
@@ -177,8 +188,8 @@ test.describe('V-NUMBER-CONDITIONS: compare-to values and column indexes', () =>
       await test.step('1, 3. CSV: As Integer and As Float filter boxes and the column Index box drop keys', async () => {
         const sheet = await openBlockSheet(page, CSV)
         await openCsvSection(sheet, 'csv-filters-section')
-        await expectIntegerBox(sheet.locator('[data-testid="filter-condition-value-filter-id-cond"]'))
-        const ratio = sheet.locator('[data-testid="filter-condition-value-filter-ratio-cond"]')
+        await expectIntegerBox(sheet.locator('[data-testid="param-input-filter-condition-value-filter-id-cond"]'))
+        const ratio = sheet.locator('[data-testid="param-input-filter-condition-value-filter-ratio-cond"]')
         await expect(ratio).toHaveValue('2.0')
         await expectTypedAs(ratio, '1e5', '15')
         await expectTypedAs(ratio, '1,000', '1000')
@@ -190,15 +201,17 @@ test.describe('V-NUMBER-CONDITIONS: compare-to values and column indexes', () =>
         await discardBlockSheet(page, sheet)
       })
 
-      await test.step('3b. a filter turned As Integer keeps 2.0, names it under the box and holds Save until a number is typed', async () => {
+      await test.step('3b. a filter turned As Integer asks before it drops 2.0, then holds Save until a number is typed', async () => {
         const sheet = await openBlockSheet(page, CSV)
         await openCsvSection(sheet, 'csv-filters-section')
         const block = sheet.locator('[data-testid="filter-block-filter-ratio"]')
-        await setFilterAsType(page, block, 'integer')
-        const box = sheet.locator('[data-testid="filter-condition-value-filter-ratio-cond"]')
-        await expect(box).toHaveValue('2.0')
-        const message = sheet.locator('[data-testid="filter-condition-error-filter-ratio-cond"]')
-        await expect(message).toHaveText('Enter a valid integer value')
+        const box = sheet.locator('[data-testid="param-input-filter-condition-value-filter-ratio-cond"]')
+        await setFilterAsTypeAsked(page, block, 'integer', 'Cancel')
+        await expect(box, 'Cancel keeps Float and 2.0').toHaveValue('2.0')
+        await setFilterAsTypeAsked(page, block, 'integer', 'Change type')
+        await expect(box, 'Change type drops 2.0').toHaveValue('')
+        const message = sheet.locator('[data-testid="param-error-filter-condition-value-filter-ratio-cond"]')
+        await expect(message).toHaveText('Value is required')
         await expect(box).toHaveAttribute('aria-invalid', 'true')
         const save = sheet.getByRole('button', { name: 'Save', exact: true })
         await expect(save).toBeDisabled()
@@ -223,6 +236,56 @@ test.describe('V-NUMBER-CONDITIONS: compare-to values and column indexes', () =>
     } finally {
       await request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => undefined)
       await request.delete(`${BACKEND_URL}/tests/${testId}`).catch(() => undefined)
+    }
+  })
+
+  test('a stored compare-to value the rule refuses is named under its box and holds the window Save', async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(180_000)
+    const stored = await importExpectingErrors(
+      page,
+      changed((fixture) => {
+        valuesOf(fixture, ASSERT).assertions[0].reference_value = '1e5'
+        valuesOf(fixture, CSV).filters[0].conditions[0].reference_value = '1e5'
+      }),
+      { context: 'load' },
+    )
+    try {
+      await test.step('3c. the Assert row holding 1e5 for the integer n', async () => {
+        const sheet = await openBlockSheet(page, ASSERT)
+        const box = valueBox(sheet, rowPath(0))
+        await expect(box).toHaveValue('1e5')
+        const message = sheet.locator(`[data-testid="param-error-assert-value-${rowPath(0)}"]`)
+        await expect(message).toHaveText('Enter a valid integer value')
+        await expect(box).toHaveAttribute('aria-invalid', 'true')
+        const save = sheet.getByRole('button', { name: 'Save', exact: true })
+        await expect(save).toBeDisabled()
+        await expectTypedAs(box, '5', '5')
+        await expect(message).toHaveCount(0)
+        await expect(save).toBeEnabled()
+        await discardBlockSheet(page, sheet)
+      })
+
+      await test.step('3c. the As Integer filter holding 1e5', async () => {
+        const sheet = await openBlockSheet(page, CSV)
+        await openCsvSection(sheet, 'csv-filters-section')
+        const box = sheet.locator('[data-testid="param-input-filter-condition-value-filter-id-cond"]')
+        await expect(box).toHaveValue('1e5')
+        const message = sheet.locator('[data-testid="param-error-filter-condition-value-filter-id-cond"]')
+        await expect(message).toHaveText('Enter a valid integer value')
+        await expect(box).toHaveAttribute('aria-invalid', 'true')
+        const save = sheet.getByRole('button', { name: 'Save', exact: true })
+        await expect(save).toBeDisabled()
+        await expectTypedAs(box, '5', '5')
+        await expect(message).toHaveCount(0)
+        await expect(save).toBeEnabled()
+        await discardBlockSheet(page, sheet)
+      })
+    } finally {
+      await request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => undefined)
+      await request.delete(`${BACKEND_URL}/tests/${stored.testId}`).catch(() => undefined)
     }
   })
 })

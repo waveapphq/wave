@@ -639,7 +639,7 @@ class TestPublishDefensiveBranches:
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]
 
-        def _raise_collision(_payload):
+        def _raise_collision(_payload, **_kwargs):
             raise ValidationException(
                 message="Function name 'Greet' is already in use",
                 details={"errors": [{"message": "Function name 'Greet' is already in use"}]},
@@ -658,7 +658,7 @@ class TestPublishDefensiveBranches:
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]
 
-        def _raise_generic(_payload):
+        def _raise_generic(_payload, **_kwargs):
             raise ValidationException(
                 message="Generic non-collision validation error",
                 details={"errors": [{"message": "Generic non-collision validation error"}]},

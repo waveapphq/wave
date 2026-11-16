@@ -16,7 +16,6 @@
           "version": "1.0.0",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "root log", "level": "INFO" },
             "outputBindings": {},
@@ -38,7 +37,6 @@
           "version": "1.0.0",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "localDefinition": {
             "workflow": {
               "nodes": [
@@ -54,7 +52,6 @@
                     "version": "1.0.0",
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": { "message": "inner log", "level": "INFO" },
                       "outputBindings": {},

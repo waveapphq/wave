@@ -44,7 +44,6 @@ async function seedLocalFunction(request: APIRequestContext): Promise<string> {
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               localDefinition: {
                 name: 'Function',

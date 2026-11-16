@@ -177,37 +177,11 @@ def _coerce_value(value: Any, expected_type: str, var_name: str) -> Any:
     )
 
 
-def _is_pending_expression(variable_context: Any, var_name: str) -> bool:
-    """True when var_name is a still-unrealized expression in a lazy context.
-
-    Reading such a name realizes the expression as a side effect, firing a
-    deferred change push of the old value that races and clobbers this write.
-    """
-    pending = getattr(variable_context, "pending_expression_names", None)
-    return callable(pending) and var_name in set(pending())
-
-
-def _apply_variable_set(variable_context: Any, var_name: str, var_value: Any) -> tuple[str, Any]:
-    """Write one variable, returning (scope, written value) for logging.
-
-    A direct write supersedes a still-pending expression without realizing it;
-    structured entries coerce by declared type; flat values are written as-is
-    (type info was lost during flattening - pre-execution validation handles it).
-    """
-    if _is_pending_expression(variable_context, var_name):
-        variable_context[var_name] = var_value
-        return "test", var_value
-
-    existing = variable_context[var_name]
-    if isinstance(existing, dict) and "scope" in existing:
-        expected_type = existing.get("type")
-        if expected_type:
-            var_value = _coerce_value(var_value, expected_type, var_name)
-        existing["value"] = var_value
-        return existing.get("scope", "test"), var_value
-
+def _apply_variable_set(variable_context: Any, var_name: str, var_value: Any) -> Any:
+    """Write one variable and return the written value; a direct write supersedes a still
+    pending expression without realizing it."""
     variable_context[var_name] = var_value
-    return "test", var_value
+    return var_value
 
 
 def _debug_text(value: Any) -> str:
@@ -216,12 +190,7 @@ def _debug_text(value: Any) -> str:
 
 
 class VariableSetterControl(ControlBase):
-    """
-    Variable Setter control.
-
-    Sets variables in the execution context. Variables are always created
-    at test scope, determined by the execution engine.
-    """
+    """Variable Setter control: sets variables in the scope of the flow it runs in (REQ-3.4.3.8)."""
 
     CONTROL_ID = ControlId.VARIABLE_SETTER
     CONTROL_VERSION = "1.0.0"
@@ -236,10 +205,9 @@ class VariableSetterControl(ControlBase):
             "version": self.CONTROL_VERSION,
             "name": self.CONTROL_NAME,
             "description": (
-                "Sets variables in the execution context. "
-                "Updates existing variables or creates new test-level variables. "
-                "New variables are created via the frontend variable manager "
-                "and are indistinguishable from manually created variables."
+                "Sets variables in the scope of the flow it runs in: in a Test, the Test's "
+                "variables; inside a Function, that Function's own variables and outputs, never "
+                "its inputs."
             ),
             "category": self.CONTROL_CATEGORY,
             "icon_name": "variable",
@@ -307,6 +275,7 @@ class VariableSetterControl(ControlBase):
                 - parameters: Control parameter values
                 - variables: Variable scope (dict)
                 - logger: Logger instance (optional)
+                - scope: The run's scope word, read only for the DEBUG line
 
         Returns:
             None (no return value)
@@ -331,11 +300,12 @@ class VariableSetterControl(ControlBase):
                     f"in a Variable Setter."
                 )
 
-            original_scope, written = _apply_variable_set(variable_context, var_name, var_value)
+            written = _apply_variable_set(variable_context, var_name, var_value)
 
             if logger:
                 logger.debug(
-                    f"Set variable '{var_name}' = {_debug_text(written)} (scope: {original_scope})"
+                    f"Set variable '{var_name}' = {_debug_text(written)} "
+                    f"(scope: {context['scope']})"
                 )
 
         return None

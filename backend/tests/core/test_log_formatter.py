@@ -1110,9 +1110,11 @@ class TestCanonicalLevel:
 
     @pytest.mark.parametrize("given", ["verbose", "TRACE"])
     def test_refuses_an_unknown_level_with_the_exact_message(self, given: str) -> None:
-        from wavecore.core.logging.formatter import canonical_level
+        from wavecore.core.logging.formatter import InvalidLogLevelError, canonical_level
 
-        with pytest.raises(ValueError, match=INVALID_LEVEL.format(level=re.escape(given))):
+        with pytest.raises(
+            InvalidLogLevelError, match=INVALID_LEVEL.format(level=re.escape(given))
+        ):
             canonical_level(given)
 
     def test_every_valid_level_is_its_own_canonical_name(self) -> None:
@@ -1158,11 +1160,11 @@ class TestSetLogLevelCanonicalName:
         assert get_log_level() == name
 
     def test_unknown_level_keeps_the_exact_message_and_the_level_in_force(self) -> None:
-        from wavecore.core.logging.formatter import set_log_level
+        from wavecore.core.logging.formatter import InvalidLogLevelError, set_log_level
 
         set_log_level("ERROR")
 
-        with pytest.raises(ValueError, match=INVALID_LEVEL.format(level="verbose")):
+        with pytest.raises(InvalidLogLevelError, match=INVALID_LEVEL.format(level="verbose")):
             set_log_level("verbose")
 
         assert logging.getLogger().level == logging.ERROR

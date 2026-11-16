@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from functools import partial
 from typing import Any, Protocol
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
 from wavecore.connectivity.helm._cli import (
     CLEANUP_TIMEOUT,
     DEFAULT_TIMEOUT,
@@ -35,7 +36,6 @@ from wavecore.connectivity.helm._cli import (
 )
 from wavecore.connectivity.k8s.rest import wave_anchors
 from wavecore.connectivity.k8s.verbs._context import K8sContext, require_context
-from wavecore.connectivity.k8s.verbs._outputs import block_failure, block_success
 from wavecore.connectivity.k8s.verbs._resources import client_options, present, resolve_namespace
 
 Log = Callable[[str, str], None]

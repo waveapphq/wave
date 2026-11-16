@@ -89,7 +89,7 @@ const expandButtonFor = (page: Page, name: string): Locator =>
     .locator('[data-testid^="expand-button-"]')
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 const initialPane = (modal: Locator): Locator =>
   modal.locator('[data-testid="compare-pane-initial"]')

@@ -131,12 +131,7 @@ interface NodeType {
     disabled?: boolean
     expressionFields?: string[]
     templateFields?: string[]
-    variableExpressionKeys?: string[]
-    variableTemplateKeys?: string[]
-    variableTypes?: Record<string, string>
-    /** Variable Setter: each array / map literal row's element types (REQ-3.1.3.19). */
-    variableElementTypes?: Record<string, ElementTypes>
-    /** Typed block settings: each one's element types (REQ-3.1.3.19). */
+    /** Typed block settings and Variable Setter list / map rows: each one's element types (REQ-3.1.3.19). */
     elementTypes?: Record<string, ElementTypes>
     /** Function nodes only: 'local' = inline in this Test, 'shared' = library reference. */
     functionLifecycle?: 'local' | 'shared'
@@ -389,6 +384,8 @@ interface WorkflowState {
   // Lets subscribers (e.g. the toast hook) detect a repeat operation even
   // when lastAnnouncement is the same string as before.
   announcementSeq: number
+  /** Bumped by every reset(): a test load started before it opens a test that is closed. */
+  canvasGeneration: number
 
   // Canvas readiness (loading experience)
   isCanvasReady: boolean
@@ -1744,6 +1741,7 @@ function buildInitializer(
     lastError: null,
     lastAnnouncement: '',
     announcementSeq: 0,
+    canvasGeneration: 0,
     isCanvasReady: false,
     fitViewRequested: false,
     fitViewOptions: null,
@@ -3341,6 +3339,7 @@ function buildInitializer(
         lastError: null,
         lastAnnouncement: '',
         announcementSeq: 0,
+        canvasGeneration: get().canvasGeneration + 1,
         isCanvasReady: false,
         fitViewRequested: false,
         fitViewOptions: null,

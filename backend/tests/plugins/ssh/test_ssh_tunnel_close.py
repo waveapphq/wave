@@ -69,7 +69,7 @@ class TestMetadata:
             ("closed", "boolean"),
         ]
 
-    def test_obsolete_outputs_are_gone(self) -> None:
+    def test_there_is_no_local_port_or_remote_destination_output(self) -> None:
         names = [o["name"] for o in SSHTunnelClosePlugin().metadata["output_schema"]]
 
         assert "local_port" not in names

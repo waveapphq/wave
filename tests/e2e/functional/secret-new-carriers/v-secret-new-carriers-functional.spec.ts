@@ -5,7 +5,7 @@
  *      REQ-4.5.1 (setter secret literal sealed at rest)
  *
  * Carrier S: a Variable Setter row marked secret writes a literal.
- *   The literal is sealed on disk (config.variableSecretKeys), unsealed at run,
+ *   The literal is sealed on disk (data.config.secretFields), unsealed at run,
  *   and the assigned variable masks on every output surface.
  * Carrier O: a JSON Parser reads a secret input document (a secret
  *   variable referenced via an expression field - the supported pattern for

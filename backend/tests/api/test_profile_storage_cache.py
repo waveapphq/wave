@@ -243,6 +243,16 @@ class TestReadEvictsAMissingProfile:
         recreated = profile_service.create_profile("Phantom", "custom")
         assert recreated["id"] != created["id"]
 
+    def test_a_held_id_that_is_not_one_plain_segment_is_not_found(self) -> None:
+        crafted = "../api_profiles/p-1"
+        _write_raw_yaml("p-1", yaml.safe_dump(_profile_document(crafted, "Crafted")))
+        profile_service.list_profiles()
+        assert crafted in profile_common._profile_storage
+
+        assert profile_service.delete_profile(crafted) is False
+        assert crafted not in profile_common._profile_storage
+        assert _profile_file("p-1").exists()
+
 
 class TestUnreadableFileDoesNotBreakTheList:
     """A file that cannot be read is skipped and logged; the list still answers."""

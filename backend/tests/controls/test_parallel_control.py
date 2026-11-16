@@ -7,18 +7,26 @@ independent limits, no outputs and a minimum of two branches.
 """
 
 import asyncio
+from collections.abc import Collection
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.core.run_fill_support import run_fill
 from wavecore.controls.flow import ParallelControl
+from wavecore.core.execution import field_checks
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.models.controls.metadata import CORE_CONTROLS
 from wavecore.models.enums import ControlId
 
 # =============================================================================
 # Helpers
 # =============================================================================
+
+_TWO_LANE_PROBLEM = FieldFinding(
+    "INVALID_CONTROL_STRUCTURE", "Parallel requires at least 2 branches", None, "branches"
+)
 
 
 def _branch(
@@ -35,6 +43,45 @@ def _branch(
 
 def _two_branches() -> list[dict[str, Any]]:
     return [_branch("branch_1", "ingest"), _branch("branch_2", "probe")]
+
+
+def _lane_limit_problem(index: int) -> FieldFinding:
+    return FieldFinding(
+        "INVALID_SETTING_VALUE",
+        "Parallel branch time limit must be a positive integer",
+        None,
+        f"branches.{index}.time_limit",
+    )
+
+
+def _structure_problems(
+    values: dict[str, Any], sources: Collection[str] = ()
+) -> list[FieldFinding]:
+    return ParallelControl().structure_problems(values, sources)
+
+
+def _run_fill(stored: dict[str, Any]) -> dict[str, Any]:
+    return run_fill(ParallelControl(), stored)
+
+
+def _start_block(
+    branches: list[dict[str, Any]], expression_fields: set[str], variables: dict[str, Any]
+) -> Any:
+    """Start a stored Parallel Block the way the workbench starts every control."""
+    from wavecore.api.services.workbench.plugins import _execute_control
+
+    with patch(
+        "wavecore.controls.registry.get_control_implementation", return_value=ParallelControl
+    ):
+        return asyncio.run(
+            _execute_control(
+                control_type="parallel",
+                version="1.0.0",
+                parameters={"branches": branches},
+                variables=variables,
+                expression_fields=expression_fields,
+            )
+        )
 
 
 # =============================================================================
@@ -115,6 +162,14 @@ class TestParallelControlMetadata:
         assert limit_param.required is False
         assert limit_param.default is None
 
+    def test_metadata_time_limit_parameter_declares_minimum_one(self) -> None:
+        """Verify the section floor is a declared minimum the shared save check reads."""
+        limit_param = next(
+            p for p in ParallelControl().metadata["parameter_schema"] if p.name == "time_limit"
+        )
+        assert limit_param.minimum is not None
+        assert limit_param.minimum == 1
+
     def test_metadata_has_empty_output_schema(self) -> None:
         """Verify Parallel declares no outputs."""
         # Guard: the placeholder 'results' array output must stay deleted.
@@ -192,26 +247,24 @@ class TestParallelControlValidation:
         ]
         asyncio.run(control.validate({"branches": branches}))
 
-    def test_validate_rejects_an_unknown_join_mode(self) -> None:
-        """Verify a join mode outside the enum is rejected."""
-        control = ParallelControl()
+    def test_the_run_fill_rejects_an_unknown_join_mode(self) -> None:
+        """Verify a join mode outside the enum stops the Block before validate() runs."""
         params = {"branches": _two_branches(), "join": "race"}
         with pytest.raises(
             ValueError,
             match=r"^Parameter 'join' must be one of: all, first; Actual value was 'race'\.$",
         ):
-            asyncio.run(control.validate(params))
+            _run_fill(params)
 
-    def test_validate_rejects_the_removed_wait_any_strategy(self) -> None:
+    def test_the_run_fill_rejects_wait_any_as_a_join_mode(self) -> None:
         """Verify the wait-any strategy is not accepted as a join mode."""
         # Guard: a wait_strategy value is not a join value.
-        control = ParallelControl()
         params = {"branches": _two_branches(), "join": "wait-any"}
         with pytest.raises(
             ValueError,
             match=r"^Parameter 'join' must be one of: all, first; Actual value was 'wait-any'\.$",
         ):
-            asyncio.run(control.validate(params))
+            _run_fill(params)
 
     def test_validate_rejects_missing_branches(self) -> None:
         """Verify validation fails when the branches parameter is missing."""
@@ -339,15 +392,6 @@ class TestParallelControlValidation:
 class TestParallelControlValidationOrdering:
     """The pinned order of Parallel validation rules."""
 
-    def test_join_is_checked_before_the_branch_count(self) -> None:
-        """Verify a bad join mode wins over a missing branch list."""
-        control = ParallelControl()
-        with pytest.raises(
-            ValueError,
-            match=r"^Parameter 'join' must be one of: all, first; Actual value was 'race'\.$",
-        ):
-            asyncio.run(control.validate({"join": "race"}))
-
     def test_branch_count_is_checked_before_the_section_limit(self) -> None:
         """Verify a single branch wins over an invalid section limit."""
         control = ParallelControl()
@@ -365,6 +409,186 @@ class TestParallelControlValidationOrdering:
 
 
 # =============================================================================
+# Structure Problems (REQ-3.5.0.3)
+# =============================================================================
+
+
+class TestParallelStructureProblems:
+    """The lane rules the save check and validate() share, each at its place."""
+
+    def test_two_lanes_or_more_have_no_problem(self) -> None:
+        three = [*_two_branches(), _branch("branch_3", "verify", 30000)]
+
+        assert _structure_problems({"branches": _two_branches()}) == []
+        assert _structure_problems({"branches": three}) == []
+
+    def test_one_lane_is_reported(self) -> None:
+        problems = _structure_problems({"branches": [_branch("branch_1", "only")]})
+
+        assert problems == [_TWO_LANE_PROBLEM]
+
+    def test_a_lane_id_used_again_is_reported_at_the_later_lane(self) -> None:
+        """Lane ids are unique, as If/Else and Switch branch ids are (REQ-3.5.0.3)."""
+        lanes = [_branch("branch_1", "A"), _branch("branch_2", "B"), _branch("branch_1", "C")]
+
+        assert _structure_problems({"branches": lanes}) == [
+            FieldFinding(
+                "INVALID_CONTROL_STRUCTURE",
+                "duplicate branch id: 'branch_1'",
+                None,
+                "branches.2.id",
+            )
+        ]
+
+    def test_lanes_with_no_id_have_no_duplicate_problem(self) -> None:
+        assert _structure_problems({"branches": [{"name": "A"}, {"name": "B"}]}) == []
+
+    def test_validate_rejects_two_lanes_of_one_id_with_the_save_text(self) -> None:
+        params = {"branches": [_branch("branch_1", "A"), _branch("branch_1", "B")], "join": "all"}
+
+        with pytest.raises(ValueError, match="^duplicate branch id: 'branch_1'$"):
+            asyncio.run(ParallelControl().validate(params))
+
+    @pytest.mark.parametrize("limit", [0, -1, "0"], ids=["zero", "negative", "zero-as-digits"])
+    def test_the_section_limit_is_no_structure_problem(self, limit: int | str) -> None:
+        # The section floor is the declared minimum of 'time_limit', checked by the shared check.
+        assert _structure_problems({"branches": _two_branches(), "time_limit": limit}) == []
+
+    @pytest.mark.parametrize("limit", [0, -5, "0"], ids=["zero", "negative", "zero-as-digits"])
+    def test_a_lane_limit_below_one_is_reported_at_its_place(self, limit: int | str) -> None:
+        one_bad = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", limit)]
+        two_bad = [
+            _branch("branch_1", "ingest", limit),
+            _branch("branch_2", "probe", 30000),
+            _branch("branch_3", "verify", limit),
+        ]
+
+        assert _structure_problems({"branches": one_bad}) == [_lane_limit_problem(1)]
+        assert _structure_problems({"branches": two_bad}) == [
+            _lane_limit_problem(0),
+            _lane_limit_problem(2),
+        ]
+
+    @pytest.mark.parametrize(
+        "limit", ["30s", "+30", "1e3", " 30", "12345678901234567890", True, 1.5]
+    )
+    def test_a_lane_limit_that_is_no_whole_number_is_reported(self, limit: Any) -> None:
+        branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", limit)]
+
+        assert _structure_problems({"branches": branches}) == [_lane_limit_problem(1)]
+
+    def test_a_lane_limit_written_as_digits_is_taken(self) -> None:
+        branches = [
+            _branch("branch_1", "ingest", "9007199254740993"),
+            _branch("branch_2", "probe", "030000"),
+        ]
+
+        assert _structure_problems({"branches": branches}) == []
+
+    def test_a_null_lane_limit_means_no_limit(self) -> None:
+        branches = [
+            {"id": "branch_1", "name": "ingest", "time_limit": None},
+            _branch("branch_2", "probe"),
+        ]
+
+        assert _structure_problems({"branches": branches}) == []
+
+    def test_a_flagged_lane_limit_is_skipped(self) -> None:
+        branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", "lane_ms * 2")]
+
+        assert _structure_problems({"branches": branches}, {"branches.1.time_limit"}) == []
+        assert _structure_problems({"branches": branches}) == [_lane_limit_problem(1)]
+
+    @pytest.mark.parametrize("text", ["", "   "])
+    def test_a_flagged_blank_lane_limit_is_required_param_empty(self, text: str) -> None:
+        branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", text)]
+
+        problems = _structure_problems({"branches": branches}, {"branches.1.time_limit"})
+
+        assert problems == [
+            FieldFinding(
+                "REQUIRED_PARAM_EMPTY",
+                "Required parameter 'branches.1.time_limit' is empty",
+                None,
+                "branches.1.time_limit",
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        ("values", "shared"),
+        [
+            (
+                {},
+                FieldFinding(
+                    "REQUIRED_PARAM_MISSING",
+                    "Required parameter 'branches' is missing",
+                    None,
+                    "branches",
+                ),
+            ),
+            (
+                {"branches": []},
+                FieldFinding(
+                    "REQUIRED_PARAM_EMPTY",
+                    "Required parameter 'branches' is empty",
+                    None,
+                    "branches",
+                ),
+            ),
+        ],
+        ids=["missing", "empty"],
+    )
+    def test_a_missing_or_empty_lane_list_gives_the_two_lane_problem(
+        self, values: dict[str, Any], shared: FieldFinding
+    ) -> None:
+        required = field_checks.check_block_fields(
+            ParallelControl().metadata["parameter_schema"],
+            values,
+            block_id="parallel",
+            expression_fields=set(),
+            template_fields=set(),
+            check_required=True,
+        )
+
+        assert _structure_problems(values) == [_TWO_LANE_PROBLEM]
+        assert required == [shared]
+
+    @pytest.mark.parametrize(
+        "lanes", [None, 2, "branch_1,branch_2"], ids=["null", "a-count", "text"]
+    )
+    def test_a_lane_value_that_is_no_list_gives_the_two_lane_problem(self, lanes: Any) -> None:
+        assert _structure_problems({"branches": lanes}) == [_TWO_LANE_PROBLEM]
+
+
+class TestLaneLimitExpression:
+    """A lane limit flagged {x} resolves per lane when the Block starts (REQ-3.2.3.7)."""
+
+    def test_a_lane_limit_expression_resolves_per_lane_at_block_start(self) -> None:
+        branches = [
+            _branch("branch_1", "ingest", 30000),
+            _branch("branch_2", "probe", "lane_ms * 2"),
+        ]
+
+        result = _start_block(branches, {"branches.1.time_limit"}, {"lane_ms": 1500})
+
+        assert result["__branches"] == [
+            _branch("branch_1", "ingest", 30000),
+            _branch("branch_2", "probe", 3000),
+        ]
+        assert branches[1]["time_limit"] == "lane_ms * 2"
+
+    def test_a_lane_limit_expression_that_gives_zero_stops_the_block_with_the_save_text(
+        self,
+    ) -> None:
+        branches = [_branch("branch_1", "ingest"), _branch("branch_2", "probe", "lane_ms * 2")]
+
+        with pytest.raises(
+            ValueError, match="^Parallel branch time limit must be a positive integer$"
+        ):
+            _start_block(branches, {"branches.1.time_limit"}, {"lane_ms": 0})
+
+
+# =============================================================================
 # Execution Tests - Signal Shape
 # =============================================================================
 
@@ -376,7 +600,7 @@ class TestParallelControlExecution:
         """Verify execute returns the container signal with the branches verbatim."""
         control = ParallelControl()
         branches = _two_branches()
-        context = {"parameters": {"branches": branches}, "variables": {}}
+        context = {"parameters": {"branches": branches, "join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert result == {
             "__parallel": True,
@@ -388,15 +612,15 @@ class TestParallelControlExecution:
     def test_execute_returns_only_the_four_signal_keys(self) -> None:
         """Verify no other key rides along on the signal."""
         control = ParallelControl()
-        context = {"parameters": {"branches": _two_branches()}, "variables": {}}
+        context = {"parameters": {"branches": _two_branches(), "join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert set(result) == {"__parallel", "__branches", "__join", "__time_limit"}
         assert result["__parallel"] is True
 
     def test_execute_defaults_the_join_mode_to_all(self) -> None:
-        """Verify an omitted join mode emits 'all'."""
+        """Verify an omitted join mode emits 'all', the default the run fills in."""
         control = ParallelControl()
-        context = {"parameters": {"branches": _two_branches()}, "variables": {}}
+        context = {"parameters": _run_fill({"branches": _two_branches()}), "variables": {}}
         result = asyncio.run(control.execute(context))
         assert result["__join"] == "all"
 
@@ -414,7 +638,7 @@ class TestParallelControlExecution:
         """Verify the section limit reaches the engine unchanged."""
         control = ParallelControl()
         context = {
-            "parameters": {"branches": _two_branches(), "time_limit": 45000},
+            "parameters": {"branches": _two_branches(), "join": "all", "time_limit": 45000},
             "variables": {},
         }
         result = asyncio.run(control.execute(context))
@@ -428,7 +652,7 @@ class TestParallelControlExecution:
             _branch("branch_2", "probe"),
             _branch("branch_3", ""),
         ]
-        context = {"parameters": {"branches": branches}, "variables": {}}
+        context = {"parameters": {"branches": branches, "join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         emitted = result["__branches"]
         assert emitted == branches
@@ -439,7 +663,7 @@ class TestParallelControlExecution:
     def test_execute_emits_an_empty_branch_list_unchanged(self) -> None:
         """Verify execute does not re-validate; the engine sees what was stored."""
         control = ParallelControl()
-        context = {"parameters": {}, "variables": {}}
+        context = {"parameters": {"join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert result["__branches"] == []
 
@@ -447,7 +671,7 @@ class TestParallelControlExecution:
         """Verify no bindable value rides on the signal."""
         # Guard: nothing stands in for the deleted 'results' output.
         control = ParallelControl()
-        context = {"parameters": {"branches": _two_branches()}, "variables": {}}
+        context = {"parameters": {"branches": _two_branches(), "join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert "results" not in result
 
@@ -460,7 +684,7 @@ class TestParallelControlLogging:
         control = ParallelControl()
         logger = MagicMock()
         context = {
-            "parameters": {"branches": _two_branches()},
+            "parameters": {"branches": _two_branches(), "join": "all"},
             "variables": {},
             "logger": logger,
         }
@@ -470,6 +694,6 @@ class TestParallelControlLogging:
     def test_no_logger_does_not_crash(self) -> None:
         """Verify execution works without a logger."""
         control = ParallelControl()
-        context = {"parameters": {"branches": _two_branches()}, "variables": {}}
+        context = {"parameters": {"branches": _two_branches(), "join": "all"}, "variables": {}}
         result = asyncio.run(control.execute(context))
         assert result["__parallel"] is True

@@ -36,6 +36,8 @@ interface BlockExecution {
   /** True when the block ran and then reported 'skipped' (an intentional skip,
    *  e.g. a function-scope Halt), as opposed to a structural skip that never ran. */
   resultSkipped?: boolean
+  /** The lanes the flow took from this block in its last pass (REQ-3.2.2.15). */
+  lanes?: readonly string[]
 }
 
 interface Execution {
@@ -167,9 +169,12 @@ export const useExecutionStore = create<ExecutionState>()(
         // skip is set to 'skipped' without ever passing through 'running'.
         const becameResultSkip =
           updates.status === 'skipped' && existingBlock?.status === 'running'
+        // A block that starts again or paints skipped drops the lanes of its pass before.
+        const newPass = updates.status === 'running' || updates.status === 'skipped'
         const blockExecution: BlockExecution = {
           ...defaultBlock,
           ...existingBlock,
+          ...(newPass ? { lanes: undefined } : {}),
           ...updates,
           ...(becameResultSkip ? { resultSkipped: true } : {}),
         }

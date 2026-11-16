@@ -124,7 +124,7 @@ import {
   typeSuggestText,
 } from '../../helpers/config-sheet'
 import { listItem } from '../../helpers/entry-editors'
-import { resetButton } from '../../helpers/value-field'
+import { expressionBox, resetButton } from '../../helpers/value-field'
 import {
   OPENSEARCH_NODE_ID,
   OPENSEARCH_SHEET_TITLE,
@@ -443,7 +443,8 @@ test.describe('V-PLUGIN-OPENSEARCH-01: OpenSearch config sheet', () => {
       )
     }
     await expect(enumTrigger(sheet, 'query_language')).toHaveText('DQL')
-    await expect(editPreview(sheet, 'query')).toHaveValue(QUERY)
+    // Query is held as Template: its Template face is a code box (FIELD-1).
+    await expect(expressionBox(sheet, 'query')).toHaveText(QUERY)
     await expect(enumTrigger(sheet, 'mode')).toHaveText('Search')
     // FIELD-10: Fields is a one-line list field whose expand opens the Fields editor.
     await expect(editPreview(sheet, 'fields')).toHaveValue(fieldsLine(WIREFRAME_FIELDS))
@@ -910,11 +911,11 @@ test.describe('V-PLUGIN-OPENSEARCH-01: OpenSearch config sheet', () => {
     await expect(save).toBeDisabled()
     await editor.locator('[data-testid="value-editor-cancel-button"]').click()
     await expect(editor).toBeHidden()
-    await expect(editPreview(sheet, 'query')).toHaveValue(text)
+    await expect(expressionBox(sheet, 'query')).toHaveText(text)
 
     await pickEnum(page, sheet, 'query_language', 'Query DSL')
     await expectLayout(sheet, [...SEARCH_ROWS, ...SEARCH_TAIL], 'Query DSL keeps the one Query row')
-    await expect(editPreview(sheet, 'query')).toHaveValue(text)
+    await expect(expressionBox(sheet, 'query')).toHaveText(text)
 
     editor = await openFieldEditor(page, sheet, 'query')
     await expect(editor.locator('.cm-content').first()).toHaveText(text)

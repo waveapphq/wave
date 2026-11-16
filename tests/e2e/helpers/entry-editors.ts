@@ -328,7 +328,7 @@ export async function inBothThemes(
 /** Park the pointer on the page corner and drop focus, so no hover look, focus look or tooltip remains. */
 export async function parkPointer(page: Page): Promise<void> {
   await page.mouse.move(1, 1)
-  // A closed sheet hands focus back to its opener, whose tooltip then opens on focus.
+  // A sheet closed from the keyboard hands focus back to its opener, which then shows its focus look and tooltip.
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await expect(page.locator(OPEN_TOOLTIP)).toHaveCount(0)
 }

@@ -142,12 +142,9 @@ async function switchMode(
 // ===========================================================================
 
 describe('VariableInspectModal - shell anatomy', () => {
-  it('renders a region labeled "Inspect variable <name>" with the per-id testid', () => {
+  it('renders a dialog named by its title, the variable name, with the per-id testid', () => {
     renderModal()
-    expect(
-      screen.getByRole('region', { name: 'Inspect variable user_name' }),
-    ).toBeInTheDocument()
-    expect(getModal()).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'user_name' })).toBe(getModal())
   })
 
   it('exposes the header drag handle derived from the modal testid', () => {
@@ -644,11 +641,9 @@ describe('VariableInspectModal - resize minimums', () => {
 // ===========================================================================
 
 describe('VariableInspectModal - accessibility', () => {
-  it('labels the section "Inspect variable <name>"', () => {
+  it('names the window by the variable name in its title', () => {
     renderModal({ variable: { name: 'api_url' } })
-    expect(
-      screen.getByRole('region', { name: 'Inspect variable api_url' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'api_url' })).toHaveAttribute('aria-modal', 'false')
   })
 
   it('labels the close button "Close inspector for <name>"', () => {
@@ -1779,6 +1774,59 @@ describe('VariableInspectModal - Compare type-mismatch', () => {
     const metric = within(getModal()).getByTestId('inspect-metric')
     expect(metric).toHaveTextContent('type mismatch')
     expect(metric.className).toMatch(/amber/)
+  })
+})
+
+// A copy of a secret is not secret, but the server masks it whole: its watcher
+// shows the mask, not the type-mismatch guard (REQ-3.1.3.5).
+describe('VariableInspectModal - a value masked whole', () => {
+  const MASKED_RUNTIME = { runtimeValue: '********', hasRuntimeValue: true, runtimeAvailable: true }
+
+  it.each([
+    ['array', ARRAY_VARIABLE],
+    ['map', MAP_VARIABLE],
+    ['table', TABLE_VARIABLE],
+    ['integer', { type: 'integer', value: 7 }],
+    ['float', { type: 'float', value: 1.5 }],
+  ] as const)('a %s masked whole shows the mask, with no type mismatch and no metric', (_type, variable) => {
+    renderModal({ variable, ...MASKED_RUNTIME })
+    expect(within(getModal()).getByTestId('inspect-secret-masked')).toHaveTextContent('********')
+    expect(within(getModal()).queryByTestId('mismatch-body')).not.toBeInTheDocument()
+    expect(within(getModal()).queryByTestId('inspect-metric')).not.toBeInTheDocument()
+  })
+
+  it('its Code view shows the mask too, never a serialized table', async () => {
+    const user = userEvent.setup()
+    renderModal({ variable: TABLE_VARIABLE, ...MASKED_RUNTIME })
+    await switchView(user, 'Code')
+    expect(within(getModal()).getByTestId('inspect-secret-masked')).toHaveTextContent('********')
+    expect(within(getModal()).queryByTestId('codemirror-editor')).not.toBeInTheDocument()
+  })
+
+  it('Compare shows the definition beside the mask, with no metric', async () => {
+    const user = userEvent.setup()
+    renderModal({ variable: ARRAY_VARIABLE, ...MASKED_RUNTIME })
+    await switchMode(user, 'Compare')
+    const { initial, current } = comparePanes()
+    expect(within(current).getByTestId('inspect-secret-masked')).toHaveTextContent('********')
+    expect(within(initial).getByTestId('array-body')).toBeInTheDocument()
+    expect(within(getModal()).queryByTestId('mismatch-body')).not.toBeInTheDocument()
+    expect(within(getModal()).queryByTestId('inspect-metric')).not.toBeInTheDocument()
+  })
+
+  it('Initial shows the definition the copy started from', async () => {
+    const user = userEvent.setup()
+    renderModal({ variable: ARRAY_VARIABLE, ...MASKED_RUNTIME })
+    await switchMode(user, 'Initial')
+    expect(within(getModal()).getByTestId('array-body')).toBeInTheDocument()
+    expect(within(getModal()).queryByTestId('inspect-secret-masked')).not.toBeInTheDocument()
+  })
+
+  it('a string that reads as the mask is text the row holds', () => {
+    renderModal(MASKED_RUNTIME)
+    expect(getBody().textContent).toContain('********')
+    expect(within(getModal()).queryByTestId('inspect-secret-masked')).not.toBeInTheDocument()
+    expect(within(getModal()).getByTestId('inspect-metric')).toHaveTextContent('8 chars')
   })
 })
 

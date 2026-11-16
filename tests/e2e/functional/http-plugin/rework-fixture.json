@@ -493,8 +493,7 @@
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": { "width": 120, "height": 62 }
       },
@@ -574,8 +573,7 @@
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": {},
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": { "width": 120, "height": 62 }
       },
@@ -654,8 +652,7 @@
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": { "error": "nullq_err" },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": { "width": 120, "height": 62 }
       },

@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from wavecore.api.services.opensearch_tools import api_spec
-from wavecore.connectivity.opensearch._query import FIELD_KEYED_QUERIES
+from wavecore.connectivity.opensearch._query import FIELD_KEYED_QUERIES, FIELD_NAMED_QUERIES
 
 PACKAGE = "wavecore.api.services.opensearch_tools"
 EXTRACT_FILE = "api-spec-extract.json"
@@ -392,3 +392,12 @@ class TestPackagedExtract:
 
         assert set(FIELD_KEYED_QUERIES) == set(extract["field_keyed_queries"])
         assert set(api_spec.load_extract().field_keyed_queries) == set(FIELD_KEYED_QUERIES)
+
+    def test_the_run_cores_field_named_queries_take_the_extracts_parameters(self) -> None:
+        queries = json.loads(packaged_text())["queries"]
+
+        assert {"geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape"} <= set(
+            FIELD_NAMED_QUERIES
+        )
+        for name, params in FIELD_NAMED_QUERIES.items():
+            assert params == set(queries[name]["params"]), name

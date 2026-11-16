@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from wavecore.api.routes.shared import read_json_array
 from wavecore.api.services.regressions import service as regression_service
 
 router = APIRouter(tags=["Regressions"])
@@ -24,7 +25,7 @@ async def batch_delete_regressions(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = regression_service.batch_delete_regressions(body)
     return result
 
@@ -39,6 +40,6 @@ async def batch_clone_regressions(request: Request) -> dict[str, Any]:
     Returns:
         Dictionary with cloned items and failed items
     """
-    body = await request.json()
+    body = await read_json_array(request)
     result = regression_service.batch_clone_regressions(body)
     return result

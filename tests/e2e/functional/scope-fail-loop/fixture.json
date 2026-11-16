@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'scopefail-start'", "level": "INFO" },
             "outputBindings": {},
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["collection"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "collection": "hosts" },
             "outputBindings": { "item": "fe_item", "index": "fe_idx" },
@@ -62,10 +60,8 @@
           "version": "1.0.0",
           "description": "Pin Node Host",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.node_host"],
           "templateFields": [],
-          "variableExpressionKeys": ["node_host"],
-          "variableTypes": { "node_host": "string" },
           "config": {
             "values": { "variables": { "node_host": "fe_item['value']" } },
             "outputBindings": {},
@@ -115,7 +111,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "node_host + ' evidence line'", "level": "INFO" },
             "outputBindings": {},
@@ -168,10 +163,8 @@
           "version": "1.0.0",
           "description": "Record Blocking Node",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.gate_blocked", "variables.drift_node"],
           "templateFields": [],
-          "variableExpressionKeys": ["gate_blocked", "drift_node"],
-          "variableTypes": { "gate_blocked": "string", "drift_node": "string" },
           "config": {
             "values": {
               "variables": { "gate_blocked": "'yes'", "drift_node": "node_host" }
@@ -196,7 +189,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'closed ' + node_host", "level": "INFO" },
             "outputBindings": {},
@@ -219,7 +211,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'scopefail-after-loop'", "level": "INFO" },
             "outputBindings": {},
@@ -242,7 +233,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -285,7 +275,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'SIGN-OFF BLOCKED scopefail-verdict: ' + drift_node",
@@ -311,7 +300,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'SIGN-OFF CLEARED scopefail-verdict'", "level": "INFO" },
             "outputBindings": {},

@@ -13,17 +13,12 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from ..rest import K8sClient, K8sResource
+from wavecore.connectivity.block_outputs import block_failure, block_success, summary_table
+
+from ..rest import K8sClient, K8sResource, seconds
 from ._context import require_context
 from ._errors import K8sReadRejected, map_api_error
-from ._outputs import (
-    block_failure,
-    block_success,
-    object_names,
-    read_objects,
-    summary_table,
-    type_name,
-)
+from ._outputs import object_names, read_objects, type_name
 from ._resources import (
     DEFAULT_TIMEOUT,
     client_options,
@@ -124,7 +119,7 @@ def run(params: dict[str, Any], log: Callable[[str, str], None]) -> dict[str, An
     if names and params.get("wait_until_gone", True):
         wait_path, target = _wait_target(resource, namespace, names, selector)
         if not _wait_until_gone(client, wait_path, timeout, named=named):
-            message = f"Timed out after {timeout} seconds waiting for {target} to be deleted"
+            message = f"Timed out after {seconds(timeout)} waiting for {target} to be deleted"
             return _failed(params, message, "Timeout", log)
 
     log("INFO", f"Deleted {len(names)} {resource.kind} object(s) from {path}")

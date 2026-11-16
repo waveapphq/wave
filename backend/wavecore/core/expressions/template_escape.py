@@ -2,7 +2,7 @@
 
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from decimal import Decimal
 from typing import Any
 
@@ -15,6 +15,7 @@ from wavecore.core.table import Table
 
 _CONTROLS = {"\t": "\\t", "\r": "\\r", "\n": "\\n"}
 _DQL_QUOTED = str.maketrans({"\\": "\\\\", '"': '\\"', **_CONTROLS})
+_JSON_STRING = str.maketrans(json.encoder.ESCAPE_DCT)
 _DQL_BARE = str.maketrans({**{char: f"\\{char}" for char in '\\():<>"*{}'}, **_CONTROLS})
 _OR_AND = re.compile(r"(?<!\S)(?:or|and)(?!\S)", re.IGNORECASE)
 _NOT = re.compile(r"not(?= )", re.IGNORECASE)
@@ -58,10 +59,8 @@ def _landings(template: str, pattern: re.Pattern[str]) -> Iterator[tuple[re.Matc
         yield match, inside
 
 
-def _dql_bare(text: str, following: str, match: re.Match[str]) -> str:
-    """Outside quotes: specials and operator words escaped, a lowercase `not` refused."""
-    if not text:
-        return '""'
+def _dql_bare(text: str, following: str, match: re.Match[str]) -> list[str]:
+    """Outside quotes: each character with specials and operator words escaped, `not` refused."""
     marked = {found.start() for found in _OR_AND.finditer(text)}
     for found in _NOT.finditer(text + following):
         if text[found.start()] == "n":
@@ -69,23 +68,41 @@ def _dql_bare(text: str, following: str, match: re.Match[str]) -> str:
                 _NOT_REFUSAL.format(marker=match.group(0)), expression=match.group(1).strip()
             )
         marked.add(found.start())
-    return "".join(
+    return [
         ("\\" if index in marked else "") + char.translate(_DQL_BARE)
         for index, char in enumerate(text)
-    )
+    ]
 
 
 def _escaped(
     rule: str, value: Any, inside: bool, template: str, match: re.Match[str]
-) -> tuple[str, str]:
-    """The value's text form and its escaped text for this landing."""
+) -> tuple[str, list[str], str]:
+    """The value's text form, each character escaped for this landing, and the escaped text."""
     text = text_form(value)
+    if rule == "json" and not inside and not isinstance(value, str):
+        return text, list(text), text
     if rule == "json":
-        escaped = json.dumps(text, ensure_ascii=False)[1:-1] if inside else _json_text(value)
-        return text, escaped
+        chars = [char.translate(_JSON_STRING) for char in text]
+        escaped = "".join(chars)
+        return text, chars, escaped if inside else f'"{escaped}"'
     if inside:
-        return text, text.translate(_DQL_QUOTED)
-    return text, _dql_bare(text, template[match.end() : match.end() + 1], match)
+        chars = [char.translate(_DQL_QUOTED) for char in text]
+        return text, chars, "".join(chars)
+    chars = _dql_bare(text, template[match.end() : match.end() + 1], match)
+    return text, chars, "".join(chars) or '""'
+
+
+def _part_pairs(text: str, chars: list[str], parts: Collection[str]) -> Iterator[tuple[str, str]]:
+    """Each part inside the text but not the whole of it, with each escaped text it takes."""
+    for part in parts:
+        if part == text:
+            continue
+        forms: dict[str, None] = {}
+        start = text.find(part)
+        while start != -1:
+            forms["".join(chars[start : start + len(part)])] = None
+            start = text.find(part, start + 1)
+        yield from ((part, form) for form in forms)
 
 
 def render_escaped(
@@ -95,11 +112,14 @@ def render_escaped(
     pattern: re.Pattern[str],
     *,
     setting: str,
+    parts: Collection[str] = (),
 ) -> tuple[str, list[tuple[str, str]]]:
     """The template filled with escaped values, and a (raw text, escaped text) pair per marker.
 
-    A null piece is JSON ``null`` where it stands alone as a JSON value; anywhere
-    else it fails and names the piece and the setting (REQ-3.1.3.22).
+    Each of ``parts`` found inside a larger value adds a (part, escaped text) pair for
+    each escaped text it takes there. A null piece is JSON ``null`` where it stands alone
+    as a JSON value; anywhere else it fails and names the piece and the setting
+    (REQ-3.1.3.22).
     """
     pieces: list[str] = []
     pairs: list[tuple[str, str]] = []
@@ -114,9 +134,10 @@ def render_escaped(
         value = evaluate(expression)
         if value is None and (rule != "json" or inside):
             raise NullValueError(null_failure_message(setting, expression=expression), expression)
-        pair = _escaped(rule, value, inside, template, match)
-        pairs.append(pair)
-        pieces.append(pair[1])
+        text, chars, escaped = _escaped(rule, value, inside, template, match)
+        pairs.append((text, escaped))
+        pairs.extend(_part_pairs(text, chars, parts))
+        pieces.append(escaped)
     pieces.append(template[position:])
     return "".join(pieces), pairs
 

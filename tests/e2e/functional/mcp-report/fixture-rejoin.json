@@ -1,0 +1,230 @@
+{
+  "name": "zz-mcp-get_run_report-2",
+  "description": "Report order: two If/Else branches with Blocks that rejoin",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "data": {
+          "label": "Choose side",
+          "recipeKey": "flow[0]",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_0",
+                  "type": "if",
+                  "label": "Left",
+                  "conditions": [
+                    {
+                      "id": "cond-1",
+                      "type": "expression",
+                      "expression": "status == 'left'"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_1",
+                  "type": "else",
+                  "label": "Right"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": -100,
+          "y": 140
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "data": {
+          "label": "Left one",
+          "recipeKey": "flow[0].if.then[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "left one",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": -300,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-3",
+        "type": "workflowNode",
+        "data": {
+          "label": "Left two",
+          "recipeKey": "flow[0].if.then[1]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "left two",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": -300,
+          "y": 420
+        }
+      },
+      {
+        "id": "node-4",
+        "type": "workflowNode",
+        "data": {
+          "label": "Right one",
+          "recipeKey": "flow[0].if.else[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "right one",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": 100,
+          "y": 280
+        }
+      },
+      {
+        "id": "node-5",
+        "type": "workflowNode",
+        "data": {
+          "label": "Join step",
+          "recipeKey": "flow[1]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "joined",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": -100,
+          "y": 560
+        }
+      },
+      {
+        "id": "node-6",
+        "type": "workflowNode",
+        "data": {
+          "label": "Final step",
+          "recipeKey": "flow[2]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "final",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        },
+        "width": 200,
+        "position": {
+          "x": -100,
+          "y": 700
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-node-node-1",
+        "source": "start-node",
+        "target": "node-1"
+      },
+      {
+        "id": "edge-node-1-branch_0-node-2",
+        "source": "node-1",
+        "target": "node-2",
+        "sourceHandle": "branch_0"
+      },
+      {
+        "id": "edge-node-2-node-3",
+        "source": "node-2",
+        "target": "node-3"
+      },
+      {
+        "id": "edge-node-1-branch_1-node-4",
+        "source": "node-1",
+        "target": "node-4",
+        "sourceHandle": "branch_1"
+      },
+      {
+        "id": "edge-node-3-node-5",
+        "source": "node-3",
+        "target": "node-5"
+      },
+      {
+        "id": "edge-node-4-node-5-ingress_1",
+        "source": "node-4",
+        "target": "node-5",
+        "targetHandle": "ingress_1"
+      },
+      {
+        "id": "edge-node-5-node-6",
+        "source": "node-5",
+        "target": "node-6"
+      }
+    ]
+  },
+  "variables": {
+    "status": {
+      "type": "string",
+      "value": "right"
+    }
+  },
+  "metadata": {
+    "tags": []
+  }
+}

@@ -157,6 +157,38 @@ class TestTunneledTcpPort:
             held[1].close()
             registry.close_all()
 
+    async def test_the_ssh_host_is_named_as_the_session_identifies_it(
+        self, listen: Listen, log: LogRecorder
+    ) -> None:
+        """A session opened on another tunnel's Local Port is named by its far host (SSH-8)."""
+        far = await listen("tcp-echo")
+        local = free_port()
+        connection = channel_connection(far.port)
+        registry = SSHSessionRegistry()
+        registry.register(
+            TUNNEL_SESSION,
+            connection,
+            None,
+            "127.0.0.1",
+            None,
+            None,
+            connect_timeout=30,
+            host_identity="node-2.internal",
+        )
+        registry.add_tunnel(TUNNEL_SESSION, f"t{local}", MagicMock(), local, FAR)
+
+        result = await run_block(netcat_params(local), log, ssh_session_registry=registry)
+
+        assert rows(result) == [[local, "tcp", "open", ""]]
+        assert log == [
+            ("INFO", f"Checking 127.0.0.1 port {local} over TCP"),
+            (
+                "INFO",
+                f"SSH tunnel detected on local port {local}: testing {FAR} from node-2.internal",
+            ),
+            ("INFO", f"Port {local}/tcp open"),
+        ]
+
     async def test_a_refused_channel_is_closed_with_the_ssh_server_words(
         self, log: LogRecorder
     ) -> None:

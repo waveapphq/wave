@@ -15,7 +15,7 @@ import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from wavecore.api.exceptions import (
     ConflictException,
@@ -24,7 +24,7 @@ from wavecore.api.exceptions import (
     ValidationException,
 )
 from wavecore.api.services import file_tree, shared
-from wavecore.api.services.storage_paths import get_artifacts_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_artifacts_storage_path
 from wavecore.core.artifacts.store import TOMBSTONE_SUFFIX, parse_artifact_filename
 
 logger = logging.getLogger(__name__)
@@ -70,23 +70,30 @@ def _execution_id_from_dir_name(dir_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def resolve_artifact_id(artifact_id: str) -> Path:
-    """Validate a path-shaped artifact id and resolve it under the artifact root."""
-    parts = artifact_id.split("/")
-    if (
-        not file_tree.is_safe_relative_path(artifact_id)
-        or len(parts) < 2
-        or parts[0] == _SESSIONS_DIR_NAME
-    ):
-        raise ValidationException(f"Invalid artifact identifier: {artifact_id}")
-    return get_artifacts_storage_path() / artifact_id
+class _ArtifactLocation(NamedTuple):
+    path: Path
+    dir_name: str
+    relative_path: str
 
 
-def _resolve_existing_artifact(artifact_id: str) -> Path:
-    path = resolve_artifact_id(artifact_id)
+def _is_execution_place(parts: tuple[str, ...]) -> bool:
+    """True for a place below an execution folder, outside the sessions area."""
+    return len(parts) >= 2 and parts[0] != _SESSIONS_DIR_NAME
+
+
+def _resolve_existing_artifact(artifact_id: str) -> _ArtifactLocation:
+    """The checked path of a stored artifact file, with the id parts its real location gives."""
+    root = get_artifacts_storage_path().resolve()
+    invalid = f"Invalid artifact identifier: {artifact_id}"
+    path = file_tree.contained_path(root, artifact_id, invalid)
+    parts = path.relative_to(root).parts
+    # A link at the end counts only when the file it leads to is in such a place too.
+    target_parts = path.resolve().relative_to(root).parts
+    if not (_is_execution_place(parts) and _is_execution_place(target_parts)):
+        raise ValidationException(invalid)
     if not path.is_file():
         raise NotFoundException(f"Artifact {artifact_id} not found")
-    return path
+    return _ArtifactLocation(path, parts[0], "/".join(parts[1:]))
 
 
 def _artifact_meta(dir_name: str, relative_path: str, path: Path) -> dict[str, Any]:
@@ -125,17 +132,22 @@ def _tombstone_meta(dir_name: str, sidecar: Path) -> dict[str, Any]:
     }
 
 
-def _find_execution_dir(execution_id: str) -> Path | None:
-    """Locate the execution's artifact dir by its trailing id, if it exists."""
+def _execution_dirs() -> list[Path]:
+    """Every execution folder: a real folder in the artifact root, never a link or sessions."""
     root = get_artifacts_storage_path()
     if not root.exists():
-        return None
-    for exec_dir in root.iterdir():
-        if (
-            exec_dir.is_dir()
-            and exec_dir.name != _SESSIONS_DIR_NAME
-            and _execution_id_from_dir_name(exec_dir.name) == execution_id
-        ):
+        return []
+    return [
+        entry
+        for entry in root.iterdir()
+        if entry.name != _SESSIONS_DIR_NAME and not entry.is_symlink() and entry.is_dir()
+    ]
+
+
+def _find_execution_dir(execution_id: str) -> Path | None:
+    """Locate the execution's artifact dir by its trailing id, if it exists."""
+    for exec_dir in _execution_dirs():
+        if _execution_id_from_dir_name(exec_dir.name) == execution_id:
             return exec_dir
     return None
 
@@ -162,8 +174,6 @@ def _scan_execution_dir(
     Tombstone sidecars are skipped by default; ``include_removed`` reconstructs
     the removed entries from them.
     """
-    if not exec_dir.is_dir() or exec_dir.name == _SESSIONS_DIR_NAME:
-        return []
     if execution_id is not None and _execution_id_from_dir_name(exec_dir.name) != execution_id:
         return []
     items: list[dict[str, Any]] = []
@@ -186,11 +196,9 @@ def list_artifacts(
     include_removed: bool = False,
 ) -> dict[str, Any]:
     """Scan execution dirs (``sessions/`` excluded) into a paginated listing."""
-    root = get_artifacts_storage_path()
     items: list[dict[str, Any]] = []
-    if root.exists():
-        for exec_dir in root.iterdir():
-            items.extend(_scan_execution_dir(exec_dir, execution_id, include_removed))
+    for exec_dir in _execution_dirs():
+        items.extend(_scan_execution_dir(exec_dir, execution_id, include_removed))
 
     items.sort(key=lambda item: item["created_at"], reverse=True)
     total = len(items)
@@ -209,16 +217,15 @@ def list_artifacts(
 
 def get_artifact_meta(artifact_id: str) -> dict[str, Any]:
     """ArtifactMeta plus an on-demand sha256 integrity checksum."""
-    path = _resolve_existing_artifact(artifact_id)
-    dir_name, relative_path = artifact_id.split("/", 1)
-    meta = _artifact_meta(dir_name, relative_path, path)
-    meta["checksum_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    location = _resolve_existing_artifact(artifact_id)
+    meta = _artifact_meta(location.dir_name, location.relative_path, location.path)
+    meta["checksum_sha256"] = hashlib.sha256(location.path.read_bytes()).hexdigest()
     return meta
 
 
 def read_artifact_content(artifact_id: str, range_header: str | None = None) -> dict[str, Any]:
     """Read full or partial artifact bytes for the content endpoint."""
-    path = _resolve_existing_artifact(artifact_id)
+    path = _resolve_existing_artifact(artifact_id).path
     size = path.stat().st_size
     content_type = file_tree.content_type(path.name)
     byte_range = _parse_range(range_header, size)
@@ -263,10 +270,9 @@ def delete_artifact(artifact_id: str) -> None:
     Executions in progress are protected (409). There is no restore - the
     tombstone is an audit record, not a recycle bin.
     """
-    path = _resolve_existing_artifact(artifact_id)
-    dir_name, relative_path = artifact_id.split("/", 1)
-    _assert_execution_not_in_progress(_execution_id_from_dir_name(dir_name))
-    _soft_delete(path, relative_path)
+    location = _resolve_existing_artifact(artifact_id)
+    _assert_execution_not_in_progress(_execution_id_from_dir_name(location.dir_name))
+    _soft_delete(location.path, location.relative_path)
 
 
 def delete_execution_artifacts(execution_id: str) -> None:
@@ -351,32 +357,28 @@ def list_execution_artifact_summaries(
     """
     from wavecore.api.services.executions import _storage as exec_storage
 
-    root = get_artifacts_storage_path()
     rows: list[dict[str, Any]] = []
-    if root.exists():
-        for exec_dir in sorted(root.iterdir(), key=lambda entry: entry.name, reverse=True):
-            if not exec_dir.is_dir() or exec_dir.name == _SESSIONS_DIR_NAME:
-                continue
-            live = _live_artifact_files(exec_dir)
-            if not live:
-                continue
-            execution_id = _execution_id_from_dir_name(exec_dir.name)
-            record = (
-                exec_storage._execution_storage.get(execution_id)
-                or exec_storage._load_execution(execution_id)
-                or {}
-            )
-            rows.append(
-                {
-                    "execution_id": execution_id,
-                    "name": record.get("name"),
-                    "entity_type": record.get("entity_type"),
-                    "status": record.get("status"),
-                    "finished_at": record.get("ended_at"),
-                    "artifact_count": len(live),
-                    "total_size_bytes": sum(path.stat().st_size for path in live),
-                }
-            )
+    for exec_dir in sorted(_execution_dirs(), key=lambda entry: entry.name, reverse=True):
+        live = _live_artifact_files(exec_dir)
+        if not live:
+            continue
+        execution_id = _execution_id_from_dir_name(exec_dir.name)
+        record = (
+            exec_storage._execution_storage.get(execution_id)
+            or exec_storage._load_execution(execution_id)
+            or {}
+        )
+        rows.append(
+            {
+                "execution_id": execution_id,
+                "name": record.get("name"),
+                "entity_type": record.get("entity_type"),
+                "status": record.get("status"),
+                "finished_at": record.get("ended_at"),
+                "artifact_count": len(live),
+                "total_size_bytes": sum(path.stat().st_size for path in live),
+            }
+        )
 
     rows = _filter_summaries(rows, search, entity_type, status)
     total = len(rows)
@@ -455,21 +457,18 @@ def zip_execution_artifacts(execution_id: str, subtree: str | None = None) -> by
     exec_dir = _find_execution_dir(execution_id)
     if exec_dir is None:
         raise NotFoundException(f"No artifacts found for execution {execution_id}")
-    base = exec_dir
+    real_dir = exec_dir.resolve()
+    base = real_dir
     if subtree:
-        _validate_subtree(execution_id, subtree)
-        base = exec_dir / subtree
+        base = file_tree.contained_path(
+            real_dir, subtree, f"Invalid artifact identifier: {execution_id}/{subtree}"
+        )
     files = _live_artifact_files(base)
     if not files:
         raise NotFoundException(f"No artifacts found for execution {execution_id}")
     return shared.build_export_zip(
-        [(path.relative_to(exec_dir).as_posix(), path) for path in files]
+        [(path.relative_to(real_dir).as_posix(), path) for path in files]
     )
-
-
-def _validate_subtree(execution_id: str, subtree: str) -> None:
-    if not file_tree.is_safe_relative_path(subtree):
-        raise ValidationException(f"Invalid artifact identifier: {execution_id}/{subtree}")
 
 
 # ---------------------------------------------------------------------------
@@ -478,8 +477,8 @@ def _validate_subtree(execution_id: str, subtree: str) -> None:
 
 
 def session_artifacts_dir(session_id: str) -> Path:
-    """Temporary artifact dir for an ephemeral workbench session."""
-    return get_artifacts_storage_path() / _SESSIONS_DIR_NAME / session_id
+    """Temporary artifact dir for an ephemeral workbench session; the ID must be one plain name."""
+    return entity_dir(get_artifacts_storage_path() / _SESSIONS_DIR_NAME, session_id)
 
 
 def wipe_session_artifacts(session_id: str) -> None:

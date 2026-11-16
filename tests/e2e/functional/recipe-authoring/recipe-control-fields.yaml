@@ -1,0 +1,109 @@
+test:
+  name: zz-mcp-recipe-control-fields-base
+  description: Every control Block field a recipe writes
+variables:
+  status: {type: string, value: ready}
+  expected_status: {type: string, value: ready}
+  host: {type: string, value: web-1}
+  prefix: {type: string, value: web}
+  retries: {type: integer, value: 2}
+  limit: {type: integer, value: 3}
+  lane_ms: {type: integer, value: 5000}
+  items: {type: array, value: [a, b]}
+  greeting: {type: string}
+  next_retries: {type: integer}
+  hosts: {type: array}
+  api_token: {type: string}
+  pending_token: {type: string}
+flow:
+  - if:
+      label: Route on status
+      if_label: Ready path
+      when:
+        - {variable: status, operator: equals, value: {expr: "expected_status + '-x'"}, value_type: string}
+        - or
+        - group:
+            - {variable: host, operator: starts_with, value: "{{ prefix }}"}
+            - group:
+                - "retries > limit"
+                - or
+                - {variable: host, operator: not_equals, value: {literal: "{{ host }}"}, value_type: string}
+      then:
+        - block: log
+          label: Log if
+          settings: {message: route=if}
+      elif:
+        - label: Slow path
+          when: ["retries > 10", "limit > 10"]
+          then:
+            - block: log
+              label: Log slow
+              settings: {message: route=slow}
+      else_label: Fallback path
+      else:
+        - block: log
+          label: Log fallback
+          settings: {message: route=fallback}
+  - switch:
+      label: Route on case
+      cases:
+        - label: Ready case
+          when: {variable: status, operator: equals, value: {expr: "expected_status"}, value_type: string}
+          steps:
+            - block: log
+              label: Log case
+              settings: {message: case=ready}
+      default_label: Other case
+      default:
+        - block: log
+          label: Log default
+          settings: {message: case=default}
+  - set:
+      greeting: "hello {{ prefix }}"
+      next_retries: {expr: "retries + 1"}
+      hosts: [{expr: "host"}, "{{ prefix }}-2", plain-3]
+      api_token: tok-control-fields-7
+      pending_token: null
+    label: Set the rows
+    secret_rows: [api_token, pending_token]
+  - note: {text: Control fields under test, color: yellow}
+  - block: log
+    label: Log rows
+    settings: {message: "greeting={{ greeting }} next={{ next_retries }} hosts={{ ','.join(hosts) }}"}
+  - parallel:
+      label: Fan out
+      join: all
+      branches:
+        - name: quick lane
+          steps:
+            - block: log
+              label: Log quick
+              settings: {message: lane=quick}
+        - name: budget lane
+          time_limit: {expr: "lane_ms"}
+          steps:
+            - block: log
+              label: Log budget
+              settings: {message: lane=budget}
+  - for:
+      count: 6
+      step: 2
+      capture: {index: tick}
+      body:
+        - block: log
+          label: Log tick
+          settings: {message: "tick={{ tick }}"}
+        - for_each:
+            label: Each item
+            collection: {expr: "items"}
+            collection_type: array
+            capture: {item: current}
+            body:
+              - if:
+                  label: Stop at two
+                  when: "tick == 2"
+                  then:
+                    - break: {loop: For Loop}
+              - block: log
+                label: Log each
+                settings: {message: "each={{ current['value'] }}"}

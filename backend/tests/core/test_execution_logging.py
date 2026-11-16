@@ -261,8 +261,8 @@ class TestPluginLogging:
 class TestParameterLogging:
     """Tests for logging plugin parameters and return values."""
 
-    def test_key_guessing_parameter_summary_is_deleted(self) -> None:
-        """The name-heuristic formatter trio is deleted, not exported."""
+    def test_there_is_no_key_guessing_parameter_summary(self) -> None:
+        """No name-heuristic formatter exists or is exported."""
         import wavecore.core.logging as core_logging
         from wavecore.core.logging import formatter
 

@@ -40,7 +40,6 @@ function buildFixture(opts: { suffix: string; hasNewerVersion?: boolean }) {
             hasNewerVersion: !!opts.hasNewerVersion,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: '"hello"', level: 'INFO' },
               outputBindings: {},

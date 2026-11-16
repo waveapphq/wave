@@ -65,9 +65,8 @@ export interface ElementData {
   profileBindings?: ProfileBinding[]
   expressionFields?: string[]
   templateFields?: string[]
-  variableExpressionKeys?: string[]
-  variableTemplateKeys?: string[]
-  variableSecretKeys?: string[]
+  /** Variable Setter rows marked secret, `variables.<row>`, read from `config.secretFields` (REQ-3.4.1.14). */
+  secretFields?: string[]
   /** Output names whose bound variable is secret (SECUI-3/4). */
   outputSecretFields?: string[]
   /** Credential-field keys the user revealed for this block. */
@@ -76,10 +75,7 @@ export interface ElementData {
   secretMasking?: SecretMaskingSetting
   /** Canvas node kind - the "Secrets" section renders only for plugins. */
   nodeType?: string
-  variableTypes?: Record<string, string>
-  /** Variable Setter: each array / map literal row's element types (REQ-3.1.3.19). */
-  variableElementTypes?: Record<string, ElementTypes>
-  /** Typed block settings (a map whose values carry a type): each one's element types. */
+  /** Each typed setting's element types, a Setter list or map row's at `variables.<row>` (REQ-3.1.3.19). */
   elementTypes?: Record<string, ElementTypes>
 }
 
@@ -96,17 +92,16 @@ export interface SaveData {
   profileBindings: ProfileBinding[]
   expressionFields: string[]
   templateFields: string[]
-  variableExpressionKeys?: string[]
-  variableTemplateKeys?: string[]
-  variableSecretKeys?: string[]
+  /** Variable Setter rows marked secret, `variables.<row>`; stored under `config` like outputSecretFields. */
+  secretFields?: string[]
+  /** Variable Setter: the type picked for each row, for the canvas to declare a new target; never stored. */
+  newTargetTypes?: Record<string, string>
   /** Output names whose bound variable is secret (SECUI-3/4). */
   outputSecretFields?: string[]
   /** Credential-field keys the user revealed for this block. */
   unmaskedSecretFields?: string[]
   /** Per-block run-output reveal tri-state (default 'system'). */
   secretMasking?: SecretMaskingSetting
-  variableTypes?: Record<string, string>
-  variableElementTypes?: Record<string, ElementTypes>
   elementTypes?: Record<string, ElementTypes>
   /** Function Blocks: the picked library version; `version` stays the Block's own. */
   functionVersion?: string

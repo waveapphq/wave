@@ -2978,6 +2978,17 @@ describe('Workflow Store', () => {
       expect(state.selectedNodeIds).toEqual([])
       expect(state.isDirty).toBe(false)
     })
+
+    it('starts a new canvas generation on every reset, so a test load in flight sees its test closed', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      const before = useWorkflowStore.getState().canvasGeneration
+      expect(before).toEqual(expect.any(Number))
+
+      useWorkflowStore.getState().reset()
+      useWorkflowStore.getState().reset()
+
+      expect(useWorkflowStore.getState().canvasGeneration).toBe(before + 2)
+    })
   })
 
   describe('setEdges', () => {
@@ -4068,7 +4079,21 @@ describe('Workflow Store', () => {
         expect(values.other).toBe('{{ user_name }}')
       })
 
-      it('refactors a Variable Setter target key across variables, keys, and types', async () => {
+      /** Node data keys a Setter may hold after a rename: the shared slots (REQ-3.4.1.14) and nothing else. */
+      const SETTER_DATA_KEYS = new Set(['label', 'elementType', 'config', 'expressionFields', 'templateFields', 'elementTypes'])
+      const SETTER_CONFIG_KEYS = new Set(['values', 'outputBindings', 'secretFields'])
+      function keysOutsideSharedSlots(data: Record<string, unknown>): string[] {
+        const config = (data.config ?? {}) as Record<string, unknown>
+        return [
+          ...Object.keys(data).filter((key) => !SETTER_DATA_KEYS.has(key)),
+          ...Object.keys(config)
+            .filter((key) => !SETTER_CONFIG_KEYS.has(key))
+            .map((key) => `config.${key}`),
+        ]
+      }
+      const sorted = (list: unknown): string[] => [...((list as string[] | undefined) ?? [])].sort()
+
+      it('refactors a Variable Setter target key across its value and its expression flag', async () => {
         const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
         useWorkflowStore.setState({
           variables: [{ id: 'var-1', name: 'next_try', value: 0, type: 'integer' }],
@@ -4080,11 +4105,10 @@ describe('Workflow Store', () => {
               data: {
                 label: 'Var Setter',
                 elementType: 'variable-setter',
-                variableExpressionKeys: ['next_try'],
-                variableTemplateKeys: [],
-                variableTypes: { next_try: 'integer', greeting: 'string' },
-                variableElementTypes: { next_try: ['integer'], greeting: { a: 'string' } },
-                config: { values: { variables: { next_try: 'attempt + 1', greeting: 'hi' } } },
+                expressionFields: ['variables.next_try'],
+                templateFields: [],
+                elementTypes: { 'variables.limits': { max: 'integer' } },
+                config: { values: { variables: { next_try: 'attempt + 1', limits: { max: 5 } } } },
               },
             },
           ],
@@ -4097,10 +4121,155 @@ describe('Workflow Store', () => {
         const vars = (data.config as { values: { variables: Record<string, unknown> } }).values.variables
         expect(vars.retry_count).toBe('attempt + 1')
         expect(vars.next_try).toBeUndefined()
-        expect(vars.greeting).toBe('hi')
-        expect(data.variableExpressionKeys).toEqual(['retry_count'])
-        expect(data.variableTypes).toEqual({ retry_count: 'integer', greeting: 'string' })
-        expect(data.variableElementTypes).toEqual({ retry_count: ['integer'], greeting: { a: 'string' } })
+        expect(vars.limits).toEqual({ max: 5 })
+        expect(data.expressionFields).toEqual(['variables.retry_count'])
+        expect(data.elementTypes).toEqual({ 'variables.limits': { max: 'integer' } })
+        // No row type is stored on the Block: the declared variable carries it (REQ-3.1.3.19).
+        expect(keysOutsideSharedSlots(data)).toEqual([])
+      })
+
+      it('re-keys the entry flags and entry types of a renamed Variable Setter list row', async () => {
+        const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+        useWorkflowStore.setState({
+          variables: [{ id: 'var-1', name: 'tries', value: [], type: 'array' }],
+          nodes: [
+            {
+              id: 'setter-1',
+              type: 'block',
+              position: { x: 0, y: 0 },
+              data: {
+                label: 'Var Setter',
+                elementType: 'variable-setter',
+                expressionFields: ['variables.tries.0', 'variables.headers.auth'],
+                templateFields: ['variables.tries.1'],
+                elementTypes: {
+                  'variables.tries': ['integer', 'string', 'integer'],
+                  'variables.headers': { auth: 'string' },
+                },
+                config: {
+                  values: {
+                    variables: { tries: ['attempt + 1', 'run {{ attempt }}', 3], headers: { auth: 'token' } },
+                  },
+                },
+              },
+            },
+          ],
+          edges: [],
+        })
+
+        useWorkflowStore.getState().renameVariable('var-1', 'retries')
+
+        const data = useWorkflowStore.getState().nodes[0].data as Record<string, unknown>
+        const vars = (data.config as { values: { variables: Record<string, unknown> } }).values.variables
+        expect(vars.retries).toEqual(['attempt + 1', 'run {{ attempt }}', 3])
+        expect(vars.tries).toBeUndefined()
+        expect(sorted(data.expressionFields)).toEqual(['variables.headers.auth', 'variables.retries.0'])
+        expect(data.templateFields).toEqual(['variables.retries.1'])
+        expect(data.elementTypes).toEqual({
+          'variables.retries': ['integer', 'string', 'integer'],
+          'variables.headers': { auth: 'string' },
+        })
+        expect(keysOutsideSharedSlots(data)).toEqual([])
+      })
+
+      it('re-keys the template flag of a renamed Variable Setter target', async () => {
+        const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+        useWorkflowStore.setState({
+          variables: [{ id: 'var-1', name: 'welcome', value: '', type: 'string' }],
+          nodes: [
+            {
+              id: 'setter-1',
+              type: 'block',
+              position: { x: 0, y: 0 },
+              data: {
+                label: 'Var Setter',
+                elementType: 'variable-setter',
+                expressionFields: [],
+                templateFields: ['variables.welcome'],
+                config: { values: { variables: { welcome: 'Hi {{ guest }}' } } },
+              },
+            },
+          ],
+          edges: [],
+        })
+
+        useWorkflowStore.getState().renameVariable('var-1', 'greeting')
+
+        const data = useWorkflowStore.getState().nodes[0].data as Record<string, unknown>
+        const vars = (data.config as { values: { variables: Record<string, unknown> } }).values.variables
+        expect(vars.greeting).toBe('Hi {{ guest }}')
+        expect(vars.welcome).toBeUndefined()
+        expect(data.templateFields).toEqual(['variables.greeting'])
+        expect(keysOutsideSharedSlots(data)).toEqual([])
+      })
+
+      it('re-keys the secret mark of a renamed Variable Setter target', async () => {
+        const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+        useWorkflowStore.setState({
+          variables: [{ id: 'var-1', name: 'api_key', value: '', type: 'string' }],
+          nodes: [
+            {
+              id: 'setter-1',
+              type: 'block',
+              position: { x: 0, y: 0 },
+              data: {
+                label: 'Var Setter',
+                elementType: 'variable-setter',
+                expressionFields: [],
+                templateFields: [],
+                config: {
+                  values: { variables: { api_key: 'abc123', region: 'eu' } },
+                  secretFields: ['variables.api_key'],
+                },
+              },
+            },
+          ],
+          edges: [],
+        })
+
+        useWorkflowStore.getState().renameVariable('var-1', 'service_key')
+
+        const data = useWorkflowStore.getState().nodes[0].data as Record<string, unknown>
+        const config = data.config as { values: { variables: Record<string, unknown> }; secretFields?: string[] }
+        expect(config.values.variables.service_key).toBe('abc123')
+        expect(config.values.variables.api_key).toBeUndefined()
+        expect(config.secretFields).toEqual(['variables.service_key'])
+        expect(keysOutsideSharedSlots(data)).toEqual([])
+      })
+
+      it('leaves the flags of a Setter row whose name only starts with the renamed target', async () => {
+        const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+        useWorkflowStore.setState({
+          variables: [{ id: 'var-1', name: 'next_try', value: 0, type: 'integer' }],
+          nodes: [
+            {
+              id: 'setter-1',
+              type: 'block',
+              position: { x: 0, y: 0 },
+              data: {
+                label: 'Var Setter',
+                elementType: 'variable-setter',
+                expressionFields: ['variables.next_try', 'variables.next_try_2'],
+                templateFields: [],
+                elementTypes: { 'variables.next_try_list': ['integer'] },
+                config: {
+                  values: { variables: { next_try: 'attempt + 1', next_try_2: 'attempt + 2', next_try_list: [1] } },
+                  secretFields: ['variables.next_try_2'],
+                },
+              },
+            },
+          ],
+          edges: [],
+        })
+
+        useWorkflowStore.getState().renameVariable('var-1', 'retry_count')
+
+        const data = useWorkflowStore.getState().nodes[0].data as Record<string, unknown>
+        const config = data.config as { values: { variables: Record<string, unknown> }; secretFields?: string[] }
+        expect(config.values.variables.next_try_2).toBe('attempt + 2')
+        expect(sorted(data.expressionFields)).toEqual(['variables.next_try_2', 'variables.retry_count'])
+        expect(data.elementTypes).toEqual({ 'variables.next_try_list': ['integer'] })
+        expect(config.secretFields).toEqual(['variables.next_try_2'])
       })
 
       it('refactors a variable referenced inside Variable Setter per-key expression/template values', async () => {
@@ -4115,9 +4284,8 @@ describe('Workflow Store', () => {
               data: {
                 label: 'Var Setter',
                 elementType: 'variable-setter',
-                variableExpressionKeys: ['next_try'],
-                variableTemplateKeys: ['welcome'],
-                variableTypes: { next_try: 'integer', welcome: 'string' },
+                expressionFields: ['variables.next_try'],
+                templateFields: ['variables.welcome'],
                 config: {
                   values: {
                     variables: { next_try: 'attempt + 1', welcome: 'Hi {{ attempt }}', plain: 'attempt' },
@@ -4166,7 +4334,7 @@ describe('Workflow Store', () => {
         expect(useWorkflowStore.getState().nodes[0].data.config).toEqual({ outputBindings: {} })
       })
 
-      it('refactors a Variable Setter target key when the optional key/type lists are absent', async () => {
+      it('refactors a Variable Setter target key when the optional flag lists are absent', async () => {
         const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
         useWorkflowStore.setState({
           variables: [{ id: 'var-1', name: 'x', value: 'lit', type: 'string' }],
@@ -4178,7 +4346,7 @@ describe('Workflow Store', () => {
               data: {
                 label: 'Var Setter',
                 elementType: 'variable-setter',
-                // no variableExpressionKeys / variableTemplateKeys / variableTypes
+                // no expressionFields / templateFields / elementTypes / config.secretFields
                 config: { values: { variables: { x: 'lit' } } },
               },
             },
@@ -4192,9 +4360,10 @@ describe('Workflow Store', () => {
         const vars = (data.config as { values: { variables: Record<string, unknown> } }).values.variables
         expect(vars.y).toBe('lit')
         expect(vars.x).toBeUndefined()
-        expect(data.variableExpressionKeys).toEqual([])
-        expect(data.variableTemplateKeys).toEqual([])
-        expect(data.variableTypes).toEqual({})
+        expect(data.expressionFields ?? []).toEqual([])
+        expect(data.templateFields ?? []).toEqual([])
+        expect(data.elementTypes ?? {}).toEqual({})
+        expect(keysOutsideSharedSlots(data)).toEqual([])
       })
 
       it('does not rename non-expression-field array values', async () => {

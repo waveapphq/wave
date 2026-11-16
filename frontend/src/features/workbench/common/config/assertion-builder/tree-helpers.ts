@@ -2,7 +2,6 @@
  * Assertion Builder - Tree Manipulation Helpers (interleaved format)
  */
 
-import { literalNumberProblem } from '@/features/workbench/lib/validation/number-bounds'
 import type {
   AssertionItem,
   AssertionGroup,
@@ -10,7 +9,6 @@ import type {
   ExpressionAssertion,
   OperatorItem,
 } from './types'
-import { UNARY_OPERATORS } from './types'
 
 /** Non-operator assertion item that can be added to a group or list */
 type AssertionContent = LiteralAssertion | ExpressionAssertion | AssertionGroup
@@ -295,49 +293,5 @@ export function moveAtPath(
       return { ...item, items: moveAtPath(item.items, path.slice(1), direction) }
     }
     return item
-  })
-}
-
-/** A row the author fills in - the AND/OR connectors are not rows. */
-type AssertionRow = Exclude<AssertionItem, OperatorItem>
-
-/** The number type a literal row's compare-to value is held to, as the server reads it, or null. */
-function comparedNumberType(row: LiteralAssertion): 'integer' | 'float' | null {
-  if (row.reference_is_expression || UNARY_OPERATORS.has(row.operator)) return null
-  if (row.value_type === 'integer' || row.value_type === 'float') return row.value_type
-  return row.value_type === 'array' && row.operator === 'length_equals' ? 'integer' : null
-}
-
-/** The message for a literal compare-to value that is no number of its row's type (REQ-3.1.3.14), or null. */
-export function compareToProblem(row: LiteralAssertion): string | null {
-  const type = comparedNumberType(row)
-  return type === null ? null : literalNumberProblem(type, row.reference_value, false)
-}
-
-/** True when a row carries everything it needs to evaluate: a literal needs a
- *  variable and a compare-to value of its type, an expression needs text, a group
- *  needs at least one complete row. */
-export function isAssertionComplete(row: AssertionRow): boolean {
-  switch (row.type) {
-    case 'literal':
-      return row.variable.trim().length > 0 && compareToProblem(row) === null
-    case 'expression':
-      return row.expression.trim().length > 0
-    case 'group':
-      return areAssertionsComplete(row.items)
-  }
-}
-
-/** True when the list holds at least one row and every row is complete. */
-export function areAssertionsComplete(items: AssertionItem[]): boolean {
-  const rows = items.filter((it): it is AssertionRow => it.type !== 'operator')
-  return rows.length > 0 && rows.every(isAssertionComplete)
-}
-
-/** True when no literal row, at any group depth, holds a compare-to value its type refuses. */
-export function compareToValuesValid(items: AssertionItem[]): boolean {
-  return items.every((item) => {
-    if (item.type === 'literal') return compareToProblem(item) === null
-    return item.type !== 'group' || compareToValuesValid(item.items)
   })
 }

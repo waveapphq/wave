@@ -2,14 +2,16 @@
  * The Edit value sheet's nested levels: a List or Map entry opens the same sheet
  * one level deeper, its items typed by their own JSON. A nested Save writes into
  * the entry of the level below; Close discards; a read-only sheet opens its
- * levels read-only; the tenth level opens no deeper List or Map.
+ * levels read-only; the tenth level opens no deeper List or Map. Each level, a
+ * text one with its real code editor too, takes the cursor as it opens.
  *
  * REQ-3.1.3.11: Variable Manager UI panel
  * REQ-3.1.3.19: Declared element types for array and map values
+ * REQ-3.1.1.5: Field values (Sheets Opened from a Sheet, Accessibility)
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('@/features/workbench/api/opensearch-tools', () => ({
@@ -159,6 +161,25 @@ describe('ValueEditorSheet - a List entry opens one level deeper', () => {
     await user.click(sheet(1).getByTestId('array-expand-0'))
     expect(sheet(2).getByTestId('array-edit-input-0')).toHaveValue('1')
     expect(sheet(2).queryAllByTestId(/^array-expr-toggle-/)).toHaveLength(0)
+  })
+})
+
+// The code editor builds its text surface a render after the sheet mounts; the cursor still goes in (CANVAS-227).
+describe('ValueEditorSheet - the cursor goes into the text editor as a level opens', () => {
+  const editorSurface = (level: number) => sheets()[level - 1].querySelector('.cm-content')
+
+  it('puts the cursor in the text editor of a text sheet', async () => {
+    renderSheet({ type: 'string', value: 'hello world' })
+    await waitFor(() => expect(editorSurface(1)).toHaveFocus())
+    expect(editorSurface(1)).toHaveTextContent(/^hello world$/)
+  })
+
+  it('puts the cursor in the text editor of a text item opened one level deeper', async () => {
+    const user = userEvent.setup()
+    renderSheet({ value: ['abc'], elementTypes: ['string'] })
+    await user.click(sheet(1).getByTestId('array-expand-0'))
+    await waitFor(() => expect(editorSurface(2)).toHaveFocus())
+    expect(editorSurface(2)).toHaveTextContent(/^abc$/)
   })
 })
 

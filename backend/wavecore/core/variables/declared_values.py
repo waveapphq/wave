@@ -9,6 +9,10 @@ from wavecore.core.variables.element_types import realize_declared_value
 _EXCLUSIVE_KINDS = "is_expression and is_template are mutually exclusive"
 
 
+class DeclaredKindError(ValueError):
+    """A declaration marked both an Expression and a Template."""
+
+
 @dataclass(frozen=True)
 class DeclaredStart:
     """A realized literal, or an Expression / Template source evaluated at its first read."""
@@ -23,7 +27,7 @@ def declared_start(entry: Mapping[str, Any], value_key: str = "value") -> Declar
     is_expression = bool(entry.get("isExpression"))
     is_template = bool(entry.get("isTemplate"))
     if is_expression and is_template:
-        raise ValueError(_EXCLUSIVE_KINDS)
+        raise DeclaredKindError(_EXCLUSIVE_KINDS)
     var_type = str(entry.get("type") or "")
     source = entry.get(value_key)
     if (is_expression or is_template) and source is None:

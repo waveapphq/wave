@@ -2082,6 +2082,13 @@ class TestAlwaysHardFail:
         with pytest.raises(ValueError, match=exact("File copy timed out after 45 seconds")):
             _run(stream, params)
 
+    def test_a_one_second_timeout_is_named_in_the_singular(self, tmp_path: Any) -> None:
+        stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
+        params = _pull_params(str(tmp_path / "out.txt"), timeout=1)
+
+        with pytest.raises(ValueError, match=exact("File copy timed out after 1 second")):
+            _run(stream, params)
+
     @_BOTH_MODES
     def test_a_timeout_while_reading_the_stream_raises_the_same_message(
         self, on_error: str, tmp_path: Any

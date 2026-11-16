@@ -86,7 +86,9 @@ The server is the FastAPI app `wavecore.api.app:app`. It serves the REST API, th
 ```bash
 # Development mode (config/config.yaml, copied from config/config.example.yaml, enables CORS for
 # localhost:3000). The excludes stop a Python block's script file under data/ or a test edit from
-# restarting the server, which would end a Workbench run.
+# restarting the server, which would end a Workbench run. The server stops with an error at start
+# when data/ does not exist, so a fresh clone creates it first.
+mkdir -p data
 WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reload-exclude "$PWD/data" --reload-exclude "$PWD/tests" --port 8000
 
 # Production mode (a config file of your own with your CORS origins, data folder and secret key)
@@ -123,9 +125,9 @@ wavecore/
 ├── core/           # Business logic and domain models
 ├── logging/        # Logging infrastructure
 ├── mcp/            # MCP server and its tools
-├── models/         # Data models (controls, profiles)
+├── models/         # Data models (controls, plugins)
 ├── plugins/        # Plugin implementations
-└── storage/        # Storage layer for persistence
+└── storage/        # Plugin definitions read from the data folder
 ```
 
 ## Configuration
@@ -232,7 +234,7 @@ who should read the same secrets.
 
 The key is locked in at install: it must stay identical for the life of an instance's data.
 On startup, if the key is missing, malformed, or cannot decrypt existing sealed data, WAVE
-logs the reason at ERROR and exits with a non-zero status rather than running in a state where
+logs the reason at FATAL and exits with a non-zero status rather than running in a state where
 runs hang on undecryptable secrets; for a missing key the message names the command above. Moving data to a new key requires re-encrypting the existing envelopes
 under the new key, not just changing the key.
 

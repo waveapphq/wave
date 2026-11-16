@@ -41,10 +41,8 @@ def _make_node(
     output_bindings: dict[str, str] | None = None,
     expression_fields: list[str] | None = None,
     template_fields: list[str] | None = None,
-    variable_expression_keys: list[str] | None = None,
-    variable_types: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Build a workflowNode dict shaped like the production payload (post-rename)."""
+    """Build a workflowNode dict shaped like the production payload."""
     data: dict[str, Any] = {
         "label": label,
         "elementType": element_type,
@@ -56,8 +54,6 @@ def _make_node(
         },
         "expressionFields": expression_fields or [],
         "templateFields": template_fields or [],
-        "variableExpressionKeys": variable_expression_keys or [],
-        "variableTypes": variable_types or {},
     }
     if description is not None:
         data["description"] = description
@@ -236,7 +232,7 @@ class TestExecuteNodeNameForwarding:
 
 
 class TestEnqueueChildren:
-    """Pre-existing helper is untouched by the rename; smoke-test included for completeness."""
+    """_enqueue_children queues only the targets not yet executed."""
 
     def test_enqueue_children_adds_unexecuted_targets(self) -> None:
         adj: dict[str, list[tuple[str, str | None]]] = {

@@ -34,7 +34,7 @@ vi.mock('@/features/profiles/api/crud', () => ({
   fetchProfileTypeSchema: vi.fn().mockResolvedValue({ type: 'http', fields: [] }),
 }))
 
-vi.mock('@/features/workbench/common/variables/variable-setter-editor', () => ({
+vi.mock('@/features/workbench/common/variables/variable-setter-editor/editor', () => ({
   VariableSetterEditor: () => <div data-testid="variable-setter-editor" />,
 }))
 vi.mock('@/features/workbench/common/editors/xml-query-editor', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/features/workbench/common/editors/xml-query-editor', () => ({
 vi.mock('@/features/workbench/common/editors/json-query-editor', () => ({
   JsonQueryEditor: () => <div data-testid="json-query-editor" />,
 }))
-vi.mock('@/features/workbench/common/config/assertion-builder', () => ({
+vi.mock('@/features/workbench/common/config/assertion-builder/builder', () => ({
   AssertionBuilder: () => <div data-testid="assertion-builder" />,
 }))
 vi.mock('@/features/workbench/common/config/condition-branch-editor', () => ({

@@ -17,6 +17,7 @@ import re
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import total_ordering
 from typing import Any, Literal
 
 from wavecore.models.blocks import BlockDependency
@@ -57,6 +58,7 @@ class InterfaceCompatibilityError(Exception):
 # ============================================================================
 
 
+@total_ordering
 @dataclass
 class SemanticVersion:
     """Parsed semantic version for comparison."""
@@ -83,8 +85,10 @@ class SemanticVersion:
             build=build,
         )
 
-    def __lt__(self, other: "SemanticVersion") -> bool:
+    def __lt__(self, other: object) -> bool:
         """Compare versions for sorting."""
+        if not isinstance(other, SemanticVersion):
+            return NotImplemented
         if (self.major, self.minor, self.patch) != (
             other.major,
             other.minor,

@@ -1,7 +1,8 @@
 /**
  * field-constraints constants tests.
  *
- * Pins the entity-name + test-name caps in the field-constraints module. The
+ * Pins the entity-name + test-name caps in the field-constraints module, and
+ * the one rule for when a capped field shows its counter. The
  * migration-completeness test in
  * `tests/migration/no-bare-inputs-in-target-surfaces.test.ts` reads these
  * values via runtime import and re-asserts them in production source.
@@ -38,5 +39,22 @@ describe('field-constraints (entity + test name caps)', () => {
 describe('field-constraints (version cap)', () => {
   it('MAX_VERSION_LENGTH equals 32 (global Function version cap, sibling of MAX_BLOCK_NAME_LENGTH)', () => {
     expect(fieldConstraints.MAX_VERSION_LENGTH).toBe(32)
+  })
+})
+
+// One rule for every capped field: the counter hides under 80% of the cap, is muted from 80% and destructive at the cap.
+describe('field-constraints (counter state)', () => {
+  it.each([
+    [0, 'hidden'],
+    [51, 'hidden'],
+    [52, 'muted'],
+    [63, 'muted'],
+    [64, 'destructive'],
+  ] as const)('reads %i of 64 as %s', (count, state) => {
+    expect(fieldConstraints.counterState(count, 64)).toBe(state)
+  })
+
+  it('reads 8 of 10 as muted, exactly 80% of the cap', () => {
+    expect(fieldConstraints.counterState(8, 10)).toBe('muted')
   })
 })

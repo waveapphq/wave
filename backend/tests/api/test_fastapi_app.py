@@ -17,6 +17,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply
+
 
 class TestFastAPIApplicationInstance:
     """Test suite for FastAPI application instance creation and configuration."""
@@ -338,16 +340,9 @@ class TestServerIntegration:
         from wavecore.api.app import app
 
         with TestClient(app) as client:
-            # Even without routes, app should handle requests
-            # (might return 404, but shouldn't crash)
-            try:
-                response = client.get("/nonexistent")
-                assert response.status_code in [
-                    404,
-                    200,
-                ], "app must handle requests without crashing"
-            except Exception as e:
-                pytest.fail(f"app must handle HTTP requests without exceptions: {e}")
+            response = client.get("/nonexistent")
+
+        assert response.status_code == 404, "an unknown path must be answered, not crash the app"
 
     def test_app_cors_ready(self) -> None:
         """Test that app is ready for CORS middleware configuration."""
@@ -657,8 +652,8 @@ class TestShutdownCleanup:
                 delattr(app.state, "ws_manager")
 
 
-class TestAsyncImportExportEndpointsRemoved:
-    """The dead async import/export scaffold is unregistered (REQ-5.2.4.9).
+class TestAsyncImportExportEndpointsAnswer404:
+    """No async import/export endpoint is registered (REQ-5.2.4.9).
 
     Every job-based import/export endpoint must return 404: the synchronous
     per-entity import/export routes are the only import/export surface.
@@ -674,45 +669,106 @@ class TestAsyncImportExportEndpointsRemoved:
         "entity",
         ["plugin", "block", "test", "suite", "regression", "profile"],
     )
-    def test_async_entity_export_endpoints_removed(self, client: TestClient, entity: str) -> None:
+    def test_async_entity_export_endpoint_answers_404(
+        self, client: TestClient, entity: str
+    ) -> None:
         """POST /export/{entity}/{id} does not exist."""
         entity_id = "00000000-0000-0000-0000-000000000001"
         response = client.post(f"/export/{entity}/{entity_id}", json={})
 
         assert response.status_code == 404
 
-    def test_async_workspace_export_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_workspace_export_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /export/workspace does not exist."""
         response = client.post("/export/workspace", json={})
 
         assert response.status_code == 404
 
-    def test_async_export_status_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_export_status_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /export/{export_id}/status does not exist."""
         response = client.get("/export/00000000-0000-0000-0000-000000000001/status")
 
         assert response.status_code == 404
 
-    def test_async_export_download_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_export_download_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /export/{export_id}/download does not exist."""
         response = client.get("/export/00000000-0000-0000-0000-000000000001/download")
 
         assert response.status_code == 404
 
-    def test_async_workspace_import_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_workspace_import_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /import/workspace does not exist."""
         response = client.post("/import/workspace", json={})
 
         assert response.status_code == 404
 
-    def test_async_import_validate_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_import_validate_endpoint_answers_404(self, client: TestClient) -> None:
         """POST /import/validate does not exist."""
         response = client.post("/import/validate", json={})
 
         assert response.status_code == 404
 
-    def test_async_import_status_endpoint_removed(self, client: TestClient) -> None:
+    def test_async_import_status_endpoint_answers_404(self, client: TestClient) -> None:
         """GET /import/{import_id}/status does not exist."""
         response = client.get("/import/00000000-0000-0000-0000-000000000001/status")
 
         assert response.status_code == 404
+
+
+class TestARequestThatBreaksItsSchema:
+    """A request that breaks its body or query schema answers 400 in the shared error
+    envelope, with the request id and field-level details (REQ-5.2.3.4)."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "kwargs", "message", "field_errors"),
+        [
+            pytest.param(
+                "POST",
+                "/admin/enable",
+                {"json": {"reason": 5}},
+                "Validation error for 'reason': Input should be a valid string",
+                [
+                    {
+                        "field": "body -> reason",
+                        "reason": "Input should be a valid string",
+                        "type": "string_type",
+                    }
+                ],
+                id="body-field-of-the-wrong-type",
+            ),
+            pytest.param(
+                "GET",
+                "/reports",
+                {"params": {"page": 0}},
+                "Validation error for 'page': Input should be greater than or equal to 1",
+                [
+                    {
+                        "field": "query -> page",
+                        "reason": "Input should be greater than or equal to 1",
+                        "type": "greater_than_equal",
+                    }
+                ],
+                id="query-value-out-of-range",
+            ),
+        ],
+    )
+    def test_the_reply_is_the_shared_envelope(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+        message: str,
+        field_errors: list[dict[str, str]],
+    ) -> None:
+        with patch.dict("os.environ", {"WAVE_ADMIN_ALLOWED": "true"}):
+            response = client.request(method, path, **kwargs)
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+        assert response.json()["error"]["details"] == {"validation_errors": field_errors}

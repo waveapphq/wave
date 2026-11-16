@@ -82,7 +82,7 @@ async function typeExpressionRow(
   const toggle = sheet.locator(`[data-testid="varset-expression-toggle-${index}"]`)
   await toggle.click()
   await expect(toggle).toHaveAttribute('data-state', 'on')
-  const editor = sheet.locator(`[data-testid="param-input-${name}"] .cm-content`)
+  const editor = sheet.locator(`[data-testid="param-input-varset-value-${index}"] .cm-content`)
   await editor.click()
   await page.keyboard.insertText(expression)
   await expect(editor).toHaveText(expression)
@@ -142,8 +142,8 @@ test.describe('V-TABLE-FILTER-NULL: table.filter() on a null cell follows the ch
       expect(setter?.data.config.values.variables, 'the stored Setter rows').toEqual(
         Object.fromEntries(ROWS.map((row) => [row.name, row.expression])),
       )
-      expect([...(setter?.data.variableExpressionKeys ?? [])].sort(), 'every row is an expression').toEqual(
-        ROWS.map((row) => row.name).sort(),
+      expect([...(setter?.data.expressionFields ?? [])].sort(), 'every row is an expression').toEqual(
+        ROWS.map((row) => `variables.${row.name}`).sort(),
       )
       for (const row of ROWS) {
         expect(stored.variables[row.name]?.type, `the Save declares ${row.name}`).toBe('string')

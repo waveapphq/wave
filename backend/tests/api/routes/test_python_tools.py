@@ -7,11 +7,13 @@ Both endpoints introspect a script and never run it:
     POST /python-tools/check    -> {"issues": [{line, column, message}]}
 
 Lines are 1-based and columns 0-based in the request and in the answer alike.
-An interpreter that is an existing executable file path is introspected; any
-other row (empty, a command line, an unresolved expression, a path that is not
-a file) falls back to WAVE's own interpreter.
+An interpreter row whose path starts a Python is introspected; any other row
+(empty, a bare program name, a command line, an unresolved expression, a path
+that is not a file, a file that starts no Python) falls back to WAVE's own
+interpreter.
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -73,6 +75,25 @@ def foreign_interpreter(tmp_path: Path) -> str:
     link = tmp_path / "python3"
     link.symlink_to(sys.executable)
     return str(link)
+
+
+@pytest.fixture(
+    params=["a program that is not Python", "a file that is not executable", "a venv folder"]
+)
+def unusable_interpreter(request: pytest.FixtureRequest, tmp_path: Path) -> str:
+    """A path that exists but starts no Python."""
+    if request.param == "a venv folder":
+        (tmp_path / "bin").mkdir()
+        (tmp_path / "bin" / "python").symlink_to(sys.executable)
+        return str(tmp_path)
+    program = tmp_path / "program"
+    if request.param == "a program that is not Python":
+        program.write_text("#!/bin/sh\nexit 0\n")
+        program.chmod(0o755)
+    else:
+        program.write_text("print(1)\n")
+        program.chmod(0o644)
+    return str(program)
 
 
 def body_for(
@@ -227,7 +248,7 @@ class TestCompletionPosition:
 
 
 class TestCompletionInterpreter:
-    """PYRUN-19: an executable path is introspected, anything else falls back."""
+    """PYRUN-19: a path that starts a Python is introspected, anything else falls back."""
 
     def test_an_existing_executable_path_is_used(
         self, client: TestClient, foreign_interpreter: str
@@ -280,6 +301,42 @@ class TestCompletionInterpreter:
 
         assert executable_of(fallback) == sys.executable
         assert executable_of(fallback) != executable_of(honored)
+
+
+class TestUnusableInterpreter:
+    """A row naming something that starts no Python answers what WAVE's own interpreter does."""
+
+    def test_resolve_environment_falls_back_to_waves_own(self, unusable_interpreter: str) -> None:
+        environment = python_tools_service.resolve_environment(unusable_interpreter)
+
+        assert executable_of(environment) == sys.executable
+
+    def test_completion_answers_waves_own_items(
+        self, client: TestClient, unusable_interpreter: str
+    ) -> None:
+        own = labels_of(post_complete(client, MEMBER_SCRIPT, 2, 3))
+
+        assert "getcwd" in own
+        assert labels_of(post_complete(client, MEMBER_SCRIPT, 2, 3, unusable_interpreter)) == own
+
+    def test_rename_answers_the_edits_of_waves_own(
+        self, client: TestClient, unusable_interpreter: str
+    ) -> None:
+        own = edits_of(post_rename(client, SCOPE_SCRIPT, 2, 4, "total"))
+
+        response = post_rename(client, SCOPE_SCRIPT, 2, 4, "total", unusable_interpreter)
+
+        assert edits_of(response) == own
+
+    def test_a_bare_program_name_is_never_looked_up_on_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "wave-probe-python").symlink_to(sys.executable)
+        monkeypatch.setenv("PATH", f"{tmp_path}{os.pathsep}{os.environ['PATH']}")
+
+        environment = python_tools_service.resolve_environment("wave-probe-python")
+
+        assert executable_of(environment) == sys.executable
 
 
 class TestCompletionFailure:
@@ -358,11 +415,19 @@ class TestRename:
 
         assert_validation_error(response, "Cannot rename: no symbol at the cursor")
 
-    @pytest.mark.parametrize("new_name", ["1bad", "__secret"])
+    @pytest.mark.parametrize("new_name", ["1bad", "class", "__1-bad"])
     def test_an_invalid_new_name_is_refused(self, client: TestClient, new_name: str) -> None:
         response = post_rename(client, SCOPE_SCRIPT, 2, 4, new_name)
 
         assert_validation_error(response, f"Invalid variable name: '{new_name}'")
+
+    @pytest.mark.parametrize("new_name", ["__secret", "__"])
+    def test_a_new_name_with_a_double_underscore_is_refused(
+        self, client: TestClient, new_name: str
+    ) -> None:
+        response = post_rename(client, SCOPE_SCRIPT, 2, 4, new_name)
+
+        assert_validation_error(response, f"Variable names may not start with __: '{new_name}'")
 
 
 class TestSyntaxCheck:

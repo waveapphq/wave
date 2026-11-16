@@ -20,10 +20,22 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
+from wavecore.api.exceptions import ConflictException, ValidationException
 
 
 class TestListRegressionsEndpoint:
@@ -294,7 +306,7 @@ class TestCreateRegressionEndpoint:
         with patch(
             "wavecore.api.routes.regressions.routes.regression_service.create_regression"
         ) as mock_create:
-            mock_create.side_effect = ValueError(
+            mock_create.side_effect = ConflictException(
                 "Regression with name 'Nightly Regression' already exists"
             )
 
@@ -303,12 +315,11 @@ class TestCreateRegressionEndpoint:
                 json={"name": "Nightly Regression"},
             )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert re.match(
-                r"^Regression with name 'Nightly Regression' already exists$",
-                data["error"]["message"],
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Regression with name 'Nightly Regression' already exists",
             )
 
     def test_create_regression_accepts_suite_references(self, client: TestClient) -> None:
@@ -449,7 +460,7 @@ class TestCreateRegressionEndpoint:
             assert response.headers["X-Cache-Invalidated"] == "regressions_list"
 
     def test_create_regression_returns_500_on_internal_error(self, client: TestClient) -> None:
-        """Test that POST /regressions returns 500 with correlation_id on internal error."""
+        """Test that POST /regressions returns the generic 500 with a request id."""
         with patch(
             "wavecore.api.routes.regressions.routes.regression_service.create_regression"
         ) as mock_create:
@@ -460,11 +471,7 @@ class TestCreateRegressionEndpoint:
                 json={"name": "Nightly Regression"},
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["code"] == "INTERNAL_ERROR"
-            assert "correlation_id" in data["error"]
+            assert_internal_error(response, "Database connection failed")
 
 
 class TestGetRegressionEndpoint:
@@ -529,7 +536,7 @@ class TestGetRegressionEndpoint:
         data = response.json()
         assert data["success"] is False
         assert re.match(
-            r"^Invalid regression ID format: 'not-a-valid-uuid' is not a valid UUID$",
+            r"^Invalid UUID format for regression_id: 'not-a-valid-uuid'$",
             data["error"]["message"],
         )
 
@@ -667,7 +674,7 @@ class TestUpdateRegressionEndpoint:
         with patch(
             "wavecore.api.routes.regressions.routes.regression_service.update_regression"
         ) as mock_update:
-            mock_update.side_effect = ValueError(
+            mock_update.side_effect = ConflictException(
                 "Regression with name 'Existing Regression' already exists"
             )
 
@@ -676,7 +683,12 @@ class TestUpdateRegressionEndpoint:
                 json={"name": "Existing Regression"},
             )
 
-            assert response.status_code == 409
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Regression with name 'Existing Regression' already exists",
+            )
 
     def test_update_regression_sets_cache_invalidation_header(self, client: TestClient) -> None:
         """Test that PUT /regressions sets X-Cache-Invalidated header."""
@@ -809,10 +821,10 @@ class TestDeleteRegressionEndpoint:
             assert response.status_code == 204
             assert "X-Cache-Invalidated" in response.headers
 
-    def test_delete_regression_returns_400_for_generic_value_error(
+    def test_delete_regression_returns_500_for_an_unexpected_value_error(
         self, client: TestClient
     ) -> None:
-        """Test that DELETE returns 400 for generic ValueError from service."""
+        """Test that DELETE answers the generic 500 for an unexpected ValueError from service."""
         regression_id = str(uuid.uuid4())
 
         with patch(
@@ -822,10 +834,7 @@ class TestDeleteRegressionEndpoint:
 
             response = client.delete(f"/regressions/{regression_id}")
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "Some generic validation error" in data["error"]["message"]
+            assert_internal_error(response, "Some generic validation error")
 
 
 class TestListRegressionVersionsEndpoint:
@@ -926,16 +935,16 @@ class TestAddRegressionVersionEndpoint:
         with patch(
             "wavecore.api.routes.regressions.version_routes._reg_version_svc.add_regression_version"
         ) as mock_add:
-            mock_add.side_effect = ValueError(
-                "Suite reference validation failed: suite 'abc123' not found"
-            )
+            mock_add.side_effect = ValidationException("Suite with ID 'abc123' not found")
 
             response = client.post(
                 f"/regressions/{regression_id}/versions",
                 json={"suites": ["abc123"]},
             )
 
-            assert response.status_code == 400
+            assert_error_reply(
+                response, 400, "VALIDATION_ERROR", "Suite with ID 'abc123' not found"
+            )
 
     def test_add_version_returns_404_when_regression_not_found(self, client: TestClient) -> None:
         """Test that POST /regressions/{id}/versions returns 404 when not found."""
@@ -1010,11 +1019,12 @@ class TestGetRegressionVersionEndpoint:
 
         response = client.get(f"/regressions/{regression_id}/versions/invalid")
 
-        assert response.status_code == 400
-        data = response.json()
-        assert re.match(
-            r"^Invalid version format: 'invalid' must follow semantic versioning$",
-            data["error"]["message"],
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid version format 'invalid': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)",
         )
 
     def test_get_version_sets_long_cache_ttl_for_historical(self, client: TestClient) -> None:
@@ -1099,14 +1109,14 @@ class TestUpdateRegressionVersionEndpoint:
 
             assert response.status_code == 404
 
-    def test_update_version_returns_400_for_published_version(self, client: TestClient) -> None:
-        """Test that PUT returns 400 when attempting to update published version."""
+    def test_update_version_returns_409_for_published_version(self, client: TestClient) -> None:
+        """Test that PUT returns 409 when attempting to update published version."""
         regression_id = str(uuid.uuid4())
 
         with patch(
             "wavecore.api.routes.regressions.version_routes._reg_version_svc.update_regression_version"
         ) as mock_update:
-            mock_update.side_effect = ValueError(
+            mock_update.side_effect = ConflictException(
                 "Cannot modify published version '1.0.0': version is immutable"
             )
 
@@ -1115,9 +1125,12 @@ class TestUpdateRegressionVersionEndpoint:
                 json={"description": "Updated"},
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert "immutable" in data["error"]["message"]
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Cannot modify published version '1.0.0': version is immutable",
+            )
 
     def test_update_version_supports_optimistic_concurrency(self, client: TestClient) -> None:
         """Test that PUT /regressions/{id}/versions/{version} supports If-Match header."""
@@ -1146,23 +1159,6 @@ class TestUpdateRegressionVersionEndpoint:
             )
 
             assert response.status_code in [200, 412]
-
-    def test_update_version_returns_412_on_etag_mismatch(self, client: TestClient) -> None:
-        """Test that PUT /regressions/{id}/versions/{version} returns 412 on ETag mismatch."""
-        regression_id = str(uuid.uuid4())
-
-        with patch(
-            "wavecore.api.routes.regressions.version_routes._reg_version_svc.update_regression_version"
-        ) as mock_update:
-            mock_update.side_effect = ValueError("Precondition failed: ETag mismatch")
-
-            response = client.put(
-                f"/regressions/{regression_id}/versions/1.0.0",
-                json={"description": "Updated"},
-                headers={"If-Match": '"stale-etag"'},
-            )
-
-            assert response.status_code == 412
 
 
 class TestDeleteRegressionVersionEndpoint:
@@ -1208,15 +1204,18 @@ class TestDeleteRegressionVersionEndpoint:
         with patch(
             "wavecore.api.routes.regressions.version_routes._reg_version_svc.delete_regression_version"
         ) as mock_delete:
-            mock_delete.side_effect = ValueError(
-                "Cannot delete version '1.0.0': 3 scheduled executions reference this version"
+            mock_delete.side_effect = ConflictException(
+                "Cannot delete version '1.0.0': scheduled executions reference this version"
             )
 
             response = client.delete(f"/regressions/{regression_id}/versions/1.0.0")
 
-            assert response.status_code == 409
-            data = response.json()
-            assert "scheduled executions" in data["error"]["message"]
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Cannot delete version '1.0.0': scheduled executions reference this version",
+            )
 
 
 class TestRegressionVariableManagement:
@@ -1362,6 +1361,15 @@ class TestRegressionVariableManagement:
             assert data["data"]["variables"]["api_key"]["masked"] is True
 
 
+def _member_suite(client: TestClient) -> str:
+    """A stored suite a regression can list."""
+    return str(client.post("/suites", json={"name": "Member Suite"}).json()["data"]["id"])
+
+
+def _listed_twice(suite_id: str) -> str:
+    return f"Suite with ID '{suite_id}' is listed more than once"
+
+
 class TestRegressionValidation:
     """Test suite for regression validation operations."""
 
@@ -1374,52 +1382,87 @@ class TestRegressionValidation:
 
     def test_create_regression_validates_suite_references(self, client: TestClient) -> None:
         """Test that create validates all suite references exist."""
-        with patch(
-            "wavecore.api.routes.regressions.routes.regression_service.create_regression"
-        ) as mock_create:
-            mock_create.side_effect = ValueError(
-                "Suite reference validation failed: suite 'abc123' not found"
-            )
+        response = client.post(
+            "/regressions",
+            json={
+                "name": "Nightly Regression",
+                "suites": ["abc123"],
+            },
+        )
 
-            response = client.post(
-                "/regressions",
-                json={
-                    "name": "Nightly Regression",
-                    "suites": ["abc123"],
-                },
-            )
-
-            assert response.status_code == 400
-            data = response.json()
-            assert "suite 'abc123' not found" in data["error"]["message"]
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Suite with ID 'abc123' not found")
 
     def test_create_regression_validates_ordering_consistency(self, client: TestClient) -> None:
-        """Test that create validates no gaps or duplicates in suite ordering."""
-        suite_id = str(uuid.uuid4())
+        """A create that lists one suite twice is refused and saves nothing."""
+        suite_id = _member_suite(client)
 
-        with patch(
-            "wavecore.api.routes.regressions.routes.regression_service.create_regression"
-        ) as mock_create:
-            mock_create.side_effect = ValueError(
-                "Ordering validation failed: duplicate suite ID in order list"
-            )
+        response = client.post(
+            "/regressions",
+            json={"name": "Nightly Regression", "suites": [suite_id, suite_id]},
+        )
 
-            response = client.post(
-                "/regressions",
-                json={
-                    "name": "Nightly Regression",
-                    "suites": [suite_id, suite_id],
-                },
-            )
+        assert_error_reply(response, 400, "VALIDATION_ERROR", _listed_twice(suite_id))
+        assert client.get("/regressions").json()["data"] == []
 
-            assert response.status_code == 400
+    @pytest.mark.parametrize(
+        ("method", "suffix"), [("PUT", ""), ("POST", "/versions")], ids=["update", "add-version"]
+    )
+    def test_a_save_that_lists_a_suite_twice_is_refused(
+        self, client: TestClient, method: str, suffix: str
+    ) -> None:
+        """An update or a new version that lists one suite twice is refused and changes nothing."""
+        from tests.api.regression_test_helpers import load_regression_file
+
+        suite_id = _member_suite(client)
+        created = client.post(
+            "/regressions", json={"name": "Nightly Regression", "suites": [suite_id]}
+        )
+        regression_id = created.json()["data"]["id"]
+        stored = load_regression_file(regression_id)
+
+        response = client.request(
+            method, f"/regressions/{regression_id}{suffix}", json={"suites": [suite_id, suite_id]}
+        )
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", _listed_twice(suite_id))
+        assert load_regression_file(regression_id) == stored
+
+    def test_a_new_version_naming_an_unknown_suite_is_refused(self, client: TestClient) -> None:
+        """A new version that lists a suite ID that matches nothing is refused by its ID."""
+        created = client.post("/regressions", json={"name": "Nightly Regression"})
+        regression_id = created.json()["data"]["id"]
+
+        response = client.post(f"/regressions/{regression_id}/versions", json={"suites": [7]})
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Suite with ID '7' not found")
+
+    @pytest.mark.parametrize("suites", [5, None, True, "abc"])
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("POST", None), ("PUT", ""), ("POST", "/versions")],
+        ids=["create", "update", "add-version"],
+    )
+    def test_suites_that_are_not_a_list_are_a_bad_request(
+        self, client: TestClient, method: str, suffix: str | None, suites: Any
+    ) -> None:
+        """A save whose suites field is not a list is refused with 400, never a server error."""
+        path = "/regressions"
+        if suffix is not None:
+            created = client.post("/regressions", json={"name": "Nightly Regression"})
+            path = f"/regressions/{created.json()['data']['id']}{suffix}"
+
+        response = client.request(method, path, json={"name": "Listed", "suites": suites})
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "'suites' must be a list of ID strings"
+        )
 
     def test_create_regression_validates_variable_binding(self, client: TestClient) -> None:
         """Test that create validates variable type consistency at boundaries."""
         with patch(
             "wavecore.api.routes.regressions.routes.regression_service.create_regression"
         ) as mock_create:
-            mock_create.side_effect = ValueError(
+            mock_create.side_effect = ValidationException(
                 "Variable binding validation failed: type mismatch for 'timeout'"
             )
 
@@ -1433,14 +1476,19 @@ class TestRegressionValidation:
                 },
             )
 
-            assert response.status_code == 400
+            assert_error_reply(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Variable binding validation failed: type mismatch for 'timeout'",
+            )
 
     def test_create_regression_enforces_naming_uniqueness(self, client: TestClient) -> None:
         """Test that create enforces naming uniqueness (REQ-5.2.4.5)."""
         with patch(
             "wavecore.api.routes.regressions.routes.regression_service.create_regression"
         ) as mock_create:
-            mock_create.side_effect = ValueError(
+            mock_create.side_effect = ConflictException(
                 "Regression with name 'Existing Regression' already exists"
             )
 
@@ -1449,7 +1497,12 @@ class TestRegressionValidation:
                 json={"name": "Existing Regression"},
             )
 
-            assert response.status_code == 409
+            assert_error_reply(
+                response,
+                409,
+                "CONFLICT",
+                "Regression with name 'Existing Regression' already exists",
+            )
 
 
 class TestRegressionEndpointInvalidUUIDErrors:
@@ -1469,7 +1522,7 @@ class TestRegressionEndpointInvalidUUIDErrors:
         assert response.status_code == 400
         data = response.json()
         assert re.match(
-            r"^Invalid regression ID format: 'invalid-uuid' is not a valid UUID$",
+            r"^Invalid UUID format for regression_id: 'invalid-uuid'$",
             data["error"]["message"],
         )
 
@@ -1482,12 +1535,16 @@ class TestRegressionEndpointInvalidUUIDErrors:
 
         assert response.status_code == 400
 
-    def test_delete_regression_returns_404_for_invalid_uuid(self, client: TestClient) -> None:
-        """Test DELETE /regressions/{id} returns 404 for invalid UUID (not found)."""
-        # Delete skips UUID validation so invalid IDs can be cleaned up; unknown IDs get 404.
+    def test_delete_regression_returns_400_for_invalid_uuid(self, client: TestClient) -> None:
+        """Test DELETE /regressions/{id} returns 400 for invalid UUID."""
         response = client.delete("/regressions/invalid-uuid")
 
-        assert response.status_code == 404
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid UUID format for regression_id: 'invalid-uuid'",
+        )
 
 
 class TestRegressionCachingBehavior:
@@ -1585,19 +1642,30 @@ class TestRegressionOptimisticConcurrency:
     def test_update_regression_returns_412_on_etag_mismatch(self, client: TestClient) -> None:
         """Test that update returns 412 when ETag doesn't match."""
         regression_id = str(uuid.uuid4())
+        stored = {"id": regression_id, "version": "1.0.0", "updated_at": "2026-01-01T00:00:00"}
 
-        with patch(
-            "wavecore.api.routes.regressions.routes.regression_service.update_regression"
-        ) as mock_update:
-            mock_update.side_effect = ValueError("Precondition failed: ETag mismatch")
-
+        with (
+            patch(
+                "wavecore.api.routes.regressions.routes.regression_service.get_regression",
+                return_value=stored,
+            ),
+            patch(
+                "wavecore.api.routes.regressions.routes.regression_service.update_regression"
+            ) as mock_update,
+        ):
             response = client.put(
                 f"/regressions/{regression_id}",
                 json={"name": "Updated Regression"},
                 headers={"If-Match": '"stale-etag"'},
             )
 
-            assert response.status_code == 412
+            assert_error_reply(
+                response,
+                412,
+                "PRECONDITION_REQUIRED",
+                "Precondition failed: resource has been modified",
+            )
+            mock_update.assert_not_called()
 
     def test_delete_regression_with_if_match_header(self, client: TestClient) -> None:
         """Test that delete supports If-Match header for concurrency control."""
@@ -1618,18 +1686,29 @@ class TestRegressionOptimisticConcurrency:
     def test_delete_regression_returns_412_on_etag_mismatch(self, client: TestClient) -> None:
         """Test that delete returns 412 when ETag doesn't match."""
         regression_id = str(uuid.uuid4())
+        stored = {"id": regression_id, "version": "1.0.0", "updated_at": "2026-01-01T00:00:00"}
 
-        with patch(
-            "wavecore.api.routes.regressions.routes.regression_service.delete_regression"
-        ) as mock_delete:
-            mock_delete.side_effect = ValueError("Precondition failed: ETag mismatch")
-
+        with (
+            patch(
+                "wavecore.api.routes.regressions.routes.regression_service.get_regression",
+                return_value=stored,
+            ),
+            patch(
+                "wavecore.api.routes.regressions.routes.regression_service.delete_regression"
+            ) as mock_delete,
+        ):
             response = client.delete(
                 f"/regressions/{regression_id}",
                 headers={"If-Match": '"stale-etag"'},
             )
 
-            assert response.status_code == 412
+            assert_error_reply(
+                response,
+                412,
+                "PRECONDITION_REQUIRED",
+                "Precondition failed: resource has been modified",
+            )
+            mock_delete.assert_not_called()
 
 
 class TestRegressionResponseEnvelope:
@@ -1821,11 +1900,12 @@ class TestRegressionValidationEdgeCases:
         """Test that list_regression_versions returns 400 for invalid UUID."""
         response = client.get("/regressions/not-a-uuid/versions")
 
-        assert response.status_code == 400
-        data = response.json()
-        assert data["success"] is False
-        assert "Invalid" in data["error"]["message"]
-        assert data["error"]["code"] == "INVALID_PARAMETER"
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid UUID format for regression_id: 'not-a-uuid'",
+        )
 
     def test_get_version_applies_cache_header_for_historical_version(
         self, client: TestClient
@@ -1863,10 +1943,10 @@ class TestRegressionValidationEdgeCases:
             assert response.status_code == 200
             assert response.headers.get("Cache-Control") == "max-age=3600"
 
-    def test_update_version_returns_400_for_generic_validation_error(
+    def test_update_version_returns_500_for_an_unexpected_value_error(
         self, client: TestClient
     ) -> None:
-        """Test that update_regression_version returns 400 for generic validation error."""
+        """Test that update_regression_version hides an unexpected ValueError behind a 500."""
         regression_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
 
@@ -1885,7 +1965,6 @@ class TestRegressionValidationEdgeCases:
                 "created_at": now,
                 "updated_at": now,
             }
-            # Raise a generic ValueError (not about precondition or immutable)
             mock_update.side_effect = ValueError("Invalid field value")
 
             response = client.put(
@@ -1893,15 +1972,12 @@ class TestRegressionValidationEdgeCases:
                 json={"notes": "test"},
             )
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "Invalid field value" in data["error"]["message"]
+            assert_internal_error(response, "Invalid field value")
 
-    def test_delete_version_returns_400_for_generic_validation_error(
+    def test_delete_version_returns_500_for_an_unexpected_value_error(
         self, client: TestClient
     ) -> None:
-        """Test that delete_regression_version returns 400 for generic validation error."""
+        """Test that delete_regression_version hides an unexpected ValueError behind a 500."""
         regression_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
 
@@ -1920,15 +1996,11 @@ class TestRegressionValidationEdgeCases:
                 "created_at": now,
                 "updated_at": now,
             }
-            # Raise a generic ValueError (not about dependencies)
             mock_delete.side_effect = ValueError("Invalid version format")
 
             response = client.delete(f"/regressions/{regression_id}/versions/1.0.0")
 
-            assert response.status_code == 400
-            data = response.json()
-            assert data["success"] is False
-            assert "Invalid version format" in data["error"]["message"]
+            assert_internal_error(response, "Invalid version format")
 
 
 class TestListRegressionTagsEndpoint:
@@ -2213,3 +2285,698 @@ class TestARegressionBodyThatIsNotAJsonObject:
         assert response.status_code == 400, response.json()
         assert response.json()["error"]["message"] == message
         update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/regressions/{id}/clone", id="clone"),
+            pytest.param("POST", "/regressions/export", id="export"),
+            pytest.param("POST", "/regressions/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/regressions/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestARegressionBatchBodyThatIsNotAJsonArray:
+    """A Regression batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("DELETE", "/regressions/batch", id="delete"),
+            pytest.param("POST", "/regressions/batch/clone", id="clone"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)
+
+
+class TestARegressionBatchItemThatIsNotAnId:
+    """A Regression batch item that is not an ID string fails; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/regressions", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_fails(self, client: TestClient, item: Any) -> None:
+        regression_id = self._create(client)
+
+        response = client.request("DELETE", "/regressions/batch", json=[item, regression_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [regression_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_clone_item_fails(self, client: TestClient, item: Any) -> None:
+        regression_id = self._create(client)
+
+        response = client.post("/regressions/batch/clone", json=[item, regression_id])
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
+        assert [entry["original_id"] for entry in body["cloned"]] == [regression_id]
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A regression whose stored version is not MAJOR.MINOR.PATCH refuses a change with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create FastAPI test client."""
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions")],
+        ids=["update", "add-version"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.regression_test_helpers import (
+            load_regression_file,
+            save_regression_file,
+        )
+
+        created = client.post("/regressions", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        regression_id = created.json()["data"]["id"]
+        stored = load_regression_file(regression_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_regression_file(stored)
+
+        response = client.request(
+            method, f"/regressions/{regression_id}{suffix}", json={"description": "x"}
+        )
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression_id) == stored
+
+
+_INTERNAL_TEXT = "internal regression detail that stays in the server log"
+_MISSING_ID = "6f1c2b9e-4d3a-4c5b-9e8f-000000000392"
+
+
+def _raise_internal(*_args: Any, **_kwargs: Any) -> Any:
+    raise ValueError(_INTERNAL_TEXT)
+
+
+class TestARegressionRouteFault:
+    """An unexpected fault behind a Regression route answers the generic 500, never its text."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("module", "function", "method", "path", "kwargs"),
+        [
+            pytest.param("service", "list_regressions", "GET", "/regressions", {}, id="list"),
+            pytest.param(
+                "service",
+                "create_regression",
+                "POST",
+                "/regressions",
+                {"json": {"name": "Fault Regression"}},
+                id="create",
+            ),
+            pytest.param("service", "get_regression", "GET", "/regressions/{id}", {}, id="get"),
+            pytest.param(
+                "service",
+                "update_regression",
+                "PUT",
+                "/regressions/{id}",
+                {"json": {"description": "x"}},
+                id="update",
+            ),
+            pytest.param(
+                "service", "delete_regression", "DELETE", "/regressions/{id}", {}, id="delete"
+            ),
+            pytest.param(
+                "version_service",
+                "list_regression_versions",
+                "GET",
+                "/regressions/{id}/versions",
+                {},
+                id="list-versions",
+            ),
+            pytest.param(
+                "version_service",
+                "add_regression_version",
+                "POST",
+                "/regressions/{id}/versions",
+                {"json": {}},
+                id="add-version",
+            ),
+            pytest.param(
+                "version_service",
+                "get_regression_version",
+                "GET",
+                "/regressions/{id}/versions/1.0.0",
+                {},
+                id="get-version",
+            ),
+            pytest.param(
+                "version_service",
+                "update_regression_version",
+                "PUT",
+                "/regressions/{id}/versions/1.0.0",
+                {"json": {}},
+                id="update-version",
+            ),
+            pytest.param(
+                "version_service",
+                "delete_regression_version",
+                "DELETE",
+                "/regressions/{id}/versions/1.0.0",
+                {},
+                id="delete-version",
+            ),
+            pytest.param(
+                "service",
+                "get_regression_suites_with_tests",
+                "GET",
+                "/regressions/{id}/suites",
+                {},
+                id="suites",
+            ),
+            pytest.param(
+                "version_service",
+                "clone_regression",
+                "POST",
+                "/regressions/{id}/clone",
+                {"json": {}},
+                id="clone",
+            ),
+        ],
+    )
+    def test_answers_the_generic_internal_error(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        module: str,
+        function: str,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+    ) -> None:
+        from importlib import import_module
+
+        monkeypatch.setattr(
+            import_module(f"wavecore.api.services.regressions.{module}"), function, _raise_internal
+        )
+
+        response = client.request(method, path.format(id=_MISSING_ID), **kwargs)
+
+        assert_internal_error(response, _INTERNAL_TEXT)
+
+
+_BAD_REGRESSION_ID = "Invalid UUID format for regression_id: 'not-a-uuid'"
+_NO_REGRESSION = f"Regression with ID '{_MISSING_ID}' not found"
+_NO_REGRESSION_VERSION = f"Version '1.0.0' not found for regression '{_MISSING_ID}'"
+_BAD_REGRESSION_NAME = (
+    "Regression name 'Bad@Name' violates naming convention: must contain only "
+    "alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses"
+)
+
+
+def _variable_type_message() -> str:
+    from wavecore.api.routes.shared import VALID_VAR_TYPES
+
+    return (
+        "Invalid variable type 'bogus' for variable 'x'. "
+        f"Allowed types: {', '.join(VALID_VAR_TYPES)}"
+    )
+
+
+class TestARegressionRefusalReply:
+    """A Regression refusal answers in the shared error envelope with status, code and message."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/regressions", json={"name": f"Reply {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize(
+        ("method", "path", "kwargs", "status", "code", "message"),
+        [
+            pytest.param(
+                "GET",
+                "/regressions?status=bogus",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid status filter: 'bogus' must be one of: passed, failed, never_run",
+                id="list-bad-status",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions?sort=a:b:c",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid sort format: 'a:b:c'. Use 'field:direction'",
+                id="list-bad-sort-format",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions?sort=bogus",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid sort field: 'bogus' must be one of: name, version, status, last_run, "
+                "suites_count, tests_count",
+                id="list-bad-sort-field",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions?sort=name:up",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid sort direction: 'up' must be 'asc' or 'desc'",
+                id="list-bad-sort-direction",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' is required",
+                id="create-no-name",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions",
+                {"json": {"name": ""}},
+                400,
+                "VALIDATION_ERROR",
+                "Regression name must be between 1 and 255 characters",
+                id="create-empty-name",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions",
+                {"json": {"name": 5}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' must be a string",
+                id="create-name-not-a-string",
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/{id}",
+                {"json": {"name": ["x"]}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' must be a string",
+                id="update-name-not-a-string",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/{id}/clone",
+                {"json": {"name": 5}},
+                400,
+                "VALIDATION_ERROR",
+                "Field 'name' must be a string",
+                id="clone-name-not-a-string",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions",
+                {"json": {"name": "Bad@Name"}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_NAME,
+                id="create-bad-name",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions",
+                {
+                    "json": {
+                        "name": "Computed",
+                        "variables": {"x": {"computed": True, "expression": "{{ a"}},
+                    }
+                },
+                400,
+                "VALIDATION_ERROR",
+                "Invalid expression syntax for computed variable 'x': unclosed template tag",
+                id="create-unclosed-expression",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/not-a-uuid",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="get-bad-id",
+            ),
+            pytest.param(
+                "GET", "/regressions/{id}", {}, 404, "NOT_FOUND", _NO_REGRESSION, id="get-missing"
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/not-a-uuid",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="update-bad-id",
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/{id}",
+                {"json": {"description": "x"}},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="update-missing",
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/{id}",
+                {"json": {"name": "Bad@Name"}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_NAME,
+                id="update-bad-name",
+            ),
+            pytest.param(
+                "DELETE",
+                "/regressions/{id}",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="delete-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/not-a-uuid/versions",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="list-versions-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/{id}/versions",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="list-versions-missing",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/not-a-uuid/versions",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="add-version-bad-id",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/{id}/versions",
+                {"json": {}},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="add-version-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/not-a-uuid/versions/1.0.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="get-version-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/{id}/versions/1.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                "Invalid version format '1.0': "
+                "must follow semantic versioning (MAJOR.MINOR.PATCH)",
+                id="get-version-bad-version",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/{id}/versions/1.0.0",
+                {},
+                404,
+                "NOT_FOUND",
+                f"Regression version '1.0.0' not found for regression '{_MISSING_ID}'",
+                id="get-version-missing",
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/not-a-uuid/versions/1.0.0",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="update-version-bad-id",
+            ),
+            pytest.param(
+                "PUT",
+                "/regressions/{id}/versions/1.0.0",
+                {"json": {}},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION_VERSION,
+                id="update-version-missing",
+            ),
+            pytest.param(
+                "DELETE",
+                "/regressions/not-a-uuid/versions/1.0.0",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="delete-version-bad-id",
+            ),
+            pytest.param(
+                "DELETE",
+                "/regressions/{id}/versions/1.0.0",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION_VERSION,
+                id="delete-version-missing",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/not-a-uuid/suites",
+                {},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="suites-bad-id",
+            ),
+            pytest.param(
+                "GET",
+                "/regressions/{id}/suites",
+                {},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="suites-missing",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/not-a-uuid/clone",
+                {"json": {}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_ID,
+                id="clone-bad-id",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/{id}/clone",
+                {"json": {"name": "Bad@Name"}},
+                400,
+                "VALIDATION_ERROR",
+                _BAD_REGRESSION_NAME,
+                id="clone-bad-name",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/{id}/clone",
+                {"json": {}},
+                404,
+                "NOT_FOUND",
+                _NO_REGRESSION,
+                id="clone-missing",
+            ),
+        ],
+    )
+    def test_answers_in_the_shared_envelope(
+        self,
+        client: TestClient,
+        method: str,
+        path: str,
+        kwargs: dict[str, Any],
+        status: int,
+        code: str,
+        message: str,
+    ) -> None:
+        response = client.request(method, path.format(id=_MISSING_ID), **kwargs)
+
+        assert_error_reply(response, status, code, message)
+
+    def test_an_unknown_variable_type_is_refused(self, client: TestClient) -> None:
+        response = client.post(
+            "/regressions", json={"name": "Typed", "variables": {"x": {"type": "bogus"}}}
+        )
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", _variable_type_message())
+
+    @pytest.mark.parametrize("method", ["PUT", "DELETE"])
+    def test_a_stale_if_match_is_a_failed_precondition(
+        self, client: TestClient, method: str
+    ) -> None:
+        regression_id = self._create(client)
+        before = client.get(f"/regressions/{regression_id}").json()["data"]
+
+        response = client.request(
+            method,
+            f"/regressions/{regression_id}",
+            headers={"If-Match": '"stale"'},
+            json={"description": "Changed"},
+        )
+
+        assert_error_reply(
+            response,
+            412,
+            "PRECONDITION_REQUIRED",
+            "Precondition failed: resource has been modified",
+        )
+        after = client.get(f"/regressions/{regression_id}").json()["data"]
+        assert after["description"] == before["description"]
+        assert after["version"] == before["version"]
+
+    def test_a_stale_if_match_on_a_version_update_is_a_failed_precondition(
+        self, client: TestClient
+    ) -> None:
+        regression_id = self._create(client)
+        before = client.get(f"/regressions/{regression_id}").json()["data"]
+
+        response = client.put(
+            f"/regressions/{regression_id}/versions/1.0.0",
+            headers={"If-Match": '"stale"'},
+            json={"description": "Changed"},
+        )
+
+        assert_error_reply(
+            response,
+            412,
+            "PRECONDITION_REQUIRED",
+            "Precondition failed: resource has been modified",
+        )
+        assert client.get(f"/regressions/{regression_id}").json()["data"] == before
+
+    def test_the_current_if_match_on_a_version_update_is_accepted(self, client: TestClient) -> None:
+        regression_id = self._create(client)
+        etag = client.get(f"/regressions/{regression_id}").headers["ETag"]
+
+        response = client.put(
+            f"/regressions/{regression_id}/versions/1.0.0",
+            headers={"If-Match": etag},
+            json={"description": "Changed"},
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["description"] == "Changed"
+
+
+class TestAnUnexpectedFaultOnARegressionBatchItem:
+    """A fault on a Regression batch item fails it with the generic text, never its own."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "patched", "answer_key"),
+        [
+            pytest.param(
+                "DELETE",
+                "/regressions/batch",
+                "wavecore.api.services.regressions.service.delete_regression",
+                "deleted",
+                id="delete",
+            ),
+            pytest.param(
+                "POST",
+                "/regressions/batch/clone",
+                "wavecore.api.services.regressions.version_service.clone_regression",
+                "cloned",
+                id="clone",
+            ),
+        ],
+    )
+    def test_it_fails_with_the_generic_message(
+        self, client: TestClient, method: str, path: str, patched: str, answer_key: str
+    ) -> None:
+        from tests.api.error_reply_support import INTERNAL_ERROR_MESSAGE
+
+        internal_text = "internal regression batch fault"
+        regression_id = str(uuid.uuid4())
+        with patch(patched, side_effect=ValueError(internal_text)):
+            response = client.request(method, path, json=[regression_id])
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {
+            answer_key: [],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+        }
+        assert internal_text not in response.text

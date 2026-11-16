@@ -65,6 +65,8 @@ STOP_BOUND = 3.0
 TIMEOUT = 1
 # The whole block, cleanup included, ends this soon after Timeout, far below the 30 s stall.
 TIMEOUT_BOUND = TIMEOUT + 2.0
+# The far host a session opened on an SSH tunnel's Local Port identifies with (SSH-8).
+TUNNEL_FAR_HOST = "files.internal"
 
 
 def _exact(message: str) -> str:
@@ -103,16 +105,16 @@ def _not_found(session_id: str) -> str:
     return f"SSH session '{session_id}' not found or already closed"
 
 
-def _unavailable(detail: str) -> str:
-    return f"SFTP is not available on {SFTP_HOST} through SSH session '{SESSION_ID}': {detail}"
+def _unavailable(detail: str, host: str = SFTP_HOST) -> str:
+    return f"SFTP is not available on {host} through SSH session '{SESSION_ID}': {detail}"
 
 
 def _unsafe(name: str, folder: str) -> str:
     return f"Unsafe entry name {name!r} in {folder} on the SFTP server: {UNSAFE_RULE}"
 
 
-def _lost(operation: str, detail: str) -> str:
-    return f"SSH session '{SESSION_ID}' to {SFTP_HOST} was lost during {operation}: {detail}"
+def _lost(operation: str, detail: str, host: str = SFTP_HOST) -> str:
+    return f"SSH session '{SESSION_ID}' to {host} was lost during {operation}: {detail}"
 
 
 def _seed(folder: Path, files: dict[str, str]) -> Path:
@@ -484,6 +486,32 @@ class TestServerSideFailures:
         assert ep.tree("/inbound") == []
 
 
+class TestASessionOnATunnelsLocalPort:
+    """The session's SSH host is named as the session identifies it: the tunnel's far host."""
+
+    async def test_sftp_unavailable_names_the_far_host(
+        self, sftp_server: SFTPServerStarter, log: LogRecorder
+    ) -> None:
+        ep = await sftp_server(subsystem=False, host_identity=TUNNEL_FAR_HOST)
+        message = _unavailable("Session request failed", TUNNEL_FAR_HOST)
+        with pytest.raises(ValueError, match=_exact(message)):
+            await ep.run(ep.params("list", path="/"), log)
+        assert log == []
+
+    async def test_a_lost_session_names_the_far_host(
+        self, sftp_server: SFTPServerStarter, log: LogRecorder
+    ) -> None:
+        ep = await sftp_server(DropsOnRead, host_identity=TUNNEL_FAR_HOST)
+        ep.write("/outbound/a.txt", "alpha")
+        params = ep.params(
+            "download", source="/outbound/a.txt", destination="got.txt", on_error="record"
+        )
+        message = _lost("Download", "Connection closed", TUNNEL_FAR_HOST)
+        outputs = await ep.run(params, log)
+        assert _plain(outputs) == _recorded("download", message, "ConnectionLost")
+        assert log == [_warned("download", "ConnectionLost", message)]
+
+
 class TestWaveSideFailures:
     """WAVE disk errors and resolver refusals name the WAVE side and follow On error."""
 
@@ -619,9 +647,7 @@ class TestTimeout:
         params = _mid_transfer_download(ep, timeout=TIMEOUT)
         async with _stalled(ep, params, log) as task:
             await _ends_within(task, TIMEOUT_BOUND)
-            with pytest.raises(
-                ValueError, match=_exact("Download did not finish within 1 seconds")
-            ):
+            with pytest.raises(ValueError, match=_exact("Download did not finish within 1 second")):
                 task.result()
             assert tree(ep.wave.home) == ["in/", "in/outbound/", "in/outbound/a.txt"]
             assert log == []
@@ -632,7 +658,7 @@ class TestTimeout:
     ) -> None:
         ep = await sftp_server(SlowRead)
         params = _mid_transfer_download(ep, timeout=TIMEOUT, on_error="record")
-        message = "Download did not finish within 1 seconds"
+        message = "Download did not finish within 1 second"
         async with _stalled(ep, params, log) as task:
             await _ends_within(task, TIMEOUT_BOUND)
             landed = ep.wave.home / "in" / "outbound" / "a.txt"
@@ -649,7 +675,7 @@ class TestTimeout:
         params = _mid_transfer_upload(ep, timeout=TIMEOUT)
         async with _stalled(ep, params, log) as task:
             await _ends_within(task, TIMEOUT_BOUND)
-            with pytest.raises(ValueError, match=_exact("Upload did not finish within 1 seconds")):
+            with pytest.raises(ValueError, match=_exact("Upload did not finish within 1 second")):
                 task.result()
             assert ep.tree("/inbound") == ["batch/", "batch/a.csv"]
             assert log == []
@@ -660,7 +686,7 @@ class TestTimeout:
     ) -> None:
         ep = await sftp_server(SlowWrite)
         params = _mid_transfer_upload(ep, timeout=TIMEOUT, on_error="record")
-        message = "Upload did not finish within 1 seconds"
+        message = "Upload did not finish within 1 second"
         async with _stalled(ep, params, log) as task:
             await _ends_within(task, TIMEOUT_BOUND)
             source = (ep.wave.testdata / "batch").resolve() / "a.csv"

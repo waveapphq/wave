@@ -297,7 +297,7 @@ class TestNeverSetExport:
 
         assert "MISSING" not in parsed
 
-    def test_the_old_not_set_failure_text_is_gone(self) -> None:
+    def test_the_source_has_no_not_set_failure_text(self) -> None:
         assert "was not set by the script" not in inspect.getsource(_shell_capture)
 
 

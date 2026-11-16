@@ -202,7 +202,7 @@ test.describe('V-DIALOG-GRID-TRACK-OVERFLOW: universal dialog overflow contract'
     await page.goto('/workbench')
     await waitForCanvasLoad(page)
 
-    // Drop Var Setter; switch row to array type; open the shared "Edit value"
+    // Drop Var Setter; switch row to array type; open the row's "Edit value"
     // sheet; switch the sheet to Code view; paste long unbreakable content.
     const modal = await dropAndOpenConfig(page, {
       term: 'var setter',
@@ -213,7 +213,7 @@ test.describe('V-DIALOG-GRID-TRACK-OVERFLOW: universal dialog overflow contract'
     await typeSelect.click()
     await page.getByRole('option', { name: 'Array' }).click()
 
-    await modal.locator('[data-testid="varset-edit-value-0"]').click()
+    await modal.locator('[data-testid="param-expand-varset-value-0"]').click()
     const sheet = page.locator('[data-testid="value-editor-sheet"]')
     await expect(sheet).toBeVisible()
 

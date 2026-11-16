@@ -52,6 +52,30 @@ export const nullButton = (sheet: Locator, name: string): Locator =>
 export const expressionToggle = (sheet: Locator, name: string): Locator =>
   paramRow(sheet, name).locator('[data-testid="expression-toggle"]')
 
+/** The box area of a field cell outside a table row (a condition value, a lane limit, a Setter value), by its stem. */
+export function cellShell(scope: Locator, stem: string): Locator {
+  return scope.locator(`[data-testid="param-key-hint-${stem}"]`).locator('xpath=..')
+}
+
+/** The bordered box of a cell: its input group in every literal face, else its {x} or Template code box. */
+export function cellBox(scope: Locator, stem: string): Locator {
+  return cellShell(scope, stem).locator(`[data-slot="input-group"], [data-testid="param-input-${stem}"]`).first()
+}
+
+/** The text, number or code box of a cell. */
+export const cellInput = (scope: Locator, stem: string): Locator => scope.locator(`[data-testid="param-input-${stem}"]`)
+
+/** The line drawn over a cell's box: a `{{ }}` entries line, `null` or `<empty string>`. */
+export const cellOverlay = (scope: Locator, stem: string): Locator =>
+  cellShell(scope, stem).locator('span.pointer-events-none > span')
+
+/** The italic state marker drawn over a cell's empty box: `null` or `<empty string>`. */
+export const cellStateMarker = (scope: Locator, stem: string): Locator =>
+  cellShell(scope, stem).locator('span.pointer-events-none > span.italic')
+
+/** The error line under a cell's box. */
+export const cellError = (scope: Locator, stem: string): Locator => scope.locator(`[data-testid="param-error-${stem}"]`)
+
 /** The visible tooltip of a row's field (the hidden screen-reader copy left out). */
 export function fieldTooltip(page: Page, name: string): Locator {
   return page.locator(`[data-slot="tooltip-content"] > [data-testid="param-tooltip-${name}"]`)

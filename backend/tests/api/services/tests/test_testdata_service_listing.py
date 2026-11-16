@@ -291,6 +291,28 @@ class TestResolveEntryValidation:
 
         assert resolved == testdata_root(test_id)
 
+    def test_a_dot_is_the_root_and_refused_by_default(self, test_id: str) -> None:
+        """Spelling the folder itself as a dot gives it no way past the root refusal."""
+        seed_folder(test_id, "fixtures")
+
+        with pytest.raises(ValidationException, match=r"^Invalid test data path: \.$"):
+            testdata_service.resolve_entry(test_id, ".")
+
+    @pytest.mark.parametrize("rel", [".", "./."])
+    def test_a_dot_is_refused_even_with_allow_root(self, test_id: str, rel: str) -> None:
+        """The empty path is the only name of the folder itself."""
+        seed_folder(test_id, "fixtures")
+
+        with pytest.raises(
+            ValidationException, match=rf"^Invalid test data path: {re.escape(rel)}$"
+        ):
+            testdata_service.resolve_entry(test_id, rel, allow_root=True)
+
+    def test_a_nul_byte_is_refused(self, test_id: str) -> None:
+        """The message names the path that was asked for."""
+        with pytest.raises(ValidationException, match="^Invalid test data path: a\0b$"):
+            testdata_service.resolve_entry(test_id, "a\0b")
+
 
 class TestResolveEntryContainment:
     """Containment is checked on the real path, so symlinks cannot escape."""

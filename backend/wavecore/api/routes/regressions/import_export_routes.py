@@ -9,14 +9,18 @@ Endpoints:
 - POST /regressions/import: Import regressions from file
 """
 
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid as _validate_uuid_shared
+from wavecore.api.routes.shared import (
+    id_list_field,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.regressions import import_export as regression_import_export
@@ -39,7 +43,7 @@ async def export_regression(
     """Export a single regression as downloadable file."""
     from wavecore.api.exceptions import NotFoundException
 
-    _validate_uuid_shared(regression_id, "regression_id")
+    validate_uuid(regression_id, "regression_id")
 
     if format not in VALID_EXPORT_FORMATS:
         raise ValidationException(f"Invalid format: '{format}'. Must be 'yaml' or 'json'")
@@ -62,8 +66,8 @@ async def export_regression(
 @router.post("/regressions/export")
 async def export_regressions_bulk(request: Request) -> Response:
     """Export multiple regressions as single file or ZIP archive."""
-    body = await request.json()
-    regression_ids = body.get("regression_ids", [])
+    body = await read_json_object(request)
+    regression_ids = id_list_field(body, "regression_ids")
     fmt = body.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))
 
@@ -134,12 +138,7 @@ async def import_regressions(
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError as err:
-            raise ValidationException("Invalid JSON in conflict_resolutions") from err
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     # ValidationException from service propagates to middleware
     result = regression_import_export.import_regressions(content, filename, resolutions)

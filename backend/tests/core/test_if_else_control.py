@@ -6,11 +6,13 @@ Covers N-branch conditionals, logging, variable passthrough, and edge cases.
 """
 
 import asyncio
+import re
 from unittest.mock import MagicMock
 
 import pytest
 
 from wavecore.controls.conditional import IfElseControl
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.models.enums import ControlId
 
 # =============================================================================
@@ -358,6 +360,240 @@ class TestIfElseControlValidation:
             {"type": "else_if", "conditions": []},
         ]
         with pytest.raises(ValueError, match="^else_if branch must have conditions$"):
+            asyncio.run(control.validate({"branches": branches}))
+
+    def test_validate_rejects_branch_conditions_side_by_side_with_the_save_text(self) -> None:
+        """The run refuses a branch whose conditions have no and / or between them."""
+        one = _literal_condition("x", "integer", "equals", 1)
+        branches = [
+            {"type": "if", "conditions": [one]},
+            {"type": "else_if", "conditions": [one, _expression_condition("x > 2")]},
+        ]
+        with pytest.raises(
+            ValueError,
+            match=r"^Condition items in 'branches\.1\.conditions' must be joined by 'and' or 'or'$",
+        ):
+            asyncio.run(IfElseControl().validate({"branches": branches}))
+
+
+# =============================================================================
+# Structure Problems - every rule reported with its place (REQ-3.5.0.3)
+# =============================================================================
+
+
+def _structure(code: str, message: str, field: str) -> FieldFinding:
+    """A structure problem as the save check reports it: no fix."""
+    return FieldFinding(code, message, None, field)
+
+
+def _problems(branches: object) -> list[FieldFinding]:
+    """The If/Else structure problems of a branch list."""
+    return IfElseControl().structure_problems({"branches": branches})
+
+
+class TestIfElseStructureProblems:
+    """If/Else structure rules as save findings (REQ-3.5.1.1, REQ-3.5.1.6, REQ-3.5.0.3)."""
+
+    def test_a_valid_branch_list_has_no_problems(self) -> None:
+        """An if, an else_if and a trailing else report nothing."""
+        branches = [
+            {
+                "type": "if",
+                "id": "b0",
+                "conditions": [_literal_condition("x", "integer", "equals", 1)],
+            },
+            {
+                "type": "else_if",
+                "id": "b1",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+            {"type": "else", "id": "b2"},
+        ]
+        assert _problems(branches) == []
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            pytest.param({}, id="missing"),
+            pytest.param({"branches": None}, id="null"),
+            pytest.param({"branches": "not a list"}, id="text"),
+            pytest.param({"branches": {"a": 1}}, id="map"),
+            pytest.param({"branches": []}, id="empty"),
+        ],
+    )
+    def test_a_branch_list_that_is_missing_not_a_list_or_empty_is_left_to_the_shared_checks(
+        self, values: dict[str, object]
+    ) -> None:
+        """The shared required and type checks own a branches value that is no branch list."""
+        assert IfElseControl().structure_problems(values) == []
+
+    def test_a_first_branch_that_is_not_if_is_reported(self) -> None:
+        """An else_if in first place is reported at the first branch's type."""
+        branches = [
+            {"type": "else_if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "else"},
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "first branch must be type 'if'", "branches.0.type"
+            ),
+        ]
+
+    def test_an_unknown_branch_type_is_reported_at_its_place(self) -> None:
+        """A branch of unknown type yields only its type problem."""
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "loop"},
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "invalid branch type: 'loop'", "branches.1.type"
+            ),
+        ]
+
+    def test_a_branch_id_used_twice_is_reported(self) -> None:
+        """The second branch holding a used id is reported at its id."""
+        branches = [
+            {
+                "type": "if",
+                "id": "b1",
+                "conditions": [_literal_condition("x", "integer", "equals", 1)],
+            },
+            {
+                "type": "else_if",
+                "id": "b1",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+        ]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "duplicate branch id: 'b1'", "branches.1.id"),
+        ]
+
+    def test_an_else_that_is_not_last_is_reported(self) -> None:
+        """An else followed by another branch is reported at its type."""
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "else"},
+            {"type": "else_if", "conditions": [_literal_condition("x", "integer", "equals", 2)]},
+        ]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "else branch must be last", "branches.1.type"),
+        ]
+
+    def test_an_else_with_conditions_is_reported(self) -> None:
+        """An else holding conditions is reported at its conditions."""
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "else", "conditions": [_literal_condition("x", "integer", "equals", 2)]},
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE",
+                "else branch must not have conditions",
+                "branches.1.conditions",
+            ),
+        ]
+
+    def test_an_if_after_the_first_branch_is_reported(self) -> None:
+        """A second if is reported at its type."""
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 2)]},
+        ]
+        assert _problems(branches) == [
+            _structure("INVALID_CONTROL_STRUCTURE", "if branch must be first", "branches.1.type"),
+        ]
+
+    @pytest.mark.parametrize(
+        "branch",
+        [
+            pytest.param({"type": "if"}, id="absent"),
+            pytest.param({"type": "if", "conditions": []}, id="empty"),
+        ],
+    )
+    def test_an_if_with_no_condition_is_required_param_empty(
+        self, branch: dict[str, object]
+    ) -> None:
+        """An if with no condition is the required-empty finding at its conditions."""
+        assert _problems([branch]) == [
+            _structure(
+                "REQUIRED_PARAM_EMPTY", "if branch must have conditions", "branches.0.conditions"
+            ),
+        ]
+
+    @pytest.mark.parametrize(
+        "branch",
+        [
+            pytest.param({"type": "else_if"}, id="absent"),
+            pytest.param({"type": "else_if", "conditions": []}, id="empty"),
+        ],
+    )
+    def test_an_else_if_with_no_condition_is_required_param_empty(
+        self, branch: dict[str, object]
+    ) -> None:
+        """An else_if with no condition is the required-empty finding at its conditions."""
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            branch,
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "REQUIRED_PARAM_EMPTY",
+                "else_if branch must have conditions",
+                "branches.1.conditions",
+            ),
+        ]
+
+    def test_every_problem_is_reported_with_its_place(self) -> None:
+        """Every rule a branch list breaks is reported, in list order and rule order."""
+        branches = [
+            {
+                "type": "else_if",
+                "id": "a",
+                "conditions": [_literal_condition("x", "integer", "equals", 1)],
+            },
+            {"type": "bogus", "id": "b"},
+            {
+                "type": "else",
+                "id": "c",
+                "conditions": [_literal_condition("x", "integer", "equals", 2)],
+            },
+            {"type": "if", "id": "a"},
+        ]
+        assert _problems(branches) == [
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "first branch must be type 'if'", "branches.0.type"
+            ),
+            _structure(
+                "INVALID_CONTROL_STRUCTURE", "invalid branch type: 'bogus'", "branches.1.type"
+            ),
+            _structure("INVALID_CONTROL_STRUCTURE", "else branch must be last", "branches.2.type"),
+            _structure(
+                "INVALID_CONTROL_STRUCTURE",
+                "else branch must not have conditions",
+                "branches.2.conditions",
+            ),
+            _structure("INVALID_CONTROL_STRUCTURE", "duplicate branch id: 'a'", "branches.3.id"),
+            _structure("INVALID_CONTROL_STRUCTURE", "if branch must be first", "branches.3.type"),
+            _structure(
+                "REQUIRED_PARAM_EMPTY", "if branch must have conditions", "branches.3.conditions"
+            ),
+        ]
+
+    def test_validate_raises_the_first_problem_text(self) -> None:
+        """The run raises the first structure problem's message, so save and run say the same."""
+        control = IfElseControl()
+        branches = [
+            {"type": "if", "conditions": [_literal_condition("x", "integer", "equals", 1)]},
+            {"type": "else"},
+            {"type": "else", "conditions": [_literal_condition("x", "integer", "equals", 2)]},
+        ]
+        problems = control.structure_problems({"branches": branches})
+        assert [problem.message for problem in problems] == [
+            "else branch must be last",
+            "else branch must not have conditions",
+        ]
+        with pytest.raises(ValueError, match=f"^{re.escape(problems[0].message)}$"):
             asyncio.run(control.validate({"branches": branches}))
 
 

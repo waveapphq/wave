@@ -38,7 +38,7 @@ function loadFixture(): Record<string, unknown> {
 }
 
 const watcher = (page: Page, name: string) =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 const expandBtn = (page: Page, name: string) =>
   variableRow(page, name).locator('[data-testid^="expand-button-"]')
 const consentDialog = (page: Page) => page.getByRole('dialog', { name: 'Edit Protected Value?' })

@@ -1162,6 +1162,12 @@ class TestDeadlineLoop:
         with pytest.raises(ValueError, match=exact(message)):
             _run(fake, params)
 
+    def test_a_one_second_timeout_is_named_in_the_singular(self) -> None:
+        message = "Timed out after 1 second waiting for configmap/probe-a to be deleted"
+
+        with pytest.raises(ValueError, match=exact(message)):
+            _run(_never_gone_client(), _name_params(timeout=1))
+
     def test_a_timed_out_wait_reports_nothing_deleted(self) -> None:
         outputs = _outputs(_never_gone_client(), _name_params(timeout=5, on_error="record"))
 

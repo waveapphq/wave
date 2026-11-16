@@ -33,7 +33,6 @@ function logNode(id: string, label: string, msg: string, position: { x: number; 
       version: '1.0.0',
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${msg}'`, level: 'INFO' },
         profileBindings: [],
@@ -83,7 +82,6 @@ function functionWithFailingAssert(id: string, position: { x: number; y: number 
       hasNewerVersion: false,
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       localDefinition: {
         name: 'Function_1',
         workflow: {

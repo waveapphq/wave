@@ -13,7 +13,7 @@
           "category": "system", "version": "1.0.0",
           "description": "Log Before",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'before-break-tests'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -31,7 +31,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S1 For count=3",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i1" }, "profileBindings": []
@@ -48,7 +48,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'brk-s1-{i1}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -65,7 +65,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S1",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s1" },
             "outputBindings": {}, "profileBindings": []
@@ -82,7 +82,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 After Break NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s1-after-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -99,7 +99,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S1 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'brk-s1-then-{i1}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -117,7 +117,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S2 ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s2" },
             "outputBindings": { "item": "item_s2", "index": "idx_s2" }, "profileBindings": []
@@ -134,7 +134,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S2 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'brk-s2-{idx_s2}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -151,7 +151,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S2",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "fe-s2" },
             "outputBindings": {}, "profileBindings": []
@@ -168,7 +168,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S2 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s2-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -186,7 +186,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S3 While True",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s3" }], "max_iterations": 10 },
             "outputBindings": { "index": "w3" }, "profileBindings": []
@@ -203,7 +203,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S3 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s3-body'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -220,7 +220,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S3",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "while-s3" },
             "outputBindings": {}, "profileBindings": []
@@ -237,7 +237,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S3 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s3-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -255,7 +255,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S4 For break-first",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i4" }, "profileBindings": []
@@ -272,7 +272,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S4 First",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s4" },
             "outputBindings": {}, "profileBindings": []
@@ -289,7 +289,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S4 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s4-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -306,7 +306,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S4 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s4-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -324,7 +324,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S5 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
             "outputBindings": { "index": "i5" }, "profileBindings": []
@@ -341,7 +341,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S5 Inner ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s5" },
             "outputBindings": { "item": "item_s5", "index": "idx_s5" }, "profileBindings": []
@@ -358,7 +358,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Inner Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'brk-s5-inner-{idx_s5}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -375,7 +375,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S5 Inner",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "fe-s5" },
             "outputBindings": {}, "profileBindings": []
@@ -392,7 +392,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Inner Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s5-inner-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -409,7 +409,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S5 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s5-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -427,7 +427,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S6 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i6" }, "profileBindings": []
@@ -444,7 +444,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S6 Inner ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s6" },
             "outputBindings": { "item": "item_s6", "index": "idx_s6" }, "profileBindings": []
@@ -461,7 +461,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Inner Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'brk-s6-inner-{idx_s6}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -478,7 +478,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S6 Outer",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s6" },
             "outputBindings": {}, "profileBindings": []
@@ -495,7 +495,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Inner Then NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s6-inner-then-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -512,7 +512,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S6 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s6-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -530,7 +530,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S7 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
             "outputBindings": { "index": "i7" }, "profileBindings": []
@@ -547,7 +547,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S7 Mid ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s7" },
             "outputBindings": { "item": "item_s7", "index": "idx_s7" }, "profileBindings": []
@@ -564,7 +564,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S7 Inner While",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s7" }], "max_iterations": 5 },
             "outputBindings": { "index": "w7" }, "profileBindings": []
@@ -581,7 +581,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 Deep Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s7-deep'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -598,7 +598,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S7 Mid",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "fe-s7" },
             "outputBindings": {}, "profileBindings": []
@@ -615,7 +615,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 While Then NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s7-while-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -632,7 +632,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 FE Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s7-fe-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -649,7 +649,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S7 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s7-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -667,7 +667,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S8 Outer For",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 2, "start": 0, "end": 0 },
             "outputBindings": { "index": "i8" }, "profileBindings": []
@@ -684,7 +684,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S8 Mid ForEach",
           "hasNewerVersion": false,
-          "expressionFields": ["collection"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["collection"], "templateFields": [],
           "config": {
             "values": { "collection": "items_s8" },
             "outputBindings": { "item": "item_s8", "index": "idx_s8" }, "profileBindings": []
@@ -701,7 +701,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S8 Inner While",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "while-do", "conditions": [{ "type": "expression", "expression": "True", "id": "cond-s8" }], "max_iterations": 5 },
             "outputBindings": { "index": "w8" }, "profileBindings": []
@@ -718,7 +718,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 Deep Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s8-deep'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -735,7 +735,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S8 Outermost",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s8" },
             "outputBindings": {}, "profileBindings": []
@@ -752,7 +752,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 While Then NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s8-while-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -769,7 +769,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 FE Then NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s8-fe-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -786,7 +786,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S8 Outer Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s8-outer-done'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -804,7 +804,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S9 For TryCatch",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i9" }, "profileBindings": []
@@ -821,7 +821,7 @@
           "category": "flow", "version": "1.0.0",
           "description": "S9 TryCatch",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": {}, "profileBindings": []
@@ -838,7 +838,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S9 Try Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s9-try'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -855,7 +855,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S9",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s9" },
             "outputBindings": {}, "profileBindings": []
@@ -872,7 +872,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S9 Catch NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s9-catch-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -889,7 +889,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S9 For Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s9-for-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -907,7 +907,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S10 For IfTrue",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i10" }, "profileBindings": []
@@ -924,7 +924,7 @@
           "category": "conditional", "version": "1.0.0",
           "description": "S10 IfElse True",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": {
               "branches": [
@@ -951,7 +951,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S10 True Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s10-true'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -968,7 +968,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S10",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s10" },
             "outputBindings": {}, "profileBindings": []
@@ -985,7 +985,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S10 Else NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s10-else-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1002,7 +1002,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S10 For Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s10-for-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1020,7 +1020,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S11 For IfFalse",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i11" }, "profileBindings": []
@@ -1037,7 +1037,7 @@
           "category": "conditional", "version": "1.0.0",
           "description": "S11 IfElse False",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": {
               "branches": [
@@ -1064,7 +1064,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S11 If NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s11-if-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1081,7 +1081,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S11 Else Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s11-else'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1098,7 +1098,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S11",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s11" },
             "outputBindings": {}, "profileBindings": []
@@ -1115,7 +1115,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S11 For Then",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'brk-s11-for-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1133,7 +1133,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S12 Continue then Break",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i12" }, "profileBindings": []
@@ -1150,7 +1150,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S12 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'comb-s12-{i12}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1167,7 +1167,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S12",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s12" },
             "outputBindings": {}, "profileBindings": []
@@ -1184,7 +1184,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S12 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s12" },
             "outputBindings": {}, "profileBindings": []
@@ -1201,7 +1201,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S12 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'comb-s12-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1218,7 +1218,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S12 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'comb-s12-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1236,7 +1236,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "S13 Break then Continue",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "mode": "count", "count": 3, "start": 0, "end": 0 },
             "outputBindings": { "index": "i13" }, "profileBindings": []
@@ -1253,7 +1253,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S13 Body Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "f'comb-s13-{i13}'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1270,7 +1270,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Break S13",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s13" },
             "outputBindings": {}, "profileBindings": []
@@ -1287,7 +1287,7 @@
           "category": "loop", "version": "1.0.0",
           "description": "Continue S13 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": [], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": [], "templateFields": [],
           "config": {
             "values": { "target_loop": "for-s13" },
             "outputBindings": {}, "profileBindings": []
@@ -1304,7 +1304,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S13 NEVER",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'comb-s13-never'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1321,7 +1321,7 @@
           "category": "system", "version": "1.0.0",
           "description": "S13 Then Log",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'comb-s13-then'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []
@@ -1339,7 +1339,7 @@
           "category": "system", "version": "1.0.0",
           "description": "Log After",
           "hasNewerVersion": false,
-          "expressionFields": ["message"], "templateFields": [], "variableExpressionKeys": [],
+          "expressionFields": ["message"], "templateFields": [],
           "config": {
             "values": { "message": "'after-all-break-tests'", "level": "INFO" },
             "outputBindings": {}, "profileBindings": []

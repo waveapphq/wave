@@ -18,9 +18,13 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from wavecore.api.exceptions import (
+    AuthorizationException,
+    InternalServerException,
+    ValidationException,
+)
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import _storage as _exec_storage
 from wavecore.api.services.network import certificates as network_certificates
@@ -30,6 +34,7 @@ from wavecore.api.services.regressions import _storage as _reg_storage
 from wavecore.api.services.suites import _storage as _suite_storage
 from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests import testdata_service
+from wavecore.core.logging.log_safe import log_safe
 from wavecore.core.ssh import trusted_hosts
 
 logger = logging.getLogger(__name__)
@@ -92,16 +97,17 @@ def get_credential_profiles() -> list[dict[str, str]]:
 
 
 def check_admin_allowed_or_404(endpoint: str) -> None:
-    """Check if admin mode is allowed, raise 404 if not."""
+    """Check if admin mode is allowed, else answer exactly what an unknown route answers."""
     if not is_admin_allowed():
         logger.warning("Blocked admin %s attempt: deployment gate disallows admin mode", endpoint)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
-def require_admin_active() -> None:
-    """Check if admin mode is active, raise 403 if not."""
+def require_admin_active(endpoint: str) -> None:
+    """Refuse an admin operation with 403 while admin mode is not active."""
     if not is_admin_enabled():
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ERR_ADMIN_NOT_ENABLED)
+        logger.warning("Blocked admin %s attempt: admin mode not enabled", endpoint)
+        raise AuthorizationException(_ERR_ADMIN_NOT_ENABLED)
 
 
 def invalidate_dashboard_cache() -> None:
@@ -275,12 +281,6 @@ class AdminResetResponse(BaseModel):
     timestamp: str
 
 
-class AdminResetErrorResponse(BaseModel):
-    cleared: dict[str, int]
-    timestamp: str
-    error: str
-
-
 # =============================================================================
 # Endpoints
 # =============================================================================
@@ -293,9 +293,7 @@ async def enable_admin(request: Request, body: AdminEnableRequest) -> AdminEnabl
 
     reason = body.reason
     if not reason or not reason.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Reason is required and cannot be empty"
-        )
+        raise ValidationException("Reason is required and cannot be empty")
 
     global _admin_enabled, _admin_enabled_at, _admin_reason
     _admin_enabled = True
@@ -303,7 +301,9 @@ async def enable_admin(request: Request, body: AdminEnableRequest) -> AdminEnabl
     _admin_reason = reason.strip()
 
     logger.info(
-        "Admin mode enabled: reason=%s, timestamp=%s", _admin_reason, _admin_enabled_at.isoformat()
+        "Admin mode enabled: reason=%s, timestamp=%s",
+        log_safe(_admin_reason),
+        _admin_enabled_at.isoformat(),
     )
 
     return AdminEnableResponse(
@@ -356,29 +356,18 @@ async def get_admin_status(request: Request) -> AdminStatusResponse:
 
 
 @router.post("/reset", response_model=None)
-async def reset_state(
-    request: Request, body: AdminResetRequest
-) -> AdminResetResponse | JSONResponse:
+async def reset_state(request: Request, body: AdminResetRequest) -> AdminResetResponse:
     """Reset system state by clearing test data categories."""
     check_admin_allowed_or_404("reset")
-
-    if not is_admin_enabled():
-        logger.warning("Blocked admin reset attempt: admin mode not enabled")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ERR_ADMIN_NOT_ENABLED)
+    require_admin_active("reset")
 
     if body.confirm is not True:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Confirmation required: set confirm=true",
-        )
+        raise ValidationException("Confirmation required: set confirm=true")
 
     if body.scope is not None:
         for category in body.scope:
             if category not in VALID_RESET_CATEGORIES:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid scope category: {category}",
-                )
+                raise ValidationException(f"Invalid scope category: {category}")
         categories_to_clear = list(dict.fromkeys(body.scope))
     else:
         categories_to_clear = list(DEFAULT_RESET_CATEGORIES)
@@ -390,10 +379,10 @@ async def reset_state(
         try:
             count = clear_category(category)
             cleared[category] = count
-        except Exception as e:
-            error_message = f"Error clearing {category}: {e!s}"
-            logger.error(
-                "Reset failed on category %s: %s, admin_reason=%s", category, e, _admin_reason
+        except Exception:
+            error_message = f"Error clearing {category}"
+            logger.exception(
+                "Reset failed on category %s, admin_reason=%s", category, _admin_reason
             )
             break
 
@@ -409,9 +398,8 @@ async def reset_state(
     )
 
     if error_message:
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"cleared": cleared, "timestamp": timestamp, "error": error_message},
+        raise InternalServerException(
+            error_message, details={"cleared": cleared, "timestamp": timestamp}
         )
 
     return AdminResetResponse(cleared=cleared, timestamp=timestamp)

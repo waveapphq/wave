@@ -1,16 +1,25 @@
 """
 SecretRegistry contract tests (REQ-3.1.3.5, REQ-4.5.3).
 
-The per-run registry holds two things: the set of variable NAMES flagged
-secret for the run (flag-based structural masking), and the set of string
-forms of registered secret VALUES (text scrubbing). It is flat per-run
+The per-run registry holds three things: the set of variable NAMES flagged
+secret for the run (flag-based structural masking), the set of string
+forms of registered secret VALUES (text scrubbing), and a fixed-size digest
+of each secret list, map or table (whole-copy masking). It is flat per-run
 state - no scopes, no reveal, no source-store back ends.
 """
 
+import random
+import re
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
-from wavecore.core.secrets.masking import mask_text
-from wavecore.core.secrets.registry import SecretRegistry
+import pytest
+
+import wavecore.core.secrets.registry as registry_module
+from wavecore.core.expressions.template_escape import text_form
+from wavecore.core.secrets.masking import MASK_PLACEHOLDER, mask_text, mask_values
+from wavecore.core.secrets.registry import MAX_DEPTH, SecretRegistry
 from wavecore.core.table import Table
 from wavecore.core.variables.print_form import value_text
 
@@ -207,6 +216,59 @@ class TestScanValueExtraction:
 
         assert registry.scan_values() == ()
 
+    @pytest.mark.parametrize(
+        ("value", "digests"),
+        [
+            ({"user": "ann", "pin": 1234}, 1),
+            (["ann", 1234], 1),
+            (Table.from_list([{"name": "alpha", "qty": 1}]), 2),
+        ],
+        ids=["map", "list", "table"],
+    )
+    def test_a_secret_container_registers_its_whole_forms_and_its_digests(
+        self, value: Any, digests: int
+    ) -> None:
+        from wavecore.core.expressions.template_escape import text_form
+
+        registry = SecretRegistry()
+        registry.register("creds", value, "declared")
+
+        scan = registry.scan_values()
+        assert {str(value), value_text(value), text_form(value)} <= set(scan)
+        # A table prints as columns and rows and fills in as its rows: one digest each.
+        assert len(scan.container_digests) == digests
+
+    @pytest.mark.parametrize("value", [{}, [], Table(), "ann", 1234, None], ids=repr)
+    def test_an_empty_container_or_a_scalar_registers_no_digest(self, value: Any) -> None:
+        registry = SecretRegistry()
+        registry.register("creds", value, "declared")
+
+        assert registry.scan_values().container_digests == frozenset()
+
+    def test_a_held_container_takes_its_digests_along_on_release(self) -> None:
+        registry = SecretRegistry()
+        registry.hold_name("call-1", "result")
+        registry.register_written("result", {"zm_login": "zwadm", "zm_code": "kq4z"}, "output")
+        assert registry.scan_values().container_digests
+
+        registry.release("call-1")
+
+        assert registry.scan_values().container_digests == frozenset()
+
+    def test_a_container_exempt_in_one_block_is_recognized_everywhere_else(self) -> None:
+        registry = SecretRegistry()
+        registry.register_value(["zwadm-login", "kq4z-code"], "param:creds", exempt_block="b1")
+
+        assert registry.scan_values(exclude_for_block="b1").container_digests == frozenset()
+        assert registry.scan_values(exclude_for_block="b2").container_digests
+        assert registry.scan_values().container_digests
+
+    def test_scan_values_of_a_registry_compare_equal_to_a_plain_tuple(self) -> None:
+        registry = SecretRegistry()
+        registry.register("token", "s3cr3t-t0ken-99", "declared")
+
+        assert registry.scan_values() == ("s3cr3t-t0ken-99",)
+
     def test_sub_floor_container_leaves_are_skipped(self) -> None:
         registry = SecretRegistry()
         registry.register(
@@ -396,6 +458,45 @@ class TestReprEscapedForms:
         assert 'say \\"hi\\"-s3cr3t-value' in values
 
 
+class TestJsonEscapedForms:
+    """A string secret in JSON text, such as WAVE's print form, escapes its control characters."""
+
+    def test_control_character_value_registers_its_json_escaped_form(self) -> None:
+        registry = SecretRegistry()
+        registry.register("token", "pa\bss\fw\x01rd", "declared")
+
+        assert r"pa\bss\fw\u0001rd" in registry.scan_values()
+
+    def test_a_secret_leaf_printed_inside_another_map_is_masked(self) -> None:
+        registry = SecretRegistry()
+        registry.register("keys", ["k3y\bvalue", "other-v4lue"], "declared")
+
+        printed = value_text({"user": "ann", "key": "k3y\bvalue"})
+
+        assert mask_text(printed, registry.scan_values()) == '{"user":"ann","key":"********"}'
+
+
+class TestJsonFillForms:
+    """A secret list, map or table filled alone in a JSON template masks whole (REQ-3.3.2.6)."""
+
+    @pytest.mark.parametrize(
+        ("value", "filled"),
+        [
+            (Table.from_list([{"name": "alpha", "qty": 1}]), '[{"name":"alpha","qty":1}]'),
+            (["alpha", 1e-07], '["alpha",1e-07]'),
+            ({"host": "db.internal", "rate": 1e-07}, '{"host":"db.internal","rate":1e-07}'),
+        ],
+        ids=["table", "list", "map"],
+    )
+    def test_the_text_a_json_fill_writes_is_masked_whole(self, value: Any, filled: str) -> None:
+        registry = SecretRegistry()
+        registry.register("rows", value, "declared")
+
+        query = '{"terms": ' + filled + "}"
+
+        assert mask_text(query, registry.scan_values()) == '{"terms": ********}'
+
+
 class TestHeldNames:
     """A name a holder holds (a Function call's secret output) is secret, and the values
     written to it scrub, only until the holder releases it (SECUI-11)."""
@@ -492,3 +593,418 @@ class TestHeldNames:
         assert "0ut3r-v4lue-13" in registry.scan_values()
         registry.release(self.CALL)
         assert "0ut3r-v4lue-13" not in registry.scan_values()
+
+
+def _texts(state: Any) -> list[str]:
+    """Every text reachable from a registry's state."""
+    found: list[str] = []
+    stack = [state]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, str):
+            found.append(item)
+        elif isinstance(item, dict):
+            stack.extend([*item.keys(), *item.values()])
+        elif isinstance(item, list | tuple | set | frozenset):
+            stack.extend(item)
+        elif hasattr(item, "__slots__"):
+            stack.extend(getattr(item, slot) for slot in item.__slots__)
+        elif hasattr(item, "__dict__"):
+            stack.append(vars(item))
+    return found
+
+
+_DIGEST = re.compile("d[0-9a-f]{32}")
+
+
+def _count_seals(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The head of every list, map and table form digested, in order."""
+    sealed: list[str] = []
+    seal = registry_module._seal
+
+    def counted(head: str, pieces: list[str]) -> str:
+        sealed.append(head)
+        return seal(head, pieces)
+
+    monkeypatch.setattr(registry_module, "_seal", counted)
+    return sealed
+
+
+class TestContainerDigests:
+    """A copy of a secret list, map or table is recognized by fixed-size digests (REQ-3.1.3.5)."""
+
+    SECRET = {
+        "login": "svc-l0gin-77",
+        "payload": "pa7load-" * 40,
+        "codes": ["c0de-one-1", "c0de-two-2"],
+    }
+
+    def test_the_digests_are_fixed_size_and_hold_no_text_of_the_container(self) -> None:
+        registry = SecretRegistry()
+        registry.register("creds", self.SECRET, "declared")
+
+        scan = registry.scan_values()
+        assert len(scan.container_digests) == 2
+        assert all(_DIGEST.fullmatch(digest) for digest in scan.container_digests)
+        # The shape facts name a bracket, a count and a fixed-size digest: of a map's keys, of how
+        # a list's first item starts. No text.
+        facts = sorted(scan.container_facts)
+        assert [entry[:2] for entry in facts] == [("[", 2), ("{", 3)]
+        assert all(len(entry) == 3 and isinstance(entry[-1], int) for entry in facts)
+
+    def test_the_key_digest_of_a_map_reads_its_keys_as_text_in_any_order(self) -> None:
+        def facts_of(value: Any) -> Any:
+            registry = SecretRegistry()
+            registry.register("creds", value, "declared")
+            return registry.scan_values().container_facts
+
+        assert facts_of({1: "alpha-code", "b": "beta-code"}) == facts_of(
+            {"b": "beta-code", "1": "alpha-code"}
+        )
+        assert facts_of({"a": "alpha-code", "b": "beta-code"}) != facts_of(
+            {"a": "alpha-code", "c": "beta-code"}
+        )
+
+    def test_the_text_kept_of_a_run_secret_container_is_only_what_scrubbing_needs(self) -> None:
+        registry = SecretRegistry()
+        registry.register("creds", self.SECRET, "declared")
+
+        kept = {text for text in _texts(registry) if "svc-l0gin-77" in text}
+        assert kept <= set(registry.scan_values())
+
+    def test_a_released_holder_leaves_no_text_and_no_digest_of_its_container(self) -> None:
+        registry = SecretRegistry()
+        for index in range(3):
+            holder = f"call-{index}"
+            registry.hold_name(holder, "result")
+            registry.register_written("result", {**self.SECRET, "n": index}, "output")
+            registry.release(holder)
+
+        texts = _texts(registry)
+        assert [text for text in texts if "svc-l0gin-77" in text or "pa7load-" in text] == []
+        assert [text for text in texts if _DIGEST.fullmatch(text)] == []
+        assert registry.scan_values() == ()
+        assert registry.scan_values().container_digests == frozenset()
+
+    def test_release_keeps_the_digests_another_holder_or_the_run_holds(self) -> None:
+        registry = SecretRegistry()
+        registry.register("run_list", ["run-l0gin-1", "run-c0de-2"], "declared")
+        registry.hold_name("call-1", "out")
+        registry.hold_name("call-2", "inner")
+        registry.register_written("out", ["out-l0gin-1", "out-c0de-2"], "output")
+        registry.register_written("inner", ["inn-l0gin-1", "inn-c0de-2"], "output")
+
+        registry.release("call-1")
+
+        scan = registry.scan_values()
+        assert mask_values(["run-l0gin-1", "run-c0de-2"], scan) == MASK_PLACEHOLDER
+        assert mask_values(["inn-l0gin-1", "inn-c0de-2"], scan) == MASK_PLACEHOLDER
+        assert mask_values(["out-l0gin-1", "out-c0de-2"], scan) == ["out-l0gin-1", "out-c0de-2"]
+
+    def test_each_container_of_a_secret_is_digested_once_when_it_registers(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sealed = _count_seals(monkeypatch)
+        registry = SecretRegistry()
+
+        registry.register(
+            "creds", [{"a": ["x1-s3cret", "x2-s3cret"]}, {"b": ["y1-s3cret"]}], "declared"
+        )
+
+        assert sorted(sealed) == ["[1|", "[2|", "[2|", "{1|", "{1|"]
+
+
+def _leads(item: Any) -> set[int]:
+    lead = registry_module.lead_digest(item)
+    return {lead} if isinstance(lead, int) else set(lead)
+
+
+def _vault_table() -> Table:
+    table = Table(columns=[("zt_login", "string"), ("zt_code", "string")])
+    table.add_row(["zwadm", "kq4z"])
+    return table
+
+
+class TestListLeads:
+    """A list is digested only when its first item starts like a secret list's (REQ-3.1.3.5)."""
+
+    @pytest.mark.parametrize(
+        ("first", "twin"),
+        [
+            (10**20, 1e20),
+            (Decimal("0.0000001"), 1e-07),
+            (0, -0.0),
+            (3, Decimal("3")),
+            (10**400, 10**400),
+            (float("inf"), Decimal("Infinity")),
+            (float("nan"), Decimal("NaN")),
+            (Decimal("sNaN"), Decimal("sNaN")),
+            (None, None),
+            (datetime(2020, 1, 2, 3, 4, 5), "2020-01-02 03:04:05"),
+            ("a-text-longer-than-sixteen-characters", "a-text-longer-than-sixteen-characters"),
+            ({1: "alpha-code"}, {"1": "alpha-code"}),
+            (("zwadm", "kq4z"), ["zwadm", "kq4z"]),
+            (_vault_table(), {"columns": [], "rows": []}),
+            (_vault_table(), [{"zt_login": "zwadm", "zt_code": "kq4z"}]),
+        ],
+    )
+    def test_items_that_write_the_same_text_start_a_list_alike(self, first: Any, twin: Any) -> None:
+        assert _leads(first) & _leads(twin)
+
+    @pytest.mark.parametrize(
+        ("first", "other"),
+        [
+            ("svc-user", 7),
+            ("svc-user", "svc-other"),
+            (41.5, 42.5),
+            ({"user": "x"}, {"page": 1}),
+            ([1, 2], [1, 2, 3]),
+            (7, None),
+        ],
+    )
+    def test_items_that_start_otherwise_have_other_digests(self, first: Any, other: Any) -> None:
+        assert not _leads(first) & _leads(other)
+
+    def test_the_leads_of_a_size_skip_first_items_of_a_kind_no_secret_list_starts_with(
+        self,
+    ) -> None:
+        registry = SecretRegistry()
+        registry.register("pair", ["svc-user", "svc-pass-77"], "declared")
+        registry.register("point", [{"x": 1}, {"y": 2}], "declared")
+
+        leads = registry.scan_values().list_leads[2]
+
+        assert leads.skipped == {int, float, bool, Decimal, type(None), list, tuple}
+        assert leads.started_by("svc-user")
+        assert not leads.started_by("svc-other")
+        assert leads.started_by({"x": 5})
+        assert not leads.started_by({"z": 5})
+
+    def test_a_table_of_a_size_starts_a_list_as_its_rows_do(self) -> None:
+        registry = SecretRegistry()
+        registry.register("rows", _vault_table(), "declared")
+
+        leads = registry.scan_values().list_leads[1]
+
+        assert leads.started_by({"zt_login": "other", "zt_code": "other"})
+        assert not leads.started_by({"zt_login": "other"})
+
+
+class TestShapeFacts:
+    """The shapes a secret list or map shows come as one list of facts, one or two of them."""
+
+    def test_a_plain_map_shows_its_size_and_the_digest_of_its_keys(self) -> None:
+        value = {"user": "svc-user", "pass": "svc-pass-77"}
+
+        assert registry_module.map_facts(value) == [("{", 2, registry_module.key_digest(value))]
+
+    def test_a_map_of_columns_and_rows_shows_a_tables_shape_too(self) -> None:
+        value = {"columns": [{"name": "a"}, {"name": "b"}], "rows": [[1, 2], [3, 4], [5, 6]]}
+
+        assert registry_module.map_facts(value) == [
+            ("{", 2, registry_module.key_digest(value)),
+            ("T", 3, 2),
+        ]
+
+    def test_a_map_of_columns_and_rows_that_are_not_lists_shows_only_its_own_shape(
+        self,
+    ) -> None:
+        value = {"columns": "a", "rows": "b"}
+
+        assert registry_module.map_facts(value) == [("{", 2, registry_module.key_digest(value))]
+
+    def test_a_list_shows_its_size_with_how_its_first_item_starts(self) -> None:
+        assert registry_module.branch_facts(["svc-user", "svc-pass-77"]) == [
+            ("[", 2, registry_module.lead_digest("svc-user"))
+        ]
+
+    def test_a_list_led_by_a_table_shows_one_shape_for_each_form_of_the_table(self) -> None:
+        table = _vault_table()
+        lead = registry_module.lead_digest(table)
+        assert isinstance(lead, tuple)
+        printed, filled = lead
+
+        assert registry_module.branch_facts([table]) == [("[", 1, printed), ("[", 1, filled)]
+
+
+class TestLeafPieces:
+    """A float writes one piece when its plain text and its repr match, else both in turn."""
+
+    @pytest.mark.parametrize(
+        ("value", "piece"),
+        [
+            (1.5, "b3:1.5"),
+            (100.0, "b5:100.0"),
+            (-0.0, "b4:-0.0"),
+            (0.0001, "b6:0.0001"),
+            (1234567890123456.0, "b18:1234567890123456.0"),
+        ],
+    )
+    def test_a_float_whose_two_texts_match_writes_one_piece(self, value: float, piece: str) -> None:
+        assert registry_module.leaf_piece(value) == piece
+
+    @pytest.mark.parametrize(
+        ("value", "pieces"),
+        [
+            (1e-05, ("b7:0.00001", "b5:1e-05")),
+            (1e16, ("b17:10000000000000000", "b5:1e+16")),
+            (-2.5e-07, ("b11:-0.00000025", "b8:-2.5e-07")),
+        ],
+    )
+    def test_a_float_in_exponent_notation_writes_its_plain_piece_then_its_repr_piece(
+        self, value: float, pieces: tuple[str, str]
+    ) -> None:
+        assert registry_module.leaf_piece(value) == pieces
+
+
+def _nest(leaf: Any, levels: int, as_map: bool) -> Any:
+    value = leaf
+    for _ in range(levels):
+        value = {"k": value} if as_map else [value]
+    return value
+
+
+class TestDeepSecrets:
+    """A secret nested past the masking depth registers without overflowing (REQ-3.1.3.5)."""
+
+    LEAF = "d33p-s3cr3t-leaf"
+
+    @pytest.mark.parametrize("levels", [600, 900, 3000, 10000])
+    @pytest.mark.parametrize("as_map", [False, True], ids=["list", "map"])
+    def test_a_deep_secret_registers_and_its_leaf_still_scrubs(
+        self, levels: int, as_map: bool
+    ) -> None:
+        registry = SecretRegistry()
+
+        registry.register("deep", _nest(self.LEAF, levels, as_map), "declared")
+
+        assert mask_text(f"got {self.LEAF} back", registry.scan_values()) == "got ******** back"
+
+    @pytest.mark.parametrize("as_map", [False, True], ids=["list", "map"])
+    def test_only_the_containers_within_the_masking_depth_register_digests(
+        self, as_map: bool
+    ) -> None:
+        secret = _nest(self.LEAF, 600, as_map)
+        registry = SecretRegistry()
+
+        registry.register("deep", secret, "declared")
+
+        scan = registry.scan_values()
+        assert len(scan.container_digests) == MAX_DEPTH
+        assert value_text(_nest(self.LEAF, MAX_DEPTH, as_map)) in scan
+        assert str(secret) in scan
+        assert mask_values(_nest(self.LEAF, 50, as_map), scan) == MASK_PLACEHOLDER
+
+    def test_items_after_a_deep_item_still_register_and_the_map_has_no_digest(self) -> None:
+        value = {"deep": _nest(self.LEAF, 600, as_map=False), "next": "n3xt-s3cret-leaf"}
+        registry = SecretRegistry()
+
+        registry.register("deep", value, "declared")
+
+        scan = registry.scan_values()
+        assert "n3xt-s3cret-leaf" in scan
+        assert len(scan.container_digests) == MAX_DEPTH
+        assert [facts for facts in scan.container_facts if facts[0] == "{"] == []
+        assert str(value) in scan
+
+    @pytest.mark.parametrize("as_map", [False, True], ids=["list", "map"])
+    def test_a_secret_taller_than_the_masking_depth_printed_whole_shows_one_placeholder(
+        self, as_map: bool
+    ) -> None:
+        secret = _nest({"pin": "kq4z"}, 150, as_map)
+        registry = SecretRegistry()
+
+        registry.register("tall", secret, "declared")
+
+        scan = registry.scan_values()
+        for printed in (str(secret), value_text(secret), text_form(secret)):
+            assert mask_text(f"payload {printed}", scan) == "payload ********"
+
+    @pytest.mark.parametrize("as_map", [False, True], ids=["list", "map"])
+    def test_a_secret_900_levels_deep_printed_whole_shows_one_placeholder(
+        self, as_map: bool
+    ) -> None:
+        secret = _nest({"pin": "kq4z"}, 900, as_map)
+        registry = SecretRegistry()
+
+        registry.register("tall", secret, "declared")
+
+        assert mask_text(f"payload {secret}", registry.scan_values()) == "payload ********"
+
+    def test_every_form_of_a_tall_secret_of_any_content_prints_as_one_placeholder(self) -> None:
+        rng = random.Random(5)
+        for _ in range(25):
+            secret = _tall_secret(rng)
+            registry = SecretRegistry()
+
+            registry.register("tall", secret, "declared")
+
+            scan = registry.scan_values()
+            for printed in (str(secret), value_text(secret), text_form(secret)):
+                assert mask_text(printed, scan) == MASK_PLACEHOLDER, printed[:200]
+
+    def test_a_tall_tuple_in_a_secret_registers_without_overflowing(self) -> None:
+        tall: Any = self.LEAF
+        for _ in range(3000):
+            tall = (tall,)
+        registry = SecretRegistry()
+
+        registry.register("deep", [tall, "s1bling-s3cret"], "declared")
+
+        scan = registry.scan_values()
+        assert mask_text(f"got {self.LEAF} and s1bling-s3cret", scan) == "got ******** and ********"
+
+
+_TALL_LEAVES: list[Any] = [
+    "plain",
+    'q"uote\\s',
+    "it's",
+    "\u00e9-text",
+    "ctl\x01\n",
+    0,
+    -12,
+    10**20,
+    1.5,
+    1e-07,
+    1e20,
+    float("nan"),
+    float("inf"),
+    -0.0,
+    Decimal("1.50"),
+    Decimal("1E+3"),
+    True,
+    False,
+    None,
+    date(2024, 1, 2),
+    datetime(2024, 1, 2, 3, 4, 5),
+]
+_TALL_KEYS: list[Any] = ["a", "b c", 'q"k', 1, 2.5, True, None]
+
+
+def _tall_part(rng: random.Random, depth: int) -> Any:
+    """A short random value: leaves, short tuples, tables, lists and maps."""
+    roll = rng.random()
+    if depth > 2 or roll < 0.4:
+        return rng.choice(_TALL_LEAVES)
+    if roll < 0.5:
+        table = Table(columns=[("ca", "string"), ("cb", "float")])
+        table.add_row(["zwadm", 1.5])
+        return table
+    if roll < 0.6:
+        return tuple(_tall_part(rng, depth + 1) for _ in range(rng.randint(1, 2)))
+    if roll < 0.8:
+        return [_tall_part(rng, depth + 1) for _ in range(rng.randint(0, 3))]
+    return {key: _tall_part(rng, depth + 1) for key in rng.sample(_TALL_KEYS, rng.randint(0, 3))}
+
+
+def _tall_secret(rng: random.Random) -> Any:
+    """A list or map nested past the masking depth, with short random values beside each level."""
+    value = _tall_part(rng, 0)
+    for _ in range(MAX_DEPTH + rng.randint(1, 40)):
+        siblings = [_tall_part(rng, 0) for _ in range(rng.randint(0, 2))]
+        if rng.random() < 0.5:
+            value = [*siblings[:1], value, *siblings[1:]]
+        else:
+            keys = rng.sample(_TALL_KEYS, len(siblings) + 1)
+            value = {**dict(zip(keys[1:], siblings, strict=True)), keys[0]: value}
+    return value

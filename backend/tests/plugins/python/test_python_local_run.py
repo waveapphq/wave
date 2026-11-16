@@ -1349,7 +1349,7 @@ class TestTimeout:
             "time.sleep(30)",
         ]
 
-        with pytest.raises(ValueError, match=exact("Script timed out after 1 seconds")):
+        with pytest.raises(ValueError, match=exact("Script timed out after 1 second")):
             await run_python(
                 {
                     "script": script_of(*lines),

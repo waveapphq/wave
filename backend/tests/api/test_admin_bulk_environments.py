@@ -15,10 +15,13 @@ Test Coverage:
 import os
 import uuid
 from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.api.error_reply_support import assert_error_reply
 
 # Pre-generated UUIDs for consistent test data
 ENV_UUID_1 = "11111111-1111-1111-1111-111111111111"
@@ -44,6 +47,15 @@ def _reset_admin_state() -> None:
     admin_routes._admin_enabled = False
     admin_routes._admin_enabled_at = None
     admin_routes._admin_reason = None
+
+
+def _assert_bulk_refusal(
+    response: Any, status_code: int, code: str, message: str, failed_index: int | None = None
+) -> None:
+    """A bulk refusal in the shared error envelope; one operation's refusal names its index."""
+    assert_error_reply(response, status_code, code, message)
+    expected = None if failed_index is None else {"failed_index": failed_index}
+    assert response.json()["error"]["details"] == expected
 
 
 def _clear_services() -> None:
@@ -128,9 +140,9 @@ class TestBulkEnvironmentsEndpoint:
             },
         )
 
-        assert response.status_code == 409
-        data = response.json()
-        assert "already exists" in data["detail"]
+        _assert_bulk_refusal(
+            response, 409, "CONFLICT", f"Environment '{ENV_UUID_DUP}' already exists", 0
+        )
 
     def test_bulk_modify_updates_existing(self, admin_client: TestClient) -> None:
         """Test that bulk modify updates existing environments."""
@@ -178,9 +190,9 @@ class TestBulkEnvironmentsEndpoint:
             },
         )
 
-        assert response.status_code == 404
-        data = response.json()
-        assert "not found" in data["detail"]
+        _assert_bulk_refusal(
+            response, 404, "NOT_FOUND", f"Environment '{ENV_UUID_NONEXISTENT}' not found", 0
+        )
 
     def test_bulk_replace_creates_or_updates(self, admin_client: TestClient) -> None:
         """Test that bulk replace creates or updates environments."""
@@ -255,9 +267,9 @@ class TestBulkEnvironmentsEndpoint:
             },
         )
 
-        assert response.status_code == 404
-        data = response.json()
-        assert "not found" in data["detail"]
+        _assert_bulk_refusal(
+            response, 404, "NOT_FOUND", f"Environment '{ENV_UUID_NONEXISTENT}' not found", 0
+        )
 
     def test_bulk_requires_id_field(self, admin_client: TestClient) -> None:
         """Test that bulk operations require id field."""
@@ -270,9 +282,9 @@ class TestBulkEnvironmentsEndpoint:
             },
         )
 
-        assert response.status_code == 400
-        data = response.json()
-        assert "'id' is required" in data["detail"]
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'id' is required", 0
+        )
 
     def test_bulk_add_requires_name_field(self, admin_client: TestClient) -> None:
         """Test that bulk add requires name field."""
@@ -286,9 +298,9 @@ class TestBulkEnvironmentsEndpoint:
             },
         )
 
-        assert response.status_code == 400
-        data = response.json()
-        assert "name" in data["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'name' is required for add", 0
+        )
 
 
 class TestBulkProfilesEndpoint:
@@ -505,8 +517,9 @@ class TestBulkEnvironmentsSecurityAndEdgeCases:
                 json={"operations": []},
             )
 
-            assert response.status_code == 403
-            assert "Admin mode must be enabled first" in response.json()["detail"]
+            assert_error_reply(
+                response, 403, "AUTHORIZATION_ERROR", "Admin mode must be enabled first"
+            )
 
         _reset_admin_state()
 
@@ -574,8 +587,9 @@ class TestBulkProfilesSecurityAndEdgeCases:
                 json={"operations": []},
             )
 
-            assert response.status_code == 403
-            assert "Admin mode must be enabled first" in response.json()["detail"]
+            assert_error_reply(
+                response, 403, "AUTHORIZATION_ERROR", "Admin mode must be enabled first"
+            )
 
         _reset_admin_state()
 
@@ -647,8 +661,13 @@ class TestBulkValidationErrors:
                 },
             )
 
-            assert response.status_code == 400
-            assert "invalid op type" in response.json()["detail"]
+            _assert_bulk_refusal(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Operation at index 0: invalid op type 'invalid_operation'",
+                0,
+            )
 
         _reset_admin_state()
 
@@ -675,8 +694,13 @@ class TestBulkValidationErrors:
                 },
             )
 
-            assert response.status_code == 400
-            assert "invalid op type" in response.json()["detail"]
+            _assert_bulk_refusal(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Operation at index 0: invalid op type 'invalid_operation'",
+                0,
+            )
 
         _reset_admin_state()
 
@@ -723,10 +747,14 @@ class TestBulkStorageErrorHandling:
                     },
                 )
 
-                assert response.status_code == 500
-                data = response.json()
-                assert "error" in data
-                assert data["failed_index"] == 1
+                assert_error_reply(
+                    response, 500, "INTERNAL_ERROR", "Operation at index 1: storage error"
+                )
+                assert response.json()["error"]["details"] == {
+                    "failed_index": 1,
+                    "partial_results": [{"id": ENV_UUID_1, "status": "created"}],
+                }
+                assert "Storage connection failed" not in response.text
             finally:
                 environment_service._environments = original_storage
 
@@ -771,10 +799,14 @@ class TestBulkStorageErrorHandling:
                     },
                 )
 
-                assert response.status_code == 500
-                data = response.json()
-                assert "error" in data
-                assert data["failed_index"] == 1
+                assert_error_reply(
+                    response, 500, "INTERNAL_ERROR", "Operation at index 1: storage error"
+                )
+                assert response.json()["error"]["details"] == {
+                    "failed_index": 1,
+                    "partial_results": [{"id": PROF_UUID_1, "status": "created"}],
+                }
+                assert "Storage connection failed" not in response.text
             finally:
                 _profile_common._profile_storage = original_storage
 

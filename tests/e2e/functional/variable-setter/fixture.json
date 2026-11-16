@@ -18,7 +18,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "variables": {
@@ -134,9 +133,8 @@
           "version": "1.0.0",
           "description": "Set Expression Values",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.computed_str", "variables.computed_sum"],
           "templateFields": [],
-          "variableExpressionKeys": ["computed_str", "computed_sum"],
           "config": {
             "values": {
               "variables": {
@@ -233,7 +231,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 5, "step": 1 },
             "outputBindings": { "index": "i" },
@@ -254,10 +251,8 @@
           "version": "1.0.0",
           "description": "Increment Counter",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.counter"],
           "templateFields": [],
-          "variableExpressionKeys": ["counter"],
-          "variableTypes": { "counter": "integer" },
           "config": {
             "values": { "variables": { "counter": "counter + 1" } },
             "outputBindings": {},
@@ -280,7 +275,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'loop-counter=' + str(counter)", "level": "INFO" },
             "outputBindings": {},
@@ -303,7 +297,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 3, "step": 1 },
             "outputBindings": { "index": "j" },
@@ -326,7 +319,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "mode": "count", "count": 2, "step": 1 },
             "outputBindings": { "index": "k" },
@@ -347,10 +339,8 @@
           "version": "1.0.0",
           "description": "Nested Increment",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.nested_sum"],
           "templateFields": [],
-          "variableExpressionKeys": ["nested_sum"],
-          "variableTypes": { "nested_sum": "integer" },
           "config": {
             "values": { "variables": { "nested_sum": "nested_sum + 1" } },
             "outputBindings": {},
@@ -373,7 +363,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'nested=' + str(nested_sum)", "level": "INFO" },
             "outputBindings": {},
@@ -396,7 +385,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "enable_catch": true, "enable_finally": false },
             "outputBindings": {},
@@ -417,10 +405,8 @@
           "version": "1.0.0",
           "description": "VarSet In Try",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.try_val"],
           "templateFields": [],
-          "variableExpressionKeys": ["try_val"],
-          "variableTypes": { "try_val": "integer" },
           "config": {
             "values": { "variables": { "try_val": "counter + nested_sum" } },
             "outputBindings": {},
@@ -443,7 +429,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "message": "'try-val=' + str(try_val)", "level": "INFO" },
             "outputBindings": {},
@@ -466,7 +451,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'final:counter=' + str(counter) + ',nested_sum=' + str(nested_sum) + ',try_val=' + str(try_val)",

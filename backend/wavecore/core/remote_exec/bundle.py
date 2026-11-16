@@ -76,6 +76,7 @@ import six
 import tlslite
 
 from wavecore.connectivity import (
+    block_outputs,
     helm,
     k8s,
     opensearch,
@@ -97,6 +98,7 @@ from wavecore.plugins import (
     _netcat_core,
     _opensearch_core,
     _ping_core,
+    _plural,
     _ports,
     _process_group,
     _python_bridge,
@@ -210,6 +212,7 @@ import zipfile
 
 from wavecore.connectivity import run_log, trust_store
 from wavecore.connectivity import web_address
+from wavecore.connectivity.block_outputs import block_failure
 from wavecore.connectivity.helm import _cli as helm_cli
 from wavecore.connectivity.helm.verbs import install, rollback, status, uninstall, upgrade
 from wavecore.connectivity.helm.verbs import test as test_verb
@@ -217,7 +220,6 @@ from wavecore.connectivity.k8s.verbs import apply, connect, cp, delete, events, 
 from wavecore.connectivity.k8s.verbs import rollout, scale, script, top
 from wavecore.connectivity.k8s.verbs import exec as exec_verb
 from wavecore.connectivity.k8s.verbs import logs as logs_verb
-from wavecore.connectivity.k8s.verbs._outputs import block_failure
 from wavecore.plugins import _file_ops as file_ops
 from wavecore.plugins import _local_process
 from wavecore.plugins import _netcat_core as netcat_core
@@ -401,7 +403,6 @@ def _http_client(params, variables, logs):
 
 
 _PY_NOUN = "Script"
-_PY_SCHEMES = ("testdata://", "artifact://")
 # The interpreter is handed fd 3 by a shell redirect: the watchdog closes every inherited one.
 _PY_REDIRECT = 'exec 3>"$1"\\nshift\\nexec "$@"\\n'
 _PY_HOOK_NOT_REACHED = (
@@ -460,19 +461,12 @@ def _py_text(value):
     return str(value)
 
 
-def _py_refuse_scheme(path):
-    for scheme in _PY_SCHEMES:
-        if path.startswith(scheme):
-            raise ValueError("%s paths are not available on the remote host" % scheme)
-
-
 def _py_working_dir(path):
-    _py_refuse_scheme(path)
-    return runtime.require_existing_dir(os.path.abspath(path))
+    return runtime.require_existing_dir(file_ops.local_path(path))
 
 
 def _py_script_file(path, cwd):
-    _py_refuse_scheme(path)
+    file_ops.refuse_wave_scheme(path)
     resolved = os.path.abspath(os.path.join(cwd, path))
     if not os.path.isfile(resolved):
         raise ValueError("Script file not found: %s" % path)
@@ -1017,8 +1011,9 @@ def _vendored_sources() -> dict[str, str]:
     with open(_process_group.__file__, encoding="utf-8") as handle:
         sources["wavecore.plugins._process_group"] = handle.read()
     # The local-process runtime, its watchdog, the Python bridge (PYRUN-12), the block cores,
-    # the trust core and the proxy core.
+    # their output core and count wording, the trust core and the proxy core.
     for module in (
+        block_outputs,
         _held_run,
         _local_process,
         _local_process_runtime,
@@ -1027,6 +1022,7 @@ def _vendored_sources() -> dict[str, str]:
         _netcat_core,
         _opensearch_core,
         _ping_core,
+        _plural,
         _ports,
         _sql_core,
         _tls_material,

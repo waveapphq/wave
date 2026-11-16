@@ -107,11 +107,87 @@ def _store_execution(execution: dict[str, Any]) -> None:
     exec_storage._execution_storage[execution["id"]] = execution
 
 
-def _node(node_id: str, label: str | None) -> dict[str, Any]:
+def plugin_node(node_id: str, label: str | None) -> dict[str, Any]:
     data: dict[str, Any] = {"nodeType": "plugin"}
     if label is not None:
         data["label"] = label
     return {"id": node_id, "type": "workflowNode", "data": data}
+
+
+def control_node(node_id: str, label: str, element_type: str, **values: Any) -> dict[str, Any]:
+    """A control Block as the canvas stores it, its settings in config.values."""
+    data = {
+        "nodeType": "control",
+        "elementType": element_type,
+        "label": label,
+        "config": {"values": values},
+    }
+    return {"id": node_id, "type": "workflowNode", "data": data}
+
+
+def note_node(node_id: str) -> dict[str, Any]:
+    return {"id": node_id, "type": "noteNode", "data": {"elementType": "note"}}
+
+
+def wire(source: str, target: str, handle: str | None = None) -> dict[str, Any]:
+    """A canvas edge; a Test's first wire leaves the virtual start-node."""
+    parts = (source, handle, target)
+    return {
+        "id": "-".join(part for part in parts if part is not None),
+        "source": source,
+        "target": target,
+        "sourceHandle": handle,
+    }
+
+
+def make_workflow_execution(
+    workflow: dict[str, Any],
+    block_states: dict[str, str] | None = None,
+    logs: list[dict[str, Any]] | None = None,
+    status: str = "passed",
+) -> str:
+    """Terminal test-type execution of any canvas workflow; returns its id."""
+    execution_id = str(uuid.uuid4())
+    test_id = str(uuid.uuid4())
+    _store_execution(
+        {
+            "id": execution_id,
+            "name": TEST_EXEC_NAME,
+            "entity_type": "test",
+            "entity_id": test_id,
+            "environment_id": str(uuid.uuid4()),
+            "triggered_by": "dev",
+            "status": status,
+            "started_at": iso(0.0),
+            "ended_at": iso(1.0),
+            "duration": 1,
+            "run_id": execution_id,
+            "workflow_snapshot": workflow,
+        }
+    )
+    test_row = {"id": test_id, "name": TEST_EXEC_NAME, "run_id": execution_id}
+    exec_storage._save_composition(
+        execution_id, {"suites": [{"id": None, "name": "", "tests": [test_row]}]}
+    )
+    exec_storage._append_status(
+        execution_id,
+        {"run_id": execution_id, "status": status, "ended_at": iso(1.0), "duration": 1.0},
+    )
+    for entry in logs or []:
+        exec_storage._append_log(execution_id, execution_id, entry)
+    exec_storage._save_snapshot(
+        execution_id,
+        execution_id,
+        {
+            "run_id": execution_id,
+            "test_id": test_id,
+            "status": status,
+            "block_states": block_states or {},
+            "variables": {},
+            "workflow": workflow,
+        },
+    )
+    return execution_id
 
 
 def make_test_workflow() -> dict[str, Any]:
@@ -120,12 +196,12 @@ def make_test_workflow() -> dict[str, Any]:
     return {
         "nodes": [
             {"id": "node-start", "type": "input", "data": {}},
-            _node("node-init", "Init_Session"),
-            _node("node-loop", "Poll_Sync_Status"),
-            _node("node-fetch", "Fetch_Status"),
-            _node("node-final", "Log_Summary"),
-            _node("node-unrun", "Cleanup_Tmp"),
-            _node("node-bare", None),
+            plugin_node("node-init", "Init_Session"),
+            plugin_node("node-loop", "Poll_Sync_Status"),
+            plugin_node("node-fetch", "Fetch_Status"),
+            plugin_node("node-final", "Log_Summary"),
+            plugin_node("node-unrun", "Cleanup_Tmp"),
+            plugin_node("node-bare", None),
         ],
         "edges": [
             {"id": "e0", "source": "node-start", "target": "node-init", "sourceHandle": None},
@@ -152,7 +228,7 @@ def make_function_workflow() -> dict[str, Any]:
             "workflow": {
                 "nodes": [
                     {"id": "start-node", "type": "startNode", "data": {}},
-                    _node("inner-log", "Fn_Log"),
+                    plugin_node("inner-log", "Fn_Log"),
                 ],
                 "edges": [
                     {
@@ -168,9 +244,9 @@ def make_function_workflow() -> dict[str, Any]:
     return {
         "nodes": [
             {"id": "node-start", "type": "input", "data": {}},
-            _node("node-after", "Log_After"),
+            plugin_node("node-after", "Log_After"),
             {"id": "node-fn", "type": "workflowNode", "data": function_data},
-            _node("node-before", "Log_Before"),
+            plugin_node("node-before", "Log_Before"),
         ],
         "edges": [
             {"id": "e0", "source": "node-start", "target": "node-before", "sourceHandle": None},
@@ -546,9 +622,9 @@ def make_suite_execution(status: str = "failed") -> dict[str, Any]:
             "variables": {},
             "workflow": {
                 "nodes": [
-                    _node("node-sql", "Fetch_Current_Stock"),
-                    _node("node-validate", "Validate_Stock_Levels"),
-                    _node("node-reconcile", "Reconcile_Totals"),
+                    plugin_node("node-sql", "Fetch_Current_Stock"),
+                    plugin_node("node-validate", "Validate_Stock_Levels"),
+                    plugin_node("node-reconcile", "Reconcile_Totals"),
                 ],
                 "edges": [],
             },

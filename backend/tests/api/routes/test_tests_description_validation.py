@@ -3,9 +3,9 @@
 Covers:
 - A node description > 64 characters is auto-trimmed to 64 on save (matches
   the structural-autofix contract used for other recoverable node-level
-  errors). The /validate flow still surfaces the same error with a
-  `fix_action="Trim description to 64 characters"` so the modal can offer
-  the fix for tests already on disk in the over-length state.
+  errors). For a stored test with a longer description, the /validate flow
+  reports the error with `fix_action="Trim description to 64 characters"`
+  so the modal can offer the fix.
 - Description of exactly 64 chars is accepted unchanged.
 - An absent description is accepted.
 - The error message is verbatim - no truncation, no substitution.
@@ -41,7 +41,7 @@ def _make_workflow_node(
     version: str = "1.0.0",
     description: str | None = None,
 ) -> dict[str, Any]:
-    """Build a node dict including an optional description (post-rename shape)."""
+    """Build a node dict including an optional description."""
     data: dict[str, Any] = {
         "elementType": element_type,
         "nodeType": node_type,
@@ -280,7 +280,7 @@ class TestDescriptionValidationSurface:
 
 
 class TestDescriptionValidationDoesNotMutateOtherFields:
-    """The new validation must not break existing valid POST/PUT behavior."""
+    """Description validation keeps valid POST/PUT behavior as it is."""
 
     @pytest.fixture
     def client(self) -> TestClient:

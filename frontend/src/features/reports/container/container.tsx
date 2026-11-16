@@ -132,7 +132,7 @@ export function ReportsListContainer(): ReactNode {
 
   const handleViewReport = useCallback(
     (executionId: string) => {
-      navigate(`/reports/${executionId}`)
+      void navigate(`/reports/${executionId}`)
     },
     [navigate],
   )

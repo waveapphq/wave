@@ -512,7 +512,6 @@ describe('EntityPickerModal', () => {
       () => {
         expect(screen.getByText('Filtered Match')).toBeInTheDocument()
       },
-      { timeout: 2000 },
     )
     expect(screen.queryByText('Login Test')).not.toBeInTheDocument()
     // Selection count survives the filter change even though the row is gone.
@@ -553,7 +552,6 @@ describe('EntityPickerModal', () => {
       () => {
         expect(screen.getByText('Match Test')).toBeInTheDocument()
       },
-      { timeout: 2000 },
     )
     expect(screen.queryByText('Login Test')).not.toBeInTheDocument()
     expect(fetchItems).toHaveBeenLastCalledWith(
@@ -587,7 +585,6 @@ describe('EntityPickerModal', () => {
           screen.getByText('6 tests - refine your search to narrow down'),
         ).toBeInTheDocument()
       },
-      { timeout: 2000 },
     )
 
     await act(async () => {
@@ -625,7 +622,6 @@ describe('EntityPickerModal', () => {
       () => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument()
       },
-      { timeout: 2000 },
     )
     expect(screen.getByText('Unable to load tests')).toBeInTheDocument()
   })
@@ -706,7 +702,6 @@ describe('EntityPickerModal', () => {
       () => {
         expect(fetchItems).toHaveBeenCalledWith(expect.objectContaining({ search: 'log' }))
       },
-      { timeout: 2000 },
     )
     expect(fetchTags).toHaveBeenCalledTimes(1)
   })

@@ -37,12 +37,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class FunctionLoadError(RuntimeError):
+    """A Function Block whose definition cannot be loaded."""
+
+
 def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
     lifecycle = node_data.get("functionLifecycle", "local")
     if lifecycle == "local":
         local_def = node_data.get("localDefinition")
         if not isinstance(local_def, dict):
-            raise RuntimeError("Local Function block missing localDefinition")
+            raise FunctionLoadError("Local Function block missing localDefinition")
         return local_def
     # Edit-mode: the in-Test draft body is the execution contract (the
     # source-version definition is not consulted while editMode is true), so
@@ -52,7 +56,7 @@ def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
         return draft
     function_id = node_data.get("functionId", "")
     if not function_id:
-        raise RuntimeError("Shared Function block missing functionId")
+        raise FunctionLoadError("Shared Function block missing functionId")
     version = node_data.get("functionVersion", "")
     try:
         if version:
@@ -60,7 +64,7 @@ def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
         else:
             definition, _etag = _function_storage.load_function(function_id)
     except LookupError as exc:
-        raise RuntimeError(str(exc)) from exc
+        raise FunctionLoadError(str(exc)) from exc
     # Library versions are sealed at rest; Local and draft bodies unseal with the Test.
     return unseal_definition_secrets(dict(definition))
 
@@ -131,11 +135,11 @@ class FunctionCanvas:
 def locate_function_instance(
     nodes: list[dict[str, Any]], node_id: str, test_id: str
 ) -> dict[str, Any]:
-    """The Function instance ``node_id`` on a canvas, or LookupError."""
+    """The Function instance ``node_id`` on a canvas, or NotFoundException."""
     for node in nodes:
         if node.get("id") == node_id and (node.get("data") or {}).get("nodeType") == "function":
             return node
-    raise LookupError(f"Function block '{node_id}' not found in Test '{test_id}'")
+    raise NotFoundException(f"Function block '{node_id}' not found in Test '{test_id}'")
 
 
 def resolve_function_canvases(
@@ -149,8 +153,8 @@ def resolve_function_canvases(
         instance = locate_function_instance(canvases[-1].nodes, node_id, test_id)
         try:
             definition = _load_function_definition(instance.get("data") or {})
-        except RuntimeError as exc:
-            raise LookupError(str(exc)) from exc
+        except FunctionLoadError as exc:
+            raise NotFoundException(str(exc)) from exc
         body = definition.get("workflow") or {}
         canvases.append(
             FunctionCanvas(
@@ -499,10 +503,12 @@ def _build_library_payload(
     }
 
 
-def _create_library_entry(library_payload: dict[str, Any]) -> dict[str, Any]:
+def _create_library_entry(
+    library_payload: dict[str, Any], repairs: list[dict[str, Any]] | None
+) -> dict[str, Any]:
     """Wrap `create_function` with the publish-specific exception remapping."""
     try:
-        definition, _etag = _functions_service.create_function(library_payload)
+        definition, _etag = _functions_service.create_function(library_payload, repairs=repairs)
         return definition
     except ValidationException as exc:
         if "is already in use" in (exc.message or ""):
@@ -517,6 +523,8 @@ def publish_local_function(
     test_id: str,
     node_id: str,
     payload: dict[str, Any],
+    *,
+    repairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Promote a local Function node to a published library entry.
 
@@ -527,7 +535,8 @@ def publish_local_function(
     the Test node and are preserved across the transition.
 
     Rolls the library entry back if the Test save fails so the system can
-    never persist a half-published state.
+    never persist a half-published state. The wires the library save removed
+    go into ``repairs`` when given.
     """
     test, node = _load_test_and_node(test_id, node_id)
     data = node.get("data") or {}
@@ -546,7 +555,7 @@ def publish_local_function(
     version_str = _resolve_publish_version(payload)
 
     library_payload = _build_library_payload(name, payload, local_def, version_str)
-    definition = _create_library_entry(library_payload)
+    definition = _create_library_entry(library_payload, repairs)
     function_id = definition["id"]
 
     new_data = {k: v for k, v in data.items() if k != "localDefinition"}

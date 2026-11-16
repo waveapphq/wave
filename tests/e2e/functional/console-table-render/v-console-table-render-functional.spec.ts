@@ -28,8 +28,8 @@
  *  - secret : a registered secret in a cell shows the mask AND the column is the width
  *             of the mask, not of the real value. Masking after layout would leave the
  *             column 31 wide (the plaintext length), which the width assertion catches.
- *             The second test proves the same for the STORED execution record, which is
- *             where the rendered table was being written unmasked.
+ *             The second test proves the STORED execution record masks the same cell: it
+ *             keeps the table as named typed columns plus rows, the secret cell the mask.
  *
  * Assertions read each entry's `data-copy-text` (via getLogCopyTexts), never its text
  * content: only the copy attribute preserves the newlines the layout is made of.
@@ -339,7 +339,7 @@ test.describe('V-CONSOLE-TABLE-RENDER-FUNCTIONAL', () => {
     })
   })
 
-  test('the rendered table written to the stored execution record is masked too', async ({
+  test('the stored record keeps the table as columns and rows with the secret cell masked', async ({
     page,
   }) => {
     test.setTimeout(240_000)
@@ -357,22 +357,17 @@ test.describe('V-CONSOLE-TABLE-RENDER-FUNCTIONAL', () => {
     const body = (await resp.json()) as Record<string, unknown>
     const variables = ((body.data as Record<string, unknown>) ?? body) as Record<string, unknown>
 
-    const stored = variables.secret_table
     expect(
-      typeof stored,
-      `the stored record keeps the table as its rendered text. Got: ${JSON.stringify(stored).slice(0, 200)}`,
-    ).toBe('string')
-
-    const lines = (stored as string).split('\n')
-    const widths = ruleWidths(lines[3])
-
-    expect(
-      widths[1],
-      'the stored table masks each cell before it measures the column, same as the console',
-    ).toBe(SECRET_MASK.length)
-    expect(lines, 'the stored table is the same rendering the console carries').toEqual(
-      SECRET_GOLDEN,
-    )
+      variables.secret_table,
+      'the stored record keeps the table as named typed columns plus rows, the secret cell masked',
+    ).toEqual({
+      columns: [
+        { name: 'lbl', type: 'string' },
+        { name: 'tok', type: 'string' },
+        { name: 'prt', type: 'integer' },
+      ],
+      rows: [['secret-leg-prod', SECRET_MASK, 8080]],
+    })
 
     expectNoSecret(
       JSON.stringify(variables),

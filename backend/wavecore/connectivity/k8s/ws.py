@@ -30,6 +30,7 @@ from wavecore.connectivity import proxy
 from wavecore.connectivity.k8s.rest import (
     K8sContextLike,
     host_header,
+    seconds,
     server_address,
     tls_config,
 )
@@ -63,7 +64,7 @@ _UNREADABLE_STATUS = "Kubernetes exec channel sent an unreadable status frame"
 _CLOSED_EARLY = "Kubernetes exec channel closed before the command finished"
 _NEEDS_V5 = "Kubernetes exec channel needs the v5 subprotocol to send standard input"
 _TOO_LARGE = "Kubernetes exec channel produced more than {limit} of output"
-_TIMED_OUT = "Kubernetes exec channel timed out after {timeout} seconds"
+_TIMED_OUT = "Kubernetes exec channel timed out after {within}"
 _MIB = 1 << 20
 _STDERR_KEPT = 65_536
 
@@ -369,7 +370,7 @@ def exec_in_pod(
             _write_stdin(wire, stdin, protocol)
         return _streams(reader, max_output_bytes)
     except TimeoutError as exc:
-        raise ExecTimeout(_TIMED_OUT.format(timeout=timeout)) from exc
+        raise ExecTimeout(_TIMED_OUT.format(within=seconds(timeout))) from exc
     finally:
         wire.sock.close()
 
@@ -391,7 +392,7 @@ class ExecStdout:
             try:
                 payload = _message(self._reader)
             except TimeoutError as exc:
-                raise ExecTimeout(_TIMED_OUT.format(timeout=self._timeout)) from exc
+                raise ExecTimeout(_TIMED_OUT.format(within=seconds(self._timeout))) from exc
             if payload is None:
                 raise ExecTransportError(_CLOSED_EARLY)
             if not payload:
@@ -450,7 +451,7 @@ def exec_stdout(
             wire.write(_request(context, call, key))
             _handshake(reader, key)
         except TimeoutError as exc:
-            raise ExecTimeout(_TIMED_OUT.format(timeout=timeout)) from exc
+            raise ExecTimeout(_TIMED_OUT.format(within=seconds(timeout))) from exc
         yield ExecStdout(reader, timeout)
     finally:
         wire.sock.close()

@@ -64,6 +64,15 @@ export async function restartStamp(
   return body.spec?.template?.metadata?.annotations?.[RESTARTED_AT]
 }
 
+/** Wait until the clock has left the second `stamp` names: a restart stamp counts whole seconds, so
+ *  only a restart in a later second writes a new one. */
+export async function leaveStampSecond(stamp: string | undefined): Promise<void> {
+  if (!stamp) return
+  const next = Date.parse(stamp) + 1000
+  expect(Number.isNaN(next), `restart stamp '${stamp}' is a time`).toBe(false)
+  await expect.poll(() => Date.now() >= next, { timeout: 5_000, intervals: [50] }).toBe(true)
+}
+
 /** One stored Block, by id or by Name. */
 export function storedBlock(test: Record<string, any>, idOrName: string): StoredBlock {
   const nodes = test.workflow.nodes as StoredBlock[]

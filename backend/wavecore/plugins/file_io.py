@@ -15,6 +15,7 @@ from typing import Any
 
 from wavecore.plugins import _file_ops
 from wavecore.plugins._file_paths import resolve_plugin_path, scheme_relative_path
+from wavecore.plugins._shared_params import toggle_parameter
 from wavecore.plugins._user_patterns import compile_user_pattern
 from wavecore.plugins._verb_bridge import run_verb
 from wavecore.plugins.base import PluginBase
@@ -104,8 +105,8 @@ class FileIOPlugin(PluginBase):
                 _choice("if_exists", _IF_EXISTS_WRITE, "overwrite", _IF_EXISTS_DESCRIPTION),
                 _path_parameter("source", _TRANSFER_OPERATIONS, _SOURCE_DESCRIPTION),
                 _path_parameter("destination", _TRANSFER_OPERATIONS, _DESTINATION_DESCRIPTION),
-                _toggle("missing_ok", "Succeed when there is nothing to delete."),
-                _toggle(
+                toggle_parameter("missing_ok", "Succeed when there is nothing to delete."),
+                toggle_parameter(
                     "size",
                     "Include the size in bytes (Stats and List). A folder's size is "
                     "everything inside it, at every depth.",
@@ -132,7 +133,7 @@ class FileIOPlugin(PluginBase):
                         "Empty lists everything."
                     ),
                 },
-                _toggle("recursive", "List entries at every depth below the folder."),
+                toggle_parameter("recursive", "List entries at every depth below the folder."),
             ],
             "return_type": "map",
             "output_schema": [
@@ -208,16 +209,6 @@ def _path_parameter(name: str, operations: list[str], description: str) -> dict[
         "trim": True,
         "required": False,
         "required_when": {"field": "operation", "values": list(operations)},
-        "description": description,
-    }
-
-
-def _toggle(name: str, description: str) -> dict[str, Any]:
-    return {
-        "name": name,
-        "type": "boolean",
-        "required": False,
-        "default": False,
         "description": description,
     }
 

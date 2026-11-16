@@ -29,11 +29,11 @@ _flush_tests
 # Entities carry the full shape the POST APIs write (description/tags/
 # variables/suites) - the update paths raw-index those keys.
 TS="$(_ts)"
-SUITE_OPS="[{\"op\":\"add\",\"entity\":{\"id\":\"$SUITE_ID\",\"name\":\"Picker Paginate Suite\",\"version\":\"1\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
+SUITE_OPS="[{\"op\":\"add\",\"entity\":{\"id\":\"$SUITE_ID\",\"name\":\"Picker Paginate Suite\",\"version\":\"1.0.0\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
 for i in $(seq 1 59); do
   NUM=$(printf "%03d" "$i")
   ID="e8000004-0001-0001-0001-$(printf "%012d" "$i")"
-  SUITE_OPS+=",{\"op\":\"add\",\"entity\":{\"id\":\"$ID\",\"name\":\"Picker Suite $NUM\",\"version\":\"1\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
+  SUITE_OPS+=",{\"op\":\"add\",\"entity\":{\"id\":\"$ID\",\"name\":\"Picker Suite $NUM\",\"version\":\"1.0.0\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
 done
 SUITE_OPS+="]"
 _bulk suites "$SUITE_OPS"

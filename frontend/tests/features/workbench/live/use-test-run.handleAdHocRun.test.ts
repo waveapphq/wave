@@ -433,14 +433,12 @@ describe('useTestRun.handleAdHocRun', () => {
     version: '1.0.0',
     expressionFields: [],
     templateFields: [],
-    variableExpressionKeys: undefined,
-    variableTemplateKeys: undefined,
-    variableTypes: undefined,
+    elementTypes: undefined,
   }
   const DRAFT_CONFIG = {
     outputBindings: {},
     profileBindings: [],
-    variableSecretKeys: undefined,
+    secretFields: undefined,
     outputSecretFields: [],
     unmasked_secret_fields: [],
     secret_masking: 'system' as const,

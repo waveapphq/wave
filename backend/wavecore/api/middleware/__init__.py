@@ -40,7 +40,6 @@ from wavecore.api.middleware.middleware_module import (  # noqa: F401
     _logging_config,
     _sanitize_error_message,
     _should_log_endpoint,
-    _should_sample_request,
     _truncate_body,
     add_error_handling_middleware,
     add_request_response_logging_middleware,

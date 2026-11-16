@@ -122,7 +122,7 @@ def parse_text(text: str) -> tuple[list[x509.Certificate], list[ParseError]]:
         return [], []
     if _PRIVATE_KEY.search(text):
         return [], [ParseError(None, PRIVATE_KEY_MESSAGE)]
-    blocks = _CERTIFICATE_BLOCK.findall(text)
+    blocks = pem_blocks(text)
     if not blocks:
         return [], [ParseError(None, NO_CERTIFICATE_MESSAGE)]
     return _collect([_pem_loader(block) for block in blocks])
@@ -141,15 +141,20 @@ def parse_file(file_name: str, data: bytes) -> tuple[list[x509.Certificate], lis
 
 def single_ca_certificate(text: str) -> x509.Certificate:
     """Exactly one PEM CA certificate with no private key beside it."""
-    blocks = _CERTIFICATE_BLOCK.findall(text)
+    blocks = pem_blocks(text)
     if _PRIVATE_KEY.search(text) or len(blocks) != 1:
         raise InvalidCertificate("not exactly one PEM certificate")
     return _ca_certificate(_pem_loader(blocks[0]))
 
 
+def pem_blocks(text: str) -> list[str]:
+    """The PEM certificate blocks of a text in text order."""
+    return list(_CERTIFICATE_BLOCK.findall(text))
+
+
 def certificate_count(text: str) -> int:
     """How many PEM certificate blocks a bundle text holds."""
-    return len(_CERTIFICATE_BLOCK.findall(text))
+    return len(pem_blocks(text))
 
 
 def certificate_id(cert: x509.Certificate) -> str:

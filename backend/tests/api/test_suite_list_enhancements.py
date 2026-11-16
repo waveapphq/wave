@@ -17,6 +17,7 @@ import pytest
 from tests.api.suite_test_helpers import (
     clear_suite_storage,
     load_suite_file,
+    make_test_ids,
     save_suite_file,
 )
 
@@ -194,7 +195,7 @@ class TestListSuitesComputedFields:
 
         clear_suite_storage()
 
-        test_ids = [str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())]
+        test_ids = make_test_ids(3)
         suite_service.create_suite(
             {
                 "name": "Suite With Tests",
@@ -338,7 +339,7 @@ class TestListSuitesComputedFields:
 
         clear_suite_storage()
 
-        test_ids = [str(uuid.uuid4())]
+        test_ids = make_test_ids(1)
         created = suite_service.create_suite(
             {
                 "name": "Test Suite",
@@ -729,7 +730,7 @@ class TestListSuitesSorting:
         suite_service.create_suite(
             {
                 "name": "Large Suite",
-                "tests": [str(uuid.uuid4()) for _ in range(10)],
+                "tests": make_test_ids(10),
             }
         )
         suite_service.create_suite(
@@ -741,7 +742,7 @@ class TestListSuitesSorting:
         suite_service.create_suite(
             {
                 "name": "Small Suite",
-                "tests": [str(uuid.uuid4())],
+                "tests": make_test_ids(1),
             }
         )
 
@@ -759,7 +760,7 @@ class TestListSuitesSorting:
         suite_service.create_suite(
             {
                 "name": "Large Suite",
-                "tests": [str(uuid.uuid4()) for _ in range(10)],
+                "tests": make_test_ids(10),
             }
         )
         suite_service.create_suite(
@@ -771,7 +772,7 @@ class TestListSuitesSorting:
         suite_service.create_suite(
             {
                 "name": "Small Suite",
-                "tests": [str(uuid.uuid4())],
+                "tests": make_test_ids(1),
             }
         )
 

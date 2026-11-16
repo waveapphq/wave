@@ -34,7 +34,6 @@ function logNode(id: string, description: string, x: number, y: number) {
       description,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message: `'${id}'`, level: 'INFO' },
         outputBindings: {},
@@ -85,7 +84,6 @@ function buildFixture(): Record<string, unknown> {
             description: 'Switch under test',
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: {
                 branches: [caseBranch('branch_0', 'first', 'a'), caseBranch('branch_1', 'second', 'b')],

@@ -42,7 +42,7 @@ _bulk tests "[{
   \"entity\": {
     \"id\": \"$TEST_ID\",
     \"name\": \"Profile Binding Test\",
-    \"version\": \"1\",
+    \"version\": \"1.0.0\",
     \"workflow\": {
       \"nodes\": [
         {

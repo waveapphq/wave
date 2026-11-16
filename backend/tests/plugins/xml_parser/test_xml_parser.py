@@ -7,11 +7,13 @@ Implements comprehensive test coverage for requirement:
 Following TDD approach with exact error messages and 100% coverage requirement.
 """
 
+from decimal import Decimal
 from typing import Any
 
 import pytest
 
 from wavecore.core.expressions.errors import NullValueError
+from wavecore.core.variables.decimal_value import WaveDecimal
 from wavecore.plugins.xml_parser import XMLParserPlugin
 
 
@@ -748,7 +750,7 @@ class TestXMLParserPluginIndividualMode:
 
         assert result["success"] is True
         assert abs(result["price"] - 19.99) < 0.001
-        assert isinstance(result["price"], float)
+        assert isinstance(result["price"], WaveDecimal)
 
     @pytest.mark.asyncio
     async def test_individual_mode_coerce_to_boolean_true(self):
@@ -845,7 +847,7 @@ class TestXMLParserPluginIndividualMode:
 
         assert result["success"] is True
         assert result["num"] == 2.0
-        assert isinstance(result["num"], float)
+        assert isinstance(result["num"], WaveDecimal)
 
     @pytest.mark.asyncio
     async def test_individual_mode_coerce_string_from_int(self):
@@ -922,7 +924,7 @@ class TestXMLParserPluginIndividualMode:
 
         assert result["success"] is True
         assert result["bool_float"] == 1.0
-        assert isinstance(result["bool_float"], float)
+        assert isinstance(result["bool_float"], WaveDecimal)
 
     @pytest.mark.asyncio
     async def test_individual_mode_coerce_boolean_from_int(self):
@@ -1088,7 +1090,7 @@ class TestXMLParserPluginIndividualMode:
 
     @pytest.mark.asyncio
     async def test_individual_mode_coerce_integer_from_float_value(self):
-        """Test coercing XPath float result to integer (truncates)."""
+        """A fractional XPath number asked for as an integer is refused, never truncated."""
         plugin = XMLParserPlugin()
         context = {
             "parameters": {
@@ -1102,9 +1104,9 @@ class TestXMLParserPluginIndividualMode:
 
         result = await plugin.execute(context)
 
-        assert result["success"] is True
-        assert result["avg"] == 6  # 6.5 truncated to 6
-        assert isinstance(result["avg"], int)
+        assert result["success"] is False
+        assert result["errors"] == [{"query": "avg", "error": "Cannot convert '6.5' to integer"}]
+        assert "avg" not in result
 
     @pytest.mark.asyncio
     async def test_individual_mode_unknown_type_passthrough(self):
@@ -1313,3 +1315,98 @@ class TestXMLParserPluginNullEntries:
         result = await _run_block(params)
 
         assert result == {"success": True, "errors": [], "count": "42", "open": True}
+
+
+def _individual(xml_content: str, queries: dict[str, str], types: dict[str, str]) -> dict:
+    """Individual-mode parameters with one output type per query."""
+    return {
+        "xml_content": xml_content,
+        "queries": queries,
+        "output_mode": "individual",
+        "query_output_types": types,
+    }
+
+
+class TestXMLParserPluginExactNumbers:
+    """A number keeps every digit, and a fractional value asked for as an integer is refused
+    (REQ-3.1.3.14)."""
+
+    @pytest.mark.asyncio
+    async def test_a_long_integer_text_asked_for_as_an_integer_keeps_every_digit(self) -> None:
+        params = _individual(
+            "<root><id>9007199254740993</id></root>", {"id": "//id/text()"}, {"id": "integer"}
+        )
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "id": 9007199254740993}
+
+    @pytest.mark.asyncio
+    async def test_a_long_fraction_asked_for_as_a_float_keeps_every_digit(self) -> None:
+        params = _individual(
+            "<root><v>-2123.123213123123699999</v></root>", {"v": "//v/text()"}, {"v": "float"}
+        )
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "v": Decimal("-2123.123213123123699999")}
+        assert isinstance(result["v"], WaveDecimal)
+
+    @pytest.mark.asyncio
+    async def test_a_fraction_asked_for_as_an_integer_is_refused(self) -> None:
+        params = _individual(
+            "<root><v>10.5</v></root>",
+            {"text": "//v/text()", "number": "//v div 4"},
+            {"text": "integer", "number": "integer"},
+        )
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [
+                {"query": "text", "error": "Cannot convert '10.5' to integer"},
+                {"query": "number", "error": "Cannot convert '2.625' to integer"},
+            ],
+        }
+
+    @pytest.mark.asyncio
+    async def test_an_xpath_number_asked_for_as_a_float_is_exact(self) -> None:
+        params = _individual("<root><v>0.1</v></root>", {"v": "number(//v)"}, {"v": "float"})
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "v": Decimal("0.1")}
+        assert isinstance(result["v"], WaveDecimal)
+
+    @pytest.mark.asyncio
+    async def test_an_xpath_number_that_is_not_a_number_asked_for_as_a_float_is_refused(
+        self,
+    ) -> None:
+        params = _individual("<root/>", {"v": "0 div 0"}, {"v": "float"})
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [{"query": "v", "error": "Cannot convert 'nan' to float"}],
+        }
+
+    @pytest.mark.asyncio
+    async def test_a_small_xpath_number_reads_as_plain_digits(self) -> None:
+        params = _individual("<root><v>1</v></root>", {"v": "//v div 10000000"}, {"v": "string"})
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "v": "0.0000001"}
+
+    @pytest.mark.asyncio
+    async def test_an_infinite_xpath_number_asked_for_as_an_integer_is_refused(self) -> None:
+        params = _individual("<root/>", {"v": "1 div 0"}, {"v": "integer"})
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [{"query": "v", "error": "Cannot convert 'inf' to integer"}],
+        }

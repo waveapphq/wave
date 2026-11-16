@@ -33,15 +33,7 @@ import {
   sameNumber,
 } from '@/lib/number-rule'
 import { validateAndParseScalarValue } from '@/lib/variable-validation'
-
-// Numeric counter visibility, mirroring the name counter: hidden under 80% of
-// the cap, muted from 80%, destructive at the cap. Float counts significant
-// digits (cap 28); integer counts digits (cap 19) (REQ-3.1.3.14).
-function counterState(count: number, max: number): 'hidden' | 'muted' | 'destructive' {
-  if (count >= max) return 'destructive'
-  if (count >= 0.8 * max) return 'muted'
-  return 'hidden'
-}
+import { counterState } from '@/lib/field-constraints'
 
 type BooleanChoice = 'true' | 'false'
 
@@ -72,6 +64,8 @@ export interface ScalarEditBodyProps {
   extraExtensions?: Extension[]
   /** The editor's or the number box's accessible name. */
   ariaLabel?: string
+  /** String branch only: the editor takes the cursor once it is built. */
+  autoFocus?: boolean
   /** Numeric branch only: the id of the message that marks the value invalid. */
   errorId?: string
   /** Numeric branch only: the id of text that tells what the box shows beyond its error (a gray default, null). */
@@ -110,7 +104,7 @@ export type NumberBoxEvents = Pick<
 export function ScalarEditBody(props: Readonly<ScalarEditBodyProps>) {
   if (props.type === 'boolean') return <BooleanEditBody {...props} />
   if (props.type === 'string') {
-    const { value, onChange, onValidChange, format, extraExtensions, ariaLabel } = props
+    const { value, onChange, onValidChange, format, extraExtensions, ariaLabel, autoFocus } = props
     return (
       <StringEditBody
         value={value}
@@ -119,6 +113,7 @@ export function ScalarEditBody(props: Readonly<ScalarEditBodyProps>) {
         format={format}
         extraExtensions={extraExtensions}
         ariaLabel={ariaLabel}
+        autoFocus={autoFocus}
       />
     )
   }
@@ -186,6 +181,7 @@ function NumberEditBody({
   }
 
   const numericType = type === 'integer' ? 'integer' : 'float'
+  // The counter counts significant digits of a float and the digits of an integer (REQ-3.1.3.14).
   const counterMax = type === 'integer' ? MAX_INTEGER_DIGITS : MAX_FLOAT_SIG_DIGITS
   const counterCount = type === 'integer' ? integerDigitCount(text) : floatSignificantDigits(text)
   const counter = counterState(counterCount, counterMax)

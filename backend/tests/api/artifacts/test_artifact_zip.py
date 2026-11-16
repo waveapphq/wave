@@ -23,6 +23,7 @@ from tests.api.artifacts.conftest import (
 from tests.api.download_name_helpers import ENTITY_NAME, assert_whole_name
 from wavecore.api.services import artifact_service, shared
 from wavecore.api.services.executions import _storage as exec_storage
+from wavecore.api.services.storage_paths import get_artifacts_storage_path
 
 _INVALID_ID_RE = r"^Invalid artifact identifier: .+$"
 
@@ -86,6 +87,82 @@ class TestZipSubtree:
         names = _zip_names(response.content)
         assert any("a.log" in name for name in names)
         assert not any("report.json" in name for name in names)
+
+
+class TestZipSubtreeContainment:
+    """A subtree is the real folder it names inside the execution folder."""
+
+    @staticmethod
+    def _execution() -> tuple[str, Path]:
+        dir_name, execution_id, directory = make_execution_dir()
+        seed_execution_record(execution_id, "passed", dir_name)
+        write_artifact_file(directory, "report.json", b"{}")
+        write_artifact_file(directory, "logs/a.log", b"line\n")
+        return execution_id, directory
+
+    def _refusal(self, client: TestClient, execution_id: str, subtree: str) -> None:
+        response = client.get(
+            "/artifacts/zip", params={"execution_id": execution_id, "path": subtree}
+        )
+        assert response.status_code == 400
+        assert (
+            response.json()["error"]["message"]
+            == f"Invalid artifact identifier: {execution_id}/{subtree}"
+        )
+
+    def test_a_nul_byte_is_invalid(self, client: TestClient) -> None:
+        execution_id, _directory = self._execution()
+
+        self._refusal(client, execution_id, "lo\0gs")
+
+    def test_two_links_that_point_at_each_other_are_invalid(self, client: TestClient) -> None:
+        execution_id, directory = self._execution()
+        (directory / "a").symlink_to(directory / "b")
+        (directory / "b").symlink_to(directory / "a")
+
+        self._refusal(client, execution_id, "a")
+
+    def test_a_folder_link_out_of_the_execution_is_invalid(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        execution_id, directory = self._execution()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "secret.txt").write_bytes(b"secret")
+        (directory / "outdir").symlink_to(outside, target_is_directory=True)
+
+        self._refusal(client, execution_id, "outdir")
+
+    def test_a_folder_link_inside_is_zipped_under_its_own_name(self, client: TestClient) -> None:
+        execution_id, directory = self._execution()
+        (directory / "current").symlink_to(directory / "logs", target_is_directory=True)
+
+        response = client.get(
+            "/artifacts/zip", params={"execution_id": execution_id, "path": "current"}
+        )
+
+        assert _zip_names(response.content) == ["current/a.log"]
+
+    def test_a_dot_names_the_whole_execution(self, client: TestClient) -> None:
+        execution_id, _directory = self._execution()
+
+        response = client.get("/artifacts/zip", params={"execution_id": execution_id, "path": "."})
+
+        assert _zip_names(response.content) == ["logs/a.log", "report.json"]
+
+    def test_an_artifact_root_under_a_link_names_files_inside_the_execution(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        real_root = tmp_path / "real-artifacts"
+        real_root.mkdir()
+        get_artifacts_storage_path().symlink_to(real_root, target_is_directory=True)
+        execution_id, _directory = self._execution()
+
+        whole = client.get("/artifacts/zip", params={"execution_id": execution_id})
+        logs = client.get("/artifacts/zip", params={"execution_id": execution_id, "path": "logs"})
+
+        assert _zip_names(whole.content) == ["logs/a.log", "report.json"]
+        assert _zip_names(logs.content) == ["logs/a.log"]
 
 
 class TestZipErrors:
@@ -266,7 +343,7 @@ class TestZipBuildsThroughSharedExportZip:
 class TestActiveExecutionStatusSource:
     """The in-progress guard reads the executions storage constant, not a copy."""
 
-    def test_the_duplicate_constant_is_gone(self) -> None:
+    def test_artifact_service_has_no_status_tuple_of_its_own(self) -> None:
         """artifact_service declares no status tuple of its own."""
         assert not hasattr(artifact_service, "_IN_PROGRESS_STATUSES")
 

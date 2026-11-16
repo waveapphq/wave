@@ -3,9 +3,10 @@
  *
  * Mirrors the backend rules used by `_validate_test_data`: required parameter
  * checks (handles `required` and `requiredWhen`), the output binding type
- * check (uses `OUTPUT_TYPE_COMPAT`), and unresolved expression-field references
+ * check (uses `OUTPUT_TYPE_COMPAT`), unresolved expression-field references
  * (identifiers that don't resolve to a known variable / namespace root /
- * profile alias / builtin). Returns one issue per (node, param).
+ * profile alias / builtin), the control rules and the Variable Setter rows,
+ * worded as the save check words them. Returns one issue per (node, param).
  */
 
 import { blockInputParams, blockOutputParams } from '@/features/workbench/lib/node-parameters'
@@ -23,10 +24,13 @@ import {
 } from '@/features/workbench/lib/python-script-validation/script-issues'
 import { EXPRESSION_SAFE_NAMES } from '@/features/workbench/lib/expression-sandbox'
 import { NAMESPACE_ROOTS } from '@/features/workbench/lib/namespace-roots'
+import { literalFits } from '@/features/workbench/lib/saved-block-fields'
 import { mapEntryErrorMessages } from '@/lib/variable-validation'
+import { numberValueProblem, type NumberProblem } from '@/lib/number-rule'
 import { safeStringify } from '@/lib/utils'
 import { describeBindingRejection } from './output-binding-rules'
 import { fieldLabel, literalNumberProblem, numberBoundError } from './number-bounds'
+import { controlFindings, numberRuleReason } from './control-checks'
 
 export type NodeIssueCode =
   | 'REQUIRED_PARAM_MISSING'
@@ -46,6 +50,13 @@ export type NodeIssueCode =
   | 'OUTPUT_NEVER_ASSIGNED'
   | 'SCRIPT_SYNTAX_ERROR'
   | 'SCRIPT_CHECK_WARNING'
+  | 'INVALID_COMPARE_VALUE'
+  | 'INVALID_CONDITION'
+  | 'INVALID_CONTROL_STRUCTURE'
+  | 'INVALID_SETTING_VALUE'
+  | 'INVALID_SETTING_TYPE'
+  | 'INVALID_VARIABLE_VALUE'
+  | 'TEMPLATE_NOT_STRING'
 
 export type NodeIssueSeverity = 'error' | 'warning'
 
@@ -98,6 +109,8 @@ interface NodeForValidation {
     label?: string
     disabled?: boolean
     expressionFields?: string[]
+    templateFields?: string[]
+    elementTypes?: Record<string, unknown>
     config?: {
       values?: Record<string, unknown>
       outputBindings?: Record<string, string>
@@ -155,10 +168,6 @@ function isParamRequired(
   return false
 }
 
-function isStringEmpty(value: unknown): boolean {
-  return typeof value === 'string' && value.trim() === ''
-}
-
 /** A value fills a field of this type: text that is not blank, a list or map with entries, any other value. */
 export function isValueNonEmpty(value: unknown, paramType: string): boolean {
   if (paramType === 'string') {
@@ -183,6 +192,28 @@ function isDefaultFilled(param: InputParam): boolean {
   return param.defaultValue !== undefined && isValueNonEmpty(param.defaultValue, param.type)
 }
 
+/** The issue a required field raises, or null when its value, its null or its default fills it. */
+function requiredParamIssue(param: InputParam, value: unknown): NodeIssue | null {
+  // An explicit null fills a field that takes null (REQ-3.1.3.21).
+  if (value === null && param.acceptsNull) return null
+  const notSet = value === undefined || value === null
+  // A not-set field uses its default, which fills a required one only when it holds something.
+  if (notSet && isDefaultFilled(param)) return null
+  if (notSet) {
+    return {
+      code: 'REQUIRED_PARAM_MISSING',
+      paramName: param.name,
+      message: param.requiredMessage ?? `Required parameter '${param.name}' is missing`,
+    }
+  }
+  if (isValueNonEmpty(value, param.type)) return null
+  return {
+    code: 'REQUIRED_PARAM_EMPTY',
+    paramName: param.name,
+    message: param.requiredMessage ?? `Required parameter '${param.name}' is empty`,
+  }
+}
+
 function checkRequiredParams(
   schema: InputParam[],
   values: Record<string, unknown>,
@@ -191,35 +222,8 @@ function checkRequiredParams(
   for (const param of schema) {
     if (!isParamVisible(param, values, schema)) continue
     if (!isParamRequired(param, values, schema)) continue
-    const value = values[param.name]
-    // A not-set field uses its default, which fills a required one only when it holds something.
-    if ((value === undefined || value === null) && isDefaultFilled(param)) continue
-
-    if (value === undefined || value === null) {
-      issues.push({
-        code: 'REQUIRED_PARAM_MISSING',
-        paramName: param.name,
-        message: param.requiredMessage ?? `Required parameter '${param.name}' is missing`,
-      })
-      continue
-    }
-
-    if (param.type === 'string' && isStringEmpty(value)) {
-      issues.push({
-        code: 'REQUIRED_PARAM_EMPTY',
-        paramName: param.name,
-        message: param.requiredMessage ?? `Required parameter '${param.name}' is empty`,
-      })
-      continue
-    }
-
-    if (!isValueNonEmpty(value, param.type)) {
-      issues.push({
-        code: 'REQUIRED_PARAM_EMPTY',
-        paramName: param.name,
-        message: param.requiredMessage ?? `Required parameter '${param.name}' is empty`,
-      })
-    }
+    const issue = requiredParamIssue(param, values[param.name])
+    if (issue) issues.push(issue)
   }
 }
 
@@ -298,6 +302,105 @@ function checkNumberRanges(
     if (message === null) continue
     issues.push({ code: 'NUMBER_RANGE', severity: 'error', paramName: param.name, message })
   }
+}
+
+/** The control rules of a Block, each with the save check's code and place (REQ-3.5.0.3). */
+function checkControlRules(
+  elementType: string,
+  values: Record<string, unknown>,
+  expressionFields: readonly string[],
+  issues: NodeIssue[],
+): void {
+  for (const { code, field, message } of controlFindings(elementType, values, expressionFields)) {
+    issues.push({ code, paramName: field, message })
+  }
+}
+
+const SETTER_ELEMENT = 'variable-setter'
+const SETTER_FLAG = 'variables.'
+
+/** The value-type word the save check names a stored value by. */
+function valueTypeName(value: unknown): string {
+  if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'float'
+  if (Array.isArray(value)) return 'array'
+  return isRecord(value) ? 'map' : typeof value
+}
+
+/** The save check's type-fit text for a Setter literal its variable's declared type refuses. */
+function setterTypeIssue(row: string, value: unknown, declared: string): NodeIssue {
+  if (declared === 'integer' || declared === 'float') {
+    // The literal does not fit, so the number rule refuses it.
+    const reason = numberRuleReason(value, declared, numberValueProblem(value, declared) as NumberProblem)
+    return { code: 'INVALID_VARIABLE_VALUE', paramName: 'variables', message: `Value for variable '${row}' ${reason}` }
+  }
+  return {
+    code: 'INVALID_SETTING_TYPE',
+    paramName: 'variables',
+    message: `Setting 'variables.${row}' of block 'variable-setter' expects ${declared}, got ${valueTypeName(value)}`,
+  }
+}
+
+/** A Setter literal row whose value no longer fits its variable's declared type (REQ-3.4.1.14). */
+function checkSetterRowTypes(
+  data: NodeForValidation['data'],
+  rows: Record<string, unknown>,
+  varsByName: Map<string, VarForValidation>,
+  issues: NodeIssue[],
+): void {
+  const written = new Set([...(data.expressionFields ?? []), ...(data.templateFields ?? [])])
+  for (const [row, value] of Object.entries(rows)) {
+    const declared = varsByName.get(row)?.type
+    if (declared === undefined || written.has(SETTER_FLAG + row)) continue
+    if (!literalFits(value, { name: row, type: declared })) issues.push(setterTypeIssue(row, value, declared))
+  }
+}
+
+function withArticle(word: string): string {
+  return `${/^[aeiou]/.test(word) ? 'an' : 'a'} ${word}`
+}
+
+/** The entry type stored for one entry of a list (by index) or map (by key) row. */
+function entryTypeAt(types: unknown, key: string): unknown {
+  if (Array.isArray(types)) return types[Number(key)]
+  return isRecord(types) ? types[key] : undefined
+}
+
+/** The save check's text for a Template Setter row or entry on a type that is not text, or null. */
+function setterTemplateMessage(
+  place: string,
+  data: NodeForValidation['data'],
+  varsByName: Map<string, VarForValidation>,
+): string | null {
+  const dot = place.indexOf('.')
+  if (dot === -1) {
+    const declared = varsByName.get(place)?.type
+    if (declared === undefined || declared === 'string') return null
+    return `Row '${place}' sets ${withArticle(declared)} variable; a template builds text, so it needs a string variable`
+  }
+  const row = place.slice(0, dot)
+  const key = place.slice(dot + 1)
+  const entryType = entryTypeAt(data.elementTypes?.[SETTER_FLAG + row], key)
+  if (typeof entryType !== 'string' || entryType === 'string') return null
+  return `Entry '${key}' of row '${row}' is ${entryType}; a template builds text, so it needs element type string`
+}
+
+/** A Template Setter row or entry on a type that is not text: a template builds text (REQ-3.4.1.14). */
+function checkSetterTemplates(
+  data: NodeForValidation['data'],
+  varsByName: Map<string, VarForValidation>,
+  issues: NodeIssue[],
+): void {
+  if (data.elementType !== SETTER_ELEMENT) return
+  const places = (data.templateFields ?? []).filter((flag) => flag.startsWith(SETTER_FLAG))
+  for (const flag of places) {
+    const message = setterTemplateMessage(flag.slice(SETTER_FLAG.length), data, varsByName)
+    if (message !== null) issues.push({ code: 'TEMPLATE_NOT_STRING', paramName: 'variables', message })
+  }
+}
+
+function setterRows(node: NodeForValidation): Record<string, unknown> {
+  const rows = node.data.config?.values?.variables
+  return node.data.elementType === SETTER_ELEMENT && isRecord(rows) ? rows : {}
 }
 
 interface ProfileBindingLike {
@@ -465,7 +568,12 @@ function issuesForNode(
   checkRequiredParams(inputSchema, values, issues)
   checkMapKeyPolicies(inputSchema, values, issues)
   checkEnumOrder(inputSchema, values, issues)
-  checkNumberRanges(inputSchema, values, new Set(data.expressionFields ?? []), issues)
+  // An {x} or a Template is written source, never read with the number rule (REQ-3.1.3.14).
+  const sourceFields = new Set([...(data.expressionFields ?? []), ...(data.templateFields ?? [])])
+  checkNumberRanges(inputSchema, values, sourceFields, issues)
+  checkControlRules(data.elementType ?? '', values, data.expressionFields ?? [], issues)
+  checkSetterRowTypes(data, setterRows(node), varsByName, issues)
+  checkSetterTemplates(data, varsByName, issues)
   checkOutputLists(inputSchema, values, outputSchema.map((output) => output.name), issues)
 
   const outputTypes = resolveOutputTypes(outputSchema, values, inputSchema)
@@ -517,6 +625,14 @@ function functionFlowRuleIssues(node: NodeForValidation, inputs: Set<string>): N
       code: 'INPUT_WRITE_FORBIDDEN',
       paramName: output,
       message: `Writes to declared input '${target}'; inputs are read-only`,
+    })
+  }
+  for (const row of Object.keys(setterRows(node))) {
+    if (!inputs.has(row)) continue
+    issues.push({
+      code: 'INPUT_WRITE_FORBIDDEN',
+      paramName: 'variables',
+      message: `Writes to declared input '${row}'; inputs are read-only`,
     })
   }
   for (const { field, text } of expressionSites(node)) {

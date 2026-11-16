@@ -1,7 +1,7 @@
 """App startup checks the data folder before serving (REQ-4.7.13).
 
 A data folder that is not set, set through a relative environment override, or
-cannot be created is logged at ERROR and the process exits with code 1. A usable
+cannot be created is logged at FATAL and the process exits with code 1. A usable
 folder is created when missing and named by absolute path in one INFO line.
 """
 
@@ -21,6 +21,7 @@ from wavecore.api.app import app
 from wavecore.api.config import loader
 from wavecore.api.config.loader import Config
 from wavecore.api.services import storage_paths
+from wavecore.core.logging import formatter
 
 NOT_SET = (
     "Data folder not set: add storage.base_path to the config file or set WAVE_STORAGE_BASE_PATH"
@@ -68,8 +69,26 @@ class TestDataFolderRefusals:
                 app_module._check_data_folder()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [NOT_SET]
+        assert startup_messages(caplog, logging.CRITICAL) == [NOT_SET]
         assert startup_messages(caplog, logging.INFO) == []
+
+    @pytest.mark.usefixtures("restore_log_levels")
+    def test_missing_setting_is_logged_at_log_level_fatal(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+        exit_call: MagicMock,
+        startup_messages: Callable[..., list[str]],
+    ) -> None:
+        _install_config(monkeypatch, tmp_path / "install", None)
+        formatter.set_log_level("FATAL")
+
+        with pytest.raises(SystemExit):
+            app_module._check_data_folder()
+
+        exit_call.assert_called_once_with(1)
+        assert startup_messages(caplog, logging.CRITICAL) == [NOT_SET]
 
     def test_relative_environment_override_logs_the_error_and_exits(
         self,
@@ -87,7 +106,7 @@ class TestDataFolderRefusals:
                 app_module._check_data_folder()
 
         exit_call.assert_called_once_with(1)
-        assert startup_messages(caplog, logging.ERROR) == [
+        assert startup_messages(caplog, logging.CRITICAL) == [
             "WAVE_STORAGE_BASE_PATH must be an absolute path: data"
         ]
         assert not (tmp_path / "ok").exists()
@@ -110,7 +129,7 @@ class TestDataFolderRefusals:
                 app_module._check_data_folder()
 
         exit_call.assert_called_once_with(1)
-        errors = startup_messages(caplog, logging.ERROR)
+        errors = startup_messages(caplog, logging.CRITICAL)
         assert len(errors) == 1
         assert re.match(rf"^Data folder {re.escape(str(target))} cannot be created: .+$", errors[0])
         assert startup_messages(caplog, logging.INFO) == []
@@ -141,7 +160,7 @@ class TestDataFolderInUse:
         shown = re.match(r"^Data folder: (/.+)$", lines[0])
         assert shown is not None
         assert _same_place(Path(shown.group(1)), expected)
-        assert startup_messages(caplog, logging.ERROR) == []
+        assert startup_messages(caplog, logging.CRITICAL) == []
 
     def test_existing_folder_is_named_and_kept(
         self,

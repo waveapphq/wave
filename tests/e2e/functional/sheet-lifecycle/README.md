@@ -60,3 +60,73 @@ its own edits (CANVAS-230, REQ-3.1.1.5, REQ-3.1.3.1).
   renames and the Test save both stored Blocks have their new names and no binding to either deleted name.
 - **Typed Name**: the typed Name survives the selection, the other Block's rename and the delete (whose binding
   empties); the Save stores the typed Name and no binding to `total`.
+
+## V-SHEET-DIALOG (functional)
+
+`v-sheet-dialog-functional.spec.ts` - floating windows are non-modal dialogs named by their titles, and the
+variable window puts the cursor in Name as it opens (CANVAS-227, VMGR-15, VMGR-106, REQ-5.2.1.32, REQ-5.2.1.33).
+
+### Prerequisites
+
+- A running stack; the spec seeds its own Test with the integer variable `counter` read by one Log, and checks
+  `POST /tests/{id}/validate` returns zero errors.
+
+### Steps
+
+1. Open the Test, expand the Variable Manager and press `+ Add`.
+2. Press the pencil on `counter`.
+3. Press the expand button on `counter` to open its watcher.
+4. Press `+ Add` again with the three windows open, then press Escape.
+
+### Validation
+
+- The `+ Add` window is a dialog named `New variable`, marked not modal, with the cursor in its Name field; it
+  has the text color of the page around it and no margin or padding of its own.
+- The pencil's window is a dialog named `Edit variable`, marked not modal, with the cursor in Name holding `counter`.
+- The watcher is a dialog named `counter`, marked not modal.
+- The page behind stays usable: its `Add` button is still found by its role and opens a second `New variable` window.
+- Escape closes only the window in front (the second `New variable` window); the watcher and the Edit window stay.
+
+## V-SHEET-FLOATING-DIALOGS (functional)
+
+`v-sheet-floating-dialogs-functional.spec.ts` - every other floating window is a non-modal dialog named by its
+visible title, the page behind it stays usable, and a window that sets a starting field puts the cursor there
+(CANVAS-227, VMGR-106, TDATA-9, REQ-5.2.1.32, REQ-5.2.1.33).
+
+### Prerequisites
+
+- A running stack; each test stores its own `zz-win-<n>` Test through `POST /tests`, checks that
+  `POST /tests/{id}/validate` finds no error, and deletes it after:
+  1. a Log;
+  2. a Local Function `Params_Fn` with the input `zz_in` and the output `zz_out`;
+  3. a Log reading the String `greeting`, the list `hosts`, the map `limits` and the table `servers`;
+  4. an HTTP Request `Fetch Status` in multipart body mode;
+  5. three File I/O Blocks: Read, List and Copy;
+  6. a Log.
+
+### Steps
+
+Each test opens its Test and expands the Variable Manager. With each window open, the test presses the Variable
+Manager's `Add` (inside a Function, `Add` and then `Variable`), then Escape.
+
+1. Press Ctrl+Space (Quick Insert).
+2. Drill into `Params_Fn`; open `Add` > `Input parameter` and `Add` > `Output parameter`, then the pencils of
+   `zz_in` and `zz_out`.
+3. Open each variable's Edit window and press `Open editor`.
+4. Open `Fetch Status` from its cog; press `Profiles`; open `Open editor for Parts` in Body and
+   `Open editor for Cipher Suites` in TLS / Certificates.
+5. Open each File I/O Block and press Browse: Read Path, Copy Source, List Path, Copy Destination.
+6. Open the Functions Library from the palette, then the `Test Data` and `Artifacts` chips.
+
+### Validation
+
+- Each window is the dialog named by its title, is not marked modal and is not shown as a modal dialog: `Quick
+  Insert`; `New input parameter`, `New output parameter`, `Edit input parameter`, `Edit output parameter`;
+  `Edit value` for a text, list, map and table value; `Fetch Status - Edit Config`; `Profiles`; `Edit value` of the
+  Parts editor and of the cipher picker; `Choose a file`, `Choose a file or folder`, `Choose a folder`, `Save as`;
+  `Functions Library`; `Test Data`; `Session Artifacts`.
+- The page behind stays usable: its `Add` button is still found by its role and opens a `New variable` window while
+  the window under test stays open; Escape closes only the `New variable` window.
+- The cursor: in Quick Insert's search box; in Name of each input and output window (Edit holds the parameter's
+  name); inside the editor of Edit value (the code editor of a text, the list, map and table bodies). The other
+  windows set no starting cursor and the spec checks none.

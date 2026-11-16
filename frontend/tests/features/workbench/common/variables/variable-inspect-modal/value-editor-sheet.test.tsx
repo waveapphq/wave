@@ -60,28 +60,41 @@ function makeEditBodyStub(testid: string, changeValue: unknown) {
 
 // The scalar body is CodeMirror, whose editable surface sits inside a scroller
 // that is itself tabbable; the stand-in carries the same two elements so the
-// sheet's focus target is the one the app has.
+// sheet's focus target is the one the app has. CodeMirror builds them in the
+// render after its host mounts (its host comes through a callback ref), so the
+// stand-in shows nothing until then either, and with autoFocus focuses its
+// surface once built, as CodeMirror does.
 function ScalarEditBodyStub({
   onChange,
   onValidChange,
+  autoFocus,
 }: {
   onChange: (v: unknown) => void
   onValidChange: (valid: boolean) => void
+  autoFocus?: boolean
 }) {
+  const [host, setHost] = React.useState<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    if (autoFocus && host) host.querySelector<HTMLElement>('.cm-content')?.focus()
+  }, [autoFocus, host])
   return (
-    <div data-testid="scalar-edit-body">
-      <div className="cm-scroller" tabIndex={-1} data-testid="scalar-edit-scroller">
-        <div className="cm-content" contentEditable data-testid="scalar-edit-surface" />
-      </div>
-      <button data-testid="scalar-edit-body-change" onClick={() => onChange('typed')}>
-        change
-      </button>
-      <button data-testid="scalar-edit-body-invalid" onClick={() => onValidChange(false)}>
-        invalid
-      </button>
-      <button data-testid="scalar-edit-body-valid" onClick={() => onValidChange(true)}>
-        valid
-      </button>
+    <div data-testid="scalar-edit-body" ref={setHost}>
+      {host && (
+        <>
+          <div className="cm-scroller" tabIndex={-1} data-testid="scalar-edit-scroller">
+            <div className="cm-content" contentEditable data-testid="scalar-edit-surface" />
+          </div>
+          <button data-testid="scalar-edit-body-change" onClick={() => onChange('typed')}>
+            change
+          </button>
+          <button data-testid="scalar-edit-body-invalid" onClick={() => onValidChange(false)}>
+            invalid
+          </button>
+          <button data-testid="scalar-edit-body-valid" onClick={() => onValidChange(true)}>
+            valid
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -322,7 +335,7 @@ import {
   applyParentChildren,
   parentChildren,
 } from '../../../../../utils/child-editor-parent'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { ValueEditorSheet } from '@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet'
 import type { UseSqlCatalogResult } from '@/features/workbench/hooks/use-sql-catalog'
 import type { OpenSearchField, OpenSearchIndex } from '@/features/workbench/api/opensearch-tools'
@@ -472,6 +485,13 @@ describe('ValueEditorSheet - shell', () => {
     expect(
       within(screen.getByTestId('value-editor-sheet')).getByRole('heading', { level: 2, name: 'Edit value' }),
     ).toBeInTheDocument()
+  })
+
+  it('is a non-modal dialog named "Edit value"', () => {
+    renderSheet()
+    const sheet = screen.getByTestId('value-editor-sheet')
+    expect(screen.getByRole('dialog', { name: 'Edit value' })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
   })
 
   it('shows a type badge for the edited value', () => {
@@ -1172,8 +1192,7 @@ describe('ValueEditorSheet - captureEsc', () => {
       <DraggableSheet
         open
         onClose={onHostClose}
-        ariaLabel="Host Sheet"
-        header={<span>Host</span>}
+        header={<SheetTitle>Host</SheetTitle>}
         data-testid="host-sheet"
       >
         <ValueEditorSheet
@@ -4079,5 +4098,214 @@ describe('ValueEditorSheet - geometry memory', () => {
     renderEditor()
     expect(sheetRoot().style.width).toBe('720px')
     expect(sheetRoot().style.height).toBe('460px')
+  })
+})
+
+// ============================================================================
+// Keyboard focus: the sheet takes focus as it opens and hands it back as it
+// closes, also when the control that opened it is gone (REQ-3.1.1.5).
+// ============================================================================
+
+/** A field with its expand; the sheet may be told the field box as the place focus goes back to. */
+function ExpandHost({ withReturnFocus = false }: Readonly<{ withReturnFocus?: boolean }>) {
+  const [open, setOpen] = React.useState(false)
+  const boxRef = React.useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input ref={boxRef} aria-label="Greeting" />
+      <button type="button" onClick={() => setOpen(true)}>
+        Open editor for Greeting
+      </button>
+      {open && (
+        <ValueEditorSheet
+          label="Greeting"
+          name="greeting"
+          type="string"
+          value="hi"
+          isTemplate={false}
+          availableVariables={[]}
+          returnFocus={withReturnFocus ? boxRef : undefined}
+          onSave={vi.fn()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
+type ProtectedStep = 'masked' | 'asking' | 'cleared'
+
+/** A protected value: the pencil asks, Delete & Edit clears it, the box takes the pencil's place and the sheet opens. */
+function ProtectedHost() {
+  const [step, setStep] = React.useState<ProtectedStep>('masked')
+  const [open, setOpen] = React.useState(false)
+  const boxRef = React.useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input aria-label="Elsewhere" />
+      {step === 'cleared' ? (
+        <input ref={boxRef} aria-label="Greeting" />
+      ) : (
+        <button type="button" onClick={() => setStep('asking')}>
+          Greeting: Edit protected value
+        </button>
+      )}
+      {step === 'asking' && (
+        <button
+          type="button"
+          onClick={() => {
+            setStep('cleared')
+            setOpen(true)
+          }}
+        >
+          Delete & Edit
+        </button>
+      )}
+      {open && (
+        <ValueEditorSheet
+          label="Greeting"
+          name="greeting"
+          type="string"
+          value=""
+          isTemplate={false}
+          availableVariables={[]}
+          returnFocus={boxRef}
+          onSave={vi.fn()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
+describe('ValueEditorSheet - keyboard focus as it opens and closes', () => {
+  const sheetShown = () => screen.queryByTestId('value-editor-sheet')
+
+  it('moves focus into the editor when the sheet opens', async () => {
+    renderSheet({ type: 'string', value: 'hi' })
+    await waitFor(() => expect(screen.getByTestId('scalar-edit-surface')).toHaveFocus())
+  })
+
+  // A list, map or table body has no text editor of its own: focus still moves into it.
+  it.each([
+    ['list', 'array', ['web-1', 'web-2'], 'array-edit-body'],
+    ['map', 'map', { cpu: '2' }, 'map-edit-body'],
+    ['table', 'table', [{ host: 'db-1' }], 'table-edit-body'],
+  ] as const)('moves focus into the %s editor when its sheet opens', async (_kind, type, value, bodyTestId) => {
+    renderSheet({ type, value })
+    const body = screen.getByTestId(bodyTestId)
+    await waitFor(() => expect(body.contains(document.activeElement)).toBe(true), { timeout: 1000 })
+  })
+
+  it('moves focus into the editor when an expand opens the sheet', async () => {
+    const user = userEvent.setup()
+    render(<ExpandHost />)
+    await user.click(screen.getByRole('button', { name: 'Open editor for Greeting' }))
+    await waitFor(() => expect(screen.getByTestId('scalar-edit-surface')).toHaveFocus())
+  })
+
+  it('leaves focus on Format when Format rebuilds the text editor', async () => {
+    const user = userEvent.setup()
+    renderSheet({ type: 'string', value: '{"a":1}' })
+    expect(screen.getByTestId('scalar-edit-surface')).toHaveFocus()
+    const format = screen.getByTestId('value-editor-string-format-button')
+    await user.click(format)
+    expect(screen.getByTestId('scalar-edit-surface')).not.toHaveFocus()
+    expect(format).toHaveFocus()
+  })
+
+  it('hands focus back to the expand that opened it when it closes', async () => {
+    const user = userEvent.setup()
+    render(<ExpandHost />)
+    const expand = screen.getByRole('button', { name: 'Open editor for Greeting' })
+    await user.click(expand)
+    await user.click(screen.getByTestId('value-editor-cancel-button'))
+    expect(sheetShown()).not.toBeInTheDocument()
+    expect(expand).toHaveFocus()
+  })
+
+  it('hands focus back to the opener still on the page, not to the field box it was also given', async () => {
+    const user = userEvent.setup()
+    render(<ExpandHost withReturnFocus />)
+    const expand = screen.getByRole('button', { name: 'Open editor for Greeting' })
+    await user.click(expand)
+    await user.click(screen.getByTestId('value-editor-cancel-button'))
+    expect(expand).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Greeting' })).not.toHaveFocus()
+  })
+
+  it('hands focus back to the field it was opened from when a sheet opened through Delete & Edit closes', async () => {
+    const user = userEvent.setup()
+    render(<ProtectedHost />)
+    await user.click(screen.getByRole('button', { name: 'Greeting: Edit protected value' }))
+    await user.click(screen.getByRole('button', { name: 'Delete & Edit' }))
+    expect(sheetShown()).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete & Edit' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('value-editor-cancel-button'))
+
+    expect(sheetShown()).not.toBeInTheDocument()
+    expect(document.activeElement).not.toBe(document.body)
+    expect(screen.getByRole('textbox', { name: 'Greeting' })).toHaveFocus()
+  })
+
+  it('hands focus back to the field it was opened from when Esc closes a sheet opened through Delete & Edit', async () => {
+    const user = userEvent.setup()
+    render(<ProtectedHost />)
+    await user.click(screen.getByRole('button', { name: 'Greeting: Edit protected value' }))
+    await user.click(screen.getByRole('button', { name: 'Delete & Edit' }))
+    expect(sheetShown()).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(sheetShown()).not.toBeInTheDocument()
+    expect(document.activeElement).not.toBe(document.body)
+    expect(screen.getByRole('textbox', { name: 'Greeting' })).toHaveFocus()
+  })
+
+  it('leaves focus where the user moved it when a sheet opened through Delete & Edit closes', async () => {
+    const user = userEvent.setup()
+    render(<ProtectedHost />)
+    await user.click(screen.getByRole('button', { name: 'Greeting: Edit protected value' }))
+    await user.click(screen.getByRole('button', { name: 'Delete & Edit' }))
+    const elsewhere = screen.getByRole('textbox', { name: 'Elsewhere' })
+    act(() => elsewhere.focus())
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(sheetShown()).not.toBeInTheDocument()
+    expect(elsewhere).toHaveFocus()
+  })
+})
+
+// A list whose items take {x} opens 40 px wider, the {x} column and its gap, so its items keep their width (FIELD-6, VMGR-85).
+describe('ValueEditorSheet - the width of a list whose items take {x}', () => {
+  // Its own sheet id: a size an earlier case moved the default sheet to is remembered per id.
+  function renderList(withExpressions: boolean) {
+    render(
+      <ValueEditorSheet
+        sheetId={withExpressions ? 'list-width-expressions' : 'list-width-plain'}
+        label="host_list"
+        name="host_list"
+        type="array"
+        value={['web-1', 'web-2', 'backup_host']}
+        isTemplate={false}
+        allowTemplate={false}
+        availableVariables={[]}
+        listEditor={withExpressions ? { expressionEditor: () => null, expressionIndices: [2] } : undefined}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+  }
+
+  it('opens a list whose items take {x} at 480 px', () => {
+    renderList(true)
+    expect(sheetRoot().style.width).toBe('480px')
+  })
+
+  it('opens a list whose items take no {x} at 440 px', () => {
+    renderList(false)
+    expect(sheetRoot().style.width).toBe('440px')
   })
 })

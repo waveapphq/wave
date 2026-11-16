@@ -3,7 +3,7 @@
 Findings are advisory: 1-based line and column and a length, all counted in characters.
 """
 
-from collections.abc import Collection, Iterable, Iterator
+from collections.abc import Collection, Iterable, Iterator, Mapping
 from typing import Any
 
 from wavecore.api.exceptions import UnprocessableEntityException, ValidationException
@@ -14,7 +14,7 @@ from wavecore.connectivity.opensearch import dql
 from wavecore.connectivity.opensearch._aggregate import _COMPANIONS
 from wavecore.connectivity.opensearch._fields import FieldInfo, FieldList
 from wavecore.connectivity.opensearch._json_text import JsonNode, JsonTextError, parse
-from wavecore.connectivity.opensearch._query import _QUERY_OPTIONS
+from wavecore.connectivity.opensearch._query import _QUERY_OPTIONS, FIELD_NAMED_QUERIES
 from wavecore.core.expressions.template import _TEMPLATE_PATTERN
 from wavecore.core.expressions.template_escape import mask_markers
 
@@ -27,6 +27,18 @@ _KIND_WORDS = {
     "boolean": "true or false",
     "object": "an object",
     "array": "a list",
+}
+# The parameters of compound queries that hold whole queries, one or a list of them.
+_QUERY_PARAMS = {
+    "bool": frozenset({"filter", "must", "must_not", "should"}),
+    "boosting": frozenset({"negative", "positive"}),
+    "constant_score": frozenset({"filter"}),
+    "dis_max": frozenset({"queries"}),
+    "function_score": frozenset({"query"}),
+    "has_child": frozenset({"query"}),
+    "has_parent": frozenset({"query"}),
+    "nested": frozenset({"query"}),
+    "script_score": frozenset({"query"}),
 }
 
 # A finding before it is placed: start and end offsets in characters, and its message.
@@ -94,13 +106,18 @@ def _json(language: str, source: str, known: FieldList | None, where: str) -> li
     spec = api_spec.load_extract()
     spans = _vocabulary(spec, language, root)
     if known is not None:
-        keyed = spec.field_keyed_queries if language == "query_dsl" else frozenset()
-        spans += _unknown(_json_fields(keyed, root), known, where)
+        beside = _beside_the_field(spec) if language == "query_dsl" else {}
+        spans += _unknown(_json_fields(beside, root), known, where)
     return spans
 
 
+def _beside_the_field(spec: ApiSpec) -> dict[str, Collection[str]]:
+    """The keys beside the field in each query that holds its field as a key, as a run reads it."""
+    return {**dict.fromkeys(spec.field_keyed_queries, _QUERY_OPTIONS), **FIELD_NAMED_QUERIES}
+
+
 def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
-    """Types and their parameters at the root: known names, value kinds, enum values."""
+    """Types and their parameters, at the root and inside compound queries: names, kinds, enums."""
     types = set(spec.keys_at(language, []))
     spans: list[Span] = []
     # Sub-aggregations and meta may sit beside the one aggregation, as a run allows.
@@ -114,7 +131,21 @@ def _vocabulary(spec: ApiSpec, language: str, root: JsonNode) -> list[Span]:
                 spans += _params(spec, language, [name, field], options)
         else:
             spans += _params(spec, language, [name], node)
+            if language == "query_dsl":
+                spans += _held_queries(spec, name, node)
     return spans
+
+
+def _held_queries(spec: ApiSpec, name: str, node: JsonNode) -> list[Span]:
+    """Each query a compound query holds, a parameter holding one query or a list of them."""
+    held = _QUERY_PARAMS.get(name, frozenset())
+    return [
+        span
+        for key, value in _members(node)
+        if key in held
+        for query in ([value] if value.kind == "object" else _children(value))
+        for span in _vocabulary(spec, "query_dsl", query)
+    ]
 
 
 def _members(node: JsonNode) -> list[tuple[str, JsonNode]]:
@@ -129,13 +160,14 @@ def _children(node: JsonNode) -> list[JsonNode]:
 
 def _params(spec: ApiSpec, language: str, path: list[str], node: JsonNode) -> list[Span]:
     spans: list[Span] = []
+    field_named = language == "query_dsl" and path[0] in FIELD_NAMED_QUERIES
     for key, value in _members(node):
         param = spec.param(language, path, key)
-        if param is None:
+        if param is not None:
+            spans += _value_problem(key, param, value)
+        elif not field_named:
             start, end = node.keys[key]
             spans.append((start, end, f'"{key}" is not a parameter of {path[0]}'))
-        else:
-            spans += _value_problem(key, param, value)
     return spans
 
 
@@ -149,23 +181,25 @@ def _value_problem(key: str, param: Param, value: JsonNode) -> list[Span]:
     return [(value.start, value.end, message)] if message else []
 
 
-def _json_fields(keyed: Collection[str], node: JsonNode) -> Iterator[tuple[str, int, int]]:
-    """Field names as a run reads them: under field-keyed queries, in `field` and `fields`."""
+def _json_fields(
+    beside: Mapping[str, Collection[str]], node: JsonNode
+) -> Iterator[tuple[str, int, int]]:
+    """Field names as a run reads them: keys of queries keyed by field, `field` and `fields`."""
     for key, value in _members(node):
-        if key in keyed:
-            yield from _key_names(value)
+        if key in beside:
+            yield from _key_names(value, beside[key])
         if key == "field" and value.kind == "string":
             yield _name(value)
         if key == "fields" and value.kind == "array":
             yield from (_name(entry) for entry in value.value if entry.kind == "string")
     for child in _children(node):
-        yield from _json_fields(keyed, child)
+        yield from _json_fields(beside, child)
 
 
-def _key_names(node: JsonNode) -> Iterator[tuple[str, int, int]]:
-    """The keys under a field-keyed query, but for the query's own options."""
+def _key_names(node: JsonNode, options: Collection[str]) -> Iterator[tuple[str, int, int]]:
+    """The keys under a query that holds its field as a key, but for the query's own options."""
     for name, (start, _end) in node.keys.items():
-        if name not in _QUERY_OPTIONS:
+        if name not in options:
             yield name, start + 1, start + 1 + len(name)
 
 

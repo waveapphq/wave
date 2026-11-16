@@ -41,6 +41,9 @@ const VALIDATION_LABEL = 'test validation'
 const SYSTEM_VARIABLES_LABEL = 'system variables'
 const PARSER_LABEL = 'expression validation'
 
+// Only the newest load may apply, also across a remount of the Workbench.
+let newestLoad = 0
+
 /** The expression parser the canvas needs to raise undeclared-variable alerts.
  *  Without it every expression extracts no identifiers, so a test with bad
  *  references renders as a test with none. */
@@ -250,8 +253,11 @@ export function useLoadTest(
   const setEditingTest = useWorkflowStore((state) => state.setEditingTest)
   const setEditingTestSuiteIds = useWorkflowStore((state) => state.setEditingTestSuiteIds)
   const setNamespaceVariables = useWorkflowStore((state) => state.setNamespaceVariables)
+  const canvasGeneration = useWorkflowStore((state) => state.canvasGeneration)
 
-  const [isLoadingTest, setIsLoadingTest] = useState(false)
+  // The canvas generation the running load owns: a close moves the store past it and ends the load.
+  const [loadingGeneration, setLoadingGeneration] = useState<number | null>(null)
+  const isLoadingTest = loadingGeneration === canvasGeneration
   const { blockPage, clearPageBlock } = usePageBlock()
 
   // A load applies to the canvas that started it; once that canvas is gone the
@@ -268,7 +274,15 @@ export function useLoadTest(
 
   const loadTest = useCallback(
     async function loadTestById(testId: string, options?: { silentNotFound?: boolean }) {
-      setIsLoadingTest(true)
+      newestLoad += 1
+      const loadNumber = newestLoad
+      // Every close resets the store, so a load started before the reset opens a closed test.
+      let generation = useWorkflowStore.getState().canvasGeneration
+      let running = true
+      const ownsCanvas = () =>
+        newestLoad === loadNumber && useWorkflowStore.getState().canvasGeneration === generation
+      const isCurrent = () => activeRef.current && ownsCanvas()
+      setLoadingGeneration(generation)
       // Immediately hide the old canvas and show overlay before async fetch
       setCanvasReady(false)
       try {
@@ -288,6 +302,7 @@ export function useLoadTest(
 
         if (detailsResult.status === 'rejected') throw detailsResult.reason
         if (workflowResult.status === 'rejected') throw workflowResult.reason
+        if (!isCurrent()) return
         const testDetails = detailsResult.value
         const workflow = workflowResult.value
         loadFailureRef.current = undefined
@@ -305,8 +320,10 @@ export function useLoadTest(
             setShowValidationErrorDialog,
           })) return
 
-          // Reset canvas first
+          // Reset canvas first; the new canvas belongs to this load.
           reset()
+          generation = useWorkflowStore.getState().canvasGeneration
+          if (running) setLoadingGeneration(generation)
 
           // Store the test ID and name in store
           setEditingTest(testId, testDetails.name)
@@ -338,6 +355,8 @@ export function useLoadTest(
           // Stamp Shared instances whose pinned version is gone from the library
           // so the canvas alert + config-modal banner surface the missing pin.
           await applyVersionStamp(supporting)
+          // A close or a newer load during the version reads owns the canvas now.
+          if (!ownsCanvas()) return
 
           // Mark as saved since we just loaded it
           markSaved()
@@ -350,7 +369,7 @@ export function useLoadTest(
           apply: applyLoadedTest,
           block: blockPage,
           clear: clearPageBlock,
-          active: () => activeRef.current,
+          active: isCurrent,
         }
 
         const [validationResult, systemVarsResult, parserResult] = await supportingSettled
@@ -362,6 +381,7 @@ export function useLoadTest(
           applied: false,
         })
       } catch (err) {
+        if (!isCurrent()) return
         loadFailureRef.current = err
         const apiErr = err as { status?: number } | undefined
         if (apiErr?.status === 404) {
@@ -377,21 +397,24 @@ export function useLoadTest(
           reportTestNotFound(err, { testId, testName: useWorkflowStore.getState().editingTestName })
           return
         }
-        if (activeRef.current) {
-          // Nothing of the test loaded, so the canvas has nothing to show.
-          blockPage({
-            label: TEST_LABEL,
-            detail: toFailureDetail(err),
-            retry: async () => {
-              await loadTestById(testId, options)
-              if (loadFailureRef.current !== undefined) throw loadFailureRef.current
-            },
-          })
-        }
+        // Nothing of the test loaded, so the canvas has nothing to show.
+        blockPage({
+          label: TEST_LABEL,
+          detail: toFailureDetail(err),
+          retry: async () => {
+            await loadTestById(testId, options)
+            if (loadFailureRef.current !== undefined) throw loadFailureRef.current
+          },
+        })
         console.error('Failed to load test:', err)
         requestFitView({ padding: 0.2, duration: 0 })
       } finally {
-        setIsLoadingTest(false)
+        running = false
+        if (newestLoad === loadNumber) setLoadingGeneration(null)
+        // The load hid the canvas and the Workbench left before it ended: the next visit shows it again.
+        if (!activeRef.current && ownsCanvas() && !useWorkflowStore.getState().isCanvasReady) {
+          requestFitView({ padding: 0.2, duration: 0 })
+        }
       }
     },
     [reset, setNodes, setEdges, setVariables, markSaved, clearDraft, setEditingTest, setEditingTestSuiteIds, requestFitView, setCanvasReady, setNamespaceVariables, blockPage, clearPageBlock]

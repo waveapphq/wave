@@ -153,7 +153,7 @@ async def _run(graph: Graph) -> _Outcome:
     served: list[_Served] = []
     events: list[str] = []
 
-    async def _open(connection: Any) -> Any:
+    async def _open(connection: Any, _host: str) -> Any:
         worker = MagicMock()
         worker.name = f"w{len([e for e in events if e.startswith('open:')]) + 1}"
         worker.host = host_of[id(connection)]

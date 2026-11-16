@@ -41,7 +41,7 @@
  *    reaches the console, the failure message stays bare, and no canary sits on the
  *    console, in the WS stream or in the session variables.
  * 10. A `testdata://` Working Directory is refused with
- *     `testdata:// paths are not available on the remote host` and reason StartFailed.
+ *     `testdata:// paths are not available on the remote host - use an absolute or relative path on the remote host` and reason StartFailed.
  * 11. After the run the worker's `/tmp/wave-worker-*` scratch dir, where the remote script ran,
  *     is no longer on the remote host.
  * 12. A remote Python block whose Working Directory is empty starts in the temp folder Python
@@ -207,7 +207,8 @@ const CANARY_FAMILY = 'pysecret-'
 
 // Exact refusals and failure messages, as the plugin and the bundle write them.
 const INTERPRETER_MISSING = 'Interpreter not found on the remote host: nosuchpython'
-const SCHEME_REFUSED = 'testdata:// paths are not available on the remote host'
+const SCHEME_REFUSED =
+  'testdata:// paths are not available on the remote host - use an absolute or relative path on the remote host'
 const EXIT_WITH_TEXT = `Script exited with code 1: ${MARK_EXIT_TEXT}`
 const SECRET_EXIT_BARE = 'Script exited with code 3'
 

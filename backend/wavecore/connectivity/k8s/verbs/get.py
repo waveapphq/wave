@@ -13,12 +13,12 @@ from collections.abc import Callable
 from contextlib import suppress
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
+
 from ..rest import K8sClient
 from ._context import require_context
 from ._errors import K8sReadRejected, map_api_error
 from ._outputs import (
-    block_failure,
-    block_success,
     empty_read_result,
     object_names,
     read_formatted,

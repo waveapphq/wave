@@ -82,7 +82,7 @@ test.describe('V-PALETTE-FN-01: Renamed bottom palette buttons + tooltips', () =
     const libraryBtn = page.locator('[data-testid="palette-blocks-library-button"]')
     await libraryBtn.click()
 
-    const modal = page.getByRole('region', { name: 'Functions Library' })
+    const modal = page.getByRole('dialog', { name: 'Functions Library' })
     await expect(modal).toBeVisible()
     await expect(modal.locator('[data-testid="functions-library-drag-handle"]')).toBeVisible()
 
@@ -103,7 +103,7 @@ test.describe('V-PALETTE-FN-01: Renamed bottom palette buttons + tooltips', () =
     await collapsePalette(page)
 
     await page.locator('[data-testid="palette-icon-library"]').click()
-    const modal = page.getByRole('region', { name: 'Functions Library' })
+    const modal = page.getByRole('dialog', { name: 'Functions Library' })
     await expect(modal).toBeVisible()
   })
 })

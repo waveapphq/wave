@@ -6,15 +6,17 @@ Requirements implemented:
 - REQ-3.5.0.12: Control registration at application startup
 """
 
+from collections.abc import Collection, Mapping
 from typing import Any
 
-from wavecore.controls.base import ControlBase
+from wavecore.controls.base import ControlBase, duplicate_branch_id, raise_first_problem
+from wavecore.core.execution.field_checks import FieldFinding
 from wavecore.core.number_rule import number_problem, parse_number
 from wavecore.models.controls.parameters import ControlParameter
 from wavecore.models.enums import ControlId
-from wavecore.plugins._executor_base import validate_enum_param
 
 _JOIN_MODES: list[str | int | float] = ["all", "first"]
+_TWO_LANES = "Parallel requires at least 2 branches"
 
 
 def time_limit_ms(value: Any) -> int | None:
@@ -77,6 +79,7 @@ class ParallelControl(ControlBase):
                     name="time_limit",
                     type="integer",
                     required=False,
+                    minimum=1,
                     description="Optional limit for the whole section in milliseconds",
                 ),
             ],
@@ -95,33 +98,56 @@ class ParallelControl(ControlBase):
         return {
             "__parallel": True,
             "__branches": params.get("branches") or [],
-            "__join": params.get("join") or "all",
+            "__join": params["join"],
             "__time_limit": params.get("time_limit"),
         }
 
+    def structure_problems(
+        self, values: Mapping[str, Any], sources: Collection[str] = ()
+    ) -> list[FieldFinding]:
+        """At least two lanes, then each lane's id and time limit at its place (REQ-3.2.3.7)."""
+        branches = values.get("branches")
+        if not isinstance(branches, list):
+            return [FieldFinding("INVALID_CONTROL_STRUCTURE", _TWO_LANES, None, "branches")]
+        problems: list[FieldFinding] = []
+        if len(branches) < 2:
+            problems.append(FieldFinding("INVALID_CONTROL_STRUCTURE", _TWO_LANES, None, "branches"))
+        seen: set[Any] = set()
+        for index, branch in enumerate(branches):
+            if isinstance(branch, Mapping):
+                problems.extend(duplicate_branch_id(branch, index, seen))
+                problems.extend(
+                    _lane_limit_problems(branch, f"branches.{index}.time_limit", sources)
+                )
+        return problems
+
     async def validate(self, params: dict[str, Any]) -> None:
-        """Validate Parallel parameters.
-
-        Enforces, in order: the join enum, at least two branches, a positive
-        section limit, and a positive limit on every branch that carries one.
-        """
-        if "join" in params:
-            validate_enum_param("join", params["join"], _JOIN_MODES)
-
-        branches = params.get("branches")
-        if not isinstance(branches, list) or len(branches) < 2:
-            raise ValueError("Parallel requires at least 2 branches")
+        """Validate Parallel parameters: two lanes, the section limit, then each lane limit."""
+        problems = self.structure_problems(params)
+        raise_first_problem([problem for problem in problems if problem.field == "branches"])
 
         time_limit = params.get("time_limit")
         if time_limit is not None and not is_time_limit(time_limit):
+            # An {x} result the save's declared minimum never saw (REQ-3.2.3.7).
             raise ValueError("Parallel time limit must be a positive integer")
 
-        for branch in branches:
-            if not isinstance(branch, dict):
-                continue
-            branch_limit = branch.get("time_limit")
-            if branch_limit is not None and not is_time_limit(branch_limit):
-                raise ValueError("Parallel branch time limit must be a positive integer")
+        raise_first_problem(problems)
+
+
+def _lane_limit_problems(
+    branch: Mapping[str, Any], place: str, sources: Collection[str]
+) -> list[FieldFinding]:
+    """A lane limit is a whole positive number of milliseconds; null is no limit."""
+    limit = branch.get("time_limit")
+    if place in sources:
+        if isinstance(limit, str) and not limit.strip():
+            message = f"Required parameter '{place}' is empty"
+            return [FieldFinding("REQUIRED_PARAM_EMPTY", message, None, place)]
+        return []
+    if limit is None or is_time_limit(limit):
+        return []
+    message = "Parallel branch time limit must be a positive integer"
+    return [FieldFinding("INVALID_SETTING_VALUE", message, None, place)]
 
 
 class TryCatchFinallyControl(ControlBase):
@@ -177,8 +203,8 @@ class TryCatchFinallyControl(ControlBase):
     async def execute(self, context: dict[str, Any]) -> Any:
         """Execute Try/Catch/Finally - returns signals for engine consumption."""
         params = context.get("parameters", {})
-        enable_catch = params.get("enable_catch", True)
-        enable_finally = params.get("enable_finally", False)
+        enable_catch = params["enable_catch"]
+        enable_finally = params["enable_finally"]
 
         logger = context.get("logger")
         if logger:
@@ -252,8 +278,8 @@ class HaltControl(ControlBase):
     async def execute(self, context: dict[str, Any]) -> Any:
         """Execute Halt control - returns __halt signal for engine consumption."""
         params = context.get("parameters", {})
-        scope = params.get("scope", "test")
-        status = params.get("status", "failed")
+        scope = params["scope"]
+        status = params["status"]
         message = params.get("message")
 
         logger = context.get("logger")
@@ -274,10 +300,4 @@ class HaltControl(ControlBase):
         }
 
     async def validate(self, params: dict[str, Any]) -> None:
-        """Validate Halt parameters."""
-        scope = params.get("scope", "test")
-        scope_param = next(p for p in self.metadata["parameter_schema"] if p.name == "scope")
-        validate_enum_param("scope", scope, scope_param.enum_values or [])
-        status = params.get("status", "failed")
-        status_param = next(p for p in self.metadata["parameter_schema"] if p.name == "status")
-        validate_enum_param("status", status, status_param.enum_values or [])
+        """Halt has no rule beyond its declared choices, which the run fill checks."""

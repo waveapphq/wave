@@ -220,6 +220,38 @@ describe('listFunctions', () => {
     expect(url).toMatch(/tags=a%2Cb|tags=a,b/)
   })
 
+  it('forwards the searched fields as one search_in query param', async () => {
+    ;(global.fetch as unknown as Mock).mockResolvedValue(
+      mockFetchResponse(
+        envelope([], {
+          pagination: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+        }),
+      ),
+    )
+
+    await listFunctions({ search: 'vault', search_in: ['name', 'description', 'tags'] })
+
+    const { url } = getCall()
+    expect(new URL(url, 'http://wave.test').searchParams.get('search_in')).toBe(
+      'name,description,tags',
+    )
+  })
+
+  it('sends no search_in when no fields are named', async () => {
+    ;(global.fetch as unknown as Mock).mockResolvedValue(
+      mockFetchResponse(
+        envelope([], {
+          pagination: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+        }),
+      ),
+    )
+
+    await listFunctions({ search: 'vault', search_in: [] })
+
+    const { url } = getCall()
+    expect(url).not.toContain('search_in')
+  })
+
   it('forwards sort_by and sort_order as query params', async () => {
     ;(global.fetch as unknown as Mock).mockResolvedValue(
       mockFetchResponse(

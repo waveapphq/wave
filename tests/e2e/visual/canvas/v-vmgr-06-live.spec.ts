@@ -52,7 +52,7 @@ const rowFor = (page: Page, name: string): Locator =>
   content(page).locator(`[aria-label="Variable ${name}"]`)
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 const initialPane = (modal: Locator): Locator =>
   modal.locator('[data-testid="compare-pane-initial"]')

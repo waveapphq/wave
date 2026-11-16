@@ -30,7 +30,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { DraggableSheet, type SheetHandle } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle, type SheetHandle } from '@/components/shared/draggable-sheet'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import { EDIT_HEADER_LABEL } from '@/components/shared/variable-bodies/body-parts'
 import type { TlsCipher } from '@/services/tls-capabilities'
@@ -258,7 +258,6 @@ export function CipherPickerSheet({
       onClose={onClose}
       sheetId="cipher-picker"
       resizable
-      ariaLabel="Edit value"
       data-testid="cipher-picker-sheet"
       initialWidth={560}
       initialHeight={520}
@@ -270,7 +269,7 @@ export function CipherPickerSheet({
         <>
           <div className="flex flex-1 items-center gap-2 min-w-0">
             <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <span className="text-sm font-semibold truncate">Edit value</span>
+            <SheetTitle className="text-sm font-semibold truncate">Edit value</SheetTitle>
             <span
               data-testid="cipher-picker-type-badge"
               className="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400"

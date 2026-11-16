@@ -43,7 +43,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "command": "echo \"shell=$0 a=${A:-unset}\""
@@ -78,7 +77,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"shell-out {shell_out.strip()}\"",
@@ -110,7 +108,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/redirect/10",
@@ -145,7 +142,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "url": "https://127.0.0.1:9449/retry?key=zz-11541-s4-__TOKEN__&fail_count=1&fail_status=503",
@@ -183,7 +179,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"http redirect={redirect_status} retry={retry_status}\"",
@@ -216,7 +211,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -312,7 +306,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "f\"fn region={region} tries={tries} ratio={ratio} labels={labels[0]}+{labels[1]} opts={opts['k']} grid={grid[1]['name']} notes={notes.splitlines()[1]}\"",

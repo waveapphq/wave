@@ -65,36 +65,36 @@ _reset
 curl -sf -X POST "${BACKEND_URL}/admin/bulk/tests" \
     -H "Content-Type: application/json" \
     -d '{"operations":[
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000001","name":"API Health Check","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000002","name":"Database Migration","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000003","name":"Payment Flow","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000004","name":"User Management","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000005","name":"File Upload Test","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000006","name":"Cache Validation","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000007","name":"Session Handling","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000008","name":"Email Notification","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000009","name":"Search Functionality","version":"1"}},
-        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-00000000000a","name":"Report Generation","version":"1"}}
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000001","name":"API Health Check","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000002","name":"Database Migration","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000003","name":"Payment Flow","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000004","name":"User Management","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000005","name":"File Upload Test","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000006","name":"Cache Validation","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000007","name":"Session Handling","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000008","name":"Email Notification","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-000000000009","name":"Search Functionality","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"a0a00000-0000-0000-0000-00000000000a","name":"Report Generation","version":"1.0.0"}}
     ]}' > /dev/null
 
 # Create suites
 curl -sf -X POST "${BACKEND_URL}/admin/bulk/suites" \
     -H "Content-Type: application/json" \
     -d '{"operations":[
-        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000001","name":"Authentication Suite","version":"1"}},
-        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000002","name":"Core API Suite","version":"1"}},
-        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000003","name":"Integration Suite","version":"1"}},
-        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000004","name":"Performance Suite","version":"1"}},
-        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000005","name":"Security Suite","version":"1"}}
+        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000001","name":"Authentication Suite","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000002","name":"Core API Suite","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000003","name":"Integration Suite","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000004","name":"Performance Suite","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"b0b00000-0000-0000-0000-000000000005","name":"Security Suite","version":"1.0.0"}}
     ]}' > /dev/null
 
 # Create regressions
 curl -sf -X POST "${BACKEND_URL}/admin/bulk/regressions" \
     -H "Content-Type: application/json" \
     -d '{"operations":[
-        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000001","name":"WAVE 25.12","version":"1"}},
-        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000002","name":"Billing v2.1","version":"1"}},
-        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000003","name":"Release Candidate","version":"1"}}
+        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000001","name":"WAVE 25.12","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000002","name":"Billing v2.1","version":"1.0.0"}},
+        {"op":"add","entity":{"id":"c0c00000-0000-0000-0000-000000000003","name":"Release Candidate","version":"1.0.0"}}
     ]}' > /dev/null
 
 # Create executions with various statuses, types, and triggered_by values

@@ -2,7 +2,7 @@
 
 End-to-end coverage of the redesigned Variable Manager panel.
 
-Five specs live here:
+Six specs live here:
 
 | Spec | Fixture | Covers |
 |------|---------|--------|
@@ -11,6 +11,7 @@ Five specs live here:
 | `v-variable-manager-virtualized.spec.ts` | `fixture-virtualized.json` plus 55 loader-generated fillers | the list above the 50-variable virtualization threshold: every drawn slot renders its own row, pitch and separators match the plain branch, scrolling reaches the last name, arrow-key navigation walks the whole list, filter and sort still apply, and a template-only reference is Used |
 | `v-var-unused-references-functional.spec.ts` | none (a blank `zz-` Test per test, built through the UI) | every place a block names a variable counts as a reference (VMGR-105): a condition row of Assert, If/Else, Switch, While and Wait Until, a Variable Setter row's value and target, a Function Block's input field and, inside a Function, a nested Function Block's input field each clear the Unused badge; a rename rewrites condition rows and Function Block fields; a Function Block input opens literal (FNCFG-6). The place table in `unused-places.ts` drives one test per place (16) in Test scope and inside a Function (an input and a local): the name read only there is not Unused, the saved Test holds the reader, and the badge is back once the reader is removed |
 | `v-var-rename-delete-functional.spec.ts` | none (a blank `zz-` Test per test, built through the UI) | a rename through the variable's Edit window (row pencil, Name, Save) follows an HTTP output binding and an XML Parser query alias (the alias key in the queries, their output types and the binding) and a run writes the new names; a rename follows the `{{ }}` of a Template variable and the name in an Expression variable and a run prints the same values; the delete dialog counts the blocks that read a variable (Cancel keeps it) and names the block whose output binding it clears |
+| `v-vmgr-edit-tooltip-functional.spec.ts` | none (a `zz-` Test with one String variable per test, plus a Log Block for the Configure tests, seeded through `POST /tests`) | the row pencil's "Edit variable" tooltip (SHELL-7b): closing its Edit window with Cancel or Save hands focus back to the pencil with no tooltip, hovering it shows the tooltip, and Tab onto the pencil shows it; and the same for a Block's Configure button: closing its Block window with Cancel or Save hands focus back to Configure with no tooltip, hovering shows it, and Shift+Tab from More options onto Configure shows it |
 
 `fixture-virtualized.json` checks in 7 declarations. The spec's loader pads the
 map to 62 with fillers named `vm1_008_pad` through `vm1_062_pad`, each holding

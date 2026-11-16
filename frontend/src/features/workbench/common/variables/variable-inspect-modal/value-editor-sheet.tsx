@@ -9,7 +9,7 @@
  * REQ-3.3.2.6: OpenSearch query editor
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref, type RefObject } from 'react'
 import { GripVertical, Loader2, Play, Square, X } from 'lucide-react'
 import type { CompletionSource } from '@codemirror/autocomplete'
 import { tooltips, type EditorView } from '@codemirror/view'
@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import { ConditionalTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { DraggableSheet, type SheetHandle } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle, type SheetHandle } from '@/components/shared/draggable-sheet'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import { UnsavedChangesDialog } from '@/components/shared/child-editors/unsaved-changes-dialog'
 import { ScalarEditBody } from '@/components/shared/variable-bodies/scalar-edit-body'
@@ -103,6 +103,9 @@ const ITEM_SHEET_ID = 'value-editor-item'
 const NESTED_SHEET_ID = 'value-editor-level'
 // CodeMirror's editable surface, never the tabbable scroller around it.
 const EDITOR_FOCUS_TARGET = '.cm-content'
+// A list, map or table body has no text editor: its first control takes focus.
+const FIRST_FOCUSABLE =
+  'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), a[href], [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 const VALUE_EDITOR_DIALOG_TEST_IDS = {
   dialog: 'value-editor-unsaved-dialog',
@@ -451,6 +454,8 @@ export interface ValueEditorSheetProps {
   /** Hosts inside a dialog that owns ESC intercept it in the capture phase so
    *  ESC reaches this sheet (and its unsaved-draft guard) first. */
   captureEsc?: boolean
+  /** The field box focus goes back to on close when the control that opened the sheet is gone (Delete & Edit). */
+  returnFocus?: RefObject<HTMLElement | null>
   onSave: (
     value: unknown,
     isTemplate: boolean,
@@ -542,6 +547,7 @@ export function ValueEditorSheet({
   sheetId,
   level = 1,
   captureEsc = false,
+  returnFocus,
   onSave,
   onClose,
 }: Readonly<ValueEditorSheetProps>) {
@@ -782,9 +788,24 @@ export function ValueEditorSheet({
     // time the sheet may already be gone.
     const host = bodyRef.current
     if (!host) return
-    const target = host.querySelector(EDITOR_FOCUS_TARGET) as HTMLElement
-    target.focus()
+    const target = host.querySelector<HTMLElement>(EDITOR_FOCUS_TARGET) ?? host.querySelector<HTMLElement>(FIRST_FOCUSABLE)
+    target?.focus()
   }, [])
+
+  // The control focused as the sheet opens, as DraggableSheet records it to hand focus back while it is on the page.
+  const [opener] = useState(() => document.activeElement)
+  const focusOnClose = useRef(returnFocus)
+  focusOnClose.current = returnFocus
+
+  // Focus moves into the editor as the sheet opens; on close, focus fallen to the page body goes to the field box when the opener is gone.
+  useEffect(() => {
+    focusEditor()
+    return () => {
+      if (document.activeElement !== document.body) return
+      if (opener instanceof HTMLElement && opener.isConnected) return
+      focusOnClose.current?.current?.focus()
+    }
+  }, [focusEditor, opener])
 
   // A chord the sheet takes never reaches the editor inside, so it never edits the draft (PYRUN-20, PYRUN-21).
   const takeChord = (event: KeyboardEvent) => {
@@ -813,16 +834,16 @@ export function ValueEditorSheet({
   const keyHandlerRef = useRef(handleSheetKey)
   keyHandlerRef.current = handleSheetKey
 
-  // The sheet section is rendered by DraggableSheet, so the chords bind to it
+  // The sheet is rendered by DraggableSheet, so the chords bind to it
   // through the body it owns - keeping them out of every other open sheet.
   useEffect(() => {
-    const section = (bodyRef.current as HTMLDivElement).closest(
+    const sheet = (bodyRef.current as HTMLDivElement).closest(
       '[data-draggable-sheet]',
     ) as HTMLElement
     const onKeyDown = (event: Event) => keyHandlerRef.current(event as KeyboardEvent)
     // Capture: the editor's own keymap would otherwise act on the chord first.
-    section.addEventListener('keydown', onKeyDown, true)
-    return () => section.removeEventListener('keydown', onKeyDown, true)
+    sheet.addEventListener('keydown', onKeyDown, true)
+    return () => sheet.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
   // Escape closes the help first: the sheet's own handler stands down on an
@@ -853,7 +874,12 @@ export function ValueEditorSheet({
     }
   }
 
-  const sheetSize = getValueEditorSheetSize(type, scriptMode, mapEntryOptions !== undefined)
+  const sheetSize = getValueEditorSheetSize(
+    type,
+    scriptMode,
+    mapEntryOptions !== undefined,
+    listEditor?.expressionEditor !== undefined,
+  )
   const levelOffset = cascadeOffset(level - 1)
 
   const listSlots: ListEditorSlots | undefined = listEditor && {
@@ -926,6 +952,8 @@ export function ValueEditorSheet({
       format={bodyFormatOf(kind, scriptMode, resolvedFormat)}
       extraExtensions={pythonExtensions ?? sqlExtensions ?? openSearchExtensions ?? templateExtensions}
       ariaLabel={label}
+      // The text editor is built after the sheet's own focus call, so it takes the cursor itself; a Format rebuild does not.
+      autoFocus={formatKey === 0}
     />
   )
 
@@ -938,7 +966,6 @@ export function ValueEditorSheet({
       sheetId={sheetId ?? defaultSheetIdOf(scriptMode)}
       captureEsc={captureEsc}
       resizable
-      ariaLabel="Edit value"
       data-testid="value-editor-sheet"
       initialOffset={{ x: levelOffset, y: levelOffset }}
       initialWidth={sheetSize.width}
@@ -952,7 +979,7 @@ export function ValueEditorSheet({
         <>
           <div className="flex flex-1 items-center gap-2 min-w-0">
             <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-semibold truncate">Edit value</h2>
+            <SheetTitle className="text-sm font-semibold truncate">Edit value</SheetTitle>
             <span
               data-testid="value-editor-type-badge"
               className={cn(
@@ -978,7 +1005,7 @@ export function ValueEditorSheet({
       }
     >
       <div className="flex flex-1 min-h-0 flex-col px-4 py-3">
-        <div ref={bodyRef} className="flex-1 min-h-0 overflow-y-auto">
+        <div ref={bodyRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {body}
         </div>
       </div>

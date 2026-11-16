@@ -8,6 +8,8 @@ entity resolution, and file parsing for import/export.
 import copy
 import io
 import json
+import logging
+import re
 import unicodedata
 import uuid
 import zipfile
@@ -18,11 +20,16 @@ from functools import partial
 from pathlib import Path
 from typing import Any, BinaryIO, overload
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    InternalServerException,
+    ValidationException,
+    WaveException,
+)
 from wavecore.core.functions.declarations import declaration_numbers, value_problems
 from wavecore.core.secrets import masking_settings
 from wavecore.core.secrets.cipher import SecretDecryptionError, is_secret_envelope
-from wavecore.core.secrets.key_provider import get_cipher
+from wavecore.core.secrets.key_provider import SecretKeyError, get_cipher
 from wavecore.core.secrets.masking import MASK_PLACEHOLDER, masked_declaration
 from wavecore.core.secrets.sealing import (
     iter_definition_secret_items,
@@ -40,6 +47,8 @@ from wavecore.core.secrets.sealing import (
 )
 from wavecore.core.utf8_text import load_yaml, unencodable_place
 from wavecore.core.variables.value_checks import stored_number
+
+logger = logging.getLogger(__name__)
 
 SECRETS_MODES = ("mask", "encrypted", "plaintext")
 
@@ -98,7 +107,7 @@ def apply_secrets_mode_to_variables(variables: dict[str, Any], mode: str) -> dic
     if mode == "plaintext":
         try:
             return unseal_variables(variables)
-        except (ValueError, SecretDecryptionError) as e:
+        except (SecretKeyError, SecretDecryptionError) as e:
             raise ConflictException(str(e)) from e
     return mask_secret_variables(variables, flag_masked=True)
 
@@ -118,7 +127,7 @@ def _under_mode[
     if mode == "plaintext":
         try:
             return unseal(document)
-        except (ValueError, SecretDecryptionError) as e:
+        except (SecretKeyError, SecretDecryptionError) as e:
             raise ConflictException(str(e)) from e
     return mask(document)
 
@@ -378,14 +387,26 @@ def variable_value_errors(variables: Any) -> list[dict[str, str]]:
     ]
 
 
-def refuse_unimportable_items(items: Iterable[Mapping[str, Any]]) -> None:
-    """A suite or regression import stops on a nameless item or a refused variable value."""
+def member_list_error(item: Mapping[str, Any], member_kind: str) -> dict[str, str] | None:
+    """An imported item's member list that is not a list, as a fatal import error."""
+    field = f"{member_kind.lower()}s"
+    if isinstance(item.get(field, []), list):
+        return None
+    return {"code": f"INVALID_{field.upper()}", "message": f"Field '{field}' must be a list"}
+
+
+def refuse_unimportable_items(items: Iterable[Mapping[str, Any]], member_kind: str) -> None:
+    """A suite or regression import stops on a nameless item, a refused variable value or a
+    member list that is not a list."""
     for item in items:
         if not item.get("name"):
             raise ValidationException("Fatal validation errors prevent import")
         value_errors = variable_value_errors(item.get("variables", {}))
         if value_errors:
             raise ValidationException(value_errors[0]["message"])
+        member_error = member_list_error(item, member_kind)
+        if member_error:
+            raise ValidationException(member_error["message"])
 
 
 def stored_variable_values(variables: Mapping[str, Any]) -> dict[str, Any]:
@@ -526,6 +547,41 @@ def read_secret_variables(variables: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# Semantic version pattern: MAJOR.MINOR.PATCH
+SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def validate_semantic_version(version: Any) -> None:
+    """Validate semantic version format (MAJOR.MINOR.PATCH).
+
+    Args:
+        version: Version string to validate.
+
+    Raises:
+        ValidationException: If version is not a string in that format.
+    """
+    if not isinstance(version, str) or not SEMVER_PATTERN.match(version):
+        raise ValidationException(
+            f"Invalid version format '{version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+
+
+def next_semantic_version(version: str, version_bump: str) -> str:
+    """The version after ``version`` for a ``major``, ``minor`` or any other (patch) bump.
+
+    Raises:
+        ValidationException: If ``version`` is not MAJOR.MINOR.PATCH.
+    """
+    validate_semantic_version(version)
+    major, minor, patch = (int(part) for part in version.split("."))
+    if version_bump == "major":
+        return f"{major + 1}.0.0"
+    if version_bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
 def bump_version_and_record(
     entity: dict[str, Any],
     entity_id: str,
@@ -555,13 +611,12 @@ def bump_version_and_record(
 
     Returns:
         The ISO-formatted timestamp of the update.
+
+    Raises:
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH;
+            nothing is saved then.
     """
-    current_version = str(entity.get("version", "1.0.0"))
-    parts = [int(x) for x in current_version.split(".")]
-    # Pad to at least MAJOR.MINOR.PATCH
-    while len(parts) < 3:
-        parts.append(0)
-    new_version = f"{parts[0]}.{parts[1] + 1}.0"
+    new_version = next_semantic_version(str(entity.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
     entity["version"] = new_version
@@ -606,6 +661,183 @@ def resolve_entities_by_ids(
         if entity:
             results.append({"id": entity["id"], "name": entity.get("name", "")})
     return results
+
+
+def refuse_unknown_members(
+    proposed: Any,
+    held: Collection[str],
+    kind: str,
+    exists: Callable[[str], bool],
+) -> None:
+    """Refuse the first member a save adds that matches nothing; a held member is not re-checked."""
+    if not isinstance(proposed, list):
+        raise ValidationException(f"'{kind.lower()}s' must be a list of ID strings")
+    for member_id in proposed:
+        if not isinstance(member_id, str) or (member_id not in held and not exists(member_id)):
+            raise ValidationException(f"{kind} with ID '{member_id}' not found")
+
+
+def refuse_repeated_members(proposed: Iterable[str], kind: str) -> None:
+    """Refuse a member list that names one member twice (no duplicates in the order)."""
+    seen: set[str] = set()
+    for member_id in proposed:
+        if member_id in seen:
+            raise ValidationException(f"{kind} with ID '{member_id}' is listed more than once")
+        seen.add(member_id)
+
+
+@dataclass(frozen=True)
+class ImportMembers:
+    """An imported member list: the members kept, and each one stripped as a fix."""
+
+    kept: list[str]
+    findings: list[dict[str, str]]
+    fixes: list[str]
+
+
+def strip_import_members(
+    item: Mapping[str, Any], exists: Callable[[str], bool], kind: str
+) -> ImportMembers:
+    """Keep each known member once; a repeat, an unknown member or one that is not an ID
+    string is stripped as a fix."""
+    label, code = kind.lower(), kind.upper()
+    listed = item.get(f"{label}s", [])
+    members = ImportMembers([], [], [])
+    seen: set[str] = set()
+    # A member list that is not a list is the item's fatal error (member_list_error)
+    for member_id in listed if isinstance(listed, list) else []:
+        is_id = isinstance(member_id, str)
+        if is_id and member_id in seen:
+            members.findings.append(
+                {
+                    "code": f"REPEATED_{code}",
+                    "message": f"{kind} '{member_id}' is listed more than once, will be stripped",
+                }
+            )
+            members.fixes.append(f"Stripped repeated {label} '{member_id}'")
+        elif is_id and exists(member_id):
+            members.kept.append(member_id)
+        else:
+            members.findings.append(
+                {
+                    "code": f"UNRESOLVABLE_{code}",
+                    "message": f"{kind} '{member_id}' not found, will be stripped",
+                }
+            )
+            members.fixes.append(f"Stripped unresolvable {label} '{member_id}'")
+        if is_id:
+            seen.add(member_id)
+    return members
+
+
+def record_import_fixes(
+    fixes_applied: list[dict[str, Any]], item_fixes: list[str], result_name: str
+) -> None:
+    """Record the fixes an import applied to one item, when it applied any."""
+    if item_fixes:
+        fixes_applied.append({"name": result_name, "fixes": item_fixes})
+
+
+def refuse_import_collisions(
+    items: list[dict[str, Any]],
+    members: list[ImportMembers],
+    find_collisions: Callable[[list[str], dict[str, Any]], list[dict[str, Any]]],
+) -> None:
+    """Refuse the import when an item's variables collide in type with its members' variables."""
+    for item, item_members in zip(items, members, strict=True):
+        variables = item.get("variables", {})
+        if not item_members.kept or not variables:
+            continue
+        collisions = find_collisions(item_members.kept, variables)
+        if collisions:
+            collision_details = "; ".join(
+                f"variable '{c['variable']}' is '{c['this_type']}' here but "
+                f"'{c['other_type']}' in suite '{c['other_suite']}'"
+                for c in collisions
+            )
+            raise ConflictException(
+                f"Variable type collision: {collision_details}",
+                details={"collisions": collisions},
+            )
+
+
+NOT_AN_OBJECT_ITEM = "The item must be a JSON object"
+_NOT_AN_UPDATE_OBJECT = "'update' must be a JSON object"
+_NOT_AN_ID_ITEM = "The item must be an ID string"
+
+
+def batch_object(item: Any) -> dict[str, Any]:
+    """A batch item as a JSON object; any other item fails on its own."""
+    if not isinstance(item, dict):
+        raise ValidationException(NOT_AN_OBJECT_ITEM)
+    return item
+
+
+def batch_update_problem(item: Any) -> str | None:
+    """Why a batch update item fails: not an object, or an 'update' that is not one; else None."""
+    if not isinstance(item, dict):
+        return NOT_AN_OBJECT_ITEM
+    if not isinstance(item.get("update", {}), dict):
+        return _NOT_AN_UPDATE_OBJECT
+    return None
+
+
+def batch_id(item: Any) -> str:
+    """A batch item as an ID string; any other item fails on its own."""
+    if not isinstance(item, str):
+        raise ValidationException(_NOT_AN_ID_ITEM)
+    return item
+
+
+def batch_failure(index: int, error: Exception) -> dict[str, Any]:
+    """A failed batch item: a refusal keeps its message, any other fault is logged and generic."""
+    if isinstance(error, WaveException):
+        return {"index": index, "error": error.message}
+    logger.error("Batch item %d failed", index, exc_info=error)
+    return {"index": index, "error": InternalServerException.message}
+
+
+def _batch_each[
+    Done
+](ids: Sequence[Any], act: Callable[[str], Done | None], kind: str) -> tuple[
+    list[Done], list[dict[str, Any]]
+]:
+    """Act on each ID in turn; a malformed, missing (None) or refused one fails by its index."""
+    done: list[Done] = []
+    failed: list[dict[str, Any]] = []
+    for idx, item in enumerate(ids):
+        if not isinstance(item, str):
+            failed.append({"index": idx, "error": _NOT_AN_ID_ITEM})
+            continue
+        try:
+            result = act(item)
+        except Exception as e:
+            failed.append(batch_failure(idx, e))
+            continue
+        if result is None:
+            failed.append({"index": idx, "error": f"{kind} with ID '{item}' not found"})
+        else:
+            done.append(result)
+    return done, failed
+
+
+def batch_delete(ids: Sequence[Any], delete: Callable[[str], bool], kind: str) -> dict[str, Any]:
+    """Delete each ID in turn; a missing, refused or malformed one goes to ``failed``."""
+    deleted, failed = _batch_each(ids, lambda item_id: item_id if delete(item_id) else None, kind)
+    return {"deleted": deleted, "failed": failed}
+
+
+def batch_clone(
+    ids: Sequence[Any], clone: Callable[[str], dict[str, Any] | None], kind: str
+) -> dict[str, Any]:
+    """Clone each ID in turn; a missing, refused or malformed one goes to ``failed``."""
+
+    def clone_one(item_id: str) -> dict[str, str] | None:
+        copied = clone(item_id)
+        return None if copied is None else {"original_id": item_id, "cloned_id": copied["id"]}
+
+    cloned, failed = _batch_each(ids, clone_one, kind)
+    return {"cloned": cloned, "failed": failed}
 
 
 ZipContent = str | bytes | Path
@@ -682,7 +914,7 @@ def parse_file(content: bytes, filename: str) -> dict[str, Any]:
         Parsed dictionary.
 
     Raises:
-        ValueError: If the file cannot be parsed or doesn't contain a mapping.
+        ValidationException: If the file cannot be parsed or doesn't contain a mapping.
     """
     lower = filename.lower()
     try:

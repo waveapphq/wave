@@ -24,6 +24,8 @@
  *      the listbox role cmdk writes and declares no `aria-multiselectable`.
  *      This is the library filter, NOT the Publish dialog's Tags chip picker
  *      - that one is covered by V-FN-TAGS-01.
+ *   9. The search also finds a Function by a word only its description holds
+ *      and by a word only one of its tags holds, in any case (CANVAS-205).
  *
  * Phase: fixture (seeds three library Functions via POST /functions; one
  * Test fixture is needed only so the workbench is reachable).
@@ -39,6 +41,28 @@ interface SeededFunction {
   name: string
 }
 
+interface FunctionSeed {
+  name: string
+  description: string
+  tags: string[]
+}
+
+async function seedFunction(page: Page, seed: FunctionSeed): Promise<SeededFunction> {
+  const resp = await page.request.post(`${BACKEND_URL}/functions`, {
+    data: {
+      ...seed,
+      inputs: [],
+      outputs: [],
+      dependencies: { functions: [], plugins: [] },
+      workflow: { nodes: [], edges: [] },
+      metadata: {},
+    },
+  })
+  const body = await resp.json().catch(() => null)
+  expect(resp.ok(), `POST /functions failed: ${resp.status()} ${JSON.stringify(body)}`).toBeTruthy()
+  return { id: body!.data.id, name: seed.name }
+}
+
 async function seedLibrary(page: Page): Promise<SeededFunction[]> {
   // Library Function names cap at 32 chars (FN-LC-1). Keep the test
   // discriminator short: 6 base36 chars (= ~2B combinations, ample for
@@ -50,24 +74,7 @@ async function seedLibrary(page: Page): Promise<SeededFunction[]> {
     { name: `LIB-01 G ${stamp}`, description: 'Third library entry', tags: ['network'] },
   ]
   const results: SeededFunction[] = []
-  for (const seed of seeds) {
-    const resp = await page.request.post(`${BACKEND_URL}/functions`, {
-      data: {
-        ...seed,
-        inputs: [],
-        outputs: [],
-        dependencies: { functions: [], plugins: [] },
-        workflow: { nodes: [], edges: [] },
-        metadata: {},
-      },
-    })
-    const body = await resp.json().catch(() => null)
-    expect(
-      resp.ok(),
-      `POST /functions failed: ${resp.status()} ${JSON.stringify(body)}`,
-    ).toBeTruthy()
-    results.push({ id: body!.data.id, name: seed.name })
-  }
+  for (const seed of seeds) results.push(await seedFunction(page, seed))
   return results
 }
 
@@ -105,7 +112,7 @@ async function openLibraryModal(page: Page) {
     await expect(palette).toHaveAttribute('data-state', 'expanded')
   }
   await page.locator('[data-testid="palette-blocks-library-button"]').click()
-  const modal = page.locator('[aria-label="Functions Library"]')
+  const modal = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
   await expect(modal).toBeVisible({ timeout: 10_000 })
   return modal
 }
@@ -191,6 +198,33 @@ test.describe('V-FN-LIB-01: Functions Library modal - populated', () => {
       .filter({ hasText: stamp })
     await expect(matches).toHaveCount(1)
     await expect(matches.first()).toContainText(`LIB-01 A ${stamp}`)
+  })
+
+  test('S8: search finds a word only a description holds and a word only a tag holds', async ({ page }) => {
+    const stamp = randomUUID().slice(0, 6)
+    const byDescription = await seedFunction(page, {
+      name: `LIB-01 D ${stamp}`,
+      description: `Rotates the keys of vault${stamp}`,
+      tags: ['demo'],
+    })
+    const byTag = await seedFunction(page, {
+      name: `LIB-01 T ${stamp}`,
+      description: 'Fourth library entry',
+      tags: [`team${stamp}`],
+    })
+    const testId = await seedHostTest(page)
+    await open(page, testId)
+    const modal = await openLibraryModal(page)
+    const search = modal.getByLabel('Search Functions')
+    const cards = modal.locator('[data-testid="library-card"]')
+
+    await search.fill(`VAULT${stamp.toUpperCase()}`)
+    await expect(cards, 'only the description holds the word').toHaveCount(1)
+    await expect(cards.first()).toContainText(byDescription.name)
+
+    await search.fill(`TEAM${stamp.toUpperCase()}`)
+    await expect(cards, 'only a tag holds the word').toHaveCount(1)
+    await expect(cards.first()).toContainText(byTag.name)
   })
 
   test('S4: filtered-empty state shows canonical copy + Clear Filters', async ({ page }) => {

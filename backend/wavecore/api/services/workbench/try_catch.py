@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
+from wavecore.api.services.log_streaming_service import scrub_message
 from wavecore.api.services.workbench._common import (
     BlockAttempt,
     NodeStep,
@@ -11,16 +12,21 @@ from wavecore.api.services.workbench._common import (
     _add_execution_log,
     _broadcast_event,
     _complete_step_over,
+    _elapsed_ms,
     _push_single_variable_change,
     _push_variable_changes,
+    log_block_completion,
+    log_block_start,
     logger,
     park_while_held,
     run_debug_block,
 )
 from wavecore.api.services.workbench.block_status import (
+    forget_lanes,
     leave_by_then,
     skip_lanes_not_run,
     skip_rest,
+    take_lane,
 )
 from wavecore.api.services.workbench.node_helpers import _execute_node, _extract_node_fields
 from wavecore.api.services.workbench.plugins import (
@@ -64,16 +70,18 @@ def _trace_path_chain(
     When a control node with structured handles (body/try/catch/then) is
     encountered, the chain follows the "then" (egress) handle only - the
     control's dispatch logic handles its other children at execution time.
+    A Note is passed straight on: it is never in the chain, its successor is.
     """
     chain: list[str] = []
     current: str | None = start_node_id
     visited: set[str] = set()
     while current and current not in visited:
         visited.add(current)
-        node = node_map.get(current)
-        if not node or node.get("type") != "workflowNode":
+        node_type = (node_map.get(current) or {}).get("type")
+        if node_type == "workflowNode":
+            chain.append(current)
+        elif node_type != "noteNode":
             break
-        chain.append(current)
         children = adj.get(current, [])
         if not children:
             break
@@ -147,6 +155,7 @@ async def _mark_node_running(
 ) -> None:
     executed.add(path_node_id)
     session["block_states"][path_node_id] = "running"
+    forget_lanes(session, path_node_id)
     await _broadcast_event(
         session_id,
         {
@@ -167,7 +176,8 @@ async def _record_node_failure(
     walker: str = "Try-catch path",
 ) -> None:
     """Mark the node failed, log the failure and paint it."""
-    logger.error("%s node %s failed: %s", walker, path_node_id, exc)
+    message = scrub_message(session_id, str(exc), "SYSTEM", block_id=path_node_id)
+    logger.error("%s node %s failed: %s", walker, path_node_id, message)
     session["block_states"][path_node_id] = "failed"
     _add_execution_log(
         session_id,
@@ -249,6 +259,7 @@ async def _run_path_node(step: _PathStep, executed: set[str]) -> str:
     session, session_id, variables = step.session, step.session_id, step.variables
     block_name = nf["block_name"]
     await _mark_node_running(session, session_id, path_node_id, block_name, executed)
+    started = log_block_start(session_id, path_node_id, block_name, nf)
 
     profile_bindings = nf["node_data"].get("config", {}).get("profileBindings", [])
     if profile_bindings:
@@ -292,6 +303,7 @@ async def _run_path_node(step: _PathStep, executed: set[str]) -> str:
         final_status = consume_wait_status(session) or "passed"
 
     session["block_states"][path_node_id] = final_status
+    log_block_completion(session_id, path_node_id, block_name, _elapsed_ms(started))
     await _broadcast_event(
         session_id,
         {
@@ -565,6 +577,8 @@ async def _execute_try_catch_paths(
 
     status_before_try = session.get("status", WorkbenchStatus.RUNNING.value)
 
+    if try_chain:
+        await take_lane(session, session_id, node_id, "try")
     try_error = await _execute_path_nodes(
         try_chain, node_map, variables, session, session_id, executed, environment_id, adj=adj
     )
@@ -599,6 +613,8 @@ async def _execute_try_catch_paths(
     if error_obj is not None:
         # Restoring below the halt return keeps the status a Halt set in the try path.
         session["status"] = status_before_try
+        if catch_chain:
+            await take_lane(session, session_id, node_id, "catch")
         catch_error = await _run_catch_chain(
             catch_chain, node_map, variables, session, session_id, executed, environment_id, adj
         )
@@ -617,6 +633,8 @@ async def _execute_try_catch_paths(
         )
         return
 
+    if finally_chain:
+        await take_lane(session, session_id, node_id, "finally")
     finally_error = await _run_finally_chain(
         finally_chain, node_map, variables, session, session_id, executed, environment_id, adj
     )

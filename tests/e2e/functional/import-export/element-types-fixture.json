@@ -21,12 +21,8 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
-          "variableTypes": {
-            "sm": "map"
-          },
-          "variableElementTypes": {
-            "sm": {
+          "elementTypes": {
+            "variables.sm": {
               "n": "integer",
               "zip": "string"
             }
@@ -114,7 +110,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "__MAP_PROBE__",
@@ -148,7 +143,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "__LIST_PROBE__",
@@ -182,7 +176,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"TRAVEL sn={sm['n'] + 1} sz={sm['zip'] + '-x'} lite={lite_rows[0]['timeout']}\"",

@@ -11,6 +11,7 @@ from wavecore.core.secrets.key_provider import get_cipher
 from wavecore.core.secrets.masking import MASK_PLACEHOLDER, holds_secret_value, structural_mask
 
 _SETTER_ELEMENT_TYPE = "variable-setter"
+_SETTER_ROW_PLACE = "variables."
 
 _SETTER = "setter"
 _SETTER_TYPES = "setter-types"
@@ -120,19 +121,24 @@ class _Slot:
         return self.holder[self.key]
 
 
-def _setter_secret_target(node: dict[str, Any]) -> tuple[dict[str, Any], list[Any]] | None:
-    """The (variables map, secret-key list) of a Variable Setter node, or None
-    when ``node`` is not a setter node carrying a variables map."""
+def setter_secret_target(node: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]] | None:
+    """A Variable Setter's rows and the row names its `config.secretFields` marks secret, or
+    None when ``node`` is not a Setter holding a rows map (REQ-3.4.1.14)."""
     data = node.get("data")
     if not isinstance(data, dict) or data.get("elementType") != _SETTER_ELEMENT_TYPE:
         return None
     config = data.get("config")
-    if not isinstance(config, dict):
+    values = config.get("values") if isinstance(config, dict) else None
+    variables = values.get("variables") if isinstance(values, dict) else None
+    if not isinstance(config, dict) or not isinstance(variables, dict):
         return None
-    variables = (config.get("values") or {}).get("variables")
-    if not isinstance(variables, dict):
-        return None
-    return variables, config.get("variableSecretKeys") or []
+    marks = config.get("secretFields")
+    rows = [
+        mark.removeprefix(_SETTER_ROW_PLACE)
+        for mark in (marks if isinstance(marks, list) else [])
+        if isinstance(mark, str) and mark.startswith(_SETTER_ROW_PLACE)
+    ]
+    return variables, rows
 
 
 def _own_definition(data: Mapping[str, Any]) -> Any:
@@ -178,19 +184,25 @@ def _field_credential_target(
 
 
 def _setter_slots(node: dict[str, Any], place: tuple[str, ...]) -> Iterator[_Slot]:
-    target = _setter_secret_target(node)
+    target = setter_secret_target(node)
     if target is None:
         return
-    variables, secret_keys = target
+    variables, secret_rows = target
     data = node["data"]
+    # Expression / template mode stores the source text, not a literal secret.
+    sources = {str(place) for place in data.get("expressionFields") or []}
+    sources |= {str(place) for place in data.get("templateFields") or []}
     # A secret row's element types name its keys, so they travel with its value.
-    element_types = data.get("variableElementTypes")
-    for key in secret_keys:
-        if key in variables:
-            yield _Slot((*place, _SETTER, str(key)), str(key), variables, key, _SETTER, data)
-        if isinstance(element_types, dict) and key in element_types:
-            types_place = (*place, _SETTER_TYPES, str(key))
-            yield _Slot(types_place, str(key), element_types, key, _SETTER_TYPES, data)
+    element_types = data.get("elementTypes")
+    for row in secret_rows:
+        if f"{_SETTER_ROW_PLACE}{row}" in sources:
+            continue
+        if row in variables:
+            yield _Slot((*place, _SETTER, row), row, variables, row, _SETTER, data)
+        types_key = f"{_SETTER_ROW_PLACE}{row}"
+        if isinstance(element_types, dict) and types_key in element_types:
+            types_place = (*place, _SETTER_TYPES, row)
+            yield _Slot(types_place, row, element_types, types_key, _SETTER_TYPES, data)
 
 
 def _credential_slots(
@@ -295,7 +307,7 @@ def _mask(slot: _Slot) -> None:
     if slot.kind == _SETTER_TYPES:
         del slot.holder[slot.key]
         if not slot.holder:
-            slot.owner.pop("variableElementTypes", None)
+            slot.owner.pop("elementTypes", None)
         return
     if slot.kind in _DECLARED and holds_secret_value(slot.value):
         slot.owner.pop("elementTypes", None)
@@ -346,9 +358,9 @@ def _restore_companions(slot: _Slot, stored: _Slot, kept: Mapping[tuple[str, ...
         return
     stored_types = kept.get((*slot.place[:-2], _SETTER_TYPES, slot.place[-1]))
     if stored_types is not None:
-        element_types = slot.owner.setdefault("variableElementTypes", {})
+        element_types = slot.owner.setdefault("elementTypes", {})
         if isinstance(element_types, dict):
-            element_types.setdefault(slot.key, copy.deepcopy(stored_types.value))
+            element_types.setdefault(stored_types.key, copy.deepcopy(stored_types.value))
 
 
 def _restore(slot: _Slot, kept: Mapping[tuple[str, ...], _Slot]) -> None:
@@ -388,7 +400,7 @@ def collect_setter_secret_names(workflow: dict[str, Any]) -> set[str]:
     """The variable names every Variable Setter marks secret, at every depth."""
     names: set[str] = set()
     for block in iter_blocks(workflow):
-        target = _setter_secret_target(block)
+        target = setter_secret_target(block)
         if target is not None:
             names.update(target[1])
     return names

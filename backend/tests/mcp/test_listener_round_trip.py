@@ -146,6 +146,18 @@ class TestProtocolRoundTrip:
         assert activity[0]["tool"] == "list_environments"
         assert activity[0]["client"] == CLIENT_NAME
 
+    async def test_an_undeclared_argument_is_refused_over_the_wire(
+        self, running_endpoint: str
+    ) -> None:
+        async with _client_session(running_endpoint) as (session, _get_session_id):
+            result = await session.call_tool("list_environments", {"search": "staging"})
+
+        assert result.is_error is True
+        assert [item.text for item in result.content] == [
+            "Error executing tool list_environments: Unknown argument 'search'; "
+            "this tool takes no arguments"
+        ]
+
     async def test_start_execution_attributes_the_wire_client(
         self, running_endpoint: str, mock_workbench_start: Any
     ) -> None:

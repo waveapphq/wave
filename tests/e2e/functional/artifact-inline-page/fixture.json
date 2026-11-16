@@ -1,0 +1,71 @@
+{
+  "name": "Artifact Inline Page E2E",
+  "version": "1.0.0",
+  "description": "A passing test whose File I/O blocks leave an HTML page and an SVG drawing in the run's artifacts, the way a file fetched from a system under test lands there. Each one carries a script that tries to read WAVE's API and writes what it got into its verdict element.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fileio-write-page",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 150 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Page Artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://page.html",
+              "content": "<!doctype html><html><head><meta charset=\"utf-8\"><title>Page from a system under test</title></head><body><p id=\"verdict\">pending</p><script>fetch('/artifacts?per_page=1').then(function (r) { return r.json() }).then(function () { document.getElementById('verdict').textContent = 'read' }, function () { document.getElementById('verdict').textContent = 'blocked' })</script></body></html>",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      },
+      {
+        "id": "fileio-write-drawing",
+        "type": "workflowNode",
+        "position": { "x": 400, "y": 250 },
+        "data": {
+          "label": "File I/O",
+          "elementType": "file-io",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Write Drawing Artifact",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "write",
+              "path": "artifact://drawing.svg",
+              "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"40\"><text id=\"verdict\" x=\"4\" y=\"24\">pending</text><script>fetch('/artifacts?per_page=1').then(function (r) { return r.json() }).then(function () { document.getElementById('verdict').textContent = 'read' }, function () { document.getElementById('verdict').textContent = 'blocked' })</script></svg>",
+              "if_exists": "overwrite"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": { "width": 120, "height": 62 }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start-node", "target": "fileio-write-page", "type": "default" },
+      { "id": "e2", "source": "fileio-write-page", "target": "fileio-write-drawing", "type": "default" }
+    ]
+  },
+  "variables": {},
+  "metadata": {},
+  "created_at": "2026-11-13T00:00:00.000000",
+  "updated_at": "2026-11-13T00:00:00.000000"
+}

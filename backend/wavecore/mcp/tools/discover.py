@@ -11,6 +11,7 @@ from wavecore.api.exceptions import NotFoundException, ValidationException
 from wavecore.api.services import variable_service
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import service as execution_service
+from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import service as function_service
 from wavecore.api.services.profiles import service as profile_service
 from wavecore.api.services.regressions import service as regression_service
@@ -20,6 +21,7 @@ from wavecore.api.services.tests import service as test_service
 from wavecore.api.services.tests import testdata_service
 from wavecore.controls.registry import list_latest_control_metadata
 from wavecore.core.plugin_registry import list_plugins
+from wavecore.core.recipes.validator import REMOTE_EXECUTION_ENTRY
 from wavecore.core.secrets.sealing import mask_definition_function_secrets
 from wavecore.plugins.base import PROXY_NOT_APPLICABLE, PluginBase
 
@@ -29,34 +31,31 @@ _LIST_ALL = 10_000
 EXECUTION_STATUSES = ("pending", "running", "passed", "failed", "stopped")
 ENTITY_TYPES = ("test", "suite", "regression")
 
-_REMOTE_EXECUTION_ENTRY: dict[str, Any] = {
-    "id": "remote-execution",
-    "name": "Remote Execution",
-    "kind": "container",
-    "category": "remote",
-    "version": "1.0.0",
-    "description": (
-        "Container that runs its body blocks on a remote host over an open SSH "
-        "session. Blocks are placed in the body via the 'body' handle."
-    ),
-    "parameter_schema": [
-        {
-            "name": "session",
-            "type": "string",
-            "required": True,
-            "description": "Name of an open SSH session the body executes over",
-        }
-    ],
-    "output_schema": [],
-    "structure_hints": {
-        "type": "scoped",
-        "has_body": True,
-        "branches": ["body", "then"],
-        "egress": "then",
-    },
-    "proxy_support": PROXY_NOT_APPLICABLE,
-    "implemented": True,
-}
+
+def _remote_execution_entry() -> dict[str, Any]:
+    """The container entry, its setting and output taken from the recipe compiler's entry."""
+    remote = REMOTE_EXECUTION_ENTRY
+    return {
+        "id": remote["id"],
+        "name": remote["name"],
+        "kind": "container",
+        "category": "remote",
+        "version": remote["version"],
+        "description": (
+            "Container that runs its body blocks on a remote host over an open SSH "
+            "session. Blocks are placed in the body via the 'body' handle."
+        ),
+        "parameter_schema": [dict(param) for param in remote["parameters"].values()],
+        "output_schema": [dict(out) for out in remote["outputs"].values()],
+        "structure_hints": {
+            "type": "scoped",
+            "has_body": True,
+            "branches": ["body", "then"],
+            "egress": "then",
+        },
+        "proxy_support": PROXY_NOT_APPLICABLE,
+        "implemented": True,
+    }
 
 
 def _as_dict(item: Any) -> Any:
@@ -107,7 +106,7 @@ def list_blocks() -> dict[str, Any]:
     """The full block catalog from the live registries: plugins, controls, containers."""
     blocks = [_plugin_entry(plugin) for plugin in list_plugins()]
     blocks.extend(_control_entry(metadata) for metadata in list_latest_control_metadata())
-    blocks.append(dict(_REMOTE_EXECUTION_ENTRY))
+    blocks.append(_remote_execution_entry())
     return {"blocks": blocks}
 
 
@@ -121,8 +120,11 @@ def get_block(block_id: str) -> dict[str, Any]:
 
 
 def list_functions(search: str | None = None) -> list[dict[str, Any]]:
-    """Published Function contract cards: summary + latest-version typed inputs/outputs."""
-    rows = function_service.list_functions(search=search or "", per_page=_LIST_ALL)["data"]
+    """Published Function contract cards: summary + latest-version typed inputs/outputs;
+    optional name/description search."""
+    rows = function_service.list_functions(
+        search=search or "", search_in=("name", "description"), per_page=_LIST_ALL
+    )["data"]
     cards: list[dict[str, Any]] = []
     for row in rows:
         contract = function_service.resolve_version_contract(
@@ -139,7 +141,7 @@ def get_function(function_id: str, version: str | None = None) -> dict[str, Any]
     if version:
         try:
             definition, _etag = function_service.read_version(function_id, version)
-        except LookupError as exc:
+        except function_storage.FunctionNotFoundError as exc:
             raise NotFoundException(str(exc)) from exc
     else:
         definition, _etag = function_service.get_function(function_id)
@@ -245,9 +247,9 @@ def _suite_row(suite: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def list_suites() -> list[dict[str, Any]]:
-    """Suite summaries with composition ids and masked variables."""
-    rows = suite_service.list_suites(per_page=_LIST_ALL)["suites"]
+def list_suites(search: str | None = None) -> list[dict[str, Any]]:
+    """Suite summaries with composition ids and masked variables; name/description search."""
+    rows = suite_service.list_suites(search=search, per_page=_LIST_ALL)["suites"]
     return [_suite_row(suite) for suite in rows]
 
 
@@ -276,9 +278,11 @@ def get_suite(suite_ref: str) -> dict[str, Any]:
     }
 
 
-def list_regressions() -> list[dict[str, Any]]:
-    """Regression summaries; the service masks variables at the boundary."""
-    return list(regression_service.list_regressions(per_page=_LIST_ALL)["regressions"])
+def list_regressions(search: str | None = None) -> list[dict[str, Any]]:
+    """Regression summaries with masked variables; optional name/description search."""
+    return list(
+        regression_service.list_regressions(search=search, per_page=_LIST_ALL)["regressions"]
+    )
 
 
 def resolve_regression(ref: str) -> dict[str, Any]:
@@ -314,8 +318,11 @@ def list_environments() -> list[dict[str, Any]]:
 
 
 def list_profiles() -> list[dict[str, Any]]:
-    """Profile rows; the service masks credential fields at the boundary."""
-    return list(profile_service.list_profiles(per_page=_LIST_ALL)["profiles"])
+    """Profile rows, the type named profile_type as create_profile takes it; credentials masked."""
+    return [
+        {("profile_type" if key == "type" else key): value for key, value in profile.items()}
+        for profile in profile_service.list_profiles(per_page=_LIST_ALL)["profiles"]
+    ]
 
 
 def list_variables(scope: str) -> list[dict[str, Any]]:

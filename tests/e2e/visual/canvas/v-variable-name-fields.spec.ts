@@ -17,9 +17,9 @@
  *
  *   Var-Setter-only:
  *   5. Validation messages: starts-with-digit, Python keyword, duplicate, namespace.
- *   6. Row vertical alignment: with the counter visible (60+ chars), the name
- *      field, type select, and value field all share the same `top` (within 1 px)
- *      because the row uses `flex items-start`.
+ *   6. Row vertical alignment: with the counter hidden and visible (60+ chars),
+ *      the name box, type select, and value box share one vertical center
+ *      (within 1 px) because the row centers its boxes.
  *   7. Autocomplete popover width tracks the trigger input and floors at 320 px;
  *      long-name items truncate with `flex-1 min-w-0 truncate` and carry a
  *      native `title` for hover.
@@ -29,6 +29,7 @@ import { test, expect, type Page, type Locator } from '../../helpers/playwright-
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { insertCodeValue } from '../../helpers/variable-create'
 import { configSheet } from '../../helpers/workbench'
+import { cellBox } from '../../helpers/value-field'
 
 async function ensureVariableManagerExpanded(page: Page) {
   const panel = page.locator('[data-testid="variable-manager"]')
@@ -202,57 +203,32 @@ test.describe('V-VARIABLE-NAME-FIELDS: shared NameField primitive', () => {
 
     const name = modal.locator('[data-testid="varset-name-input-0"]')
     const typeSelect = modal.locator('[data-testid="varset-type-select-0"]')
-    // The default (string) row's value affordance is the Edit-value button.
-    const value = modal.locator('[data-testid="varset-edit-value-0"]')
+    // The row's value is the inline value box.
+    const value = cellBox(modal, 'varset-value-0')
+
+    const center = (loc: Locator) =>
+      loc.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return r.top + r.height / 2
+      })
+    const expectOneCenter = async (state: string) => {
+      const nameCenter = await center(name)
+      expect(Math.abs(nameCenter - (await center(typeSelect))), `${state}: type select centered with the name`).toBeLessThanOrEqual(1)
+      expect(Math.abs(nameCenter - (await center(value))), `${state}: value box centered with the name`).toBeLessThanOrEqual(1)
+    }
 
     // Counter HIDDEN (short name).
     await name.fill('s')
-    {
-      const nameTop = await name.evaluate((el) => el.getBoundingClientRect().top)
-      const typeTop = await typeSelect.evaluate((el) => el.getBoundingClientRect().top)
-      const valueTop = await value.evaluate((el) => el.getBoundingClientRect().top)
-      // 60 px tolerance: the row uses `items-start` but in container CI the
-      // measured `top` of a textarea inside a Radix Popover anchor reports a
-      // ~56 px lower offset than a sibling textarea outside an anchor in some
-      // Chromium builds. The user-visible rendering still places the text
-      // baselines on a single row; this assertion catches the qualitative
-      // case where the counter pushes the textarea downward.
-      expect(Math.abs(nameTop - typeTop)).toBeLessThanOrEqual(60)
-      expect(Math.abs(nameTop - valueTop)).toBeLessThanOrEqual(60)
-    }
+    await expectOneCenter('counter hidden')
 
     // Counter VISIBLE (60-char muted state).
     await name.fill('z'.repeat(60))
     await expect(modal.locator('[data-testid="varset-name-input-0-counter"]')).toBeVisible()
-    {
-      const nameTop = await name.evaluate((el) => el.getBoundingClientRect().top)
-      const typeTop = await typeSelect.evaluate((el) => el.getBoundingClientRect().top)
-      const valueTop = await value.evaluate((el) => el.getBoundingClientRect().top)
-      // 60 px tolerance: the row uses `items-start` but in container CI the
-      // measured `top` of a textarea inside a Radix Popover anchor reports a
-      // ~56 px lower offset than a sibling textarea outside an anchor in some
-      // Chromium builds. The user-visible rendering still places the text
-      // baselines on a single row; this assertion catches the qualitative
-      // case where the counter pushes the textarea downward.
-      expect(Math.abs(nameTop - typeTop)).toBeLessThanOrEqual(60)
-      expect(Math.abs(nameTop - valueTop)).toBeLessThanOrEqual(60)
-    }
+    await expectOneCenter('counter muted')
 
     // Counter VISIBLE (64-char destructive state).
     await name.fill('z'.repeat(64))
-    {
-      const nameTop = await name.evaluate((el) => el.getBoundingClientRect().top)
-      const typeTop = await typeSelect.evaluate((el) => el.getBoundingClientRect().top)
-      const valueTop = await value.evaluate((el) => el.getBoundingClientRect().top)
-      // 60 px tolerance: the row uses `items-start` but in container CI the
-      // measured `top` of a textarea inside a Radix Popover anchor reports a
-      // ~56 px lower offset than a sibling textarea outside an anchor in some
-      // Chromium builds. The user-visible rendering still places the text
-      // baselines on a single row; this assertion catches the qualitative
-      // case where the counter pushes the textarea downward.
-      expect(Math.abs(nameTop - typeTop)).toBeLessThanOrEqual(60)
-      expect(Math.abs(nameTop - valueTop)).toBeLessThanOrEqual(60)
-    }
+    await expectOneCenter('counter destructive')
   })
 
   test('S6: Var Setter autocomplete popover width floors at 320px and items truncate', async ({

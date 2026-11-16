@@ -27,6 +27,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_ID_LIST_FIELDS, assert_refused
 from tests.api.download_name_helpers import ENTITY_NAME, EXPORT_STEM, assert_whole_name
 from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.functions import import_export
@@ -569,6 +570,14 @@ class TestBatchExportErrors:
     def test_empty_ids_returns_400(self, client: TestClient) -> None:
         response = client.post("/functions/export", json={"ids": [], "format": "yaml"})
         assert response.status_code == 400
+
+    @pytest.mark.parametrize("ids", NOT_ID_LIST_FIELDS)
+    def test_ids_that_are_not_a_list_of_strings_are_refused(
+        self, client: TestClient, ids: Any
+    ) -> None:
+        response = client.post("/functions/export", json={"ids": ids, "format": "yaml"})
+
+        assert_refused(response, "'ids' must be a list of ID strings")
 
 
 class TestBatchExportFilenameCollision:

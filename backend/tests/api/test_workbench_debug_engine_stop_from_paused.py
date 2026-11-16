@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from wavecore.api.exceptions import NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 
@@ -50,7 +51,6 @@ def _log_node(node_id: str, label: str, message: str = "'ok'") -> dict[str, Any]
             "displayName": label,
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -152,8 +152,8 @@ class TestStopFromPausedState:
         ), "paused (breakpointed) node must not execute when Stop is issued from paused"
 
     @pytest.mark.asyncio
-    async def test_stop_from_paused_raises_lookup_error_for_missing_session(self) -> None:
-        """Stop on an unknown session raises LookupError (same as from running)."""
-        with pytest.raises(LookupError) as exc_info:
+    async def test_stop_from_paused_raises_not_found_for_missing_session(self) -> None:
+        """Stop on an unknown session raises NotFoundException (same as from running)."""
+        with pytest.raises(NotFoundException) as exc_info:
             workbench_service.stop_workbench_run(session_id="nope")
         assert "Workbench session 'nope' not found" in str(exc_info.value)

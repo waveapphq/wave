@@ -2,14 +2,16 @@
 
 End-to-end proof that the Python block works the way an author sees it: the typed
 contract in and out, failure outcomes, logging to the run console, the Python-mode
-script editor (live checks, F2 rename, Run, scroll containment), the plain-text-only
-script bodies, Stop from the editor, and a run on a real remote host (REQ-3.4.1.2,
-REQ-3.4.2.2; PYRUN-1 to PYRUN-21, SQL-13).
+script editor (live checks, F2 rename, Run, scroll containment), the interpreter its
+completion and rename ask about, the plain-text-only script bodies, Stop from the
+editor, and a run on a real remote host (REQ-3.4.1.2, REQ-3.4.2.2; PYRUN-1 to
+PYRUN-21, SQL-13).
 
-Every spec imports its own Test from a JSON fixture in this folder and deletes it in
-`afterAll`. Markers a script prints are assembled from parts inside the script,
-because the DEBUG `Inputs:` echo carries the script source and would otherwise
-satisfy an assertion by itself.
+Every spec but `v-python-tools-interpreter-functional` imports its own Test from a
+JSON fixture in this folder and deletes it in `afterAll`; that one only asks the
+python-tools endpoints and creates nothing. Markers a script prints are assembled
+from parts inside the script, because the DEBUG `Inputs:` echo carries the script
+source and would otherwise satisfy an assertion by itself.
 
 The editor's completion list is parented to `document.body`, where an open one covers the
 next control a spec clicks. Every spec that types into the Python editor leaves it with
@@ -26,6 +28,9 @@ pass, and the toolbar Stop; the SQL editor suite imports them too.
   shell-blocks suite pins the wording for that case.
 - `jedi` installed in the backend environment. Completion, the documentation panel
   and F2 rename all answer through the python-tools endpoints, which need it.
+- `/bin/true` on the machine the backend runs on, for
+  `v-python-tools-interpreter-functional` only: a program that exists and is not
+  Python.
 - The `sshd` service of the real-service stack, for `v-plugin-python-remote-functional`
   only (`tests/e2e/services/README.md`). It ships the `python3` that spec runs the
   script under; the spec never hardcodes a version.
@@ -57,6 +62,7 @@ The suite runs inside the containerized Playwright CI
 | `v-plugin-python-run-functional` | `fixture-run.json`, `fixture-args.json`, `fixture-other-error.json` | Run executes only this block with the unsaved script and ends there, turning into Stop while it is in flight and leaving the saved script untouched on the canvas and on the server. Paused at the block, Run repeats it. Run uses the toolbar Environment and asks only when none is selected, sends the whole unsaved configuration, is refused only for this block's own non-script findings, and carries the parent's note when something else blocks Save |
 | `v-plugin-python-stop-functional` | `fixture-run.json` | A script that prints a line and sleeps 60 s is run from the editor: Stop stands where Run was, the line reaches the console, F1 Help opens, Save stays dead on a changed draft and the config behind is read-only. The editor's Stop ends the run within 10 s with the block stopped and a WARN `Stopped by user`, and the line after the sleep never prints. Run comes back and a second run passes. Close during a run raises the unsaved prompt with its Save dead, closes the editor and leaves the run going until the toolbar Stop |
 | `v-plugin-python-rename-functional` | `fixture-rename.json` | F2 opens the rename box at the symbol, pre-filled, with occurrences highlighted. A local renames in the script only; an export name renames the Variable Exports row and the persisted `script_variables` and `outputBindings`; an Input Variable name renames its `input_vars` key. One Ctrl+Z undoes the whole rename, Esc changes nothing, and an invalid name is refused inline |
+| `v-python-tools-interpreter-functional` | none (API only) | An Interpreter row naming a program that exists but is not Python (`/bin/true`) is no local interpreter, so it answers what a row naming nothing does (PYRUN-19): `POST /python-tools/rename` answers 200 with the same edits as WAVE's own interpreter, the three uses of `count` renamed, and `POST /python-tools/complete` after `os.` offers the same members as a row naming a file that does not exist, `getcwd` among them |
 | `v-plugin-script-body-plain-functional` | `fixture-script-body.json` | The Shell Script, K8s Script and SSH Session Script bodies take plain text only, so their value editor shows no Format control, shown against a row that still offers the whole Format menu. Template stays available as the value Kind, and a `noExpression` parameter shows no Kind dropdown |
 | `v-plugin-python-scroll-functional` | `fixture-scroll.json` | With the Python editor open the page behind it gains no scrollable height and cannot be pushed, including after a completion tooltip mounts; the wheel over the editor scrolls the editor only; the expression editor modal leaves the page alone the same way |
-| `v-plugin-python-remote-functional` | `fixture-remote.json`, `fixture-remote-refusals.json`, `fixture-remote-secret.json`, `testdata-remote/` | Inside a Remote Execution body against the real `sshd` host: a `testdata://` script is read on WAVE and shipped, a helper module beside it imports by name, the host's own `python3` runs it, typed exports come back, log lines arrive when the block ends, a plain path resolves on the host, the start line says the remote host, an empty Working Directory starts in the remote host's temp folder (`os.getcwd()` equals `tempfile.gettempdir()`), `sys.exit("text")` reads its text, and the worker's `/tmp/wave-worker-*` scratch dir, which held the script, is gone from the host after the run. A missing interpreter reads `Interpreter not found on the remote host: nosuchpython`, a `testdata://` Working Directory is refused with `testdata:// paths are not available on the remote host`, and a secret Stdout or Stderr never reaches the console, the WS stream or a failure message |
+| `v-plugin-python-remote-functional` | `fixture-remote.json`, `fixture-remote-refusals.json`, `fixture-remote-secret.json`, `testdata-remote/` | Inside a Remote Execution body against the real `sshd` host: a `testdata://` script is read on WAVE and shipped, a helper module beside it imports by name, the host's own `python3` runs it, typed exports come back, log lines arrive when the block ends, a plain path resolves on the host, the start line says the remote host, an empty Working Directory starts in the remote host's temp folder (`os.getcwd()` equals `tempfile.gettempdir()`), `sys.exit("text")` reads its text, and the worker's `/tmp/wave-worker-*` scratch dir, which held the script, is gone from the host after the run. A missing interpreter reads `Interpreter not found on the remote host: nosuchpython`, a `testdata://` Working Directory is refused with `testdata:// paths are not available on the remote host - use an absolute or relative path on the remote host`, and a secret Stdout or Stderr never reaches the console, the WS stream or a failure message |

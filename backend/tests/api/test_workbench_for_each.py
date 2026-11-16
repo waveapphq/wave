@@ -80,7 +80,6 @@ def _make_node(
             "displayName": display_name or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

@@ -4,6 +4,7 @@ test:
   tags: [example, control-flow]
 variables:
   transport: {type: string, value: TCP}
+  expected_transport: {type: string, value: TCP}
   health: {type: integer, value: 200}
   hosts: {type: array, value: [alpha, beta, gamma]}
   retries: {type: integer, value: 0}
@@ -11,39 +12,52 @@ variables:
   session_token: {type: string}
 flow:
   - if:
-      when: "health == 200"
+      if_label: Healthy
+      when:
+        - "health == 200"
+        - or
+        - group:
+            - {variable: transport, operator: equals, value: TCP, value_type: string}
+            - "retries < 3"
       then:
         - block: log
           settings: {message: Service healthy}
       elif:
-        - when: {variable: transport, operator: equals, value: UDP, value_type: string}
+        - label: Degraded over UDP
+          when: {variable: transport, operator: equals, value: UDP, value_type: string}
           then:
             - block: log
               settings: {message: Degraded over UDP}
-        - when: {variable: session_token, operator: is_null}
+        - label: No session yet
+          when: {variable: session_token, operator: is_null}
           then:
             - block: log
               settings: {message: No session token yet}
+      else_label: Down
       else:
         - block: log
           settings: {message: Service down}
   - switch:
       label: Route on status
       cases:
-        - when: "health == 200"
+        - label: All good
+          when: "health == 200"
           break: false
           steps:
             - block: log
               settings: {message: All good}
-        - when: {variable: transport, operator: equals, value: TCP, value_type: string}
+        - label: Expected transport
+          when: {variable: transport, operator: equals, value: {expr: "expected_transport"}, value_type: string}
           steps:
             - block: log
-              settings: {message: Still on TCP}
+              settings: {message: "Still on {{ transport }}"}
+      default_label: Anything else
       default:
         - block: log
           settings: {message: Unexpected status}
   - for:
-      count: 3
+      count: 6
+      step: 2
       body:
         - block: log
           settings: {message: Ping attempt}
@@ -54,6 +68,7 @@ flow:
           settings: {message: Even tick}
   - for_each:
       collection: {expr: "hosts"}
+      collection_type: array
       capture: {item: current_host, index: host_index}
       body:
         - block: log

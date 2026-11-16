@@ -2053,7 +2053,7 @@ class TestScheduleInConfigFile:
 
         assert get_schedule() == _default_schedule()
 
-    def test_the_old_schedule_file_helpers_are_gone(self) -> None:
+    def test_the_scheduler_has_no_schedule_file_helpers(self) -> None:
         from wavecore.api.services.backup import _helpers, scheduler
 
         assert not hasattr(scheduler, "delete_schedule")

@@ -496,6 +496,49 @@ describe('useTestLifecycle', () => {
       expect(storeFns.reset).toHaveBeenCalledOnce()
       expect(params.setIsNewTestMode).toHaveBeenCalledWith(true)
     })
+
+    const SAVED_DRAFT = {
+      nodes: [{ id: 'draft-node', type: 'workflowNode', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      testId: null,
+      testName: null,
+      isDirty: true,
+      variables: [{ id: 'draft-var', name: 'draftVar', value: 'draft', type: 'string' }],
+    }
+
+    it('never restores the saved draft over the new test', () => {
+      mockDraft = SAVED_DRAFT
+      setupStore()
+      const params = defaultParams()
+      const view = renderNewTest(params)
+
+      expect(storeFns.reset).toHaveBeenCalledOnce()
+      expect(view.result.current.location.search).toBe('')
+      expect(storeFns.setNodes).not.toHaveBeenCalled()
+      expect(storeFns.setVariables).not.toHaveBeenCalled()
+    })
+
+    it('never reopens the test that was open before the page load', () => {
+      setupStore({ editingTestId: 'old-test-id', nodes: [] })
+      const params = defaultParams()
+      const view = renderNewTest(params)
+
+      expect(storeFns.reset).toHaveBeenCalledOnce()
+      expect(view.result.current.location.search).toBe('')
+      expect(mockLoadTest).not.toHaveBeenCalled()
+    })
+
+    it('asks first over unsaved draft work, and still restores the draft behind the dialog', () => {
+      mockDraft = SAVED_DRAFT
+      setupStore({ isDirty: true })
+      const params = defaultParams()
+      const view = renderNewTest(params)
+
+      expectAskedAndKept(params, view)
+      expect(storeFns.setNodes).toHaveBeenCalledOnce()
+      expect(storeFns.setVariables).toHaveBeenCalledWith(SAVED_DRAFT.variables)
+    })
   })
 
   describe('library View open on a plain /workbench', () => {

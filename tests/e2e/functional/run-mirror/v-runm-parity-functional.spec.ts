@@ -10,7 +10,7 @@
  *    run of the same test one-for-one in count, order, level, source and
  *    message; summary counts and timeline statuses are identical.
  * 2. The persisted history payloads (block states, end-of-run variables, log
- *    rows) match apart from ids and timestamps.
+ *    rows) match apart from ids, timestamps and measured durations.
  * 3. The console lines the mirror showed live equal what the Execution
  *    History page repaints for the same run, in order and level.
  * 4. The environment the mirror reflected equals the history page readout.
@@ -62,7 +62,9 @@ async function fetchHistory(
 /** Measured wall-clock values differ per run like timestamps do; normalize them
  *  so the comparison is about content, order and level. */
 function normalizeMessage(message: string): string {
-  return message.replace(/\(\d+ ms elapsed\)/g, '(<elapsed> ms elapsed)')
+  return message
+    .replace(/\(\d+ ms elapsed\)/g, '(<elapsed> ms elapsed)')
+    .replace(/^(Completed '.*') \(\d+ ms\)$/s, '$1 (<duration> ms)')
 }
 
 function comparableLogs(logs: HistoryPayload['logs']): Array<[number, string, string, string]> {
@@ -177,7 +179,7 @@ test.describe('V-RUNM-PARITY-FUNCTIONAL: watched and unwatched runs leave the sa
     const watchedHistory = await fetchHistory(request, watchedExec)
     const unwatchedHistory = await fetchHistory(request, unwatchedExec)
 
-    await test.step('history payloads match apart from ids and timestamps', async () => {
+    await test.step('history payloads match apart from ids, timestamps and durations', async () => {
       expect(watchedHistory.status).toBe(unwatchedHistory.status)
       expect(watchedHistory.block_states).toEqual(unwatchedHistory.block_states)
       expect(watchedHistory.variables).toEqual(unwatchedHistory.variables)

@@ -12,52 +12,47 @@ Endpoints:
 """
 
 import re
-import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Query, Request, Response, status
-from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.exceptions import NotFoundException, ValidationException
+from wavecore.api.routes.shared import (
+    entity_etag,
+    read_json_object,
+    refuse_stale_etag,
+    validate_uuid,
+)
 from wavecore.api.services.blocks import service as block_service
 
 # Create router for block endpoints
 router = APIRouter(tags=["Blocks"], prefix="/blocks")
 
 
-def validate_block_name(name: str) -> None:
+def validate_block_name(name: Any) -> None:
     """Validate block name format and length.
 
     Args:
         name: Block name to validate
 
     Raises:
-        ValueError: If name is invalid
+        ValidationException: If name is invalid
     """
+    if not isinstance(name, str):
+        raise ValidationException("Field 'name' must be a string")
     if not name or len(name) > 255:
-        raise ValueError("Block name must be between 1 and 255 characters")
+        raise ValidationException("Block name must be between 1 and 255 characters")
 
     if not re.match(r"^[a-zA-Z0-9 _-]+$", name):
-        raise ValueError(
+        raise ValidationException(
             f"Block name '{name}' violates naming convention: must contain only "
             "alphanumeric characters, spaces, hyphens, and underscores"
         )
 
 
-def _generate_etag(block: dict[str, Any]) -> str:
-    """Generate ETag for a block.
-
-    Args:
-        block: Block data
-
-    Returns:
-        ETag string (quoted hex hash)
-    """
-    import hashlib
-
-    content = f"{block.get('id')}{block.get('version')}{block.get('updated_at')}"
-    return f'"{hashlib.sha256(content.encode()).hexdigest()}"'
+def block_not_found(block_id: str) -> NotFoundException:
+    """The 404 for a block ID that matches no block."""
+    return NotFoundException(f"Block with ID '{block_id}' not found")
 
 
 @router.get("", response_model=None)
@@ -68,7 +63,7 @@ async def list_blocks(
     search: Annotated[str | None, Query(description="Text search query")] = None,
     plugin_id: Annotated[str | None, Query(description="Filter by plugin ID")] = None,
     tags: Annotated[list[str] | None, Query(description="Filter by tags")] = None,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """List all blocks with filtering and pagination.
 
     Args:
@@ -85,16 +80,7 @@ async def list_blocks(
     response.headers["Cache-Control"] = "max-age=60"
 
     if plugin_id:
-        try:
-            validate_uuid(plugin_id, "plugin_id")
-        except (ValueError, ValidationException) as e:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "success": False,
-                    "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-                },
-            )
+        validate_uuid(plugin_id, "plugin_id")
 
     result = block_service.list_blocks(
         page=page,
@@ -117,7 +103,7 @@ async def list_blocks(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=None)
-async def create_block(request: Request, response: Response) -> dict[str, Any] | JSONResponse:
+async def create_block(request: Request, response: Response) -> dict[str, Any]:
     """Create a new block.
 
     Validates block definition including naming conventions, plugin references,
@@ -130,59 +116,25 @@ async def create_block(request: Request, response: Response) -> dict[str, Any] |
     Returns:
         Created block with metadata
     """
-    try:
-        body = await request.json()
+    body = await read_json_object(request)
 
-        if "name" not in body:
-            raise ValueError("Field 'name' is required")
-        if "plugin_id" not in body:
-            raise ValueError("Field 'plugin_id' is required")
+    if "name" not in body:
+        raise ValidationException("Field 'name' is required")
+    if "plugin_id" not in body:
+        raise ValidationException("Field 'plugin_id' is required")
 
-        validate_block_name(body["name"])
-        validate_uuid(body["plugin_id"], "plugin_id")
+    validate_block_name(body["name"])
+    validate_uuid(body["plugin_id"], "plugin_id")
 
-        block = block_service.create_block(body)
+    block = block_service.create_block(body)
 
-        response.headers["X-Cache-Invalidated"] = "blocks_list"
+    response.headers["X-Cache-Invalidated"] = "blocks_list"
 
-        return {"success": True, "data": block}
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "already exists" in error_message:
-            status_code = status.HTTP_409_CONFLICT
-        elif "Circular dependency" in error_message:
-            status_code = status.HTTP_400_BAD_REQUEST
-        elif "not found" in error_message:
-            status_code = status.HTTP_400_BAD_REQUEST
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
-    except Exception:
-        correlation_id = str(uuid.uuid4())
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "success": False,
-                "error": {
-                    "message": "Internal server error",
-                    "code": "INTERNAL_ERROR",
-                    "correlation_id": correlation_id,
-                },
-            },
-        )
+    return {"success": True, "data": block}
 
 
 @router.get("/{block_id}", response_model=None)
-async def get_block(block_id: str, response: Response) -> dict[str, Any] | JSONResponse:
+async def get_block(block_id: str, response: Response) -> dict[str, Any]:
     """Get block by ID.
 
     Args:
@@ -192,35 +144,16 @@ async def get_block(block_id: str, response: Response) -> dict[str, Any] | JSONR
     Returns:
         Block details with metadata
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        block = block_service.get_block(block_id)
+    block = block_service.get_block(block_id)
 
-        if block is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if block is None:
+        raise block_not_found(block_id)
 
-        response.headers["ETag"] = _generate_etag(block)
+    response.headers["ETag"] = entity_etag(block)
 
-        return {"success": True, "data": block}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": block}
 
 
 @router.delete("/{block_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -242,46 +175,10 @@ async def delete_block(
     Returns:
         Empty response with 204 status code
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
+    refuse_stale_etag(if_match, block_service.get_block, block_id)
 
-        if if_match:
-            block = block_service.get_block(block_id)
-            if block:
-                current_etag = _generate_etag(block)
-                if if_match != current_etag:
-                    raise ValueError("Precondition failed: resource has been modified")
+    if not block_service.delete_block(block_id, cascade=cascade):
+        raise block_not_found(block_id)
 
-        deleted = block_service.delete_block(block_id, cascade=cascade)
-
-        if not deleted:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "Precondition failed" in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        elif "Cannot delete" in error_message:
-            status_code = status.HTTP_409_CONFLICT
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -248,6 +248,16 @@ export default defineConfig({
         // missing testdata:// reference warns without blocking until
         // write_testdata supplies the file and the packaged example runs green.
         'mcp-testdata/**/*.spec.ts',
+        // Run report over MCP: Block paths name containers only (an If/Else or
+        // a split Assert adds no level), rejoined branches list in flow order,
+        // and the get_run_report description names the timeline and formats.
+        'mcp-report/**/*.spec.ts',
+        // Control Block fields on the one value field, driven in the window and run end to end.
+        'control-block-fields/**/*.spec.ts',
+        // One spec per MCP tool for Suites, Regressions and the list tools.
+        'mcp-suites/**/*.spec.ts',
+        'mcp-regressions/**/*.spec.ts',
+        'mcp-lists/**/*.spec.ts',
         // SSH Session trio (Open / Execute / Close) - stateful
         // session against the asyncssh simulator, a 2-hop parent chain, cascade
         // close, and the Connected-flips-false-on-close proof.
@@ -484,6 +494,10 @@ export default defineConfig({
         // (drop, quick-add, drag from the lane dot), saved and run
         // (functional/canvas-lanes/README.md).
         'canvas-lanes/**/*.spec.ts',
+        // Lane wires after a run: only the lanes the flow went through are
+        // highlighted, live, after a reload and in the run history
+        // (functional/canvas-run-wires/README.md).
+        'canvas-run-wires/**/*.spec.ts',
         // Field-level save errors on the profile modal: the port-range message
         // under the field, the Name message once left, no required fields
         // (FIELDERR-1..FIELDERR-3) (functional/profile-field-errors/README.md).
@@ -498,6 +512,9 @@ export default defineConfig({
         // grouping, single-file download bytes, soft-delete audit trail, streamed
         // zip, and the execution-delete cascade to /artifacts + /reports.
         'artifact-browser/**/*.spec.ts',
+        // An HTML or SVG artifact opened inline renders and runs its script, but
+        // never in WAVE's origin (functional/artifact-inline-page/README.md).
+        'artifact-inline-page/**/*.spec.ts',
         'halt-control/**/*.spec.ts',
         'if-else-control/**/*.spec.ts',
         // Switch/Case end-to-end - break, fall-through
@@ -538,6 +555,8 @@ export default defineConfig({
         'while-control/**/*.spec.ts',
         'break-control/**/*.spec.ts',
         'continue-control/**/*.spec.ts',
+        // A run passes a Note on inside every body, section, case and lane.
+        'note-control/**/*.spec.ts',
         'variable-setter/**/*.spec.ts',
         // The migrated setter assigns one value of EACH type
         // (string/int/float/bool/array/map/table) + a per-key expression row +
@@ -609,6 +628,8 @@ export default defineConfig({
         'workbench-undo-redo/**/*.spec.ts',
         // Save-spec sanitization (selected/dragging/hasNewerVersion)
         'workbench-save-sanitize/**/*.spec.ts',
+        // A workflow whose wires repeat an id: every save, import, restore, run and the Fix refuse it.
+        'edge-identity/**/*.spec.ts',
         // Tests-list switch dialog timing for clean-but-executed workbench
         'tests-list-switch-dialog/**/*.spec.ts',
         // Tests-page New Test / Open-in-Workbench

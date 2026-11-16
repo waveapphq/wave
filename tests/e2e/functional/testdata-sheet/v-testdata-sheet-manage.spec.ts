@@ -73,10 +73,9 @@ test.describe('Test Data sheet - managing a test\'s files', () => {
     await openWorkbench(page, own.id)
 
     const sheet = await openSheet(page)
-    await expect(sheet, 'the sheet names itself for assistive tech').toHaveAttribute(
-      'aria-label',
-      'Test Data',
-    )
+    // Per CANVAS-227: a floating window is the dialog named by its visible title.
+    await expect(sheet, 'the sheet names itself for assistive tech').toHaveRole('dialog')
+    await expect(sheet, 'the sheet names itself for assistive tech').toHaveAccessibleName('Test Data')
 
     await test.step('1. a saved test with no files shows the empty state', async () => {
       const empty = sheet.getByTestId('testdata-empty-state')

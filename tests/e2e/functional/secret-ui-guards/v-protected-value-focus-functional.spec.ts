@@ -117,12 +117,9 @@ const FIXTURE: Record<string, unknown> = {
           hasNewerVersion: false,
           expressionFields: [],
           templateFields: [],
-          variableExpressionKeys: [],
-          variableTemplateKeys: [],
-          variableTypes: { saved_pin: 'integer' },
           config: {
             values: { variables: { saved_pin: STORED_SECRET_NUMBER } },
-            variableSecretKeys: ['saved_pin'],
+            secretFields: ['variables.saved_pin'],
             outputBindings: {},
             profileBindings: [],
           },
@@ -147,11 +144,12 @@ const FIXTURE: Record<string, unknown> = {
 // Locators
 // ---------------------------------------------------------------------------
 
-const maskedField = (scope: Locator): Locator =>
-  scope.locator('button[aria-label="Edit protected value"]')
+/** A Block field's masked control, named by the field's visible label. */
+const maskedField = (scope: Locator, label: string): Locator =>
+  scope.getByRole('button', { name: `${label}: Edit protected value`, exact: true })
 
 const editQuestion = (page: Page): Locator =>
-  page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  page.getByRole('dialog', { name: 'Edit Protected Value?' })
 
 const valueEditorSheet = (page: Page): Locator => page.locator('[data-testid="value-editor-sheet"]')
 
@@ -320,7 +318,7 @@ const BLOCK_SURFACES: BlockSurface[] = [
     nodeId: SSH_NODE,
     previousControl: (sheet) =>
       sheet.locator('[data-testid="param-row-username"] [data-testid="expression-toggle"]'),
-    masked: (sheet) => maskedField(sheet.locator('[data-testid="param-row-password"]')),
+    masked: (sheet) => maskedField(sheet.locator('[data-testid="param-row-password"]'), 'Password'),
     valueControl: (sheet) => sheet.locator('[data-testid="param-row-password"] [data-slot="input-group"] input'),
     stored: (block) => block.values.password,
     cleared: '',
@@ -330,8 +328,8 @@ const BLOCK_SURFACES: BlockSurface[] = [
     title: 'a stored secret number',
     nodeId: SETTER_NODE,
     previousControl: (sheet) => sheet.locator('[data-testid="varset-secret-checkbox-0"]'),
-    masked: (sheet) => maskedField(sheet),
-    valueControl: (sheet) => sheet.locator('[data-testid="scalar-edit-input"]'),
+    masked: (sheet) => maskedField(sheet, 'saved_pin'),
+    valueControl: (sheet) => sheet.locator('[data-testid="param-input-varset-value-0"]'),
     stored: (block) =>
       (block.values.variables as Record<string, unknown> | undefined)?.saved_pin,
     cleared: '0',

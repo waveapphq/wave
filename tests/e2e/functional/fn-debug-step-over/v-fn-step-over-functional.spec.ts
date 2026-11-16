@@ -40,7 +40,6 @@ function logNode(id: string, label: string, message: string, x: number): Record<
       version: '1.0.0',
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values: { message: `'${message}'`, level: 'INFO' }, outputBindings: {}, profileBindings: [] },
     },
   }
@@ -68,7 +67,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',

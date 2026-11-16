@@ -172,9 +172,9 @@ export function ExecutionsListContainer(): ReactNode {
     (executionId: string) => {
       const exec = executions.find((e) => e.id === executionId)
       if (exec?.type === 'test') {
-        navigate(`/executions/history/${executionId}`)
+        void navigate(`/executions/history/${executionId}`)
       } else {
-        navigate(`/executions/${executionId}`)
+        void navigate(`/executions/${executionId}`)
       }
     },
     [navigate, executions]
@@ -229,7 +229,7 @@ export function ExecutionsListContainer(): ReactNode {
         setTestRerunOpen(false)
         setTestRerunExec(null)
         // Test runs stream live on the Workbench canvas.
-        navigate('/workbench')
+        void navigate('/workbench')
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Failed to start execution')

@@ -43,6 +43,8 @@ LEVEL_IS_ERROR = {
     "bool": {"should": [{"match": {"log.level": "ERROR"}}], "minimum_should_match": 1}
 }
 TERM = {"term": {"log.level": "ERROR"}}
+# Parameters a geo query may hold beside its field.
+GEO_OPTIONS = {"validation_method": "STRICT", "ignore_unmapped": True, "_name": "near", "boost": 2}
 REQUEST_KEYS = [
     "size",
     "from",
@@ -407,6 +409,46 @@ class TestNamedFieldsQueryDsl:
     )
     def test_the_key_under_a_field_keyed_type(self, query: dict[str, Any]) -> None:
         assert named_fields(author_query("query_dsl", query)) == ["log.level"]
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            {
+                "geo_bounding_box": {
+                    "pin.location": {"top_left": "dr5r9ydj2y73", "bottom_right": "drj7teegpus6"},
+                    "type": "indexed",
+                    **GEO_OPTIONS,
+                }
+            },
+            {
+                "geo_distance": {
+                    "distance": "12km",
+                    "distance_type": "arc",
+                    "unit": "km",
+                    "pin.location": {"lat": 40, "lon": -70},
+                    **GEO_OPTIONS,
+                }
+            },
+            {"geo_polygon": {"pin.location": {"points": [[-70, 40], [-80, 30], [-90, 20]]}}},
+            {
+                "geo_shape": {
+                    "pin.location": {"shape": {"type": "point", "coordinates": [13, 53]}},
+                    "ignore_unmapped": True,
+                    "_name": "here",
+                    "boost": 2,
+                }
+            },
+            {"xy_shape": {"boost": 2, "pin.location": {"shape": {"type": "point"}}}},
+        ],
+        ids=["geo_bounding_box", "geo_distance", "geo_polygon", "geo_shape", "xy_shape"],
+    )
+    def test_the_key_beside_the_parameters_of_a_geo_query(self, query: dict[str, Any]) -> None:
+        assert named_fields(author_query("query_dsl", query)) == ["pin.location"]
+
+    def test_a_geo_query_inside_a_bool_clause(self) -> None:
+        query = {"bool": {"filter": [{"geo_distance": {"distance": "1km", "pin.locaton": "u33"}}]}}
+
+        assert named_fields(author_query("query_dsl", query)) == ["pin.locaton"]
 
     def test_the_value_of_a_field_key(self) -> None:
         assert named_fields(author_query("query_dsl", {"exists": {"field": "trace.id"}})) == [

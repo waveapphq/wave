@@ -105,7 +105,7 @@ test.describe('V-PLUGIN-SFTP-DROPZONE-FUNCTIONAL: SFTP on the chrooted dropzone 
 
       const sheet = await openConfig(page, NODE.open)
       await fillTextRow(page, sheet, 'username', SSH_DROPZONE_USER)
-      await replaceSecretRow(page, sheet, 'password', SSH_DROPZONE_PASSWORD)
+      await replaceSecretRow(page, sheet, 'password', 'Password', SSH_DROPZONE_PASSWORD)
       await saveConfig(sheet)
       await saveWorkbench(page)
 

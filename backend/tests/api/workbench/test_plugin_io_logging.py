@@ -1079,3 +1079,60 @@ class TestLogMessageOfAnyTypeThroughTheHarness:
 
         assert '["********",null]' in messages
         assert not any("s3cr3t-t0ken-99" in message for message in messages)
+
+
+class _QueryStubPlugin(_IOStubPlugin):
+    """Data stub: a Query DSL query field that fills its markers escaped for JSON."""
+
+    @property
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "id": "query-stub",
+            "version": "1.0.0",
+            "parameters": [
+                {"name": "query_language", "type": "string"},
+                {
+                    "name": "query",
+                    "type": ["string", "map"],
+                    "template_escape": {
+                        "by": "query_language",
+                        "rules": {"dql": "dql", "query_dsl": "json"},
+                        "default": "dql",
+                    },
+                },
+            ],
+            "output_schema": [],
+        }
+
+
+class TestSecretTableInAJsonQuery:
+    """REQ-3.3.2.6 / REQ-3.1.3.5: a secret table filled alone in a Query DSL query shows
+    masked in the run output, never its column names or cells."""
+
+    async def test_the_run_output_masks_the_whole_table(self) -> None:
+        from wavecore.core.table import Table
+
+        rows = Table.from_list([{"name": "alpha", "qty": 1}])
+        registry = _make_registry()
+        registry.register("rows", rows, "declared")
+        session_id = _prime_session(registry)
+        log_streaming_service.register_secret_registry(session_id, registry)
+        await wb_plugins._execute_plugin_with_session(
+            _QueryStubPlugin(None),
+            "query-stub",
+            {"query_language": "query_dsl", "query": '{"terms": {{ rows }}}'},
+            {"rows": rows},
+            session_id,
+            None,
+            None,
+            None,
+            {"query"},
+        )
+
+        assert _find_line(session_id, "Rendered 'query': ") == (
+            "Rendered 'query': {\"terms\": ********}"
+        )
+        assert _find_line(session_id, "Inputs: ") == (
+            'Inputs: {"query_language":"query_dsl","query":"{\\"terms\\": ********}"}'
+        )
+        assert not any("alpha" in message for message in _messages(session_id))

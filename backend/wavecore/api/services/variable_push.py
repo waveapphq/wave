@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from wavecore.api.websocket.manager import WebSocketManager
+from wavecore.core.secrets.masking import MASK_PLACEHOLDER
 from wavecore.core.table import Table
 from wavecore.core.variables.wire_form import wire_scalar
 
@@ -100,7 +101,8 @@ class VariablePushService:
         Returns:
             The transformed value to push to clients
         """
-        if var_type in _COMPLEX_VAR_TYPES:
+        # A list, map or table masked whole pushes the bare placeholder, never a measurement.
+        if var_type in _COMPLEX_VAR_TYPES and value != MASK_PLACEHOLDER:
             return self._summarize_complex_value(value)
         # A scalar pushes whole, a number in its wire form (REQ-3.1.3.14).
         return wire_scalar(value)
@@ -120,10 +122,7 @@ class VariablePushService:
         session = _workbench_sessions.get(str(event.get("watch_id", "")))
         registry = (session or {}).get("secret_registry")
         # The WS variable stream feeds the workbench Variable Manager panel and its
-        # watchers, both governed by the test-variables reveal flag. Splitting into
-        # per-surface streams so a masked surface never receives raw bytes is
-        # server/multi-user hardening (a local single-user deployment has one
-        # authorized viewer of this session topic).
+        # watchers, both governed by the test-variables reveal flag.
         if registry is None or masking_settings.is_test_variables_revealed():
             return value
         name = str(event.get("path", ""))

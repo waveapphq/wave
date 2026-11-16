@@ -197,18 +197,14 @@
      "hasNewerVersion": false,
      "expressionFields": [],
      "templateFields": [],
-     "variableExpressionKeys": [],
-     "variableTypes": {
-      "setter_secret": "string"
-     },
      "config": {
       "values": {
        "variables": {
         "setter_secret": "cnr6-set-a1b2c3d4-gamma-real-bytes"
        }
       },
-      "variableSecretKeys": [
-       "setter_secret"
+      "secretFields": [
+       "variables.setter_secret"
       ],
       "outputBindings": {},
       "profileBindings": []

@@ -79,7 +79,7 @@ for tid_name in \
 do
   TID="${tid_name%%|*}"
   TNAME="${tid_name#*|}"
-  _bulk tests "[{\"op\":\"add\",\"entity\":{\"id\":\"$TID\",\"name\":\"$TNAME\",\"version\":\"1\",\"created_at\":\"$TS_TEST\",\"updated_at\":\"$TS_TEST\",\"metadata\":{\"tags\":[\"smoke\"],\"status\":\"passed\",\"last_run\":\"$TS_TEST\"},\"workflow\":$(_workflow_log),\"variables\":{}}}]"
+  _bulk tests "[{\"op\":\"add\",\"entity\":{\"id\":\"$TID\",\"name\":\"$TNAME\",\"version\":\"1.0.0\",\"created_at\":\"$TS_TEST\",\"updated_at\":\"$TS_TEST\",\"metadata\":{\"tags\":[\"smoke\"],\"status\":\"passed\",\"last_run\":\"$TS_TEST\"},\"workflow\":$(_workflow_log),\"variables\":{}}}]"
 done
 
 # Suites

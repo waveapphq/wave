@@ -6,7 +6,13 @@
  * mode toggle, variable auto-type, reorder, validation, and operator filtering.
  *
  * Uses the interleaved format: [assertion, operator, assertion, operator, ...]
+ *
+ * The list is controlled: the builder draws the rows it is given and the window holds Save on the
+ * shared check of that list. Each row draws its own message (FIELD-15) and a variable pick that would
+ * drop a compare value asks the shared type-change question first (FIELD-13).
+ * REQ-3.5.1.5, REQ-3.5.1.1, REQ-3.5.1.11, REQ-3.5.1.17, REQ-3.5.1.20, REQ-3.5.4.3
  */
+import { useState } from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -29,31 +35,33 @@ vi.mock('@/hooks/use-viewport', () => ({
 }))
 
 // Mock ExpressionField - CodeMirror doesn't work in jsdom.
-// Render a plain input that calls onChange with the typed text.
+// Render a plain input that calls onChange with the typed text, inside the
+// `param-input-<name>` box the real expression input draws.
 vi.mock('@/features/workbench/common/element-config/expressions/expression-field', () => ({
   ExpressionField: ({ name, value, onChange, placeholder, isInvalid }: {
     name: string; value: string; onChange: (v: string) => void; placeholder?: string; isInvalid?: boolean
   }) => (
-    <input
-      data-testid={`mock-expression-field-${name}`}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      data-invalid={isInvalid ? 'true' : undefined}
-    />
+    <div data-testid={`param-input-${name}`}>
+      <input
+        data-testid={`mock-expression-field-${name}`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        data-invalid={isInvalid ? 'true' : undefined}
+      />
+    </div>
   ),
 }))
 
-import {
-  AssertionBuilder,
-  type AssertionBuilderProps,
-  type AssertionItem,
-  type LiteralAssertion,
-  type ExpressionAssertion,
-  type AssertionGroup,
-  type OperatorItem,
-} from '@/features/workbench/common/config/assertion-builder'
-import { compareToValuesValid } from '@/features/workbench/common/config/assertion-builder/tree-helpers'
+import { AssertionBuilder } from '@/features/workbench/common/config/assertion-builder/builder'
+import type {
+  AssertionBuilderProps,
+  AssertionItem,
+  LiteralAssertion,
+  ExpressionAssertion,
+  AssertionGroup,
+  OperatorItem,
+} from '@/features/workbench/common/config/assertion-builder/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,19 +78,101 @@ const defaultProps: AssertionBuilderProps = {
     { name: 'rate', type: 'float' },
   ],
   onAssertionsChange: vi.fn(),
-  onValidChange: vi.fn(),
 }
 
 function renderBuilder(overrides: Partial<AssertionBuilderProps> = {}) {
   const props = { ...defaultProps, ...overrides }
   // Fresh mocks per render unless overridden
   if (!overrides.onAssertionsChange) props.onAssertionsChange = vi.fn()
-  if (!overrides.onValidChange) props.onValidChange = vi.fn()
 
   return {
     props,
     ...render(<AssertionBuilder {...props} />),
   }
+}
+
+/** A host that keeps the list the builder last wrote, as the config window does. */
+function StatefulBuilder({
+  initial,
+  availableVariables = defaultProps.availableVariables,
+  onAssertionsChange,
+}: Readonly<{
+  initial: AssertionItem[]
+  availableVariables?: AssertionBuilderProps['availableVariables']
+  onAssertionsChange: (next: AssertionItem[]) => void
+}>) {
+  const [assertions, setAssertions] = useState(initial)
+  return (
+    <AssertionBuilder
+      assertions={assertions}
+      availableVariables={availableVariables}
+      onAssertionsChange={(next) => {
+        setAssertions(next)
+        onAssertionsChange(next)
+      }}
+    />
+  )
+}
+
+function renderStateful(initial: AssertionItem[], availableVariables?: AssertionBuilderProps['availableVariables']) {
+  const onAssertionsChange = vi.fn()
+  const view = render(
+    <StatefulBuilder initial={initial} availableVariables={availableVariables} onAssertionsChange={onAssertionsChange} />,
+  )
+  return { onAssertionsChange, user: userEvent.setup(), unmount: view.unmount }
+}
+
+function lastList(onAssertionsChange: ReturnType<typeof vi.fn>): AssertionItem[] {
+  return onAssertionsChange.mock.calls.at(-1)![0] as AssertionItem[]
+}
+
+// Loaded at run time, so the cases that do not need the shared check run before it exists.
+const CONDITION_CHECKS = '@/features/workbench/lib/validation/condition-checks'
+
+/** The shared check the window holds Save on (REQ-3.5.1.5). */
+async function listComplete(items: AssertionItem[]): Promise<boolean> {
+  const checks = (await import(/* @vite-ignore */ CONDITION_CHECKS)) as {
+    conditionListComplete: (list: AssertionItem[]) => boolean
+  }
+  return checks.conditionListComplete(items)
+}
+
+const VALUE_KEYS = ['reference_value', 'reference_is_expression', 'reference_is_template'] as const
+const TYPE_CHANGE_TITLE = 'Change entry type?'
+const OPERATOR_CHANGE_TITLE = 'Change operator?'
+
+/** A cell's box: the text or number box, or the {x} box, that carries param-input-<stem>. */
+function cellBox(stem: string): HTMLElement | null {
+  return screen.queryByTestId(`param-input-${stem}`)
+}
+
+/** A row with a message grows 20 px at the bottom (mock `.cr-row-msg`, margin-bottom 20px). */
+const GROWN = '.mb-5, .pb-5, .mb-\\[20px\\], .pb-\\[20px\\]'
+
+/** The compare value box of the literal row at `path`. */
+function valueBox(path: string): HTMLElement {
+  const box = cellBox(`assert-value-${path}`)
+  expect(box, `the compare value box of row ${path} is drawn`).not.toBeNull()
+  return box as HTMLElement
+}
+
+/** The row with none of the three compare value keys. */
+function bare(row: LiteralAssertion): LiteralAssertion {
+  const rest: Partial<LiteralAssertion> = { ...row }
+  for (const key of VALUE_KEYS) delete rest[key]
+  return rest as LiteralAssertion
+}
+
+function expectNoCompareTo(row: AssertionItem): void {
+  for (const key of VALUE_KEYS) expect(row).not.toHaveProperty(key)
+}
+
+async function confirmTypeChange(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Change type' }))
+}
+
+async function confirmOperatorChange(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Change operator' }))
 }
 
 function makeLiteral(overrides: Partial<LiteralAssertion> = {}): LiteralAssertion {
@@ -148,10 +238,10 @@ describe('AssertionBuilder', () => {
       expect(screen.getByTestId('assert-add-group')).toBeInTheDocument()
     })
 
-    it('calls onValidChange(false) when no assertions are present', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({ onValidChange })
-      expect(onValidChange).toHaveBeenCalledWith(false)
+    it('holds an empty list incomplete through the shared check', async () => {
+      renderBuilder()
+      expect(screen.getByTestId('assertion-builder-empty')).toHaveTextContent('At least one assertion is required')
+      expect(await listComplete([])).toBe(false)
     })
   })
 
@@ -168,8 +258,8 @@ describe('AssertionBuilder', () => {
       expect(screen.getByTestId('assert-type-badge-0')).toHaveTextContent('integer')
       // Operator selector
       expect(screen.getByTestId('assert-operator-0')).toBeInTheDocument()
-      // Value input
-      expect(screen.getByTestId('assert-value-input-0')).toBeInTheDocument()
+      // Value input: the one field's box
+      expect(screen.getByTestId('param-input-assert-value-0')).toBeInTheDocument()
     })
 
     it('shows delete and reorder buttons', () => {
@@ -186,9 +276,16 @@ describe('AssertionBuilder', () => {
   describe('expression assertion row', () => {
     it('renders expression input with braces icon', () => {
       renderBuilder({ assertions: [makeExpression()] })
-      expect(screen.getByTestId('assert-expression-input-0')).toBeInTheDocument()
+      expect(screen.getByTestId('param-input-assert-expr-0')).toBeInTheDocument()
       // Braces icon indicates expression mode
       expect(screen.getByTestId('assert-expression-icon-0')).toBeInTheDocument()
+    })
+
+    it('shows the Boolean expression hint in a blank expression row', () => {
+      renderBuilder({ assertions: [makeExpression({ expression: '' })] })
+      expect(
+        within(screen.getByTestId('param-input-assert-expr-0')).getByPlaceholderText('Boolean expression (e.g. x > 5)'),
+      ).toBeInTheDocument()
     })
   })
 
@@ -248,6 +345,19 @@ describe('AssertionBuilder', () => {
           expect.objectContaining({ type: 'expression' }),
         ])
       )
+    })
+
+    it('starts an added literal row with no variable, on equals, with no compare value', async () => {
+      const user = userEvent.setup()
+      const onAssertionsChange = vi.fn()
+      renderBuilder({ onAssertionsChange })
+
+      await user.click(screen.getByTestId('assert-add-assertion'))
+      await user.click(screen.getByTestId('assert-add-literal'))
+
+      const [row] = onAssertionsChange.mock.calls[0][0] as LiteralAssertion[]
+      expect(row).toMatchObject({ type: 'literal', variable: '', value_type: 'string', operator: 'equals' })
+      expectNoCompareTo(row)
     })
   })
 
@@ -533,7 +643,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
     })
 
     it('hides value input for is_false operator', () => {
@@ -547,7 +657,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
     })
 
     it('hides value input for is_empty operator', () => {
@@ -561,7 +671,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
     })
 
     it('hides value input for is_not_empty operator', () => {
@@ -575,7 +685,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
     })
   })
 
@@ -592,6 +702,10 @@ describe('AssertionBuilder', () => {
       })
 
       await user.click(screen.getByTestId('assert-expr-toggle-0'))
+      // The value holds 10, so the cell's switch warning asks first (FIELD-7).
+      expect(screen.getByTestId('switch-mode-dialog')).toBeInTheDocument()
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+      await user.click(screen.getByTestId('switch-mode-clear-default'))
 
       expect(onAssertionsChange).toHaveBeenCalledWith([
         expect.objectContaining({
@@ -605,12 +719,12 @@ describe('AssertionBuilder', () => {
         assertions: [makeLiteral({ reference_is_expression: false })],
       })
 
-      // Plain literal input should be present (TextField primitive uses textarea rows={1})
-      const valueInput = screen.getByTestId('assert-value-input-0')
-      expect(valueInput.tagName).toBe('TEXTAREA')
+      // The one field's number box is present
+      const valueInput = screen.getByTestId('param-input-assert-value-0')
+      expect(valueInput.tagName).toBe('INPUT')
 
       // ExpressionField mock should NOT be rendered
-      expect(screen.queryByTestId('mock-expression-field-assert-ref-lit-1')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('mock-expression-field-assert-value-0')).not.toBeInTheDocument()
     })
 
     it('renders ExpressionField when reference_is_expression is true', () => {
@@ -619,21 +733,16 @@ describe('AssertionBuilder', () => {
       })
 
       // ExpressionField mock should be rendered inside the value wrapper
-      const valueWrapper = screen.getByTestId('assert-value-input-0')
-      const exprField = within(valueWrapper).getByTestId('mock-expression-field-assert-ref-lit-1')
+      const valueWrapper = screen.getByTestId('param-input-assert-value-0')
+      const exprField = within(valueWrapper).getByTestId('mock-expression-field-assert-value-0')
       expect(exprField).toBeInTheDocument()
       expect(exprField).toHaveValue('x + 1')
     })
 
     it('updates reference_value via ExpressionField when in expression mode', async () => {
-      const user = userEvent.setup()
-      const onAssertionsChange = vi.fn()
-      renderBuilder({
-        assertions: [makeLiteral({ reference_is_expression: true, reference_value: '' })],
-        onAssertionsChange,
-      })
+      const { user, onAssertionsChange } = renderStateful([makeLiteral({ reference_is_expression: true, reference_value: '' })])
 
-      const exprField = screen.getByTestId('mock-expression-field-assert-ref-lit-1')
+      const exprField = screen.getByTestId('mock-expression-field-assert-value-0')
       await user.type(exprField, 'y * 2')
 
       const lastCall = onAssertionsChange.mock.calls[onAssertionsChange.mock.calls.length - 1]
@@ -704,116 +813,112 @@ describe('AssertionBuilder', () => {
   // 15. Validity
   // =========================================================================
   describe('validity', () => {
-    it('calls onValidChange(true) when at least one assertion exists', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [makeLiteral()],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenCalledWith(true)
+    it('holds a list with a complete row complete through the shared check', async () => {
+      renderBuilder({ assertions: [makeLiteral()] })
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(await listComplete([makeLiteral()])).toBe(true)
     })
 
-    it('calls onValidChange(false) when assertions is empty', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [], onValidChange })
-      expect(onValidChange).toHaveBeenCalledWith(false)
+    it('holds an empty list incomplete and says so in the dashed box', async () => {
+      renderBuilder({ assertions: [] })
+      expect(screen.getByTestId('assertion-builder-empty')).toHaveTextContent('At least one assertion is required')
+      expect(await listComplete([])).toBe(false)
     })
 
     // A half-built condition must not save.
-    it('rejects a literal row with no variable picked', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral({ variable: '' })], onValidChange })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects a literal row with no variable picked', async () => {
+      const rows = [makeLiteral({ variable: '' })]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('assert-variable-error-0')).toHaveTextContent(/^Choose a variable\.$/)
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    it('rejects a literal row whose variable is only whitespace', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral({ variable: '   ' })], onValidChange })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects a literal row whose variable is only whitespace', async () => {
+      const rows = [makeLiteral({ variable: '   ' })]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('assert-variable-error-0')).toHaveTextContent(/^Choose a variable\.$/)
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    it('rejects an expression row with no expression', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [{ id: 'exp-1', type: 'expression', expression: '' }],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects an expression row with no expression', async () => {
+      const rows: AssertionItem[] = [{ id: 'exp-1', type: 'expression', expression: '' }]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('param-error-assert-expr-0')).toHaveTextContent(/^Condition is required$/)
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    it('rejects an empty group', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [{ id: 'grp-1', type: 'group', items: [] }],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects a literal row with no compare value under an operator that takes one', async () => {
+      const rows = [bare(makeLiteral())]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('param-error-assert-value-0')).toHaveTextContent(/^Value is required$/)
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    it('rejects a group holding an incomplete row', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [
-          { id: 'grp-1', type: 'group', items: [makeLiteral({ variable: '' })] },
-        ],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects an empty group', async () => {
+      const rows: AssertionItem[] = [{ id: 'grp-1', type: 'group', items: [] }]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('assert-group-empty-grp-1')).toHaveTextContent('At least one assertion is required')
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    it('rejects a complete row sitting beside an incomplete one', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [
-          makeLiteral(),
-          { type: 'operator', value: 'and' },
-          { id: 'exp-2', type: 'expression', expression: '  ' },
-        ],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('rejects a group holding an incomplete row', async () => {
+      const rows: AssertionItem[] = [{ id: 'grp-1', type: 'group', items: [makeLiteral({ variable: '' })] }]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('assert-variable-error-0-0')).toHaveTextContent(/^Choose a variable\.$/)
+      expect(await listComplete(rows)).toBe(false)
     })
 
-    // The Assert control, If/Else, While and Switch all gate Save on this same
-    // callback, so an incomplete row must block every one of them.
-    it('reports the same verdict whichever control embeds the builder', () => {
-      const onValidChange = vi.fn()
+    it('rejects a complete row sitting beside an incomplete one', async () => {
+      const rows: AssertionItem[] = [
+        makeLiteral(),
+        { type: 'operator', value: 'and' },
+        { id: 'exp-2', type: 'expression', expression: '  ' },
+      ]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('param-error-assert-expr-2')).toHaveTextContent(/^Condition is required$/)
+      expect(screen.queryByTestId('param-error-assert-value-0')).not.toBeInTheDocument()
+      expect(await listComplete(rows)).toBe(false)
+    })
+
+    // The Assert control, If/Else, While and Switch all hold Save on this same
+    // shared check, so an incomplete row must block every one of them.
+    it('reports the same verdict whichever control embeds the builder', async () => {
+      const incomplete = [makeLiteral({ variable: '' })]
       const { rerender } = render(
         <AssertionBuilder
-          assertions={[makeLiteral({ variable: '' })]}
+          assertions={incomplete}
           availableVariables={defaultProps.availableVariables}
           onAssertionsChange={vi.fn()}
-          onValidChange={onValidChange}
         />,
       )
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+      expect(screen.getByTestId('assert-variable-error-0')).toHaveTextContent(/^Choose a variable\.$/)
+      expect(await listComplete(incomplete)).toBe(false)
 
+      const complete = [makeLiteral()]
       rerender(
         <AssertionBuilder
-          assertions={[makeLiteral()]}
+          assertions={complete}
           availableVariables={defaultProps.availableVariables}
           onAssertionsChange={vi.fn()}
-          onValidChange={onValidChange}
         />,
       )
-      expect(onValidChange).toHaveBeenLastCalledWith(true)
+      expect(screen.queryByTestId('assert-variable-error-0')).not.toBeInTheDocument()
+      expect(await listComplete(complete)).toBe(true)
     })
 
-    it('accepts complete rows, including inside a group', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [
-          makeLiteral(),
-          { type: 'operator', value: 'and' },
-          {
-            id: 'grp-1',
-            type: 'group',
-            items: [{ id: 'exp-1', type: 'expression', expression: 'x > 5' }],
-          },
-        ],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(true)
+    it('accepts complete rows, including inside a group', async () => {
+      const rows: AssertionItem[] = [
+        makeLiteral(),
+        { type: 'operator', value: 'and' },
+        {
+          id: 'grp-1',
+          type: 'group',
+          items: [{ id: 'exp-1', type: 'expression', expression: 'x > 5' }],
+        },
+      ]
+      renderBuilder({ assertions: rows })
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(await listComplete(rows)).toBe(true)
     })
   })
 
@@ -862,7 +967,7 @@ describe('AssertionBuilder', () => {
 
     it('marks an empty expression row invalid', () => {
       renderBuilder({ assertions: [{ id: 'exp-1', type: 'expression', expression: '' }] })
-      expect(screen.getByTestId('mock-expression-field-assert-expr-exp-1')).toHaveAttribute(
+      expect(screen.getByTestId('mock-expression-field-assert-expr-0')).toHaveAttribute(
         'data-invalid',
         'true',
       )
@@ -870,7 +975,7 @@ describe('AssertionBuilder', () => {
 
     it('leaves a filled expression row unmarked', () => {
       renderBuilder({ assertions: [{ id: 'exp-1', type: 'expression', expression: 'x > 5' }] })
-      expect(screen.getByTestId('mock-expression-field-assert-expr-exp-1')).not.toHaveAttribute(
+      expect(screen.getByTestId('mock-expression-field-assert-expr-0')).not.toHaveAttribute(
         'data-invalid',
       )
     })
@@ -905,14 +1010,9 @@ describe('AssertionBuilder', () => {
   // =========================================================================
   describe('value change', () => {
     it('updates reference_value when typing in value input', async () => {
-      const user = userEvent.setup()
-      const onAssertionsChange = vi.fn()
-      renderBuilder({
-        assertions: [makeLiteral({ reference_value: '' })],
-        onAssertionsChange,
-      })
+      const { user, onAssertionsChange } = renderStateful([makeLiteral({ reference_value: '' })])
 
-      const input = screen.getByTestId('assert-value-input-0')
+      const input = screen.getByTestId('param-input-assert-value-0')
       await user.clear(input)
       await user.type(input, '42')
 
@@ -931,16 +1031,15 @@ describe('AssertionBuilder', () => {
       const onAssertionsChange = vi.fn()
       renderBuilder({ assertions: [makeLiteral({ value_type: valueType, reference_value: '' })], onAssertionsChange })
 
-      fireEvent.change(screen.getByTestId('assert-value-input-0'), { target: { value: typed } })
+      fireEvent.change(screen.getByTestId('param-input-assert-value-0'), { target: { value: typed } })
 
       expect(onAssertionsChange).not.toHaveBeenCalled()
     })
 
     it('takes unfinished number text while it is typed and any text for a string', () => {
-      const onAssertionsChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral({ value_type: 'float', reference_value: '' })], onAssertionsChange })
-      fireEvent.change(screen.getByTestId('assert-value-input-0'), { target: { value: '-1.' } })
-      expect(onAssertionsChange.mock.lastCall?.[0][0].reference_value).toBe('-1.')
+      renderStateful([makeLiteral({ value_type: 'float', reference_value: '' })])
+      fireEvent.change(screen.getByTestId('param-input-assert-value-0'), { target: { value: '-1.' } })
+      expect(screen.getByTestId('param-input-assert-value-0')).toHaveValue('-1.')
     })
 
     it.each([
@@ -949,7 +1048,7 @@ describe('AssertionBuilder', () => {
     ])('brings up the number keyboard for a %s compare', (valueType, inputMode) => {
       renderBuilder({ assertions: [makeLiteral({ value_type: valueType, reference_value: '' })] })
 
-      expect(screen.getByTestId('assert-value-input-0')).toHaveAttribute('inputmode', inputMode)
+      expect(screen.getByTestId('param-input-assert-value-0')).toHaveAttribute('inputmode', inputMode)
     })
 
     it('leaves a string compare free of the number rule', () => {
@@ -958,8 +1057,8 @@ describe('AssertionBuilder', () => {
         assertions: [makeLiteral({ variable: 'y', value_type: 'string', reference_value: '' })],
         onAssertionsChange,
       })
-      expect(screen.getByTestId('assert-value-input-0')).not.toHaveAttribute('inputmode')
-      fireEvent.change(screen.getByTestId('assert-value-input-0'), { target: { value: '1e5' } })
+      expect(valueBox('0')).not.toHaveAttribute('inputmode')
+      fireEvent.change(valueBox('0'), { target: { value: '1e5' } })
       expect(onAssertionsChange.mock.lastCall?.[0][0].reference_value).toBe('1e5')
     })
   })
@@ -969,15 +1068,10 @@ describe('AssertionBuilder', () => {
   // =========================================================================
   describe('expression value change', () => {
     it('updates expression when typing in expression input', async () => {
-      const user = userEvent.setup()
-      const onAssertionsChange = vi.fn()
-      renderBuilder({
-        assertions: [makeExpression({ expression: '' })],
-        onAssertionsChange,
-      })
+      const { user, onAssertionsChange } = renderStateful([makeExpression({ expression: '' })])
 
       // ExpressionField is mocked - the mock input is inside the wrapper
-      const wrapper = screen.getByTestId('assert-expression-input-0')
+      const wrapper = screen.getByTestId('param-input-assert-expr-0')
       const input = within(wrapper).getByRole('textbox')
       await user.type(input, 'x > 10')
 
@@ -1517,15 +1611,29 @@ describe('AssertionBuilder', () => {
 
       expect(screen.getByTestId('assert-variable-0')).toBeInTheDocument()
       expect(screen.getByTestId('assert-group-grp-root')).toBeInTheDocument()
-      expect(screen.getByTestId('assert-expression-input-4')).toBeInTheDocument()
+      expect(screen.getByTestId('param-input-assert-expr-4')).toBeInTheDocument()
     })
   })
 
   // =========================================================================
   // 16. Props sync effect (lines 155-157)
   // =========================================================================
-  describe('props sync effect', () => {
-    it('syncs internal state when assertions prop changes from outside', () => {
+  describe('controlled list', () => {
+    it('draws only the rows the assertions prop holds and keeps no copy of its own', async () => {
+      const user = userEvent.setup()
+      const onAssertionsChange = vi.fn()
+      renderBuilder({ assertions: [], onAssertionsChange })
+
+      await user.click(screen.getByTestId('assert-add-assertion'))
+      await user.click(screen.getByTestId('assert-add-literal'))
+
+      expect(onAssertionsChange).toHaveBeenCalledTimes(1)
+      // The host has not passed the new list back, so the builder still draws the empty one.
+      expect(screen.queryByTestId('assert-row-0')).not.toBeInTheDocument()
+      expect(screen.getByTestId('assertion-builder-empty')).toBeInTheDocument()
+    })
+
+    it('draws the new rows when the assertions prop changes from outside', () => {
       const onAssertionsChange = vi.fn()
       const { rerender } = render(
         <AssertionBuilder
@@ -1548,7 +1656,7 @@ describe('AssertionBuilder', () => {
       )
 
       // After prop change, the expression row should now appear
-      expect(screen.getByTestId('assert-expression-input-0')).toBeInTheDocument()
+      expect(screen.getByTestId('param-input-assert-expr-0')).toBeInTheDocument()
       // The literal row from before should be gone
       expect(screen.queryByTestId('assert-variable-0')).not.toBeInTheDocument()
     })
@@ -1660,7 +1768,7 @@ describe('AssertionBuilder', () => {
         ],
       })
       // The ExpressionField (mock) should show empty value
-      const exprField = screen.getByTestId('mock-expression-field-assert-ref-lit-1')
+      const exprField = screen.getByTestId('mock-expression-field-assert-value-0')
       expect(exprField).toHaveValue('')
     })
 
@@ -1673,7 +1781,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      const input = screen.getByTestId('assert-value-input-0')
+      const input = screen.getByTestId('param-input-assert-value-0')
       expect(input).toHaveValue('')
     })
 
@@ -1686,7 +1794,7 @@ describe('AssertionBuilder', () => {
           }),
         ],
       })
-      const input = screen.getByTestId('assert-value-input-0')
+      const input = screen.getByTestId('param-input-assert-value-0')
       expect(input).toHaveValue('')
     })
   })
@@ -1844,6 +1952,9 @@ describe('AssertionBuilder', () => {
       await user.click(varBtn)
       const flagOption = await screen.findByText('flag')
       await user.click(flagOption)
+      // 'test' would be lost under is_true, so the shared question asks first (FIELD-13).
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+      await confirmTypeChange(user)
 
       expect(onAssertionsChange).toHaveBeenCalledWith([
         expect.objectContaining({
@@ -2279,7 +2390,7 @@ describe('AssertionBuilder', () => {
   // 32. Operator change to unary (line 549: reference_value set to null)
   // =========================================================================
   describe('operator change to unary clears reference_value', () => {
-    it('sets reference_value to null when changing to a unary operator', async () => {
+    it('asks first, then drops the compare value when changing to a unary operator', async () => {
       const user = userEvent.setup()
       const onAssertionsChange = vi.fn()
       renderBuilder({
@@ -2298,13 +2409,17 @@ describe('AssertionBuilder', () => {
       await user.click(screen.getByTestId('assert-operator-0'))
       const option = await screen.findByText('is empty')
       await user.click(option)
+      // The row holds a value, so the shared question asks first (FIELD-13).
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+      await confirmOperatorChange(user)
 
       expect(onAssertionsChange).toHaveBeenCalledWith([
         expect.objectContaining({
           operator: 'is_empty',
-          reference_value: null, // cleared because is_empty is unary
         }),
       ])
+      // Dropped because is_empty takes no compare value.
+      expectNoCompareTo(lastList(onAssertionsChange)[0])
     })
   })
 
@@ -2374,24 +2489,24 @@ describe('AssertionBuilder', () => {
       renderBuilder({ assertions: [makeLiteral()] })
       const toggle = screen.getByTestId('assert-expr-toggle-0')
       expect(toggle).toHaveAttribute('data-slot', 'expression-toggle')
-      expect(toggle).toHaveAccessibleName(/^Toggle expression mode for value$/)
+      expect(toggle).toHaveAccessibleName(/^Value expression mode$/)
     })
 
     it.each(NULL_OPERATORS)('picking "%s" hides the value box and the {} toggle', async (label) => {
-      const user = userEvent.setup()
-      renderBuilder({ assertions: [makeLiteral()] })
-      expect(screen.getByTestId('assert-value-input-0')).toBeInTheDocument()
+      const { user } = renderStateful([makeLiteral()])
+      expect(screen.getByTestId('param-input-assert-value-0')).toBeInTheDocument()
       expect(screen.getByTestId('assert-expr-toggle-0')).toBeInTheDocument()
 
       await user.click(screen.getByTestId('assert-operator-0'))
       await user.click(await screen.findByRole('option', { name: label }))
+      await confirmOperatorChange(user)
 
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
       expect(screen.queryByTestId('assert-expr-toggle-0')).not.toBeInTheDocument()
     })
 
     it.each(NULL_OPERATORS)(
-      'picking "%s" stores %s and clears the compare-to value to null',
+      'picking "%s" on a held value asks first, then stores %s with no compare-to value',
       async (label, wireName) => {
         const user = userEvent.setup()
         const onAssertionsChange = vi.fn()
@@ -2399,10 +2514,13 @@ describe('AssertionBuilder', () => {
 
         await user.click(screen.getByTestId('assert-operator-0'))
         await user.click(await screen.findByRole('option', { name: label }))
+        expect(within(screen.getByRole('alertdialog')).getByRole('heading', { name: OPERATOR_CHANGE_TITLE })).toBeInTheDocument()
+        await confirmOperatorChange(user)
 
         expect(onAssertionsChange).toHaveBeenLastCalledWith([
-          expect.objectContaining({ operator: wireName, reference_value: null }),
+          expect.objectContaining({ operator: wireName }),
         ])
+        expectNoCompareTo(lastList(onAssertionsChange)[0])
       },
     )
 
@@ -2413,7 +2531,7 @@ describe('AssertionBuilder', () => {
           assertions: [makeLiteral({ operator: wireName, reference_value: null })],
         })
 
-        expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+        expect(cellBox('assert-value-0')).not.toBeInTheDocument()
         expect(screen.queryByTestId('assert-expr-toggle-0')).not.toBeInTheDocument()
       },
     )
@@ -2424,35 +2542,34 @@ describe('AssertionBuilder', () => {
     ])(
       'picking the variable %s (%s) lands the row on %s and stores no compare-to value',
       async (variable, valueType, operator) => {
-        const user = userEvent.setup()
-        const onAssertionsChange = vi.fn()
-        const row = makeLiteral({ variable: 'y', value_type: 'string', operator: 'equals', reference_value: '' })
-        renderBuilder({
-          assertions: [row],
-          availableVariables: [...defaultProps.availableVariables, { name: 'rows', type: 'table' }],
-          onAssertionsChange,
-        })
+        const row = bare(makeLiteral({ variable: 'y', value_type: 'string', operator: 'equals' }))
+        const { user, onAssertionsChange } = renderStateful(
+          [row],
+          [...defaultProps.availableVariables, { name: 'rows', type: 'table' }],
+        )
 
         await user.click(screen.getByTestId('assert-variable-0'))
         await user.click(await screen.findByText(variable))
 
         expect(onAssertionsChange).toHaveBeenLastCalledWith([
-          { ...row, variable, value_type: valueType, operator, reference_value: null },
+          { ...row, variable, value_type: valueType, operator },
         ])
-        expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
+        expectNoCompareTo(lastList(onAssertionsChange)[0])
+        expect(cellBox('assert-value-0')).not.toBeInTheDocument()
       },
     )
 
-    it('switching a row from is null back to equals gives the empty value a new row has', async () => {
+    it('switching a row from is null back to equals leaves the compare value not set', async () => {
       const user = userEvent.setup()
       const onAssertionsChange = vi.fn()
-      const row = makeLiteral({ operator: 'is_null', reference_value: null })
+      const row = bare(makeLiteral({ operator: 'is_null' }))
       renderBuilder({ assertions: [row], onAssertionsChange })
 
       await user.click(screen.getByTestId('assert-operator-0'))
       await user.click(await screen.findByRole('option', { name: 'equals' }))
 
-      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, operator: 'equals', reference_value: '' }])
+      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, operator: 'equals' }])
+      expect(lastList(onAssertionsChange)[0]).not.toHaveProperty('reference_value')
     })
 
     it('picking a variable whose type keeps the operator keeps the compare-to value', async () => {
@@ -2467,16 +2584,17 @@ describe('AssertionBuilder', () => {
       expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, variable: 'x', value_type: 'integer' }])
     })
 
-    it('lets Save through once a row with an empty value is set to is null', async () => {
-      const user = userEvent.setup()
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral({ reference_value: '' })], onValidChange })
+    it('lets Save through once a row with no value is set to is null', async () => {
+      const { user, onAssertionsChange } = renderStateful([bare(makeLiteral())])
+      expect(screen.getByTestId('param-error-assert-value-0')).toHaveTextContent(/^Value is required$/)
 
       await user.click(screen.getByTestId('assert-operator-0'))
       await user.click(await screen.findByRole('option', { name: 'is null' }))
 
-      expect(screen.queryByTestId('assert-value-input-0')).not.toBeInTheDocument()
-      expect(onValidChange).toHaveBeenLastCalledWith(true)
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(cellBox('assert-value-0')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('param-error-assert-value-0')).not.toBeInTheDocument()
+      expect(await listComplete(lastList(onAssertionsChange))).toBe(true)
     })
   })
 
@@ -2484,41 +2602,21 @@ describe('AssertionBuilder', () => {
   // A compare-to value that is no number of the row's type (REQ-3.1.3.14)
   // =========================================================================
   describe('a compare-to value that is no number of its type', () => {
-    it('picking an integer variable keeps a string row value, names it under the box and holds Save', async () => {
-      const user = userEvent.setup()
-      const onAssertionsChange = vi.fn()
-      const onValidChange = vi.fn()
-      const row = makeLiteral({ variable: 'y', value_type: 'string', operator: 'equals', reference_value: 'go' })
-      renderBuilder({ assertions: [row], onAssertionsChange, onValidChange })
-      expect(screen.queryByTestId('assert-value-error-lit-1')).not.toBeInTheDocument()
+    it('a number typed over the kept value lifts the message and lets Save through', async () => {
+      const { user, onAssertionsChange } = renderStateful([makeLiteral({ reference_value: 'go' })])
+      expect(screen.getByTestId('param-error-assert-value-0')).toHaveTextContent(/^Enter a valid integer value$/)
 
-      await user.click(screen.getByTestId('assert-variable-0'))
-      await user.click(await screen.findByText('x'))
-
-      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, variable: 'x', value_type: 'integer' }])
-      expect(screen.getByTestId('assert-value-error-lit-1')).toHaveTextContent(/^Enter a valid integer value$/)
-      expect(screen.getByTestId('assert-value-error-lit-1')).toHaveAttribute('role', 'alert')
-      const box = screen.getByTestId('assert-value-input-0')
+      const box = screen.getByTestId('param-input-assert-value-0')
       expect(box).toHaveValue('go')
       expect(box).toHaveAttribute('aria-invalid', 'true')
-      expect(box).toHaveAttribute('aria-describedby', 'assert-value-error-lit-1')
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
-    })
-
-    it('a number typed over the kept value lifts the message and lets Save through', async () => {
-      const user = userEvent.setup()
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral({ reference_value: 'go' })], onValidChange })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
-
-      const box = screen.getByTestId('assert-value-input-0')
       await user.clear(box)
-      await user.type(box, '5')
+      await user.type(screen.getByTestId('param-input-assert-value-0'), '5')
 
-      expect(box).toHaveValue('5')
-      expect(screen.queryByTestId('assert-value-error-lit-1')).not.toBeInTheDocument()
-      expect(box).not.toHaveAttribute('aria-invalid')
-      expect(onValidChange).toHaveBeenLastCalledWith(true)
+      expect(screen.getByTestId('param-input-assert-value-0')).toHaveValue('5')
+      expect(screen.queryByTestId('param-error-assert-value-0')).not.toBeInTheDocument()
+      expect(screen.getByTestId('param-input-assert-value-0')).not.toHaveAttribute('aria-invalid')
+      expect(lastList(onAssertionsChange)[0]).toMatchObject({ reference_value: '5' })
+      expect(await listComplete(lastList(onAssertionsChange))).toBe(true)
     })
 
     it.each<[string, Partial<LiteralAssertion>, string]>([
@@ -2529,11 +2627,21 @@ describe('AssertionBuilder', () => {
         'Enter a valid integer value',
       ],
       ['an integer row past the cap', { reference_value: '12345678901234567890' }, 'Maximum 19 digits'],
-    ])('names %s and holds Save', (_what, overrides, message) => {
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral(overrides)], onValidChange })
-      expect(screen.getByTestId('assert-value-error-lit-1')).toHaveTextContent(new RegExp(`^${message}$`))
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+      ['empty text on a number compare', { reference_value: '' }, 'Value is required'],
+      ['a stored null compare-to', { reference_value: null }, 'Value is required'],
+      ['a blank expression compare-to', { reference_value: ' ', reference_is_expression: true }, 'Value is required'],
+      [
+        'a blank Template compare-to',
+        { variable: 'y', value_type: 'string', reference_value: '', reference_is_template: true },
+        'Value is required',
+      ],
+    ])('names %s and holds Save', async (_what, overrides, message) => {
+      const row = makeLiteral(overrides)
+      renderBuilder({ assertions: [row] })
+      const line = screen.getByTestId('param-error-assert-value-0')
+      expect(line).toHaveTextContent(new RegExp(`^${message}$`))
+      expect(line).toHaveAttribute('role', 'alert')
+      expect(await listComplete([row])).toBe(false)
     })
 
     it.each<[string, Partial<LiteralAssertion>]>([
@@ -2541,33 +2649,197 @@ describe('AssertionBuilder', () => {
       ['an array row with contains', { variable: 'z', value_type: 'array', operator: 'contains', reference_value: 'go' }],
       ['an expression compare-to', { reference_value: 'limit + 1', reference_is_expression: true }],
       ['an operator that takes no compare-to value', { operator: 'is_null', reference_value: null }],
-      ['an empty compare-to value', { reference_value: '' }],
       ['a stored number', { reference_value: 10 }],
-    ])('names nothing for %s and lets Save through', (_what, overrides) => {
-      const onValidChange = vi.fn()
-      renderBuilder({ assertions: [makeLiteral(overrides)], onValidChange })
-      expect(screen.queryByTestId('assert-value-error-lit-1')).not.toBeInTheDocument()
-      expect(onValidChange).toHaveBeenLastCalledWith(true)
+      // Empty text typed on purpose is a value and compares with empty text (FIELD-4, FIELD-15).
+      ['empty text on a string row', { variable: 'y', value_type: 'string', reference_value: '' }],
+      ['text of spaces on a string row', { variable: 'y', value_type: 'string', reference_value: '   ' }],
+    ])('names nothing for %s and lets Save through', async (_what, overrides) => {
+      const row = makeLiteral(overrides)
+      renderBuilder({ assertions: [row] })
+      expect(screen.queryByTestId('param-error-assert-value-0')).not.toBeInTheDocument()
+      expect(await listComplete([row])).toBe(true)
     })
 
-    it('holds Save for a group holding such a row', () => {
-      const onValidChange = vi.fn()
-      renderBuilder({
-        assertions: [{ id: 'grp-1', type: 'group', items: [makeLiteral({ reference_value: 'go' })] }],
-        onValidChange,
-      })
-      expect(onValidChange).toHaveBeenLastCalledWith(false)
+    it('holds Save for a group holding such a row', async () => {
+      const rows: AssertionItem[] = [{ id: 'grp-1', type: 'group', items: [makeLiteral({ reference_value: 'go' })] }]
+      renderBuilder({ assertions: rows })
+      expect(screen.getByTestId('param-error-assert-value-0-0')).toHaveTextContent(/^Enter a valid integer value$/)
+      expect(await listComplete(rows)).toBe(false)
     })
   })
 
-  describe('compareToValuesValid', () => {
-    it('holds only when every literal row, at any depth, compares to a value of its type', () => {
-      const bad = makeLiteral({ reference_value: 'go' })
-      expect(compareToValuesValid([makeLiteral(), makeOp(), makeExpression()])).toBe(true)
-      expect(compareToValuesValid([])).toBe(true)
-      expect(compareToValuesValid([makeLiteral(), makeOp(), bad])).toBe(false)
-      expect(compareToValuesValid([{ id: 'grp-1', type: 'group', items: [bad] }])).toBe(false)
-      expect(compareToValuesValid([{ id: 'grp-1', type: 'group', items: [makeLiteral({ variable: '' })] }])).toBe(true)
+  // =========================================================================
+  // The row's own messages and a variable pick through the shared value-loss check
+  // =========================================================================
+  describe('the variable box message (FIELD-15)', () => {
+    it('shows Choose a variable. under the variable box and flags nothing else', async () => {
+      const { user } = renderStateful([])
+      await user.click(screen.getByTestId('assert-add-assertion'))
+      await user.click(screen.getByTestId('assert-add-literal'))
+
+      const line = screen.getByTestId('assert-variable-error-0')
+      expect(line).toHaveTextContent(/^Choose a variable\.$/)
+      expect(line).toHaveAttribute('role', 'alert')
+      const box = screen.getByTestId('assert-variable-0')
+      expect(box).toHaveAttribute('aria-invalid', 'true')
+      expect(line.id).not.toBe('')
+      expect(box.getAttribute('aria-describedby') ?? '').toContain(line.id)
+      // One message per row, variable first: the empty compare value is not flagged.
+      expect(screen.queryByTestId('param-error-assert-value-0')).not.toBeInTheDocument()
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+    })
+
+    it('grows the row while the variable line shows and not once the row is complete', () => {
+      const view = renderBuilder({ assertions: [bare(makeLiteral({ variable: '', value_type: 'string' }))] })
+      expect(screen.getByTestId('assert-variable-error-0')).toBeInTheDocument()
+      expect(document.querySelector(GROWN)).not.toBeNull()
+      view.unmount()
+
+      renderBuilder({ assertions: [makeLiteral()] })
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(document.querySelector(GROWN)).toBeNull()
+    })
+
+    it('drops the variable message once a variable is picked', async () => {
+      const { user } = renderStateful([bare(makeLiteral({ variable: '', value_type: 'string' }))])
+      expect(screen.getByTestId('assert-variable-error-0')).toBeInTheDocument()
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('y'))
+
+      expect(screen.queryByTestId('assert-variable-error-0')).not.toBeInTheDocument()
+      expect(screen.getByTestId('param-error-assert-value-0')).toHaveTextContent(/^Value is required$/)
+    })
+  })
+
+  describe('a variable pick through the shared value-loss check (FIELD-13)', () => {
+    const PICK_VARIABLES = [
+      ...defaultProps.availableVariables,
+      { name: 'region', type: 'string' },
+    ]
+
+    it.each<[string, Partial<LiteralAssertion>, string, Partial<LiteralAssertion>]>([
+      [
+        'ready from one string variable to another',
+        { variable: 'y', value_type: 'string', reference_value: 'ready' },
+        'region',
+        { variable: 'region', value_type: 'string' },
+      ],
+      [
+        '500 from an integer variable to a float one',
+        { variable: 'x', value_type: 'integer', reference_value: '500' },
+        'rate',
+        { variable: 'rate', value_type: 'float' },
+      ],
+    ])('keeps the compare value and asks nothing when it still fits the new variable (%s)', async (_what, start, picked, after) => {
+      const row = makeLiteral(start)
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText(picked))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, ...after }])
+    })
+
+    it('keeps an {x} compare value whatever the new variable', async () => {
+      const row = makeLiteral({ variable: 'y', value_type: 'string', reference_value: 'limit', reference_is_expression: true })
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('x'))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, variable: 'x', value_type: 'integer' }])
+    })
+
+    it('asks Change entry type? before a picked variable drops a compare value that no longer fits', async () => {
+      const row = makeLiteral({ variable: 'y', value_type: 'string', reference_value: 'abc' })
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('x'))
+
+      const dialog = screen.getByRole('alertdialog')
+      expect(within(dialog).getByRole('heading', { name: TYPE_CHANGE_TITLE })).toBeInTheDocument()
+      expect(
+        within(dialog).getByText(/^Changing type to integer will clear 1 existing string value\. This cannot be undone\.$/),
+      ).toBeInTheDocument()
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+      expect(within(dialog).getByRole('button', { name: 'Change type' })).toBeInTheDocument()
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+    })
+
+    it('asks before a picked variable whose type takes no compare value drops a Template', async () => {
+      const row = makeLiteral({ variable: 'y', value_type: 'string', reference_value: '{{ host }}', reference_is_template: true })
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('flag'))
+
+      expect(within(screen.getByRole('alertdialog')).getByRole('heading', { name: TYPE_CHANGE_TITLE })).toBeInTheDocument()
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+    })
+
+    it('drops the value and both flags on Change type and keeps the old variable on Cancel', async () => {
+      const row = makeLiteral({
+        variable: 'y',
+        value_type: 'string',
+        reference_value: 'abc',
+        reference_is_expression: false,
+        reference_is_template: false,
+      })
+
+      // Cancel: the old variable and the value stay.
+      const canceled = renderStateful([row], PICK_VARIABLES)
+      await canceled.user.click(screen.getByTestId('assert-variable-0'))
+      await canceled.user.click(await screen.findByText('x'))
+      await canceled.user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }))
+      expect(canceled.onAssertionsChange).not.toHaveBeenCalled()
+      expect(screen.getByTestId('assert-variable-0')).toHaveValue('y')
+      expect(valueBox('0')).toHaveValue('abc')
+      canceled.unmount()
+
+      // Change type: the variable is picked and the value goes with both flags.
+      const picked = renderStateful([row], PICK_VARIABLES)
+      await picked.user.click(screen.getByTestId('assert-variable-0'))
+      await picked.user.click(await screen.findByText('x'))
+      await confirmTypeChange(picked.user)
+
+      expect(picked.onAssertionsChange).toHaveBeenLastCalledWith([bare({ ...row, variable: 'x', value_type: 'integer' })])
+      expectNoCompareTo(lastList(picked.onAssertionsChange)[0])
+      expect(screen.getByTestId('assert-type-badge-0')).toHaveTextContent('integer')
+      expect(screen.getByTestId('param-input-assert-value-0')).toHaveValue('')
+      expect(screen.getByTestId('assert-expr-toggle-0')).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByTestId('param-error-assert-value-0')).toHaveTextContent(/^Value is required$/)
+    })
+
+    it('keeps the old variable, operator and value on Cancel', async () => {
+      const row = makeLiteral({ variable: 'y', value_type: 'string', operator: 'contains', reference_value: 'abc' })
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('flag'))
+      await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(onAssertionsChange).not.toHaveBeenCalled()
+      expect(screen.getByTestId('assert-variable-0')).toHaveValue('y')
+      expect(screen.getByTestId('assert-type-badge-0')).toHaveTextContent('string')
+      expect(screen.getByTestId('assert-operator-0')).toHaveTextContent(/^contains$/)
+      expect(valueBox('0')).toHaveValue('abc')
+    })
+
+    it('changes at once when the row holds no compare value', async () => {
+      const row = bare(makeLiteral({ variable: 'y', value_type: 'string' }))
+      const { user, onAssertionsChange } = renderStateful([row], PICK_VARIABLES)
+
+      await user.click(screen.getByTestId('assert-variable-0'))
+      await user.click(await screen.findByText('x'))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(onAssertionsChange).toHaveBeenLastCalledWith([{ ...row, variable: 'x', value_type: 'integer' }])
+      expect(screen.getByTestId('assert-type-badge-0')).toHaveTextContent('integer')
     })
   })
 })

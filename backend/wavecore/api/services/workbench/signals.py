@@ -13,6 +13,7 @@ from wavecore.api.services.workbench.block_status import (
     block_name_of,
     paint_skipped,
     skip_rest,
+    take_wired_lane,
 )
 from wavecore.core.variables.atomic import session_variable_access
 from wavecore.core.variables.decimal_value import to_wave_decimal
@@ -85,6 +86,7 @@ def _extract_engine_signals(result: Any) -> dict[str, Any]:
         "check_interval": None,
         "wait_message": None,
         "wait_fail_scope": None,
+        "wait_mode": None,
         "remote_execution": None,
     }
     if not result or not isinstance(result, dict):
@@ -132,6 +134,7 @@ def _extract_engine_signals(result: Any) -> dict[str, Any]:
     signals["check_interval"] = result.pop("__check_interval", None)
     signals["wait_message"] = result.pop("__wait_message", None)
     signals["wait_fail_scope"] = result.pop("__wait_fail_scope", None)
+    signals["wait_mode"] = result.pop("__wait_mode", None)
     signals["remote_execution"] = result.pop("__remote_execution", None)
     drop_zero_run_item(signals, result)
     return signals
@@ -445,6 +448,9 @@ async def skip_disabled_block(
     """Store and paint a disabled or runtime-skipped block skipped, with every block it mutes."""
     for block_id in [node_id, *_cascade_skip_disabled_branches(session, adj, node, node_id)]:
         await paint_skipped(session, session_id, block_id, block_name_of(node_map, block_id))
+    # The branch the flow passes through still counts as taken.
+    for handle in sorted(_disabled_pass_through_handles(node) or ()):
+        await take_wired_lane(session, session_id, node_id, handle, adj or {})
 
 
 def _cascade_skip_disabled_branches(

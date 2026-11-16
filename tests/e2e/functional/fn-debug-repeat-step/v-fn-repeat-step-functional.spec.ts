@@ -51,7 +51,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -73,7 +72,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'fn-repeat-marker'", level: 'INFO' },
                         outputBindings: {},
@@ -91,10 +89,8 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       nodeType: 'control',
                       category: 'flow',
                       version: '1.0.0',
-                      expressionFields: [],
+                      expressionFields: ['variables.counter'],
                       templateFields: [],
-                      variableExpressionKeys: ['counter'],
-                      variableTypes: { counter: 'integer' },
                       config: {
                         values: { variables: { counter: 'counter + 1' } },
                         outputBindings: {},
@@ -114,7 +110,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "f'counter={counter}'", level: 'INFO' },
                         outputBindings: {},

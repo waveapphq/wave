@@ -63,7 +63,7 @@ import {
   type WaveTable,
 } from '../../helpers/fixture-import'
 import { expectNodeStatus, finishRun, startRun } from '../../helpers/k8s-run'
-import { expectConsoleLine, getLogEntries, type LogEntry } from '../../helpers/log-reader'
+import { escapeRegExp, expectConsoleLine, getLogEntries, type LogEntry } from '../../helpers/log-reader'
 import { withSqlStack } from '../../helpers/sql-stack'
 import {
   F_METRICS,
@@ -172,7 +172,7 @@ function expectFailedBlock(
 async function expectSwitchWarning(page: Page, title: string, buttons: string[]): Promise<Locator> {
   const dialog = switchWarning(page)
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole('heading')).toHaveText(new RegExp(`^${title.replace(/[?]/g, '\\?')}$`))
+  await expect(dialog.getByRole('heading')).toHaveText(new RegExp(`^${escapeRegExp(title)}$`))
   await expect(dialog.getByText(SWITCH_BODY, { exact: true })).toBeVisible()
   await expect(dialog.getByRole('button').filter({ hasText: /\S/ })).toHaveText(buttons)
   return dialog

@@ -76,7 +76,7 @@ async function importAndOpen(page: Page, nameSuffix: string): Promise<void> {
 const rowFor = (page: Page, name: string): Locator =>
   page.locator('[data-testid="variable-manager-content"]').locator(`[aria-label="Variable ${name}"]`)
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 // Eye -> read watcher (Current mode).
 async function openRead(page: Page, name: string): Promise<Locator> {

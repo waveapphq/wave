@@ -87,14 +87,15 @@ class TestProfileObjectStringRepresentation:
             profile_name="My Server",
             profile_type="http",
         )
-        result = str(p)
-        assert "Profile: My Server (http)" in result
-        assert "Field" in result
-        assert "Value" in result
-        assert "url" in result
-        assert "http://example.com" in result
-        assert "timeout" in result
-        assert "5000" in result
+        assert str(p) == "\n".join(
+            [
+                "Profile: My Server (http)",
+                "  Field    Value",
+                "  -------  ------------------------------",
+                "  url      http://example.com",
+                "  timeout  5000",
+            ]
+        )
 
     def test_repr_matches_str(self) -> None:
         """__repr__ returns the same as __str__."""

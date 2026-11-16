@@ -248,7 +248,6 @@ def _state(config_file: Path) -> dict[str, Any]:
         "bytes": config_file.read_bytes(),
         "folder": sorted(config_file.parent.iterdir()),
         "memory": config.to_dict(include_secrets=True),
-        "audit": config.get_audit_trail(),
     }
 
 
@@ -944,19 +943,6 @@ class TestRunningConfig:
         assert restarted.get(_FLAG) is True
         assert restarted.get("mcp.port") == 9000
 
-    @pytest.mark.parametrize(
-        ("arguments", "user"),
-        [({}, "settings"), ({"user": "scheduler"}, "scheduler")],
-        ids=["default-user", "named-user"],
-    )
-    def test_save_records_the_change_under_its_user(
-        self, arguments: dict[str, str], user: str
-    ) -> None:
-        get_config().save({_FLAG: True}, **arguments)
-
-        entry = get_config().get_audit_trail(_FLAG)[-1]
-        assert (entry["new_value"], entry["user"]) == (True, user)
-
     def test_write_keys_alone_leaves_the_running_config_alone(
         self, config_file: Path, config_on_disk: Callable[[], dict[str, Any]]
     ) -> None:
@@ -1329,7 +1315,7 @@ class TestSaveChanged:
         assert saved is True
         assert len(moves) == 1
         assert config_on_disk() == {"mcp": {"enabled": True}}
-        assert [entry["key"] for entry in get_config().get_audit_trail()] == ["mcp.enabled"]
+        assert get_config().get("mcp.enabled") is True
 
     def test_every_key_that_differs_is_written_in_one_write(
         self, config_on_disk: Callable[[], dict[str, Any]], monkeypatch: pytest.MonkeyPatch

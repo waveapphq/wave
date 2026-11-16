@@ -10,14 +10,18 @@ Endpoints:
 - GET /environments/{environment_id}/export: Export single environment
 """
 
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import (
+    id_list_field,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.file_tree import content_disposition
@@ -31,8 +35,8 @@ VALID_EXPORT_FORMATS = {"yaml", "json"}
 @router.post("/export")
 async def export_environments_bulk(request: Request) -> Response:
     """Export multiple environments as single file or ZIP archive."""
-    body = await request.json()
-    env_ids = body.get("environment_ids", [])
+    body = await read_json_object(request)
+    env_ids = id_list_field(body, "environment_ids")
     fmt = body.get("format", "yaml")
 
     if not env_ids:
@@ -94,12 +98,7 @@ async def import_environments(
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError as err:
-            raise ValidationException("Invalid JSON in conflict_resolutions") from err
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     result = environment_service.import_environments(content, filename, resolutions)
 

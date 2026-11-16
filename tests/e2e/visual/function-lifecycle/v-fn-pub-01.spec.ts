@@ -53,7 +53,6 @@ function buildSeed(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { msg: 'hello' }, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'PublishMe',

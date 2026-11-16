@@ -272,7 +272,7 @@ const addButton = (page: Page): Locator =>
 /** Every message line the page shows, top to bottom. */
 const messages = (page: Page): Locator => setupTab(page).locator('[aria-live="polite"] p')
 const confirm = (page: Page): Locator =>
-  page.getByRole('dialog').filter({ hasText: CONFIRM_TITLE })
+  page.getByRole('dialog', { name: CONFIRM_TITLE })
 const confirmButton = (page: Page, name: string): Locator =>
   confirm(page).getByRole('button', { name, exact: true })
 

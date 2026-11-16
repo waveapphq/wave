@@ -93,7 +93,7 @@ class _Hosts:
 
     @contextmanager
     def patched(self) -> Iterator[None]:
-        async def _open(connection: Any) -> Any:
+        async def _open(connection: Any, _host: str) -> Any:
             # Yield first so concurrent lanes reach the open together.
             await asyncio.sleep(0)
             worker = MagicMock()

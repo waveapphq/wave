@@ -18,8 +18,11 @@ import { drillToPath, type DrillSegment } from '@/features/functions/canvas/use-
 import { convertBackendVariables } from './variable-helpers'
 import { canvasLocalFunctionBodies } from '@/features/workbench/lib/canonical-workflow'
 import { fixTest } from '@/features/tests/api/validation'
+import { refusedFindings, reportedAsDeletedTest } from './save-utils'
 
 const EMPTY_SEGMENTS: PathSegment[] = []
+// The fix endpoint refuses a Test whose wires repeat an id and repairs nothing (REQ-5.2.4.3).
+const FIX_REFUSED_CODE = 'DUPLICATE_EDGE_ID'
 
 export interface ValidationResult {
   // State
@@ -33,7 +36,8 @@ export interface ValidationResult {
   setValidationMode: (mode: ValidationDialogMode) => void
   isFixingTest: boolean
   /** True when the dialog's "Fix All" should be offered:
-   *  - load mode: at least one issue carries a BE fix_action (auto-fixable).
+   *  - load mode: at least one issue carries a BE fix_action (auto-fixable)
+   *    and no wire id repeats, which makes the fix endpoint refuse the Test.
    *    Content issues (missing param, undefined ref, missing version) carry
    *    none, so a test with only those offers no Fix All.
    *  - save / run / debug: inline auto-fix only handles UNDECLARED_VARIABLE,
@@ -144,7 +148,7 @@ export function useValidation(
       reset()
       clearDraft()
       clearEditingTest()
-      navigate('/tests')
+      void navigate('/tests')
     }
   }, [validationMode, validationErrors, validationFatal, setPulseValidationNodeIds, reset, clearDraft, clearEditingTest, navigate])
 
@@ -160,7 +164,7 @@ export function useValidation(
       reset()
       clearDraft()
       clearEditingTest()
-      navigate('/tests')
+      void navigate('/tests')
       toast.success('Test has been deleted.', 'Test Deleted')
     } catch (err) {
       console.error('Failed to delete test:', err)
@@ -231,6 +235,11 @@ export function useValidation(
 
   const handleFixAll = useCallback(async function fixAllValidationErrors() {
     if (!editingTestId) return
+    const closeDialog = () => {
+      setShowValidationErrorDialog(false)
+      setValidationErrors([])
+      setValidationFatal(false)
+    }
     setIsFixingTest(true)
     try {
       if (validationMode === 'load') {
@@ -238,12 +247,19 @@ export function useValidation(
       } else {
         applyInlineVarFix()
       }
-      setShowValidationErrorDialog(false)
-      setValidationErrors([])
-      setValidationFatal(false)
+      closeDialog()
     } catch (err) {
-      console.error('Failed to fix test:', err)
-      toast.error('Failed to apply automatic fixes. Please try again.', 'Fix Failed')
+      const findings = refusedFindings(err)
+      if (reportedAsDeletedTest(err)) {
+        // The "Test not found" dialog takes the place of the dialog of the Test that is gone.
+        closeDialog()
+      } else if (findings.length > 0) {
+        // Retrying cannot change a refusal, so the dialog lists what the fix endpoint refused.
+        setValidationErrors(findings)
+      } else {
+        console.error('Failed to fix test:', err)
+        toast.error('Failed to apply automatic fixes. Please try again.', 'Fix Failed')
+      }
     } finally {
       setIsFixingTest(false)
     }
@@ -270,7 +286,8 @@ export function useValidation(
   )
 
   const canFixAll = validationMode === 'load'
-    ? validationErrors.some((e) => e.fix_action != null)
+    ? validationErrors.some((e) => e.fix_action != null) &&
+      !validationErrors.some((e) => e.code === FIX_REFUSED_CODE)
     : validationErrors.some((e) => e.code === 'UNDECLARED_VARIABLE')
 
   return {

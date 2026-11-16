@@ -241,11 +241,11 @@ export type SetterRow = {
 /** A Variable Setter; every row's variable is declared in the scope it runs in. */
 export function setter(id: string, rows: Record<string, SetterRow>): NestLeaf {
   const variables: Record<string, unknown> = {}
-  const expressionKeys: string[] = []
+  const expressionFields: string[] = []
   const vars: VarDecl[] = []
   for (const [name, row] of Object.entries(rows)) {
     variables[name] = row.value
-    if (row.expression) expressionKeys.push(name)
+    if (row.expression) expressionFields.push(`variables.${name}`)
     vars.push({ name, type: row.type, seed: row.seed, flow: row.flow ?? 'local' })
   }
   return leaf(
@@ -256,7 +256,7 @@ export function setter(id: string, rows: Record<string, SetterRow>): NestLeaf {
       category: 'flow',
       description: id,
       values: { variables },
-      variableExpressionKeys: expressionKeys,
+      expressionFields,
     }),
     { vars },
   )

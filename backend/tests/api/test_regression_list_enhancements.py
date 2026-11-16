@@ -21,6 +21,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply, assert_internal_error
 from wavecore.api.exceptions import ConflictException
 from wavecore.api.services.regressions import _storage as _reg_storage
 from wavecore.api.services.regressions import version_service as _reg_version_svc
@@ -280,7 +281,7 @@ class TestCloneRegressionEndpoint:
         with patch(
             "wavecore.api.routes.regressions.composition_routes._reg_version_svc.clone_regression"
         ) as mock_clone:
-            mock_clone.side_effect = ValueError(
+            mock_clone.side_effect = ConflictException(
                 "Regression with name 'Existing Name' already exists"
             )
 
@@ -289,10 +290,9 @@ class TestCloneRegressionEndpoint:
                 json={"name": "Existing Name"},
             )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert "already exists" in data["error"]["message"]
+            assert_error_reply(
+                response, 409, "CONFLICT", "Regression with name 'Existing Name' already exists"
+            )
 
     def test_clone_regression_returns_400_for_invalid_uuid(self, client: TestClient) -> None:
         """Test that clone returns 400 for invalid regression UUID."""
@@ -305,7 +305,7 @@ class TestCloneRegressionEndpoint:
         data = response.json()
         assert data["success"] is False
         assert re.match(
-            r"^Invalid regression ID format: 'invalid-uuid' is not a valid UUID$",
+            r"^Invalid UUID format for regression_id: 'invalid-uuid'$",
             data["error"]["message"],
         )
 
@@ -1245,7 +1245,7 @@ class TestCloneRegressionExceptionHandling:
         return TestClient(app)
 
     def test_clone_regression_handles_generic_exception(self, client: TestClient) -> None:
-        """Test that generic exception returns 500 with correlation ID."""
+        """Test that generic exception returns the generic 500 with a request id."""
         regression_id = str(uuid.uuid4())
 
         with patch(
@@ -1258,14 +1258,7 @@ class TestCloneRegressionExceptionHandling:
                 json={"name": "Test Clone"},
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert data["success"] is False
-            assert data["error"]["message"] == "Internal server error"
-            assert data["error"]["code"] == "INTERNAL_ERROR"
-            assert "correlation_id" in data["error"]
-            # Correlation ID should be a valid UUID
-            uuid.UUID(data["error"]["correlation_id"])
+            assert_internal_error(response, "Unexpected error")
 
 
 class TestGetRegressionSuitesWithTestsEndpoint:
@@ -1333,10 +1326,12 @@ class TestGetRegressionSuitesWithTestsEndpoint:
         """Test that endpoint returns 400 for invalid UUID."""
         response = client.get("/regressions/not-a-uuid/suites")
 
-        assert response.status_code == 400
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "INVALID_PARAMETER"
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid UUID format for regression_id: 'not-a-uuid'",
+        )
 
 
 class TestGetSuiteTestsEndpoint:

@@ -77,7 +77,6 @@ function buildFnFixture(name: string): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: "'BEFORE-FIRED'", level: 'INFO' },
               profileBindings: [],
@@ -99,7 +98,6 @@ function buildFnFixture(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             localDefinition: {
               name: 'Function_1',
               workflow: {
@@ -115,7 +113,6 @@ function buildFnFixture(name: string): Record<string, unknown> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'INNER-FIRED'", level: 'INFO' },
                         profileBindings: [],
@@ -147,7 +144,6 @@ function buildFnFixture(name: string): Record<string, unknown> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: "'AFTER-FIRED'", level: 'INFO' },
               profileBindings: [],

@@ -152,7 +152,7 @@ OUTPUT_DESCRIPTIONS = {
     ),
 }
 
-REMOVED_PARAMETERS = [
+ABSENT_PARAMETERS = [
     "command",
     "cpu_limit",
     "memory_limit",
@@ -410,11 +410,11 @@ class TestShellScriptOutputSchema:
         assert "type_when" not in _outputs()[name]
 
 
-class TestShellScriptRemovedSchema:
+class TestShellScriptAbsentFields:
     """No sandbox, no resource limits, no protocol secret (SHRUN-2, REQ-3.1.3.16)."""
 
-    @pytest.mark.parametrize("name", REMOVED_PARAMETERS)
-    def test_removed_parameters_are_absent(self, name: str) -> None:
+    @pytest.mark.parametrize("name", ABSENT_PARAMETERS)
+    def test_the_parameter_is_absent(self, name: str) -> None:
         assert name not in _parameters()
 
     @pytest.mark.parametrize("name", sorted(EXPECTED_PARAMS))

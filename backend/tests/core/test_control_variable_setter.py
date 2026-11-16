@@ -127,6 +127,16 @@ class TestVariableSetterMetadata:
         assert "description" in meta
         assert len(meta["description"]) > 0
 
+    def test_metadata_description_names_the_scope_of_the_flow_it_runs_in(self):
+        """The catalog text an assistant reads states the scope it writes (REQ-3.4.3.8)."""
+        from wavecore.controls.variable_setter import VariableSetterControl
+
+        assert VariableSetterControl().metadata["description"] == (
+            "Sets variables in the scope of the flow it runs in: in a Test, the Test's "
+            "variables; inside a Function, that Function's own variables and outputs, never "
+            "its inputs."
+        )
+
     def test_metadata_has_parameter_schema(self):
         """Metadata must include parameter_schema list."""
         from wavecore.controls.variable_setter import VariableSetterControl
@@ -328,15 +338,13 @@ class TestVariableSetterExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"myvar": "myvalue"}},
-            "variables": {
-                "myvar": {"value": "", "scope": "test", "type": "string"},
-            },
+            "variables": {"myvar": ""},
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["myvar"]["value"] == "myvalue"
+        assert context["variables"]["myvar"] == "myvalue"
 
     @pytest.mark.asyncio
     async def test_execute_sets_multiple_variables(self):
@@ -346,25 +354,19 @@ class TestVariableSetterExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"var1": "a", "var2": 42, "var3": True}},
-            "variables": {
-                "var1": {"value": "", "scope": "test", "type": "string"},
-                "var2": {"value": 0, "scope": "test", "type": "integer"},
-                "var3": {"value": False, "scope": "test", "type": "boolean"},
-            },
+            "variables": {"var1": "", "var2": 0, "var3": False},
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["var1"]["value"] == "a"
-        assert context["variables"]["var2"]["value"] == 42
-        assert context["variables"]["var3"]["value"] is True
+        assert context["variables"]["var1"] == "a"
+        assert context["variables"]["var2"] == 42
+        assert context["variables"]["var3"] is True
 
     @pytest.mark.asyncio
     async def test_execute_preserves_types(self):
-        """Execute must preserve value types (float lands as exact Decimal)."""
-        from decimal import Decimal
-
+        """Execute writes each value as given; the run hands over a float row as a Decimal."""
         from wavecore.controls.variable_setter import VariableSetterControl
 
         control = VariableSetterControl()
@@ -373,7 +375,7 @@ class TestVariableSetterExecution:
                 "variables": {
                     "str_var": "text",
                     "int_var": 42,
-                    "float_var": 3.14,
+                    "float_var": Decimal("3.14"),
                     "bool_var": False,
                     "array_var": [1, 2, 3],
                     "map_var": {"key": "value"},
@@ -381,60 +383,42 @@ class TestVariableSetterExecution:
                 }
             },
             "variables": {
-                "str_var": {"value": "", "scope": "test", "type": "string"},
-                "int_var": {"value": 0, "scope": "test", "type": "integer"},
-                "float_var": {"value": 0.0, "scope": "test", "type": "float"},
-                "bool_var": {"value": True, "scope": "test", "type": "boolean"},
-                "array_var": {"value": [], "scope": "test", "type": "array"},
-                "map_var": {"value": {}, "scope": "test", "type": "map"},
-                "null_var": {"value": "", "scope": "test", "type": "string"},
+                "str_var": "",
+                "int_var": 0,
+                "float_var": Decimal("0"),
+                "bool_var": True,
+                "array_var": [],
+                "map_var": {},
+                "null_var": "",
             },
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["str_var"]["value"] == "text"
-        assert context["variables"]["int_var"]["value"] == 42
-        assert context["variables"]["float_var"]["value"] == Decimal("3.14")
-        assert context["variables"]["bool_var"]["value"] is False
-        assert context["variables"]["array_var"]["value"] == [1, 2, 3]
-        assert context["variables"]["map_var"]["value"] == {"key": "value"}
-        assert context["variables"]["null_var"]["value"] is None
+        assert context["variables"]["str_var"] == "text"
+        assert context["variables"]["int_var"] == 42
+        assert context["variables"]["float_var"] == Decimal("3.14")
+        assert context["variables"]["bool_var"] is False
+        assert context["variables"]["array_var"] == [1, 2, 3]
+        assert context["variables"]["map_var"] == {"key": "value"}
+        assert context["variables"]["null_var"] is None
 
     @pytest.mark.asyncio
     async def test_execute_updates_existing_variable(self):
-        """Execute must update existing variable value while preserving scope."""
+        """Execute must update an existing variable's value."""
         from wavecore.controls.variable_setter import VariableSetterControl
 
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"existing": "new_value"}},
-            "variables": {"existing": {"value": "old_value", "scope": "test", "type": "string"}},
+            "variables": {"existing": "old_value"},
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["existing"]["value"] == "new_value"
-        assert context["variables"]["existing"]["scope"] == "test"
-
-    @pytest.mark.asyncio
-    async def test_execute_preserves_suite_scope(self):
-        """Execute must preserve original scope (e.g. suite) when updating existing vars."""
-        from wavecore.controls.variable_setter import VariableSetterControl
-
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"suite_var": "updated"}},
-            "variables": {"suite_var": {"value": "original", "scope": "suite", "type": "string"}},
-            "logger": None,
-        }
-
-        await control.execute(context)
-
-        assert context["variables"]["suite_var"]["value"] == "updated"
-        assert context["variables"]["suite_var"]["scope"] == "suite"
+        assert context["variables"]["existing"] == "new_value"
 
     @pytest.mark.asyncio
     async def test_execute_updates_raw_value_variable(self):
@@ -493,9 +477,7 @@ class TestVariableSetterExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"x": 1}},
-            "variables": {
-                "x": {"value": 0, "scope": "test", "type": "integer"},
-            },
+            "variables": {"x": 0},
             "logger": None,
         }
 
@@ -510,7 +492,7 @@ class TestVariableSetterExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"existing": "updated", "missing": "oops"}},
-            "variables": {"existing": {"value": "original", "scope": "test", "type": "string"}},
+            "variables": {"existing": "original"},
             "logger": None,
         }
 
@@ -565,8 +547,9 @@ class TestVariableSetterLogging:
         mock_logger = Mock()
         context: dict[str, Any] = {
             "parameters": {"variables": {"existing": "updated"}},
-            "variables": {"existing": {"value": "original", "scope": "test", "type": "string"}},
+            "variables": {"existing": "original"},
             "logger": mock_logger,
+            "scope": "test",
         }
 
         await control.execute(context)
@@ -584,15 +567,13 @@ class TestVariableSetterLogging:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"myvar": "value"}},
-            "variables": {
-                "myvar": {"value": "", "scope": "test", "type": "string"},
-            },
+            "variables": {"myvar": ""},
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["myvar"]["value"] == "value"
+        assert context["variables"]["myvar"] == "value"
 
 
 class TestVariableSetterDebugLine:
@@ -600,15 +581,16 @@ class TestVariableSetterDebugLine:
     form (REQ-3.1.3.23)."""
 
     @staticmethod
-    async def _debug_line(value: Any, declared_type: str) -> str:
+    async def _debug_line(value: Any) -> str:
         from wavecore.controls.variable_setter import VariableSetterControl
 
         logger = Mock()
         await VariableSetterControl().execute(
             {
                 "parameters": {"variables": {"target": value}},
-                "variables": {"target": {"value": None, "scope": "test", "type": declared_type}},
+                "variables": {"target": None},
                 "logger": logger,
+                "scope": "test",
             }
         )
         logger.debug.assert_called_once()
@@ -616,50 +598,50 @@ class TestVariableSetterDebugLine:
 
     @pytest.mark.asyncio
     async def test_a_null_value_prints_null(self):
-        line = await self._debug_line(None, "integer")
+        line = await self._debug_line(None)
 
         assert line == "Set variable 'target' = null (scope: test)"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(("value", "text"), [(True, "true"), (False, "false")])
     async def test_a_boolean_prints_lower_case(self, value: bool, text: str):
-        line = await self._debug_line(value, "boolean")
+        line = await self._debug_line(value)
 
         assert line == f"Set variable 'target' = {text} (scope: test)"
 
     @pytest.mark.asyncio
     async def test_a_list_prints_compact_json_with_null_inside(self):
-        line = await self._debug_line([1, None, "x"], "array")
+        line = await self._debug_line([1, None, "x"])
 
         assert line == """Set variable 'target' = [1,null,"x"] (scope: test)"""
 
     @pytest.mark.asyncio
     async def test_a_map_prints_compact_json_with_null_inside(self):
-        line = await self._debug_line({"host": "web-1", "port": None}, "map")
+        line = await self._debug_line({"host": "web-1", "port": None})
 
         assert line == """Set variable 'target' = {"host":"web-1","port":null} (scope: test)"""
 
     @pytest.mark.asyncio
     async def test_a_float_prints_its_exact_decimal_text(self):
-        line = await self._debug_line("1.50", "float")
+        line = await self._debug_line(Decimal("1.50"))
 
         assert line == "Set variable 'target' = 1.50 (scope: test)"
 
     @pytest.mark.asyncio
     async def test_an_integer_prints_its_digits(self):
-        line = await self._debug_line(42, "integer")
+        line = await self._debug_line(42)
 
         assert line == "Set variable 'target' = 42 (scope: test)"
 
     @pytest.mark.asyncio
     async def test_a_string_stays_quoted(self):
-        line = await self._debug_line("hello", "string")
+        line = await self._debug_line("hello")
 
         assert line == "Set variable 'target' = 'hello' (scope: test)"
 
     @pytest.mark.asyncio
     async def test_the_text_null_stays_a_quoted_string(self):
-        line = await self._debug_line("null", "string")
+        line = await self._debug_line("null")
 
         assert line == "Set variable 'target' = 'null' (scope: test)"
 
@@ -673,10 +655,71 @@ class TestVariableSetterDebugLine:
                 "parameters": {"variables": {"raw": None}},
                 "variables": {"raw": "old"},
                 "logger": logger,
+                "scope": "test",
             }
         )
 
         logger.debug.assert_called_once_with("Set variable 'raw' = null (scope: test)")
+
+
+class TestSetterLogsItsScope:
+    """The DEBUG line names the scope of the flow the Setter runs in (REQ-3.4.1.14, REQ-3.4.3.8)."""
+
+    @pytest.fixture(autouse=True)
+    def _core_controls(self) -> None:
+        from wavecore.controls.registry import _registry, register_all_core_controls
+
+        register_all_core_controls(_registry, freeze_after=False)
+
+    @staticmethod
+    async def _setter_line() -> str:
+        from unittest.mock import patch
+
+        from wavecore.api.services.workbench import plugins as wb_plugins
+        from wavecore.core.variables.declared_types import declared_type_scope
+
+        with (
+            declared_type_scope({"out": "integer"}),
+            patch.object(wb_plugins, "SessionLogger") as logger_class,
+        ):
+            await wb_plugins._execute_control(
+                "variable-setter",
+                "1.0.0",
+                {"variables": {"out": 5}},
+                {"out": 0},
+                session_id="setter-scope-session",
+                block_id="set-out",
+                block_label="Set Out",
+            )
+        logger_class.return_value.debug.assert_called_once()
+        return logger_class.return_value.debug.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_a_setter_inside_a_function_logs_scope_function(self):
+        from wavecore.api.services.workbench._common import function_instance
+
+        with function_instance(("fn-instance-1",)):
+            line = await self._setter_line()
+
+        assert line == "Set variable 'out' = 5 (scope: function)"
+
+    @pytest.mark.asyncio
+    async def test_a_setter_in_a_test_logs_scope_test(self):
+        line = await self._setter_line()
+
+        assert line == "Set variable 'out' = 5 (scope: test)"
+
+    def test_apply_variable_set_returns_the_written_value(self):
+        from wavecore.api.services.workbench.lazy_variables import LazyVariables
+        from wavecore.controls.variable_setter import _apply_variable_set
+
+        flat_scope: dict[str, Any] = {"out": 0}
+        pending_scope = LazyVariables({}, expr_map={"out": ("1 + 1", "integer")})
+
+        assert _apply_variable_set(flat_scope, "out", 5) == 5
+        assert flat_scope == {"out": 5}
+        assert _apply_variable_set(pending_scope, "out", 5) == 5
+        assert pending_scope["out"] == 5
 
 
 # =============================================================================
@@ -1248,49 +1291,26 @@ class TestResolveParametersMapTemplateKeys:
 
 
 class TestVariableSetterTypeCoercion:
-    """Test type coercion and validation in Variable Setter execute()."""
+    """Coercion by the declared type of a row's variable: the run coerces each row
+    before the control writes it, and the control writes flat values as given."""
 
     # --- String to numeric coercion ---
 
-    @pytest.mark.asyncio
-    async def test_string_value_coerced_to_float_structured(self):
+    def test_string_value_coerced_to_float(self):
         """String '3.14' must be coerced to an exact Decimal for a float variable."""
-        from decimal import Decimal
+        from wavecore.controls.variable_setter import _coerce_value
 
-        from wavecore.controls.variable_setter import VariableSetterControl
+        result = _coerce_value("3.14", "float", "pi")
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"pi": "3.14"}},
-            "variables": {
-                "pi": {"value": 0.0, "scope": "test", "type": "float"},
-            },
-            "logger": None,
-        }
-
-        await control.execute(context)
-
-        result = context["variables"]["pi"]["value"]
         assert result == Decimal("3.14")
         assert isinstance(result, Decimal)
 
-    @pytest.mark.asyncio
-    async def test_string_value_coerced_to_integer_structured(self):
+    def test_string_value_coerced_to_integer(self):
         """String '42' must be coerced to int 42 for integer-typed variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": "42"}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
+        result = _coerce_value("42", "integer", "count")
 
-        await control.execute(context)
-
-        result = context["variables"]["count"]["value"]
         assert result == 42
         assert isinstance(result, int)
 
@@ -1316,244 +1336,123 @@ class TestVariableSetterTypeCoercion:
         # String passes through as-is for flat variables
         assert context["variables"]["pi"] == "3.14"
 
-    @pytest.mark.asyncio
-    async def test_string_boolean_true_coerced(self):
+    def test_string_boolean_true_coerced(self):
         """String 'true' must be coerced to bool True."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"flag": "true"}},
-            "variables": {
-                "flag": {"value": False, "scope": "test", "type": "boolean"},
-            },
-            "logger": None,
-        }
+        assert _coerce_value("true", "boolean", "flag") is True
 
-        await control.execute(context)
-
-        assert context["variables"]["flag"]["value"] is True
-
-    @pytest.mark.asyncio
-    async def test_string_boolean_false_coerced(self):
+    def test_string_boolean_false_coerced(self):
         """String 'false' must be coerced to bool False."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"flag": "false"}},
-            "variables": {
-                "flag": {"value": True, "scope": "test", "type": "boolean"},
-            },
-            "logger": None,
-        }
-
-        await control.execute(context)
-
-        assert context["variables"]["flag"]["value"] is False
+        assert _coerce_value("false", "boolean", "flag") is False
 
     # --- int to float widening ---
 
-    @pytest.mark.asyncio
-    async def test_int_value_widened_to_float(self):
+    def test_int_value_widened_to_float(self):
         """Integer value must be widened to an exact Decimal for a float variable."""
-        from decimal import Decimal
+        from wavecore.controls.variable_setter import _coerce_value
 
-        from wavecore.controls.variable_setter import VariableSetterControl
+        result = _coerce_value(5, "float", "rate")
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"rate": 5}},
-            "variables": {
-                "rate": {"value": 0.0, "scope": "test", "type": "float"},
-            },
-            "logger": None,
-        }
-
-        await control.execute(context)
-
-        result = context["variables"]["rate"]["value"]
         assert result == Decimal("5")
         assert isinstance(result, Decimal)
 
     # --- float to int narrowing (lossless) ---
 
-    @pytest.mark.asyncio
-    async def test_float_value_narrowed_to_int_lossless(self):
+    def test_float_value_narrowed_to_int_lossless(self):
         """Float 5.0 must be narrowed to int 5 for integer-typed variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": 5.0}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
+        result = _coerce_value(5.0, "integer", "count")
 
-        await control.execute(context)
-
-        result = context["variables"]["count"]["value"]
         assert result == 5
         assert isinstance(result, int)
 
     # --- Type mismatch errors ---
 
-    @pytest.mark.asyncio
-    async def test_string_to_integer_invalid_raises(self):
+    def test_string_to_integer_invalid_raises(self):
         """Non-numeric string must raise TypeError for integer variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": "abc"}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(TypeError, match="^Variable 'count': cannot convert 'abc' to integer$"):
+            _coerce_value("abc", "integer", "count")
 
-        with pytest.raises(TypeError, match="cannot convert 'abc' to integer"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_string_to_float_invalid_raises(self):
+    def test_string_to_float_invalid_raises(self):
         """Non-numeric string must raise TypeError for float variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"rate": "not_a_number"}},
-            "variables": {
-                "rate": {"value": 0.0, "scope": "test", "type": "float"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(
+            TypeError, match="^Variable 'rate': cannot convert 'not_a_number' to float$"
+        ):
+            _coerce_value("not_a_number", "float", "rate")
 
-        with pytest.raises(TypeError, match="cannot convert 'not_a_number' to float"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_float_with_fraction_to_integer_raises(self):
+    def test_float_with_fraction_to_integer_raises(self):
         """Float 3.14 must raise TypeError for integer variable (lossy narrowing)."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": 3.14}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(
+            TypeError,
+            match=r"^Variable 'count': cannot convert 3\.14 to integer \(has fractional part\)$",
+        ):
+            _coerce_value(3.14, "integer", "count")
 
-        with pytest.raises(TypeError, match="has fractional part"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_string_fraction_to_integer_raises(self):
+    def test_string_fraction_to_integer_raises(self):
         """String '3.14' must raise TypeError for integer variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": "3.14"}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(
+            TypeError,
+            match=r"^Variable 'count': cannot convert '3\.14' to integer \(has fractional part\)$",
+        ):
+            _coerce_value("3.14", "integer", "count")
 
-        with pytest.raises(TypeError, match="has fractional part"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_list_to_string_raises(self):
+    def test_list_to_string_raises(self):
         """List value must raise TypeError for string variable."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"name": [1, 2, 3]}},
-            "variables": {
-                "name": {"value": "", "scope": "test", "type": "string"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(
+            TypeError, match="^Variable 'name': cannot assign list value to string variable$"
+        ):
+            _coerce_value([1, 2, 3], "string", "name")
 
-        with pytest.raises(TypeError, match="cannot assign list value to string"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_string_to_boolean_invalid_raises(self):
+    def test_string_to_boolean_invalid_raises(self):
         """Invalid boolean string must raise TypeError."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"flag": "maybe"}},
-            "variables": {
-                "flag": {"value": False, "scope": "test", "type": "boolean"},
-            },
-            "logger": None,
-        }
+        with pytest.raises(
+            TypeError,
+            match=(
+                r"^Variable 'flag': cannot convert 'maybe' to boolean "
+                r"\(expected 'true' or 'false'\)$"
+            ),
+        ):
+            _coerce_value("maybe", "boolean", "flag")
 
-        with pytest.raises(TypeError, match="cannot convert 'maybe' to boolean"):
-            await control.execute(context)
-
-    @pytest.mark.asyncio
-    async def test_bool_to_integer_raises(self):
+    def test_bool_to_integer_raises(self):
         """Boolean must not be silently converted to integer."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"count": True}},
-            "variables": {
-                "count": {"value": 0, "scope": "test", "type": "integer"},
-            },
-            "logger": None,
-        }
-
-        with pytest.raises(TypeError, match="cannot assign bool value to integer"):
-            await control.execute(context)
+        with pytest.raises(
+            TypeError, match="^Variable 'count': cannot assign bool value to integer variable$"
+        ):
+            _coerce_value(True, "integer", "count")
 
     # --- None is always allowed ---
 
-    @pytest.mark.asyncio
-    async def test_none_allowed_for_any_type(self):
+    def test_none_allowed_for_any_type(self):
         """Null is a value of every type, so it is written whatever the declared type."""
-        from wavecore.controls.variable_setter import VariableSetterControl
+        from wavecore.controls.variable_setter import _coerce_value
 
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {
-                "variables": {
-                    "count": None,
-                    "rate": None,
-                    "flag": None,
-                    "items": None,
-                    "config": None,
-                }
-            },
-            "variables": {
-                "count": {"value": 42, "scope": "test", "type": "integer"},
-                "rate": {"value": 3.14, "scope": "test", "type": "float"},
-                "flag": {"value": True, "scope": "test", "type": "boolean"},
-                "items": {"value": [1, 2], "scope": "test", "type": "array"},
-                "config": {"value": {"k": "v"}, "scope": "test", "type": "map"},
-            },
-            "logger": None,
-        }
-
-        await control.execute(context)
-
-        assert context["variables"]["count"]["value"] is None
-        assert context["variables"]["rate"]["value"] is None
-        assert context["variables"]["flag"]["value"] is None
-        assert context["variables"]["items"]["value"] is None
-        assert context["variables"]["config"]["value"] is None
+        for name, declared in [
+            ("count", "integer"),
+            ("rate", "float"),
+            ("flag", "boolean"),
+            ("items", "array"),
+            ("config", "map"),
+        ]:
+            assert _coerce_value(None, declared, name) is None
 
     # --- Raw value type inference ---
 
@@ -2029,13 +1928,13 @@ class TestVariableSetterTableExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"orders": table}},
-            "variables": {"orders": {"value": None, "scope": "test", "type": "table"}},
+            "variables": {"orders": None},
             "logger": None,
         }
 
         await control.execute(context)
 
-        stored = context["variables"]["orders"]["value"]
+        stored = context["variables"]["orders"]
         assert isinstance(stored, Table)
         assert stored.to_list() == [{"sku": "A-1", "qty": 3}, {"sku": "B-2", "qty": 7}]
 
@@ -2048,13 +1947,13 @@ class TestVariableSetterTableExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"big_orders": filtered}},
-            "variables": {"big_orders": {"value": None, "scope": "test", "type": "table"}},
+            "variables": {"big_orders": None},
             "logger": None,
         }
 
         await control.execute(context)
 
-        stored = context["variables"]["big_orders"]["value"]
+        stored = context["variables"]["big_orders"]
         assert isinstance(stored, Table)
         assert stored.to_list() == [{"sku": "B-2", "qty": 7}]
 
@@ -2066,26 +1965,10 @@ class TestVariableSetterTableExecution:
         control = VariableSetterControl()
         context: dict[str, Any] = {
             "parameters": {"variables": {"orders": [{"sku": "A-1", "qty": 3}]}},
-            "variables": {"orders": {"value": None, "scope": "test", "type": "table"}},
+            "variables": {"orders": None},
             "logger": None,
         }
 
         await control.execute(context)
 
-        assert context["variables"]["orders"]["value"] == [{"sku": "A-1", "qty": 3}]
-
-    @pytest.mark.asyncio
-    async def test_string_to_table_variable_raises_exact_message(self) -> None:
-        from wavecore.controls.variable_setter import VariableSetterControl
-
-        control = VariableSetterControl()
-        context: dict[str, Any] = {
-            "parameters": {"variables": {"orders": "A-1"}},
-            "variables": {"orders": {"value": None, "scope": "test", "type": "table"}},
-            "logger": None,
-        }
-
-        with pytest.raises(
-            TypeError, match="^Variable 'orders': cannot assign str value to table variable$"
-        ):
-            await control.execute(context)
+        assert context["variables"]["orders"] == [{"sku": "A-1", "qty": 3}]

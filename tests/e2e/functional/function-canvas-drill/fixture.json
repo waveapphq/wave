@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "localDefinition": {
             "workflow": {
               "nodes": [
@@ -42,7 +41,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": [],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "localDefinition": {
                       "workflow": {
                         "nodes": [],

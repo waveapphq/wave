@@ -26,7 +26,7 @@ Repeats the loop body while a condition remains true.
 |-----------|------|----------|---------|-------------|
 | mode | string enum | yes | while-do | while-do or do-while |
 | conditions | array | yes | - | Assertion conditions (same format as If/Else) |
-| max_iterations | integer | no | none | Session FAILS if reached |
+| max_iterations | integer | no | none | At least 1. Session FAILS if reached |
 | timeout | float | no | none | Session FAILS if reached |
 
 ### Output

@@ -44,7 +44,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: { exit_msg: 'caller_var' }, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -64,9 +63,8 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       nodeType: 'control',
                       category: 'flow',
                       version: '1.0.0',
-                      expressionFields: [],
+                      expressionFields: ['variables.exit_msg'],
                       templateFields: [],
-                      variableExpressionKeys: ['exit_msg'],
                       config: {
                         values: { variables: { exit_msg: "'changed!'" } },
                         outputBindings: {},
@@ -86,7 +84,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: 'exit_msg', level: 'INFO' },
                         outputBindings: {},
@@ -115,7 +112,6 @@ async function seedTest(request: APIRequestContext): Promise<string> {
             version: '1.0.0',
             expressionFields: ['message'],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { message: 'caller_var', level: 'INFO' },
               outputBindings: {},

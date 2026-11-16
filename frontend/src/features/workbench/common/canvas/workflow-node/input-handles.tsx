@@ -13,6 +13,10 @@ interface InputHandlesProps {
   showAddHandle: boolean
   proximityTarget?: boolean
   proximityCycleDetected?: boolean
+  /** The test id stem of every handle; a Note keeps its own. */
+  testIdPrefix?: string
+  /** Classes every handle adds, for a card whose body draws over its top edge. */
+  className?: string
 }
 
 /**
@@ -25,6 +29,8 @@ export function InputHandles({
   showAddHandle,
   proximityTarget,
   proximityCycleDetected,
+  testIdPrefix = 'handle-input',
+  className,
 }: Readonly<InputHandlesProps>) {
   // Single centered handle (backward compatible - no id)
   if (ingressCount <= 1 && !showAddHandle) {
@@ -34,8 +40,8 @@ export function InputHandles({
         <Handle
           type="target"
           position={Position.Top}
-          data-testid="handle-input-cycle"
-          className="!w-5 !h-5 !rounded-full !bg-red-600 !border-2 !border-red-400 !border-solid !flex !items-center !justify-center"
+          data-testid={`${testIdPrefix}-cycle`}
+          className={cn('!w-5 !h-5 !rounded-full !bg-red-600 !border-2 !border-red-400 !border-solid !flex !items-center !justify-center', className)}
         >
           <RefreshCcw className="w-3 h-3 text-white" strokeWidth={3} />
         </Handle>
@@ -45,11 +51,12 @@ export function InputHandles({
       <Handle
         type="target"
         position={Position.Top}
-        data-testid="handle-input"
+        data-testid={testIdPrefix}
         className={cn(
           '!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0',
           'hover:!ring-2 hover:!ring-zinc-400 transition-shadow',
-          proximityTarget && '!ring-2 !ring-green-400 !bg-green-500 animate-pulse'
+          proximityTarget && '!ring-2 !ring-green-400 !bg-green-500 animate-pulse',
+          className,
         )}
       />
     )
@@ -69,9 +76,9 @@ export function InputHandles({
               type="target"
               position={Position.Top}
               id={handleId}
-              data-testid="handle-input-cycle"
+              data-testid={`${testIdPrefix}-cycle`}
               style={{ left: `${leftPct}%` }}
-              className="!w-5 !h-5 !rounded-full !bg-red-600 !border-2 !border-red-400 !border-solid !flex !items-center !justify-center"
+              className={cn('!w-5 !h-5 !rounded-full !bg-red-600 !border-2 !border-red-400 !border-solid !flex !items-center !justify-center', className)}
             >
               <RefreshCcw className="w-3 h-3 text-white" strokeWidth={3} />
             </Handle>
@@ -81,9 +88,9 @@ export function InputHandles({
               type="target"
               position={Position.Top}
               id={handleId}
-              data-testid={`handle-input-${handleId}`}
+              data-testid={`${testIdPrefix}-${handleId}`}
               style={{ left: `${leftPct}%` }}
-              className="!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0"
+              className={cn('!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0', className)}
             />
           )
         })}
@@ -108,9 +115,9 @@ export function InputHandles({
             type="target"
             position={Position.Top}
             id={handleId}
-            data-testid={handleId ? `handle-input-${handleId}` : 'handle-input'}
+            data-testid={handleId ? `${testIdPrefix}-${handleId}` : testIdPrefix}
             style={{ left: `${leftPct}%` }}
-            className="!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0 hover:!ring-2 hover:!ring-zinc-400 transition-shadow"
+            className={cn('!w-4 !h-2 !rounded-full !bg-zinc-600 !border-0 hover:!ring-2 hover:!ring-zinc-400 transition-shadow', className)}
           />
         )
       })}
@@ -130,12 +137,13 @@ export function InputHandles({
           type="target"
           position={Position.Top}
           id={`ingress_${Math.max(1, ingressCount)}`}
-          data-testid="handle-input-add"
+          data-testid={`${testIdPrefix}-add`}
           style={{ left: `${((Math.max(1, ingressCount) + 1) / (Math.max(1, ingressCount) + 2)) * 100}%` }}
           className={cn(
             '!w-5 !h-5 !rounded-full !bg-green-600 !border-2 !border-green-400 !border-solid',
             'hover:!ring-2 hover:!ring-green-300 transition-shadow',
-            '!flex !items-center !justify-center'
+            '!flex !items-center !justify-center',
+            className,
           )}
         >
           <Plus className="w-3 h-3 text-white" strokeWidth={3} />

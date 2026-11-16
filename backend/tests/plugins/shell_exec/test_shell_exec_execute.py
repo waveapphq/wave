@@ -588,5 +588,5 @@ class TestLogOutput:
 
 async def test_timeout_message() -> None:
     """The deadline ends the command with the Timeout message (SHRUN-14)."""
-    with pytest.raises(ValueError, match=exact("Command timed out after 1 seconds")):
+    with pytest.raises(ValueError, match=exact("Command timed out after 1 second")):
         await run({"command": "sleep 30", "timeout": 1})

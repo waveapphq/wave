@@ -15,12 +15,16 @@ DIALECTS: dict[str, ModuleType] = {
 }
 
 
+class UnknownDatabaseTypeError(ValueError):
+    """A database type WAVE has no dialect for."""
+
+
 def dialect(database_type: str) -> ModuleType:
     """The module for a database type, read from DIALECTS at call time."""
     try:
         return DIALECTS[database_type]
     except KeyError:
-        raise ValueError(f"Unknown database type '{database_type}'") from None
+        raise UnknownDatabaseTypeError(f"Unknown database type '{database_type}'") from None
 
 
 @dataclass

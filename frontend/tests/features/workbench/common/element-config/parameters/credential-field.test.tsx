@@ -5,7 +5,7 @@
  * protected by default wherever a value is entered directly:
  *   - STORED literal (a sealed `wave:enc:v1:` envelope from the saved config)
  *     -> the field is masked write-only (the shared ValueField.secret
- *     affordance, aria-label "Edit protected value") and a gray Lock status
+ *     affordance, aria-label "<label>: Edit protected value") and a gray Lock status
  *     indicator carries the protected tooltip.
  *   - Literal typed THIS session (plaintext, pre-save) -> stays visible and
  *     inline-editable (the normal string edit affordance) with the Lock
@@ -148,7 +148,7 @@ describe('Credential field - literal value (REQ-3.1.3.18)', () => {
       value: SEALED_VALUE,
     })
 
-    expect(screen.getByLabelText('Edit protected value')).toBeInTheDocument()
+    expect(screen.getByLabelText('Password: Edit protected value')).toBeInTheDocument()
     expect(screen.queryByText(/wave:enc:v1:/)).not.toBeInTheDocument()
   })
 
@@ -169,7 +169,7 @@ describe('Credential field - literal value (REQ-3.1.3.18)', () => {
       value: 'pw-typed-this-session',
     })
 
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Password' })).toHaveValue('pw-typed-this-session')
     expect(screen.getByLabelText(LITERAL_TOOLTIP)).toBeInTheDocument()
   })
@@ -183,7 +183,7 @@ describe('Credential field - literal value (REQ-3.1.3.18)', () => {
 
     expect(screen.getByRole('textbox', { name: 'Password' })).toHaveValue('')
     expect(screen.queryByText(/undefined/)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
   })
 
   it('reveals a stored (sealed) credential in the clear when the credential-inputs unmask is on', () => {
@@ -197,7 +197,7 @@ describe('Credential field - literal value (REQ-3.1.3.18)', () => {
     )
 
     expect(screen.getByText(/revealed-plaintext-pw/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
     // The lock indicator stays: the value is still a protected credential.
     expect(screen.getByLabelText(LITERAL_TOOLTIP)).toBeInTheDocument()
   })
@@ -246,7 +246,7 @@ describe('Non-credential field is unchanged (REQ-3.1.3.18)', () => {
     renderRow({ ...baseProps, parameter: plainParam, value: 'db.example.com' })
 
     expect(screen.queryByLabelText(LITERAL_TOOLTIP)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Host' })).toHaveValue('db.example.com')
   })
 })
@@ -398,13 +398,13 @@ describe('Credential field - map credential keeps the map editor', () => {
 
     expect(showsText('{"username": "admin", "password": "hunter2"}')).toBe(true)
     expect(screen.getByTestId('param-expand-secret_data')).toHaveAccessibleName('Open editor for Data')
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
   })
 
   it('masks a STORED map without its entry count, its keys, or its envelopes', () => {
     renderRow({ ...baseProps, parameter: mapCred as Parameter, value: storedMap })
 
-    expect(screen.getByLabelText('Edit protected value')).toBeInTheDocument()
+    expect(screen.getByLabelText('Data: Edit protected value')).toBeInTheDocument()
     expect(screen.queryByTestId('param-expand-secret_data')).not.toBeInTheDocument()
     expect(screen.queryByText(/entries/)).not.toBeInTheDocument()
     expect(screen.queryByText(/tls\./)).not.toBeInTheDocument()
@@ -415,11 +415,11 @@ describe('Credential field - map credential keeps the map editor', () => {
     const onChange = vi.fn()
     renderRow({ ...baseProps, onChange, parameter: mapCred as Parameter, value: storedMap })
 
-    fireEvent.click(screen.getByLabelText('Edit protected value'))
+    fireEvent.click(screen.getByLabelText('Data: Edit protected value'))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onChange).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByLabelText('Edit protected value'))
+    fireEvent.click(screen.getByLabelText('Data: Edit protected value'))
     expect(screen.getByText('Edit Protected Value?')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
     expect(onChange).toHaveBeenCalledWith({})
@@ -469,7 +469,7 @@ describe('Credential field - map credential keeps the map editor', () => {
     expect(showsText('{"a": "1"}')).toBe(true)
     expect(screen.getByTestId('param-expand-data')).toHaveAccessibleName('Open editor for Data')
     expect(screen.queryByLabelText(LITERAL_TOOLTIP)).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
   })
 })
 
@@ -494,23 +494,23 @@ describe('Credential field - keyboard focus after "Edit Protected Value?"', () =
     ['Escape', () => fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })],
   ])('puts focus back on the masked credential after %s', async (_label, dismiss) => {
     render(<StoredCredentialRow parameter={credentialParam as Parameter} />)
-    fireEvent.click(screen.getByLabelText('Edit protected value'))
+    fireEvent.click(screen.getByLabelText('Password: Edit protected value'))
     expect(screen.getByText('Edit Protected Value?')).toBeInTheDocument()
 
     dismiss()
 
     expect(screen.queryByText('Edit Protected Value?')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.getByLabelText('Edit protected value')).toHaveFocus())
+    await waitFor(() => expect(screen.getByLabelText('Password: Edit protected value')).toHaveFocus())
   })
 
   it('puts focus on the empty credential\'s own control after "Delete & Edit"', async () => {
     render(<StoredCredentialRow parameter={credentialParam as Parameter} />)
     screen.getByRole('textbox', { name: 'Block name' }).focus()
-    fireEvent.click(screen.getByLabelText('Edit protected value'))
+    fireEvent.click(screen.getByLabelText('Password: Edit protected value'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete & Edit' }))
 
-    expect(screen.queryByLabelText('Edit protected value')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Edit protected value$/)).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Password' })).toHaveFocus())
     expect(screen.getByRole('textbox', { name: 'Block name' })).not.toHaveFocus()
   })
@@ -527,7 +527,7 @@ describe('Credential field - non-string declared credential (REQ-3.1.3.18)', () 
     }
     renderRow({ ...baseProps, parameter: intCred as Parameter, value: SEALED_VALUE })
 
-    expect(screen.getByLabelText('Edit protected value')).toBeInTheDocument()
+    expect(screen.getByLabelText('PIN: Edit protected value')).toBeInTheDocument()
   })
 })
 
@@ -605,7 +605,7 @@ describe('Credential field - the unsaved-secret line (REQ-3.1.3.18)', () => {
 
     rerender(rowTree({ ...props, value: SEALED_VALUE }))
 
-    expect(screen.getByLabelText('Edit protected value')).toBeInTheDocument()
+    expect(screen.getByLabelText('Password: Edit protected value')).toBeInTheDocument()
     expect(line()).not.toBeInTheDocument()
   })
 

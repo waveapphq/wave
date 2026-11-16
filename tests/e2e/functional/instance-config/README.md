@@ -53,7 +53,7 @@ cannot use, and keeps every saved setting in that file across a restart.
 ### Validation
 
 - **Refused starts (STARTUP-1 to 5):** the process exits with code 1 and its output holds one
-  ERROR line with the exact text: `Config file not found: <path> (set WAVE_CONFIG_FILE to use
+  FATAL line with the exact text: `Config file not found: <path> (set WAVE_CONFIG_FILE to use
   another file)`, `WAVE_CONFIG_FILE must be an absolute path: <value>`, `Config file <path>
   does not hold a YAML mapping`, `Config file <path> cannot be read: <the parser's reason>`,
   `Config file <path>: mcp.port must be a whole number from 1024 to 65535`, `Config file
@@ -82,7 +82,7 @@ cannot use, and keeps every saved setting in that file across a restart.
   and `No active periodic backup schedule`, and the schedule answers off with an empty cron
   and no next run.
 - **Refused keys (STARTUP-13 to 15):** the process exits with code 1 and its output holds one
-  ERROR line: exactly `No secret encryption key configured: make one with 'poetry run
+  FATAL line: exactly `No secret encryption key configured: make one with 'poetry run
   wave-new-secret-key' in the backend folder, then set it as security.secret_key in the config
   file or as the WAVE_SECRET_KEY environment variable` (no key line, and the example as
   shipped); exactly `Secret
@@ -90,7 +90,7 @@ cannot use, and keeps every saved setting in that file across a restart.
   security.secret_key.` (both malformed keys); a line holding `does not decrypt existing sealed
   data` (another key, after the first start left `secret_key_sentinel.yaml` in the data folder).
 - **Refused data folders (STARTUP-16 to 18):** the process exits with code 1 and its output
-  holds one ERROR line: exactly `Data folder not set: add storage.base_path to the config file or
+  holds one FATAL line: exactly `Data folder not set: add storage.base_path to the config file or
   set WAVE_STORAGE_BASE_PATH`, and no data folder is made; exactly `WAVE_STORAGE_BASE_PATH must
   be an absolute path: data`; `Data folder <config file>/data cannot be created: <the system's
   reason>`, and the config file is still a file.

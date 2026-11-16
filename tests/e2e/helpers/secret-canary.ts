@@ -10,6 +10,7 @@
 
 import { expect, type APIRequestContext } from './playwright-fixtures'
 import { BACKEND_URL, STORAGE_BASE_PATH } from './config'
+import { escapeRegExp } from './log-reader'
 import fs from 'fs'
 import path from 'path'
 
@@ -57,6 +58,12 @@ export function sweepStore(needle: string): string[] {
 /** Concatenated raw bytes of every file under `dir` (at-rest envelope / canary checks). */
 export function dirBytes(dir: string): Buffer {
   return Buffer.concat(listStoreFiles(dir).map((file) => fs.readFileSync(file)))
+}
+
+/** Each value stored YAML text gives `key` at any depth, exactly as written. */
+export function storedYamlValues(text: string, key: string): string[] {
+  const line = new RegExp(`^ *${escapeRegExp(key)}: (.*)$`, 'gm')
+  return Array.from(text.matchAll(line), (match) => match[1])
 }
 
 /** How an export or a backup writes secret values. */

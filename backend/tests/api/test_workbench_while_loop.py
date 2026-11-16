@@ -67,7 +67,6 @@ def _make_node(
             "displayName": display_name or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -185,8 +184,8 @@ class TestWhileLoopWorkflowExecution:
         assert session["block_states"]["after-log"] == "passed"
 
     @pytest.mark.asyncio
-    async def test_while_do_empty_conditions_zero_iterations(self) -> None:
-        """While-Do with empty conditions list: evaluates to False, 0 iterations."""
+    async def test_a_while_with_an_empty_condition_list_is_refused_before_it_runs(self) -> None:
+        """An empty condition list is refused at run as it is at save (REQ-3.5.1.17)."""
         session_id = "wl-empty"
         _wb_common._workbench_sessions[session_id] = _make_session(session_id)
 
@@ -204,8 +203,11 @@ class TestWhileLoopWorkflowExecution:
         await workbench_service._execute_workflow(session_id, nodes, edges, {"idx": None})
 
         session = _wb_common._workbench_sessions[session_id]
-        assert session["status"] == "passed"
-        assert session["block_states"]["after-log"] == "passed"
+        assert session["status"] == "failed"
+        assert session["error"] == "Required parameter 'conditions' is empty"
+        assert session["block_states"]["while-1"] == "failed"
+        assert session["block_states"].get("body-log") in ("skipped", None)
+        assert session["block_states"].get("after-log") in ("skipped", None)
 
     @pytest.mark.asyncio
     async def test_while_do_condition_changes_body_runs_n_times(self) -> None:

@@ -344,6 +344,14 @@ describe('CipherPickerSheet - default (all enabled) state', () => {
     mockedFetch.mockResolvedValue(CAPABILITIES)
   })
 
+  it('is a non-modal dialog named "Edit value"', async () => {
+    renderSheet()
+    await ready()
+    const sheet = screen.getByTestId('cipher-picker-sheet')
+    expect(screen.getByRole('dialog', { name: 'Edit value' })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
+  })
+
   it('renders every visible row in both tables checked and reorderable', async () => {
     renderSheet()
     await ready()

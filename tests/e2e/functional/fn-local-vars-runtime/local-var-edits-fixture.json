@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": {},
@@ -63,14 +62,10 @@
                     "version": "1.0.0",
                     "description": "Writes fn_kept",
                     "hasNewerVersion": false,
-                    "expressionFields": [],
-                    "templateFields": [],
-                    "variableExpressionKeys": [
-                      "fn_kept"
+                    "expressionFields": [
+                      "variables.fn_kept"
                     ],
-                    "variableTypes": {
-                      "fn_kept": "integer"
-                    },
+                    "templateFields": [],
                     "config": {
                       "values": {
                         "variables": {
@@ -105,7 +100,6 @@
                       "message"
                     ],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "f'fn-read:{fn_plain}:{fn_kept}'",

@@ -3,23 +3,25 @@
  *
  * Phase: no-data (parallel) - self-seeds a Test via POST /tests, opens its Variable
  * Setter config sheet; no execution. Runs under dark + light projects.
- * Design Decisions: SECUI-9 shared-cell canon
+ * Design Decisions: SECUI-9 shared-cell canon, VARSET-7
  * REQ: REQ-3.1.3.18
  *
  * Pass Criteria:
  * 1. The Variable Setter editor labels the Secret + Value columns.
  * 2. A SAVED (sealed) secret renders masked write-only via the same full-width field
- *    affordance (aria-label "Edit protected value") a plugin credential input uses;
- *    the stored value never renders in cleartext.
- * 3. A secret value typed THIS session stays visible and editable; it masks write-only
- *    only AFTER the test is saved, WITHOUT a page reload (the nested
+ *    affordance a plugin credential input uses, named after its row
+ *    (`saved_secret: Edit protected value`); the stored value never renders in cleartext.
+ * 3. A secret value typed THIS session in the row's value box stays visible and editable;
+ *    it masks write-only only AFTER the test is saved, WITHOUT a page reload (the nested
  *    config.values.variables resync).
  * 4. Cancel and Escape on "Edit Protected Value?" close the question, open no editor,
  *    leave exactly one masked field and put keyboard focus back on it; a config Save
  *    and a test Save after them keep the same sealed value in the saved test, and the
  *    reopened field is still masked (REQ-3.1.3.5).
- * 5. "Delete & Edit" opens the empty editor and puts keyboard focus on the row's own
- *    Edit control, never on the page body (REQ-3.1.3.5).
+ * 5. "Delete & Edit" on the text secret opens no editor: the row's value box is empty and
+ *    holds keyboard focus. On the stored list secret it opens the empty "Edit value" sheet
+ *    with focus inside; Escape closes it and focus is on that row's value box. Focus is
+ *    never on the page body (REQ-3.1.3.5).
  */
 
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
@@ -39,26 +41,56 @@ const MASKING_ALL_OFF = {
 const SETTER_NODE = 'setter'
 const SECRET_NAME = 'saved_secret'
 const SECRET_PLAINTEXT = 'saved-secret-abc123'
+const SECRET_ROW = 0
+// A stored list secret beside the text secret: its Delete & Edit opens a sheet.
+const LIST_NAME = 'saved_list'
+const LIST_PLAINTEXT = ['list-secret-a7f3', 'list-secret-b9e1']
+const LIST_ROW = 1
 const SEALED = /^wave:enc:v1:[A-Za-z0-9+/=_-]+$/
 const SAVED_NOTE = 'Gate kept the secret'
 
-function loadFixture(): Record<string, unknown> {
-  return JSON.parse(
-    fs.readFileSync(path.resolve(__dirname, '../../fixtures/secrets/varset-gate.json'), 'utf-8'),
-  )
+interface GateFixture {
+  workflow: {
+    nodes: Array<{
+      id: string
+      data: { config: { values: { variables: Record<string, unknown> }; secretFields: string[] } }
+    }>
+  }
+  variables: Record<string, unknown>
 }
 
-const maskedField = (sheet: Locator): Locator =>
-  sheet.locator('button[aria-label="Edit protected value"]')
+/** The shared gate fixture plus a stored list secret row. */
+function loadFixture(): Record<string, unknown> {
+  const fixture = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../../fixtures/secrets/varset-gate.json'), 'utf-8'),
+  ) as GateFixture
+  const setter = fixture.workflow.nodes.find((node) => node.id === SETTER_NODE)
+  if (!setter) throw new Error('the gate fixture holds no setter block')
+  setter.data.config.values.variables[LIST_NAME] = [...LIST_PLAINTEXT]
+  setter.data.config.secretFields.push(`variables.${LIST_NAME}`)
+  fixture.variables[LIST_NAME] = { value: [], type: 'array', scope: 'test', secret: true }
+  return fixture as unknown as Record<string, unknown>
+}
+
+// The masked control is named after its row (`<row>: Edit protected value`).
+const maskedField = (sheet: Locator, row = SECRET_NAME): Locator =>
+  sheet.getByRole('button', { name: `${row}: Edit protected value`, exact: true })
+
+// The row's inline value box and its sheet's list editor.
+const valueBox = (sheet: Locator, row: number): Locator => sheet.getByTestId(`param-input-varset-value-${row}`)
+const listItems = (editor: Locator): Locator => editor.locator('[data-testid^="array-edit-input-"]')
 
 const editQuestion = (page: Page): Locator =>
-  page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  page.getByRole('dialog', { name: 'Edit Protected Value?' })
 
 const valueEditor = (page: Page): Locator => page.locator('[data-testid="value-editor-sheet"]')
 
 /** True while no control holds keyboard focus. */
 const focusIsOnPageBody = (page: Page): Promise<boolean> =>
   page.evaluate(() => document.activeElement === null || document.activeElement === document.body)
+
+const holdsFocusInside = (target: Locator): Promise<boolean> =>
+  target.evaluate((element) => element.contains(document.activeElement))
 
 /** The setter block as the saved test holds it, read back through the workflow route. */
 async function savedSetter(
@@ -137,7 +169,7 @@ test.describe('V-CRED-STORED-GATE-01: Variable Setter secret gate', () => {
 
     // The saved secret masks write-only via the shared full-width
     // field affordance; the stored value / envelope never render in cleartext.
-    const masked = sheet.locator('button[aria-label="Edit protected value"]')
+    const masked = maskedField(sheet)
     await expect(masked).toHaveCount(1)
     await expect(masked).toBeVisible()
     await expect(sheet.getByText(/saved-secret-abc123/)).toHaveCount(0)
@@ -148,24 +180,19 @@ test.describe('V-CRED-STORED-GATE-01: Variable Setter secret gate', () => {
     const sheet = () => configSheet(page)
 
     // Baseline: the saved secret is masked write-only.
-    await expect(sheet().locator('button[aria-label="Edit protected value"]')).toHaveCount(1)
+    await expect(maskedField(sheet())).toHaveCount(1)
 
-    // Clear-and-retype the saved secret through the write-only flow.
-    await sheet().locator('button[aria-label="Edit protected value"]').click()
-    const editConfirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    // Clear-and-retype the saved secret through the write-only flow, in the row's own box.
+    await maskedField(sheet()).click()
+    const editConfirm = editQuestion(page)
     await expect(editConfirm).toBeVisible()
     await editConfirm.getByRole('button', { name: /Delete & Edit/i }).click()
-    const valueSheet = page.locator('[data-testid="value-editor-sheet"]')
-    await expect(valueSheet).toBeVisible()
-    await valueSheet.locator('.cm-content').first().click()
+    await expect(valueBox(sheet(), SECRET_ROW)).toBeFocused()
     await page.keyboard.type('fresh-typed-val')
-    await valueSheet.locator('[data-testid="value-editor-save-button"]').click()
-    await valueSheet.locator('[data-testid="value-editor-cancel-button"]').click()
-    await expect(valueSheet).toBeHidden()
 
     // Gate: the value typed this session stays visible + editable (no masked cell now).
-    await expect(sheet().locator('[data-testid="varset-edit-value-0"]')).toContainText('fresh-typed-val')
-    await expect(sheet().locator('button[aria-label="Edit protected value"]')).toHaveCount(0)
+    await expect(valueBox(sheet(), SECRET_ROW)).toHaveValue('fresh-typed-val')
+    await expect(maskedField(sheet())).toHaveCount(0)
 
     // Apply the config (sheet Save) + persist the workbench (toolbar Save).
     await applyConfigAndSave(page)
@@ -173,7 +200,7 @@ test.describe('V-CRED-STORED-GATE-01: Variable Setter secret gate', () => {
     // Reopen the setter config WITHOUT a page reload: the nested setter secret re-masks
     // write-only (the config.values.variables resync), never showing the typed plaintext.
     await openSetterConfig(page)
-    await expect(sheet().locator('button[aria-label="Edit protected value"]')).toHaveCount(1, {
+    await expect(maskedField(sheet())).toHaveCount(1, {
       timeout: 10_000,
     })
     await expect(sheet().getByText(/fresh-typed-val/)).toHaveCount(0)
@@ -208,20 +235,41 @@ test.describe('V-CRED-STORED-GATE-01: Variable Setter secret gate', () => {
     expect(after.secret, 'the saved test still holds the same sealed value').toBe(before.secret)
   })
 
-  test('Delete & Edit puts keyboard focus on the row Edit control, never on the page body', async ({
+  test('Delete & Edit puts keyboard focus on the row value box, never on the page body', async ({
     page,
   }) => {
     const sheet = configSheet(page)
 
+    // The text secret: no editor opens; its emptied value box holds the focus.
     await maskedField(sheet).click()
     await expect(editQuestion(page)).toBeVisible()
     await editQuestion(page).getByRole('button', { name: 'Delete & Edit', exact: true }).click()
     await expect(editQuestion(page)).toHaveCount(0)
 
-    await expect(valueEditor(page)).toBeVisible()
-    await expect(valueEditor(page).locator('.cm-content').first()).toHaveText('')
+    await expect(valueEditor(page), 'a text secret opens no editor').toHaveCount(0)
     await expect(maskedField(sheet)).toHaveCount(0)
-    await expect(sheet.locator('[data-testid="varset-edit-value-0"]')).toBeFocused()
-    expect(await focusIsOnPageBody(page), 'focus is on the page body').toBe(false)
+    await expect(valueBox(sheet, SECRET_ROW)).toHaveValue('')
+    await expect(valueBox(sheet, SECRET_ROW), 'focus is in the emptied value box').toBeFocused()
+    expect(await focusIsOnPageBody(page), 'text secret: focus is on the page body').toBe(false)
+
+    // The list secret: the empty editor opens with the focus; Escape hands it to the row.
+    await maskedField(sheet, LIST_NAME).click()
+    await expect(editQuestion(page)).toBeVisible()
+    await editQuestion(page).getByRole('button', { name: 'Delete & Edit', exact: true }).click()
+    await expect(editQuestion(page)).toHaveCount(0)
+
+    const editor = valueEditor(page)
+    await expect(editor).toBeVisible()
+    await expect(editor.locator('[data-testid="array-edit-body"]')).toBeVisible()
+    await expect(listItems(editor)).toHaveCount(0)
+    for (const item of LIST_PLAINTEXT) await expect(editor).not.toContainText(item)
+    await expect(maskedField(sheet, LIST_NAME)).toHaveCount(0)
+    await expect.poll(() => holdsFocusInside(editor), { message: 'focus is inside the editor' }).toBe(true)
+
+    await page.keyboard.press('Escape')
+    await expect(editor).toHaveCount(0)
+    await expect(sheet, 'the block dialog stays open').toBeVisible()
+    await expect(valueBox(sheet, LIST_ROW), "focus returns to the row's value box").toBeFocused()
+    expect(await focusIsOnPageBody(page), 'list secret: focus is on the page body').toBe(false)
   })
 })

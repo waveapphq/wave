@@ -35,11 +35,11 @@ _add_suite "bbbb1111-1111-1111-1111-111111111111" "Long Desc Suite"
 # The _add_suite helper does not take description; fall back to a direct
 # admin bulk modify so we can attach the long-token description.
 TS="$(_ts)"
-_bulk suites "[{\"op\":\"modify\",\"entity\":{\"id\":\"bbbb1111-1111-1111-1111-111111111111\",\"version\":\"1\",\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"description\":\"$LONG_DESC\",\"metadata\":{}}}]"
+_bulk suites "[{\"op\":\"modify\",\"entity\":{\"id\":\"bbbb1111-1111-1111-1111-111111111111\",\"version\":\"1.0.0\",\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"description\":\"$LONG_DESC\",\"metadata\":{}}}]"
 
 # Regression with the long single-token description for the sidebar wrap guard.
 _add_regression "cccc1111-1111-1111-1111-111111111111" "Long Desc Regression"
-_bulk regressions "[{\"op\":\"modify\",\"entity\":{\"id\":\"cccc1111-1111-1111-1111-111111111111\",\"version\":\"1\",\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"description\":\"$LONG_DESC\",\"metadata\":{}}}]"
+_bulk regressions "[{\"op\":\"modify\",\"entity\":{\"id\":\"cccc1111-1111-1111-1111-111111111111\",\"version\":\"1.0.0\",\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"description\":\"$LONG_DESC\",\"metadata\":{}}}]"
 
 # Long-named profile + environment so the list-name-truncate spec can exercise
 # the truncate cell across all five entity surfaces.

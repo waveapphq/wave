@@ -125,7 +125,7 @@ const kindSelect = (win: Locator): Locator => win.getByTestId('create-kind-selec
 
 /** The window shows a saved definition: its title, Type, Kind and the Initial view. */
 async function expectSavedDefinition(win: Locator, type: string, kind: string): Promise<void> {
-  await expect(win).toHaveAttribute('aria-label', 'Edit variable')
+  await expect(win).toHaveAccessibleName('Edit variable')
   await expect(typeSelect(win)).toHaveText(new RegExp(`^${type}`))
   await expect(kindSelect(win)).toHaveText(kind)
   await expect(valueSwitch(win)).toHaveText('Initial')

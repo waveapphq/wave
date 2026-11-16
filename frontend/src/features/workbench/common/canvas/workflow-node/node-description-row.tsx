@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { cn } from '@/lib/utils'
 
 interface NodeDescriptionRowProps {
+  /** The text's id, which describes the Block's body button. */
+  id?: string
   description: string
   expanded: boolean
   /** Notified whenever the visible-text overflow state changes so the parent can render the (out-of-button) chevron. */
@@ -13,7 +15,7 @@ interface NodeDescriptionRowProps {
  * (node.tsx) as a sibling of the body <button> - that way both the body and
  * the chevron can be real <button> elements without nesting.
  */
-export function NodeDescriptionRow({ description, expanded, onOverflowChange }: Readonly<NodeDescriptionRowProps>) {
+export function NodeDescriptionRow({ id, description, expanded, onOverflowChange }: Readonly<NodeDescriptionRowProps>) {
   const textRef = useRef<HTMLDivElement | null>(null)
   const [overflows, setOverflows] = useState(false)
   const reportedRef = useRef(false)
@@ -51,6 +53,7 @@ export function NodeDescriptionRow({ description, expanded, onOverflowChange }: 
     <div className="flex items-end gap-1 min-w-0 pl-8">
       <div
         ref={textRef}
+        id={id}
         data-testid="node-description"
         data-expanded={expanded ? 'true' : undefined}
         className={cn(

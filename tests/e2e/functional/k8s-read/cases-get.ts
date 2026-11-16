@@ -705,7 +705,7 @@ export function readLine(kind: string, count: number, path: string): string {
   return `Read ${count} ${kind} object(s) from ${path}`
 }
 
-/** The WARN line a recorded failure writes (verbs/_outputs._recorded_failure_line). */
+/** The WARN line a recorded failure writes (connectivity/block_outputs._recorded_failure_line). */
 export function recordedLine(reason: string, message: string): string {
   return reason ? `Read failed (${reason}): ${message}` : `Read failed: ${message}`
 }

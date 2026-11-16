@@ -16,7 +16,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, NotFoundException
 
 _NOT_FOUND_RE = re.compile(r"^Workbench session '[^']+' not found$")
 _CONFLICT_RE = re.compile(r"^Cannot update breakpoints: session is '[^']+', not running$")
@@ -101,7 +101,9 @@ class TestUpdateBreakpointsErrors:
         with patch(
             "wavecore.api.routes.workbench.workbench_service.update_breakpoints"
         ) as mock_update:
-            mock_update.side_effect = LookupError(f"Workbench session '{session_id}' not found")
+            mock_update.side_effect = NotFoundException(
+                f"Workbench session '{session_id}' not found"
+            )
 
             response = client.patch(
                 f"/workbench/{session_id}/breakpoints",

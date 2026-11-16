@@ -16,7 +16,6 @@
           "version": "1.0.0",
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "enable_catch": true,
@@ -41,7 +40,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "localDefinition": {
             "name": "Function_1",
             "workflow": {
@@ -90,7 +88,6 @@
           "version": "1.0.0",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {"message": "'caught'", "level": "INFO"},
             "profileBindings": [],
@@ -109,7 +106,6 @@
           "version": "1.0.0",
           "expressionFields": ["message"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {"message": "'after tc'", "level": "INFO"},
             "profileBindings": [],

@@ -950,6 +950,27 @@ class TestRestoreNeverStops:
         ]
         assert list(stored("regressions")) == [round_trip.regression]
 
+    @pytest.mark.parametrize("part", ID_PARTS)
+    def test_an_item_whose_id_leaves_its_folder_is_fatal_and_writes_nothing(
+        self, part: str
+    ) -> None:
+        escaping = "../escaped"
+        if part == "functions":
+            document = make_function(
+                "Escapes", escaping, [function_version("1.0.0", [log_block()])]
+            )
+        elif part == "tests":
+            document = make_test("Escapes", escaping, [log_block()])
+        else:
+            document = MAKERS[part]("Escapes", escaping)
+        before = disk_state()
+
+        result = _restore({part: [document]}, {escaping: [("sample.csv", b"1")]})
+
+        refusal = _could_not_be_written("Invalid UUID format for id: '../escaped'")
+        _assert_part(result[part], fatal=1, items=[("Escapes", "fatal", refusal)])
+        assert disk_state() == before
+
 
 # ---------------------------------------------------------------------------
 # The answer

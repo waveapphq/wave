@@ -35,7 +35,6 @@ async function buildSeedThatViolatesRule(): Promise<Record<string, unknown>> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: { x: 'foo' }, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Function_1',
@@ -57,7 +56,6 @@ async function buildSeedThatViolatesRule(): Promise<Record<string, unknown>> {
                       version: '1.0.0',
                       expressionFields: ['message'],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: {
                         values: { message: "'attempting input write'", level: 'INFO' },
                         outputBindings: { line: 'x' },

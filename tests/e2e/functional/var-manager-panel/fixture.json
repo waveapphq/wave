@@ -16,10 +16,8 @@
           "version": "1.0.0",
           "description": "Set Demo State",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.items_arr", "variables.map_data"],
           "templateFields": [],
-          "variableExpressionKeys": ["items_arr", "map_data"],
-          "variableTypes": { "counter": "integer", "items_arr": "array", "map_data": "map" },
           "config": {
             "values": {
               "variables": {

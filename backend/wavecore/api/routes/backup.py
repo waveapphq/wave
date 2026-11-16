@@ -19,6 +19,7 @@ from fastapi import APIRouter, Form, Request, UploadFile, status
 from fastapi.responses import JSONResponse, Response
 
 from wavecore.api.routes.executions.shared import _create_success_response
+from wavecore.api.routes.shared import read_json_object
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.backup import scheduler as backup_scheduler
 from wavecore.api.services.backup import service as backup_service
@@ -39,7 +40,7 @@ async def create_backup(request: Request) -> Response:
         ValidationException: 400 if entity types, format, or secrets mode
             is invalid.
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     entity_types = body.get("entity_types", [])
     fmt = body.get("format", "yaml")
@@ -157,7 +158,7 @@ async def update_schedule(request: Request) -> JSONResponse:
     Raises:
         ValidationException: 400 if schedule configuration is invalid.
     """
-    body = await request.json()
+    body = await read_json_object(request)
 
     result = backup_scheduler.update_schedule(body)
 

@@ -166,7 +166,7 @@ not UTF-8 and names the setting that turns it on.
 
 ### Validation
 
-- **ENCODING-1:** the process exits with code 1. Its output holds one ERROR line: `WAVE needs
+- **ENCODING-1:** the process exits with code 1. Its output holds one FATAL line: `WAVE needs
   UTF-8 and this host's encoding is <encoding>: set PYTHONUTF8=1 in the environment that starts
   WAVE`, where `<encoding>` is not UTF-8. The output names no config file and no data folder, and
   no data folder exists.

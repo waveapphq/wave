@@ -71,10 +71,10 @@ test.describe('V-VARSET-ELEMENT-TYPES: Variable Setter element types', () => {
 
     await test.step('type the map and list rows in the setter sheets and save', async () => {
       const dialog = await openSetter(page)
-      await dialog.locator('[data-testid="varset-edit-value-0"]').click()
+      await dialog.locator('[data-testid="param-expand-varset-value-0"]').click()
       await fillMapRows(page, valueSheet(page), MAP_ROWS)
       await saveAndCloseSheet(page)
-      await dialog.locator('[data-testid="varset-edit-value-1"]').click()
+      await dialog.locator('[data-testid="param-expand-varset-value-1"]').click()
       await fillListRows(page, valueSheet(page), LIST_ROWS)
       await saveAndCloseSheet(page)
       await dialog.getByRole('button', { name: /^Save$/ }).last().click()
@@ -87,16 +87,16 @@ test.describe('V-VARSET-ELEMENT-TYPES: Variable Setter element types', () => {
     await test.step('the saved node carries the rows and their element types', async () => {
       const node = await getNode(request, testId, SETTER)
       expect(node.data.config.values.variables).toEqual({ m: storedMap(), a: storedList() })
-      expect(node.data.variableElementTypes).toEqual({ m: mapElementTypes(), a: listElementTypes() })
+      expect(node.data.elementTypes).toEqual({ 'variables.m': mapElementTypes(), 'variables.a': listElementTypes() })
     })
 
     await test.step('after a reload the setter sheets read every type back', async () => {
       await openTest(page, testId)
       const dialog = await openSetter(page)
-      await dialog.locator('[data-testid="varset-edit-value-0"]').click()
+      await dialog.locator('[data-testid="param-expand-varset-value-0"]').click()
       await expectMapRows(valueSheet(page), MAP_ROWS)
       await valueSheet(page).locator('[data-testid="value-editor-cancel-button"]').click()
-      await dialog.locator('[data-testid="varset-edit-value-1"]').click()
+      await dialog.locator('[data-testid="param-expand-varset-value-1"]').click()
       await expectListRows(valueSheet(page), LIST_ROWS)
       await valueSheet(page).locator('[data-testid="value-editor-cancel-button"]').click()
       await expect(valueSheet(page)).toBeHidden()

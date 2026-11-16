@@ -60,7 +60,7 @@ test.describe('V-CTRL-ASSERT-04: Save Button Enabled', () => {
       await expect(expressionOption).toBeVisible()
       await expressionOption.click()
 
-      const editor = modal.locator('[data-testid^="assert-expression-input-"] .cm-content').last()
+      const editor = modal.locator('[data-testid^="param-input-assert-expr-"] .cm-content').last()
       await expect(editor).toBeVisible()
       await editor.click()
       await page.keyboard.type('1 == 1')

@@ -62,7 +62,6 @@ def _make_node(
             "displayName": display_name or label,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -514,6 +513,147 @@ class TestWaitUntilRounds(_WaitEngineBase):
         assert session["block_states"]["after-log"] == "passed"
         assert retry_runs["count"] == 1
         assert variables["ok"] is True
+
+
+class TestWatchNeverRunsARetryLane(_WaitEngineBase):
+    """Watch only checks its condition: a retry edge kept from Retry never runs (REQ-3.5.4.3)."""
+
+    @pytest.mark.asyncio
+    async def test_watch_with_a_stored_retry_edge_never_runs_the_retry_lane(self) -> None:
+        session_id = "wu-watch-stored-retry"
+        self._session(session_id)
+        variables: dict[str, Any] = {"ok": None, "waited": None, "counter": 0}
+        counter: dict[str, int] = {}
+
+        nodes = [
+            _make_wait_node(
+                conditions=CONDITION_ALWAYS_FALSE, timeout=100, check_interval=10, mode="watch"
+            ),
+            _make_log_node("retry-log", "Retry Log", "'retrying'"),
+            _make_log_node("after-log", "After Log", "'done'"),
+        ]
+        edges = _retry_edges("wait-1", "retry-log", "after-log")
+
+        with _counting_execute("retry-log", counter):
+            await workbench_service._execute_workflow(session_id, nodes, edges, variables)
+
+        session = _wb_common._workbench_sessions[session_id]
+        assert counter.get("runs", 0) == 0
+        assert [entry["message"] for entry in _entries_for(session_id, "retry-log")] == []
+        assert session["block_states"].get("retry-log") in (None, "skipped")
+        assert session["block_states"]["after-log"] == "passed"
+        assert variables["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_retry_still_runs_the_retry_lane(self) -> None:
+        session_id = "wu-retry-still-runs"
+        self._session(session_id)
+        variables: dict[str, Any] = {"ok": None, "waited": None, "counter": 0}
+        counter: dict[str, int] = {}
+
+        nodes = [
+            _make_wait_node(
+                conditions=_counter_at_least(2), timeout=5000, check_interval=5, mode="retry"
+            ),
+            _make_log_node("retry-log", "Retry Log", "'retrying'"),
+            _make_log_node("after-log", "After Log", "'done'"),
+        ]
+        edges = _retry_edges("wait-1", "retry-log", "after-log")
+
+        with _counting_execute("retry-log", counter):
+            await workbench_service._execute_workflow(session_id, nodes, edges, variables)
+
+        session = _wb_common._workbench_sessions[session_id]
+        assert counter["runs"] == 2
+        assert session["block_states"]["retry-log"] == "passed"
+        assert session["block_states"]["after-log"] == "passed"
+        assert variables["ok"] is True
+
+    @pytest.mark.parametrize(
+        ("wait_mode", "watch"),
+        [
+            pytest.param("watch", True, id="watch"),
+            pytest.param("retry", False, id="retry"),
+            pytest.param(None, False, id="not-emitted"),
+        ],
+    )
+    def test_wait_spec_reads_watch_from_wait_mode(self, wait_mode: str | None, watch: bool) -> None:
+        from wavecore.api.services.workbench.signals import _extract_engine_signals
+        from wavecore.api.services.workbench.wait_until import WaitSpec
+
+        emitted: dict[str, Any] = {"__wait_until": True, "__wait_timeout": 100}
+        if wait_mode is not None:
+            emitted["__wait_mode"] = wait_mode
+
+        spec = WaitSpec.from_signals(_extract_engine_signals(emitted), {})
+
+        assert spec.watch is watch
+
+    def test_wait_spec_reads_timeout_and_interval_as_emitted(self) -> None:
+        from wavecore.api.services.workbench.signals import _extract_engine_signals
+        from wavecore.api.services.workbench.wait_until import WaitSpec
+
+        read = []
+        for emitted in (250, 0, None):
+            signals = _extract_engine_signals(
+                {"__wait_until": True, "__wait_timeout": emitted, "__check_interval": emitted}
+            )
+            spec = WaitSpec.from_signals(signals, {})
+            read.append((spec.timeout_ms, spec.check_interval_ms))
+
+        assert read == [(250, 250), (0, 0), (None, None)]
+
+
+def _hold_retry_round(round_held: int) -> Any:
+    """Hold one retry round before its Block starts, so the wait's deadline cuts it there."""
+    from wavecore.api.services.workbench import for_loop as _wb_for_loop
+
+    original = _wb_for_loop._drain_session_signal
+    rounds = {"started": 0}
+
+    async def _drain(walk: Any, body_node_id: str, skip_offset: int) -> Any:
+        if body_node_id == "retry-log" and skip_offset == 0:
+            rounds["started"] += 1
+            if rounds["started"] == round_held:
+                await asyncio.sleep(10)
+        return await original(walk, body_node_id, skip_offset)
+
+    return patch.object(_wb_for_loop, "_drain_session_signal", side_effect=_drain)
+
+
+class TestARetryLaneThatRanIsNeverShownSkipped(_WaitEngineBase):
+    """A retry Block that ran keeps its status when the deadline cuts a later round.
+
+    REQ-3.5.4.3, REQ-3.5.0.9.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_deadline_before_the_next_round_starts_keeps_the_earlier_result(
+        self,
+    ) -> None:
+        session_id = "wu-retry-ran-then-cut"
+        self._session(session_id)
+        variables: dict[str, Any] = {"ok": None, "waited": None, "counter": 0}
+        counter: dict[str, int] = {}
+
+        nodes = [
+            _make_wait_node(conditions=CONDITION_ALWAYS_FALSE, timeout=100, check_interval=10),
+            _make_log_node("retry-log", "Retry Log", "'retrying'"),
+            _make_log_node("after-log", "After Log", "'done'"),
+        ]
+        edges = _retry_edges("wait-1", "retry-log", "after-log")
+
+        with _counting_execute("retry-log", counter), _hold_retry_round(2):
+            await asyncio.wait_for(
+                workbench_service._execute_workflow(session_id, nodes, edges, variables),
+                timeout=10,
+            )
+
+        session = _wb_common._workbench_sessions[session_id]
+        assert counter["runs"] == 1
+        assert session["block_states"]["wait-1"] == "warning"
+        assert session["block_states"]["retry-log"] == "passed"
+        assert session["block_states"]["after-log"] == "passed"
 
 
 class TestWaitUntilDeadlineBoundsTheSubFlow(_WaitEngineBase):

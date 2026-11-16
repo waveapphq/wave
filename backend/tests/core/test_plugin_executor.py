@@ -8,10 +8,13 @@ Tests requirements:
 import datetime
 import json
 import re
+import time
 from typing import Any
 
 import pytest
 import yaml
+
+from wavecore.core.table import Table
 
 
 class TestPluginExecutor:
@@ -2278,6 +2281,25 @@ class TestTemplateReadOnlyViolation:
 
         assert template_read_only_violation("plain text") is None
 
+    def test_a_long_unclosed_run_of_braces_is_scanned_in_linear_time(self) -> None:
+        from wavecore.core.execution.plugin_executor import template_read_only_violation
+
+        start = time.perf_counter()
+        violation = template_read_only_violation("{" * 50_000)
+        elapsed = time.perf_counter() - start
+
+        assert violation is None
+        assert elapsed < 1.0
+
+
+class TestTemplateFillMarkers:
+    """Block settings find ``{{ }}`` markers by the one shared marker rule."""
+
+    def test_a_second_opening_starts_the_marker_over(self) -> None:
+        from wavecore.core.execution.plugin_executor import evaluate_template
+
+        assert evaluate_template("{{ a {{ b }}", {"b": 7}, setting="body") == "{{ a 7"
+
 
 _QUERY_ESCAPE = {
     "by": "query_language",
@@ -2285,8 +2307,12 @@ _QUERY_ESCAPE = {
     "default": "dql",
 }
 
+_SECRET_TABLE = Table.from_list([{"name": "alpha", "qty": 1}])
 
-def _resolve_query(parameters, variables, **kwargs):
+
+def _resolve_query(
+    parameters: dict[str, Any], variables: dict[str, Any], **kwargs: Any
+) -> dict[str, Any]:
     """The Query row as a template field carrying its escape spec (REQ-3.3.2.6)."""
     from wavecore.core.execution.plugin_executor import resolve_parameters
 
@@ -2537,6 +2563,127 @@ class TestTemplateEscapeSecretForms:
 
         assert registry.registered == [('"s3cretvalue"', "template escape")]
 
+    def test_a_secret_inside_a_quoted_dql_value_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(('p"w0rd',))
+
+        result = _resolve_query(
+            {"query": 'msg: "{{ prefix + token }}"'},
+            {"prefix": "id ", "token": 'p"w0rd'},
+            registry=registry,
+        )
+
+        assert result["query"] == r'msg: "id p\"w0rd"'
+        assert registry.registered == [(r"p\"w0rd", "template escape")]
+
+    def test_a_secret_inside_a_bare_dql_value_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(("pass(word)",))
+
+        result = _resolve_query(
+            {"query": "msg: {{ prefix + token }}"},
+            {"prefix": "id ", "token": "pass(word)"},
+            registry=registry,
+        )
+
+        assert result["query"] == r"msg: id pass\(word\)"
+        assert registry.registered == [(r"pass\(word\)", "template escape")]
+
+    def test_a_secret_inside_a_json_string_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(("a\\b\fc",))
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"match": {"m": "{{ prefix + token }}"}}'},
+            {"prefix": "id ", "token": "a\\b\fc"},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"match": {"m": "id a\\b\fc"}}'
+        assert registry.registered == [(r"a\\b\fc", "template escape")]
+
+    def test_a_secret_inside_a_standing_alone_json_text_registers_its_escaped_form(self) -> None:
+        registry = _SpyRegistry(('s3"cret',))
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"term": {"user": {{ prefix + token }}}}'},
+            {"prefix": "id ", "token": 's3"cret'},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"term": {"user": "id s3\"cret"}}'
+        assert registry.registered == [(r"s3\"cret", "template escape")]
+
+    def test_the_run_registry_scrubs_a_secret_escaped_inside_a_larger_value(self) -> None:
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("token", "pass(word)", "variable")
+
+        _resolve_query(
+            {"query": "msg: {{ prefix + token }}"},
+            {"prefix": "id ", "token": "pass(word)"},
+            registry=registry,
+        )
+
+        assert r"pass\(word\)" in registry.scan_values()
+
+    def test_the_run_registry_scrubs_a_secret_leaf_in_a_standing_alone_json_map(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("keys", ["pa\bss\fw0rd", "second-k3y"], "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"match": {{ filter }}}'},
+            {"filter": {"pw": "pa\bss\fw0rd"}},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"match": {"pw":"pa\bss\fw0rd"}}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"match": {"pw":"********"}}'
+
+    @pytest.mark.parametrize(
+        ("value", "filled"),
+        [
+            (_SECRET_TABLE, '[{"name":"alpha","qty":1}]'),
+            (["alpha", 1e-07], '["alpha",1e-07]'),
+            ({"host": "db.internal", "rate": 1e-07}, '{"host":"db.internal","rate":1e-07}'),
+        ],
+        ids=["table", "list", "map"],
+    )
+    def test_the_run_registry_scrubs_a_secret_container_standing_alone_in_json(
+        self, value: Any, filled: str
+    ) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", value, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"terms": {{ rows }}}'},
+            {"rows": value},
+            registry=registry,
+        )
+
+        assert result["query"] == '{"terms": ' + filled + "}"
+        assert mask_text(result["query"], registry.scan_values()) == '{"terms": ********}'
+
+    def test_the_run_registry_scrubs_a_secret_table_filled_inside_a_json_string(self) -> None:
+        from wavecore.core.secrets.masking import mask_text
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        registry.register("rows", _SECRET_TABLE, "variable")
+
+        result = _resolve_query(
+            {"query_language": "query_dsl", "query": '{"m": "{{ rows }}"}'},
+            {"rows": _SECRET_TABLE},
+            registry=registry,
+        )
+
+        assert result["query"] == r'{"m": "[{\"name\":\"alpha\",\"qty\":1}]"}'
+        assert mask_text(result["query"], registry.scan_values()) == '{"m": "********"}'
+
     def test_a_value_that_is_no_secret_registers_nothing(self) -> None:
         registry = _SpyRegistry(("hunter2secret",))
 
@@ -2587,7 +2734,7 @@ def _fill(template: str, variables: dict[str, Any], **marks: Any) -> str:
     from wavecore.core.execution import plugin_executor
 
     marks.setdefault("setting", "url")
-    return plugin_executor._evaluate_template(template, variables, **marks)
+    return plugin_executor.evaluate_template(template, variables, **marks)
 
 
 class TestTemplateFillNullPieces:
@@ -3151,10 +3298,33 @@ class TestFillFieldDefaultsKeepsWhatTheBlockHolds:
 
         assert _fill_defaults({"note": None}, [field]) == {"note": None}
 
-    def test_a_stored_null_on_a_field_with_a_default_takes_the_default(self) -> None:
-        field = {"name": "timeout", "type": "integer", "default": 30}
+    @pytest.mark.parametrize(
+        "field",
+        [
+            pytest.param({"name": "timeout", "type": "integer", "default": 30}, id="optional"),
+            pytest.param(
+                {"name": "timeout", "type": "integer", "required": True, "default": 30},
+                id="required",
+            ),
+            pytest.param({"name": "timeout", "type": "string", "default": ""}, id="empty-default"),
+            pytest.param(
+                {"name": "timeout", "type": "string", "default": "", "secret": True}, id="secret"
+            ),
+        ],
+    )
+    def test_a_stored_null_on_a_field_with_a_default_fails_naming_it(
+        self, field: dict[str, Any]
+    ) -> None:
+        """A setting given null fails and names it; it never takes the default (REQ-3.1.3.21)."""
+        from wavecore.core.expressions.errors import NullValueError
 
-        assert _fill_defaults({"timeout": None}, [field]) == {"timeout": 30}
+        with pytest.raises(NullValueError, match=r"^'timeout' is null$"):
+            _fill_defaults({"timeout": None}, [field])
+
+    def test_a_stored_null_on_a_field_with_a_default_that_accepts_null_is_kept(self) -> None:
+        field = {"name": "message", "type": "string", "default": "", "accepts_null": True}
+
+        assert _fill_defaults({"message": None}, [field]) == {"message": None}
 
     def test_a_stored_null_on_a_field_with_no_default_stays_null(self) -> None:
         field = {"name": "csv_content", "type": "string"}
@@ -3609,3 +3779,85 @@ class TestAValueGivenToAFunctionInputIsCheckedByItsType:
 
         assert isinstance(given["x"], Decimal)
         assert given["x"] == Decimal(5)
+
+
+def _resolve_setter_rows(
+    rows: dict[str, Any],
+    variables: dict[str, Any],
+    *,
+    expression_fields: set[str] | None = None,
+    template_fields: set[str] | None = None,
+) -> dict[str, Any]:
+    """A Variable Setter's rows resolved by the one run entry, with the Block's own flags."""
+    from wavecore.controls.variable_setter import VariableSetterControl
+    from wavecore.core.execution.plugin_executor import resolve_block_fields
+
+    resolved = resolve_block_fields(
+        {"variables": rows},
+        VariableSetterControl().metadata["parameter_schema"],
+        expression_fields=expression_fields or set(),
+        template_fields=template_fields or set(),
+        element_types={},
+        variables=variables,
+        session_id=None,
+        exact_numbers=False,
+    )
+    return dict(resolved["variables"])
+
+
+class TestTwoLevelEntryFlags:
+    """A flag on an entry of a Setter list or map row resolves that one entry (REQ-3.4.1.14)."""
+
+    def test_a_flagged_item_of_a_list_held_by_a_map_entry_resolves(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"host_list": ["web-1", "web-2", "backup_host"], "greeting": "hi"},
+            {"backup_host": "web-3"},
+            expression_fields={"variables.host_list.2"},
+        )
+
+        assert resolved == {"host_list": ["web-1", "web-2", "web-3"], "greeting": "hi"}
+
+    def test_a_flagged_value_of_a_map_held_by_a_map_entry_resolves(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"limits": {"max": "attempts * 2", "min": "1"}},
+            {"attempts": 3},
+            expression_fields={"variables.limits.max"},
+        )
+
+        assert resolved == {"limits": {"max": 6, "min": "1"}}
+
+    def test_a_template_flagged_value_held_by_a_map_entry_is_filled(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"labels": {"greeting": "Hello {{ name }}", "plain": "{{ kept }}"}},
+            {"name": "Ada"},
+            template_fields={"variables.labels.greeting"},
+        )
+
+        assert resolved == {"labels": {"greeting": "Hello Ada", "plain": "{{ kept }}"}}
+
+    def test_an_exact_key_that_holds_a_dot_still_wins(self) -> None:
+        resolved = _resolve_setter_rows(
+            {"a.b": "x + 1", "a": {"b": "x + 2"}},
+            {"x": 1},
+            expression_fields={"variables.a.b"},
+        )
+
+        assert resolved == {"a.b": 2, "a": {"b": "x + 2"}}
+
+    def test_the_resolve_works_on_a_copy(self) -> None:
+        rows: dict[str, Any] = {
+            "host_list": ["web-1", "backup_host"],
+            "limits": {"max": "attempts * 2"},
+        }
+        flags = {"variables.host_list.1", "variables.limits.max"}
+
+        first = _resolve_setter_rows(
+            rows, {"backup_host": "web-2", "attempts": 3}, expression_fields=flags
+        )
+        second = _resolve_setter_rows(
+            rows, {"backup_host": "web-9", "attempts": 5}, expression_fields=flags
+        )
+
+        assert first == {"host_list": ["web-1", "web-2"], "limits": {"max": 6}}
+        assert second == {"host_list": ["web-1", "web-9"], "limits": {"max": 10}}
+        assert rows == {"host_list": ["web-1", "backup_host"], "limits": {"max": "attempts * 2"}}

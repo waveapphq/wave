@@ -242,7 +242,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "f\"SQL lite_int={lite_int_rows[0]['timeout']} lite_float={lite_float_rows[0]['timeout']} app={pg_rows[0]['app']} app_is_text={type(pg_rows[0]['app']) == str} sp={pg_rows[0]['sp']} expr_app={pg_expr_rows[0]['app']} my={my_rows[0]['t']}\"",

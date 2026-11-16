@@ -25,8 +25,12 @@ SUITE_NAME_REQUIRED = "Field 'name' is required"
 SUITE_NAME_LENGTH = "Suite name must be between 1 and 255 characters"
 SUITE_NAME_CONVENTION = (
     "Suite name '{name}' violates naming convention: must contain only "
-    "alphanumeric characters, spaces, hyphens, and underscores"
+    "alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses"
 )
+SUITE_TYPE_COLLISION = (
+    "Variable type collision: variable 'env' is 'string' here but 'integer' in suite 'Typed Suite'"
+)
+SUITE_VALUE_REFUSED = "Value for variable 'count' is not a valid integer"
 # Membership resolves an id or a unique name, so the message names the reference.
 ATTACHED_TEST_MISSING = "Test '{test_id}' not found"
 
@@ -40,7 +44,7 @@ REGRESSION_NAME_CONFLICT = "Regression with name '{name}' already exists"
 SUITE_REF_MISSING = "Suite '{suite_id}' not found"
 
 PROFILE_NAME_REQUIRED = "Field 'name' is required"
-PROFILE_TYPE_REQUIRED = "Field 'type' is required"
+PROFILE_TYPE_REQUIRED = "Field 'profile_type' is required"
 PROFILE_INVALID_TYPE = (
     "Invalid profile type '{profile_type}': valid types are "
     "database, ssh, http, kubernetes, opensearch, custom"
@@ -113,8 +117,14 @@ def _get_suite(suite_id: str) -> dict[str, Any]:
     return suite
 
 
-def _write_raw_suite(name: str) -> str:
-    """Persist a suite straight to disk, bypassing the create-time name gate."""
+def _suite_names() -> list[str]:
+    from wavecore.api.services.suites import service as suite_service
+
+    return [row["name"] for row in suite_service.list_suite_names()]
+
+
+def _write_raw_suite(name: str, tests: list[str] | None = None) -> str:
+    """Persist a suite straight to disk, bypassing the create-time gates."""
     from wavecore.api.services.suites import _storage as suite_storage
 
     suite_id = str(uuid.uuid4())
@@ -124,7 +134,7 @@ def _write_raw_suite(name: str) -> str:
             "name": name,
             "version": "1.0.0",
             "description": "",
-            "tests": [],
+            "tests": tests or [],
             "tags": [],
             "variables": {},
             "metadata": {},
@@ -222,6 +232,20 @@ def _has_problem(findings: list[dict[str, Any]], problem: str) -> bool:
     return any(item.get("problem") == problem for item in findings)
 
 
+def _integer_var(value: int) -> dict[str, Any]:
+    return {"type": "integer", "value": value}
+
+
+def _validation(problem: str) -> dict[str, Any]:
+    return {
+        "step": "input",
+        "code": "VALIDATION",
+        "severity": "error",
+        "problem": problem,
+        "fix": None,
+    }
+
+
 def _var(value: str) -> dict[str, Any]:
     return {"type": "string", "value": value}
 
@@ -263,6 +287,10 @@ class TestCreateSuite:
         assert result["created"] is False
         assert _has_problem(result["findings"], SUITE_NAME_CONVENTION.format(name="Bad@Suite"))
 
+    def test_a_name_with_periods_and_parentheses_is_created(self) -> None:
+        result = organize().create_suite("Smoke (v1.2)")
+        assert result["created"] is True, result
+
     def test_attached_test_must_exist(self) -> None:
         ghost_id = str(uuid.uuid4())
         result = organize().create_suite("Suite With Ghost", tests=[ghost_id])
@@ -273,6 +301,50 @@ class TestCreateSuite:
         result = organize().create_suite("Suite With Vars", variables={"env": _var("prod")})
         assert result["created"] is True
         assert "env" in _get_suite(result["suite_id"])["variables"]
+
+    def test_a_name_conflict_keeps_its_own_code(self) -> None:
+        _make_suite("Taken Suite")
+
+        result = organize().create_suite("Taken Suite")
+
+        assert result == {
+            "created": False,
+            "findings": [
+                {
+                    "step": "input",
+                    "code": "NAME_CONFLICT",
+                    "severity": "error",
+                    "problem": SUITE_NAME_CONFLICT.format(name="Taken Suite"),
+                    "fix": None,
+                }
+            ],
+        }
+
+    def test_a_variable_type_collision_is_a_validation_finding(self) -> None:
+        shared = create_test_entity("Typed Member")
+        _make_suite("Typed Suite", tests=[shared["id"]], variables={"env": _integer_var(1)})
+
+        result = organize().create_suite(
+            "Clashing Suite", tests=[shared["id"]], variables={"env": _var("dev")}
+        )
+
+        assert result == {"created": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
+
+    def test_a_repeated_test_is_a_validation_finding(self) -> None:
+        member = create_test_entity("Twice Member")
+
+        result = organize().create_suite("Twice Suite", tests=[member["id"], member["id"]])
+
+        assert result == {
+            "created": False,
+            "findings": [_validation(f"Test with ID '{member['id']}' is listed more than once")],
+        }
+        assert _suite_names() == []
+
+    def test_a_refused_variable_value_is_a_validation_finding(self) -> None:
+        result = organize().create_suite("Valued Suite", variables={"count": _integer_var(1.5)})
+
+        assert result == {"created": False, "findings": [_validation(SUITE_VALUE_REFUSED)]}
 
 
 class TestUpdateSuite:
@@ -342,6 +414,25 @@ class TestUpdateSuite:
         result = organize().update_suite(suite["id"], name="Existing Suite")
         assert result["updated"] is False
         assert _has_problem(result["findings"], SUITE_NAME_CONFLICT.format(name="Existing Suite"))
+
+    def test_a_variable_type_collision_is_a_validation_finding(self) -> None:
+        shared = create_test_entity("Typed Member")
+        _make_suite("Typed Suite", tests=[shared["id"]], variables={"env": _integer_var(1)})
+        suite = _make_suite("Clashing Suite")
+
+        result = organize().update_suite(
+            suite["id"], add_tests=[shared["id"]], set_variables={"env": _var("dev")}
+        )
+
+        assert result == {"updated": False, "findings": [_validation(SUITE_TYPE_COLLISION)]}
+
+    def test_a_refused_variable_value_is_a_validation_finding(self) -> None:
+        suite = _make_suite("Valued Suite")
+
+        result = organize().update_suite(suite["id"], set_variables={"count": _integer_var(1.5)})
+
+        assert result == {"updated": False, "findings": [_validation(SUITE_VALUE_REFUSED)]}
+        assert _get_suite(suite["id"])["variables"] == {}
 
 
 # ---------------------------------------------------------------------------
@@ -815,6 +906,72 @@ class TestMembershipAcceptsNames:
         finding = result["findings"][0]
         assert finding["code"] == "ATTACHED_SUITE_NOT_FOUND"
         assert finding["problem"] == "Suite 'No Such Suite' not found"
+
+    def test_update_suite_remove_tests_accepts_a_test_name(self) -> None:
+        leaving = create_test_entity("Named Removal One")
+        staying = create_test_entity("Named Removal Two")
+        suite = _make_suite("Suite Remove By Name", tests=[leaving["id"], staying["id"]])
+        result = organize().update_suite(suite["id"], remove_tests=["Named Removal One"])
+        assert result["updated"] is True
+        assert _get_suite(suite["id"])["tests"] == [staying["id"]]
+
+    def test_update_regression_remove_suites_accepts_a_suite_name(self) -> None:
+        leaving = _make_suite("Named Suite Removal One")
+        staying = _make_suite("Named Suite Removal Two")
+        regression = _make_regression(
+            "Regression Remove By Name", suites=[leaving["id"], staying["id"]]
+        )
+        result = organize().update_regression(
+            regression["id"], remove_suites=["Named Suite Removal One"]
+        )
+        assert result["updated"] is True
+        assert _get_regression(regression["id"])["suites"] == [staying["id"]]
+
+    def test_a_removal_by_name_of_a_non_member_names_the_reference(self) -> None:
+        create_test_entity("Named Stranger")
+        suite = _make_suite("Suite Stranger By Name")
+        result = organize().update_suite(suite["id"], remove_tests=["Named Stranger"])
+        assert result == {
+            "updated": False,
+            "findings": [
+                {
+                    "step": "input",
+                    "code": "NOT_A_MEMBER",
+                    "severity": "error",
+                    "problem": "Test 'Named Stranger' is not in this suite",
+                    "fix": None,
+                }
+            ],
+        }
+        assert _get_suite(suite["id"])["version"] == "1.0.0"
+
+    def test_a_removal_that_names_nothing_is_not_a_member(self) -> None:
+        regression = _make_regression("Regression Ghost Removal")
+        result = organize().update_regression(regression["id"], remove_suites=["No Such Suite"])
+        assert result["updated"] is False
+        assert [item["problem"] for item in result["findings"]] == [
+            "Suite 'No Such Suite' is not in this regression"
+        ]
+
+    def test_a_stored_member_whose_test_is_gone_is_still_removed_by_id(self) -> None:
+        staying = create_test_entity("Named Survivor")
+        gone_id = str(uuid.uuid4())
+        suite_id = _write_raw_suite("Suite Holding A Gone Test", tests=[gone_id, staying["id"]])
+        result = organize().update_suite(suite_id, remove_tests=[gone_id])
+        assert result["updated"] is True
+        assert _get_suite(suite_id)["tests"] == [staying["id"]]
+
+    def test_adding_by_id_and_removing_by_name_is_contradictory(self) -> None:
+        member = create_test_entity("Contradiction By Name")
+        suite = _make_suite("Suite Contradiction By Name", tests=[member["id"]])
+        result = organize().update_suite(
+            suite["id"], add_tests=[member["id"]], remove_tests=["Contradiction By Name"]
+        )
+        assert result["updated"] is False
+        assert [item["problem"] for item in result["findings"]] == [
+            "Test 'Contradiction By Name' is both added and removed in one call"
+        ]
+        assert _get_suite(suite["id"])["version"] == "1.0.0"
 
 
 class TestNoOpWrites:

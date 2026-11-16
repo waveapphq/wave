@@ -20,7 +20,12 @@ The Note control provides sticky-note-style annotations on the workflow canvas.
 - Serve as flow placeholders during design
 
 **Behavior:**
-- Invisible to the execution engine (no-op pass-through)
+- An input and an output handle, so it can sit in a flow as a placeholder for a future Block; where paths join, it shows one input for each connection coming in, as a Block does
+- A run passes the flow straight on, with no outputs and no side effects; a Note nothing connects to is never reached
 - Supports inline text editing (double-click)
-- Resizable via drag handles
+- Resizable by dragging any edge or corner
 - Five color presets for visual organization
+
+**Parameters:**
+- `text`: the note's text (empty by default)
+- `color`: yellow, pink, blue, green or slate (slate by default)

@@ -19,7 +19,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
+from sqlglot.errors import TokenError
 
+from tests.api.error_reply_support import assert_internal_error
 from tests.api.services._pull_threads import pull_threads_ended
 from tests.connectivity.sql.fakes import FakeConnection, sqlite_file
 from tests.plugins.sql_client.conftest import PASSWORD, fake_dialect
@@ -108,7 +110,7 @@ CHECK_FIXTURES = [
     (
         "postgresql",
         "SELECT 'unterminated",
-        [{"line": 1, "col": 1, "message": "Error tokenizing 'SELECT 'unterminate'"}],
+        [{"line": 1, "col": 1, "message": "Error tokenizing 'SELECT 'unterminated'"}],
     ),
     (
         "postgresql",
@@ -121,7 +123,7 @@ CHECK_FIXTURES = [
     (
         "postgresql",
         "SELECT 1;\nSELECT 'open",
-        [{"line": 2, "col": 1, "message": "Error tokenizing 'SELECT 'ope'"}],
+        [{"line": 2, "col": 1, "message": "Error tokenizing 'SELECT 'open'"}],
     ),
     (
         "postgresql",
@@ -418,6 +420,72 @@ class TestCheck:
             message="Unknown database type 'db2'",
         )
 
+    def test_a_lookup_fault_answers_the_generic_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fail(_database_type: str) -> Any:
+            raise ValueError("internal dialect text")
+
+        monkeypatch.setattr(check, "dialect", _fail)
+
+        response = client.post(CHECK_PATH, json={"database_type": "postgresql", "script": "x"})
+
+        assert_internal_error(response, "internal dialect text")
+
+    def test_a_token_finding_quotes_the_script_never_the_tokenizer_text(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _refuse(*_args: Any, **_kwargs: Any) -> Any:
+            raise TokenError("internal tokenizer text", start=0, end=6)
+
+        monkeypatch.setattr(check.sqlglot, "parse", _refuse)
+
+        response = client.post(
+            CHECK_PATH, json={"database_type": "postgresql", "script": "SELECT 1"}
+        )
+
+        assert data_of(response) == {
+            "issues": [{"line": 1, "col": 1, "message": "Error tokenizing 'SELECT'"}]
+        }
+        assert "internal tokenizer text" not in response.text
+
+    def test_a_token_finding_quotes_the_script_as_written(self, client: TestClient) -> None:
+        """A placeholder shows as written, and the quote runs to the end of the statement."""
+        response = client.post(
+            CHECK_PATH, json={"database_type": "postgresql", "script": "SELECT :id, 'open"}
+        )
+
+        assert data_of(response) == {
+            "issues": [{"line": 1, "col": 1, "message": "Error tokenizing 'SELECT :id, 'open'"}]
+        }
+
+    def test_a_token_finding_in_a_later_statement_quotes_that_statement(
+        self, client: TestClient
+    ) -> None:
+        script = "SELECT :id;\nSELECT :name, 'open"
+
+        response = client.post(CHECK_PATH, json={"database_type": "postgresql", "script": script})
+
+        assert data_of(response) == {
+            "issues": [{"line": 2, "col": 1, "message": "Error tokenizing 'SELECT :name, 'open'"}]
+        }
+
+    def test_a_long_statement_is_marked_where_the_quote_starts(self, client: TestClient) -> None:
+        """The quote is the last 50 of 108 characters, so the finding sits at column 59."""
+        script = "SELECT 1, " * 10 + "\n  'open"
+
+        response = client.post(CHECK_PATH, json={"database_type": "postgresql", "script": script})
+
+        assert data_of(response) == {
+            "issues": [
+                {
+                    "line": 1,
+                    "col": 59,
+                    "message": f"Error tokenizing '{script[58:]}'",
+                }
+            ]
+        }
+
     def test_the_size_cap_is_one_megabyte(self) -> None:
         assert check.MAX_SCRIPT_BYTES == MB
 
@@ -566,6 +634,19 @@ class TestCatalogRefusals:
             code="VALIDATION_ERROR",
             message="Unknown database type 'db2'",
         )
+        assert catalog_jobs._JOBS == {}
+
+    def test_a_lookup_fault_answers_the_generic_500(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fail(_database_type: str) -> Any:
+            raise ValueError("internal dialect text")
+
+        monkeypatch.setattr(catalog, "dialect", _fail)
+
+        response = start(client, catalog_request(connection()))
+
+        assert_internal_error(response, "internal dialect text")
         assert catalog_jobs._JOBS == {}
 
     @pytest.mark.parametrize(

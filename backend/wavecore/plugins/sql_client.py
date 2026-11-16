@@ -17,6 +17,7 @@ from wavecore.plugins._file_paths import (
     resolve_plugin_path,
     scheme_relative_path,
 )
+from wavecore.plugins._ports import check_port
 from wavecore.plugins._shared_params import (
     blank,
     check_at_least,
@@ -86,12 +87,12 @@ def _check_connection(params: dict[str, Any], database_type: str) -> None:
             raise ValueError(f"Missing required parameter: {name}")
 
 
-def _operation_rows(operation: str, script_type: str) -> tuple[str, ...]:
+def _operation_rows(operation: str, script_type: str) -> list[str]:
     if operation == "run_sql":
-        return ("sql",) if script_type == "source" else ("sql_file",)
+        return ["sql"] if script_type == "source" else ["sql_file"]
     if operation == "call_procedure":
-        return ("procedure",)
-    return ("table", "target_table")
+        return ["procedure"]
+    return ["table", "target_table"]
 
 
 def _check_types(params: dict[str, Any], operation: str, database_type: str) -> None:
@@ -117,9 +118,9 @@ def _check_types(params: dict[str, Any], operation: str, database_type: str) -> 
 
 
 def _check_bounds(params: dict[str, Any], operation: str, database_type: str) -> None:
-    port: Any = params.get("port")
-    if database_type != "sqlite" and is_integer_value(port) and not 1 <= port <= 65535:
-        raise ValueError("Port must be between 1 and 65535")
+    port = params.get("port")
+    if database_type != "sqlite" and is_integer_value(port):
+        check_port("port", port, 1)
     check_at_least(params, "timeout", 1, "Timeout must be at least 1")
     check_at_least(params, "connect_timeout", 1, "Connect timeout must be at least 1")
     if operation == "load_table":

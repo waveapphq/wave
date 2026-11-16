@@ -10,6 +10,7 @@ against here):
     3. source version exists       -> NotFoundException (404)
     4. target not already present  -> ConflictException (409)
     5. target is an allowed bump   -> UnprocessableEntityException (422)
+    6. body passes the save checks -> SaveValidationError (422)
 
 On success it returns ``{function_id, version}`` and the new version is durable.
 """
@@ -172,6 +173,30 @@ def _publish_body_change(fn_id: str, name: str, workflow: dict[str, Any]) -> dic
         "workflow": workflow,
     }
     return _call(fn_id, draft_definition=draft, changelog="Body change", description="say hello")
+
+
+def _workflow_of_block(element_type: str, values: dict[str, Any]) -> dict[str, Any]:
+    """A reachable body of one plugin Block holding ``values``."""
+    return {
+        "nodes": [
+            {
+                "id": "blk-1",
+                "type": "workflowNode",
+                "data": {
+                    "label": "Blk_1",
+                    "elementType": element_type,
+                    "nodeType": "plugin",
+                    "version": "1.0.0",
+                    "config": {"values": values, "outputBindings": {}, "profileBindings": []},
+                },
+            }
+        ],
+        "edges": [{"source": "start-node", "target": "blk-1"}],
+    }
+
+
+def _findings(errors: list[dict[str, Any]]) -> list[tuple[str, str, str]]:
+    return [(error["code"], error["message"], error["node_label"]) for error in errors]
 
 
 def _version_strings(fn_id: str) -> list[str]:
@@ -376,3 +401,102 @@ class TestAddVersionServiceReferenceChecks:
 
         assert exc_info.value.status_code == 422
         assert _version_strings(a_id) == ["1.0.0"]
+
+
+class TestAddVersionServiceBodyChecks:
+    """A new version runs every save check of the first publish on its body (REQ-3.1.2.4)."""
+
+    def test_a_block_missing_a_required_parameter_is_refused(self) -> None:
+        fn_id = _seed_plain("caller")
+
+        with pytest.raises(SaveValidationError) as exc_info:
+            _publish_body_change(fn_id, "caller", _workflow_of_block("log", {}))
+
+        assert _findings(exc_info.value.errors) == [
+            ("REQUIRED_PARAM_MISSING", "Required parameter 'message' is missing", "Blk_1")
+        ]
+        assert _version_strings(fn_id) == ["1.0.0"]
+
+    def test_a_block_missing_a_conditional_parameter_is_refused(self) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.file_io import FileIOPlugin
+
+        register_plugin(FileIOPlugin())
+        fn_id = _seed_plain("caller")
+        values = {"operation": "write", "path": "out.txt"}
+
+        with pytest.raises(SaveValidationError) as exc_info:
+            _publish_body_change(fn_id, "caller", _workflow_of_block("file-io", values))
+
+        assert _findings(exc_info.value.errors) == [
+            ("REQUIRED_PARAM_MISSING", "Required parameter 'content' is missing", "Blk_1")
+        ]
+        assert _version_strings(fn_id) == ["1.0.0"]
+
+    def test_an_expression_that_changes_data_is_refused(self) -> None:
+        fn_id = _seed_plain("caller")
+        workflow = _workflow_of_block("log", {"message": "rows.append(9)"})
+        workflow["nodes"][0]["data"]["expressionFields"] = ["message"]
+        draft = {
+            "name": "caller",
+            "description": "say hello",
+            "tags": ["demo"],
+            "inputs": [],
+            "outputs": [],
+            "variables": [{"name": "rows", "type": "array", "value": [1]}],
+            "workflow": workflow,
+        }
+
+        with pytest.raises(SaveValidationError) as exc_info:
+            _call(fn_id, draft_definition=draft, changelog="Body change", description="say hello")
+
+        assert _findings(exc_info.value.errors) == [
+            (
+                "EXPRESSION_CHANGES_DATA",
+                "The append method changes data. An expression can only read data, not change "
+                "it. To change a variable, add a Variable Setter Block. Block: Blk_1. "
+                "Field: message.",
+                "Blk_1",
+            )
+        ]
+        assert _version_strings(fn_id) == ["1.0.0"]
+
+    def test_a_block_the_entry_does_not_reach_is_refused(self) -> None:
+        callee_id = _seed_plain("callee")
+        fn_id = _seed_plain("caller")
+        workflow = {**_workflow_calling(callee_id), "edges": []}
+
+        with pytest.raises(SaveValidationError) as exc_info:
+            _publish_body_change(fn_id, "caller", workflow)
+
+        assert _findings(exc_info.value.errors) == [
+            ("NODE_UNREACHABLE", "Block is not reachable from the Function's entry", "Call_1")
+        ]
+        assert _version_strings(fn_id) == ["1.0.0"]
+
+    def test_a_reachable_call_of_another_function_publishes(self) -> None:
+        callee_id = _seed_plain("callee")
+        fn_id = _seed_plain("caller")
+
+        result = _publish_body_change(fn_id, "caller", _workflow_calling(callee_id))
+
+        assert result == {"function_id": fn_id, "version": "1.0.1"}
+        assert _version_strings(fn_id) == ["1.0.1", "1.0.0"]
+
+    def test_the_changelog_is_checked_before_the_body(self) -> None:
+        fn_id = _seed_plain("caller")
+
+        with pytest.raises(
+            UnprocessableEntityException,
+            match=r"^Changelog is required for edit-mode publish$",
+        ):
+            _call(
+                fn_id,
+                draft_definition={
+                    "name": "caller",
+                    "inputs": [],
+                    "outputs": [],
+                    "workflow": _workflow_of_block("log", {}),
+                },
+                changelog="",
+            )

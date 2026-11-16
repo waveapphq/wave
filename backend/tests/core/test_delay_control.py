@@ -304,9 +304,7 @@ class TestDelayControlResult:
 class TestDelayControlPreResolvedValues:
     """Test duration with pre-resolved values (REQ-3.5.4.1).
 
-    Post expression-migration, duration arrives as an already-resolved integer
-    from resolve_parameters() upstream. These tests verify the control works
-    correctly with pre-resolved values.
+    Duration arrives as an already-resolved integer from resolve_parameters() upstream.
     """
 
     def test_execute_escalating_delays(self):

@@ -10,6 +10,9 @@ import {
   getNextSequencedName,
 } from '@/features/functions/lib/naming'
 import { getInputParams } from '@/features/workbench/lib/node-parameters'
+import { inputs as assertInputs } from '@/features/workbench/lib/node-parameters/controls/assert'
+import { inputs as waitUntilInputs } from '@/features/workbench/lib/node-parameters/controls/wait-until'
+import type { InputParam } from '@/features/workbench/lib/node-parameters/types'
 import { choiceDefaults } from '@/features/workbench/lib/saved-block-fields'
 import { useSshHostPolicyStore } from '@/stores/ssh-host-policy-store'
 import type { WaveBlockData } from './canvas-constants'
@@ -136,7 +139,6 @@ const STRUCTURAL_SEEDS: Record<string, () => Record<string, unknown>> = {
       { id: 'branch_1', name: '' },
       { id: 'branch_2', name: '' },
     ],
-    join: 'all',
   }),
 }
 
@@ -152,7 +154,6 @@ function paletteChoiceValues(id: string): Record<string, unknown> {
 }
 
 export function buildDefaultConfigForPalette(id: string): Record<string, unknown> | undefined {
-  if (id === 'note') return { text: '', color: 'slate' }
   const values = { ...paletteChoiceValues(id), ...STRUCTURAL_SEEDS[id]?.() }
   // REQ-4.5.14: the Settings default is stamped at placement, never looked up at run time.
   if (id === 'ssh-session-open') values.host_key_verification = useSshHostPolicyStore.getState().defaultBlockAction
@@ -239,14 +240,21 @@ function branchesThenHandles(config: EgressValues): string[] {
   return [...branchIds(valuesOf(config)), 'then']
 }
 
+/** The default each field of a field list declares, by field name. */
+function listDefaults(inputs: readonly InputParam[]): EgressValues {
+  return Object.fromEntries(inputs.map((param) => [param.name, param.defaultValue]))
+}
+
+// A Block that holds no mode draws the lanes of its field list default.
+const ASSERT_DEFAULTS = listDefaults(assertInputs)
+const WAIT_UNTIL_DEFAULTS = listDefaults(waitUntilInputs)
+
 function assertHandles(config: EgressValues): string[] | null {
-  const mode = (valuesOf(config).mode as string | undefined) ?? 'split'
-  return mode === 'split' ? ['pass', 'fail'] : null
+  return (valuesOf(config).mode ?? ASSERT_DEFAULTS.mode) === 'split' ? ['pass', 'fail'] : null
 }
 
 function waitUntilHandles(config: EgressValues): string[] | null {
-  const mode = (valuesOf(config).mode as string | undefined) ?? 'retry'
-  return mode === 'retry' ? ['retry', 'then'] : null
+  return (valuesOf(config).mode ?? WAIT_UNTIL_DEFAULTS.mode) === 'retry' ? ['retry', 'then'] : null
 }
 
 function ifElseHandles(config: EgressValues): string[] | null {

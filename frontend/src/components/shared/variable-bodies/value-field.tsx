@@ -1,7 +1,7 @@
 /**
- * ValueField - the shared per-type value affordance for a variable / parameter
- * row, used by both the Variable Setter rows and the Profile parameter rows so
- * the two surfaces stay identical:
+ * ValueField - the shared per-type value affordance of a variable value cell
+ * (`VariableValueCell`: Profile parameters and the Suite, Regression and global
+ * variable tables), so those surfaces stay identical:
  * - integer / float / boolean: an inline shared ScalarEditBody.
  * - string + array / map / table: a plain truncating Edit-preview button (pencil
  *   + value preview) that calls onEdit() to open the host's "Edit value" sheet.

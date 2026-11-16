@@ -3,6 +3,7 @@
 Requirements tested:
 - REQ-3.1.3.14: a number reaches the browser as a JSON number only when that number keeps every
   digit in plain notation; otherwise as its exact text
+- REQ-3.5.5.1: a table value travels in its column-schema shape, named typed columns plus rows
 """
 
 from decimal import Decimal
@@ -65,7 +66,42 @@ class TestWireValues:
             "pair": ["1000000000000000000000", "x"],
         }
 
-    def test_a_value_that_is_neither_list_map_nor_number_passes(self) -> None:
-        table = Table(columns=[("id", "integer")])
+    def test_a_table_travels_as_columns_and_rows_with_its_cells_in_wire_form(self) -> None:
+        table = Table(columns=[("id", "integer"), ("amt", "float"), ("label", "string")])
+        table.add_row([2**60, Decimal("2.50"), "x"])
 
-        assert wire_values(table) is table
+        assert wire_values(table) == {
+            "columns": [
+                {"name": "id", "type": "integer"},
+                {"name": "amt", "type": "float"},
+                {"name": "label", "type": "string"},
+            ],
+            "rows": [["1152921504606846976", "2.50", "x"]],
+        }
+
+    def test_a_table_inside_a_list_or_map_travels_as_columns_and_rows(self) -> None:
+        table = Table(columns=[("id", "integer")])
+        table.add_row([7])
+        sent = {"columns": [{"name": "id", "type": "integer"}], "rows": [[7]]}
+
+        assert wire_values({"tables": [table]}) == {"tables": [sent]}
+
+    def test_a_value_that_is_neither_list_map_table_nor_number_passes(self) -> None:
+        value = object()
+
+        assert wire_values(value) is value
+
+    @pytest.mark.parametrize("as_map", [False, True], ids=["list", "map"])
+    def test_a_value_nested_past_any_stack_depth_travels_in_its_wire_form(
+        self, as_map: bool
+    ) -> None:
+        value: Any = Decimal("2.50")
+        for _ in range(5000):
+            value = {"k": value} if as_map else (value,)
+
+        sent = wire_values(value)
+
+        for _ in range(5000):
+            assert isinstance(sent, dict if as_map else list)
+            sent = sent["k"] if as_map else sent[0]
+        assert sent == "2.50"

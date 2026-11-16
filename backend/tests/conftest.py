@@ -29,9 +29,20 @@ os.environ["WAVE_CONFIG_FILE"] = str(_SESSION_CONFIG_FILE)
 EXAMPLE_CONFIG_FILE = Path(__file__).resolve().parents[1] / "config" / "config.example.yaml"
 
 
+@pytest.fixture(scope="session")
+def fresh_folder(tmp_path_factory: pytest.TempPathFactory) -> Callable[[str], Path]:
+    """Make a new empty folder per call in constant time, unlike a numbered ``mktemp``."""
+    parent = tmp_path_factory.mktemp("wave-fixtures")
+
+    def _make(prefix: str) -> Path:
+        return Path(tempfile.mkdtemp(prefix=f"{prefix}-", dir=parent))
+
+    return _make
+
+
 @pytest.fixture(autouse=True)
 def config_file(
-    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+    fresh_folder: Callable[[str], Path], monkeypatch: pytest.MonkeyPatch
 ) -> Generator[Path, None, None]:
     """Give every test its own config file and its own running config (REQ-4.7.16).
 
@@ -40,7 +51,7 @@ def config_file(
     """
     from wavecore.api.config import loader
 
-    path = tmp_path_factory.mktemp("wave-config") / "config.yaml"
+    path = fresh_folder("wave-config") / "config.yaml"
     path.write_text("{}\n", encoding="utf-8")
     monkeypatch.setenv("WAVE_CONFIG_FILE", str(path))
     original = loader._config_instance
@@ -115,6 +126,29 @@ def restore_log_levels() -> Generator[None, None, None]:
         target.setLevel(level)
 
 
+class _RecordList(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(logging.DEBUG)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+@pytest.fixture
+def wavecore_log() -> Generator[list[logging.LogRecord], None, None]:
+    """Every record a wavecore logger emits in the test, DEBUG included."""
+    # Held on the wavecore logger: the app import resets the root handlers caplog uses.
+    target = logging.getLogger("wavecore")
+    handler = _RecordList()
+    level = target.level
+    target.setLevel(logging.DEBUG)
+    target.addHandler(handler)
+    yield handler.records
+    target.removeHandler(handler)
+    target.setLevel(level)
+
+
 @pytest.fixture
 def non_utf8_child_env() -> dict[str, str]:
     """The environment of a child Python on a host whose encoding is not UTF-8 (REQ-4.6.9)."""
@@ -128,7 +162,7 @@ def non_utf8_child_env() -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-def temp_storage_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Path, None, None]:
+def temp_storage_path(fresh_folder: Callable[[str], Path]) -> Generator[Path, None, None]:
     """Set up a temporary storage path for all API service tests.
 
     This fixture runs automatically for all tests and ensures that
@@ -142,25 +176,35 @@ def temp_storage_path(tmp_path_factory: pytest.TempPathFactory) -> Generator[Pat
     from wavecore.api.services.tests.service import _clear_in_memory_cache
 
     # Reset and set the storage path to temp directory
-    base_path = tmp_path_factory.mktemp("wave-data")
+    base_path = fresh_folder("wave-data")
     storage_paths.reset_path_cache()
     storage_paths.set_base_path(str(base_path))
     # Clear test cache so it reloads from the new temp path
     _clear_in_memory_cache()
+    _forget_system_variables()
 
     yield base_path
 
     # Reset after test
     storage_paths.reset_path_cache()
     _clear_in_memory_cache()
+    _forget_system_variables()
+
+
+def _forget_system_variables() -> None:
+    """System variables live in the data folder, so a fresh folder starts with none in memory."""
+    from wavecore.api.services import variable_service
+
+    variable_service._variable_storage.pop("system", None)
+    variable_service._system_cache_loaded = False
 
 
 @pytest.fixture(autouse=True)
-def server_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+def server_home(fresh_folder: Callable[[str], Path], monkeypatch: pytest.MonkeyPatch) -> Path:
     """Where a relative WAVE-side path starts: a temp folder, never the real home folder."""
     from wavecore.plugins import _file_paths
 
-    home = tmp_path_factory.mktemp("server-home")
+    home = fresh_folder("server-home")
     monkeypatch.setattr(_file_paths, "home_folder", lambda: home)
     return home
 

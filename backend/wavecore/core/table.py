@@ -896,10 +896,18 @@ def operator_available(col_type: ColumnType, operator: str) -> bool:
     return operator in _check_row_operators(col_type) or operator in _EMPTY_FILTER_OPERATORS
 
 
+def filter_operator_problem(col_type: ColumnType, operator: Any) -> str | None:
+    """The refusal of a literal filter row on a `col_type` column using `operator`, or None."""
+    if isinstance(operator, str) and operator in _check_row_operators(col_type):
+        return None
+    return f"Unknown filter operator: {operator!r}"
+
+
 def validate_filter_operator(col_type: ColumnType, operator: str) -> None:
     """Raise ValueError if a literal filter row on a `col_type` column may not use `operator`."""
-    if operator not in _check_row_operators(col_type):
-        raise ValueError(f"Unknown filter operator: {operator!r}")
+    problem = filter_operator_problem(col_type, operator)
+    if problem is not None:
+        raise ValueError(problem)
 
 
 def cell_matches(cell: Any, col_type: ColumnType, operator: str, value: Any) -> bool:

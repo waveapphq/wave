@@ -1,0 +1,173 @@
+{
+  "name": "V-EDGE-IDS-FIX",
+  "version": "1.0.0",
+  "description": "A Try/Catch whose wire from Start and a cross-scope wire out of its try path carry the one id e-shared.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "ef-tc",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 160
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "ef try",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 220,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef-try-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 40,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "On the try path",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ef-try-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef-catch-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 340
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "On the catch path",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ef-catch-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "ef-after-log",
+        "type": "workflowNode",
+        "position": {
+          "x": 360,
+          "y": 520
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "After the Try/Catch",
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ef-after-ran'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-shared",
+        "source": "start-node",
+        "target": "ef-tc",
+        "type": "default"
+      },
+      {
+        "id": "e-ef-try",
+        "source": "ef-tc",
+        "sourceHandle": "try",
+        "target": "ef-try-log",
+        "type": "default"
+      },
+      {
+        "id": "e-ef-catch",
+        "source": "ef-tc",
+        "sourceHandle": "catch",
+        "target": "ef-catch-log",
+        "type": "default"
+      },
+      {
+        "id": "e-ef-then",
+        "source": "ef-tc",
+        "sourceHandle": "then",
+        "target": "ef-after-log",
+        "type": "default"
+      },
+      {
+        "id": "e-shared",
+        "source": "ef-try-log",
+        "target": "ef-after-log",
+        "targetHandle": "ingress_1",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {}
+}

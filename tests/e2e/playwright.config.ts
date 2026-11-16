@@ -340,6 +340,8 @@ const noDataTests = [
   // Note control
   'canvas/v-ctrl-note-01.spec.ts',
   'canvas/v-ctrl-note-02.spec.ts',
+  // Note inputs at a join, the + input and the cycle mark. Seeds its own Tests via POST /tests.
+  'canvas/v-ctrl-note-03.spec.ts',
   // Assert control
   'canvas/v-ctrl-assert-01.spec.ts',
   'canvas/v-ctrl-assert-02.spec.ts',
@@ -384,9 +386,12 @@ const noDataTests = [
   // one-slot-per-branch widening, the RUNNING-badge-alone running node) and the
   // config sheet (single Section Time Limit row, one-line BRANCH rows, the
   // two-branch minimum, JOIN MODE, no Output Variables, storage round-trip and
-  // reorder). Each seeds its own Test via POST /tests.
+  // reorder), and the lane row sizes at the 880 px window (name box, the one
+  // time limit field in plain and {x} mode, the {x} column). Each seeds its own
+  // Test via POST /tests.
   'canvas/v-ctrl-parallel-01.spec.ts',
   'canvas/v-ctrl-parallel-02.spec.ts',
+  'canvas/v-ctrl-parallel-03.spec.ts',
   // Shared variable picker with a 60-character name: truncation, reachable
   // full name, pinned type pill, no horizontal overflow, both themes.
   'canvas/v-varpick-01.spec.ts',
@@ -575,6 +580,9 @@ const noDataTests = [
   'canvas/v-field-list-fields.spec.ts',
   'canvas/v-field-variable-required.spec.ts',
   'canvas/v-field-icons.spec.ts',
+  // V-CTRL-CONDROW-01, V-CTRL-SETTER-01: condition rows and Setter rows on the one value field (FIELD-14..16).
+  'canvas/v-ctrl-condrow-01.spec.ts',
+  'canvas/v-ctrl-setter-01.spec.ts',
   // V-CANVAS-NODE-05 (RUN border-pulse) and V-12 (config modal read-only
   // during run) need a real workflow run to drive the canvas into a
   // running execution state. A mocked historical canvas does not work: the

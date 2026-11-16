@@ -10,7 +10,7 @@ from contextlib import suppress
 from decimal import Decimal
 from typing import Any, NamedTuple
 
-from wavecore.connectivity.k8s.verbs._outputs import (
+from wavecore.connectivity.block_outputs import (
     block_failure,
     block_success,
     summary_table,
@@ -38,6 +38,7 @@ from wavecore.connectivity.sql._params import bind_params
 from wavecore.connectivity.sql._procedure import build_call, function_select, read_signature
 from wavecore.connectivity.sql._split import CODE, OTHER, lex, session_state_word, split_script
 from wavecore.connectivity.sql.dialects import Handle, dialect, oracle
+from wavecore.plugins._file_ops import refuse_wave_scheme
 from wavecore.plugins._held_run import Live, Stopped, held
 
 # The bundle worker names the remote host before it dispatches a SQL block.
@@ -46,7 +47,6 @@ REMOTE_HOST: str | None = None
 Log = Callable[[str, str], None]
 
 _ACTIONS = {"run_sql": "Run SQL", "call_procedure": "Call procedure", "load_table": "Load table"}
-_SCHEMES = ("testdata://", "artifact://")
 _EXCEL_SUFFIXES = (".xlsx", ".xlsm")
 # Oracle and SQL Server declare their out arguments' types in a catalog read before the call.
 _SIGNED = ("oracle", "mssql")
@@ -221,9 +221,10 @@ def _require_bundled_sqlite() -> None:
 
 def _refuse_scheme(path: str) -> None:
     """A testdata:// or artifact:// reference that reached the core names a file only WAVE has."""
-    if path.startswith(_SCHEMES):
-        scheme = path.partition("://")[0]
-        raise SqlFailure(f"{scheme}:// paths are not available on the remote host", VALIDATION)
+    try:
+        refuse_wave_scheme(path)
+    except ValueError as exc:
+        raise SqlFailure(str(exc), VALIDATION) from exc
 
 
 def _refuse_before_connecting(block: _Block) -> None:

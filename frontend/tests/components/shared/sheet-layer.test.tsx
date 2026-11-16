@@ -10,7 +10,7 @@ import { useState } from 'react'
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { FreezableFieldset, SheetLayer } from '@/components/shared/sheet-layer'
 
 function Sheet({
@@ -21,8 +21,7 @@ function Sheet({
     <DraggableSheet
       open
       onClose={() => {}}
-      ariaLabel={testId}
-      header={<span>{testId}</span>}
+      header={<SheetTitle>{testId}</SheetTitle>}
       data-testid={testId}
     >
       <button data-testid={`${testId}-field`}>field</button>

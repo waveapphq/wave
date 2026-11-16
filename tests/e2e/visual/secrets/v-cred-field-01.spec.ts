@@ -7,9 +7,9 @@
  * REQ: REQ-3.1.3.16 / REQ-3.1.3.18
  *
  * Pass Criteria:
- * 1. A STORED (sealed) credential literal renders masked write-only (Edit protected
- *    value) + a gray Lock carrying the literal tooltip; the wave:enc:v1: envelope
- *    never renders.
+ * 1. A STORED (sealed) credential literal renders masked write-only (the button
+ *    `Password: Edit protected value`) + a gray Lock carrying the literal tooltip; the
+ *    wave:enc:v1: envelope never renders.
  * 2. A credential expression referencing a NON-secret variable shows the amber alert
  *    with the exact copy; referencing a SECRET variable shows the gray Lock.
  * 3. The SSH "Mask specific fields" list carries password / private_key / passphrase.
@@ -96,7 +96,7 @@ test.describe('V-CRED-FIELD-01: credential field status + masking', () => {
     // Password (Connection group): sealed literal -> masked write-only + literal lock,
     // and the envelope never renders.
     const pwRow = sheet.locator('[data-testid="param-row-password"]')
-    await expect(pwRow.locator('button[aria-label="Edit protected value"]')).toBeVisible()
+    await expect(pwRow.locator('button[aria-label="Password: Edit protected value"]')).toBeVisible()
     await expect(sheet.locator(`[aria-label="${LITERAL_TOOLTIP}"]`)).toBeVisible()
     await expect(sheet.getByText(/wave:enc:v1:/)).toHaveCount(0)
 
@@ -127,7 +127,7 @@ test.describe('V-CRED-FIELD-01: credential field status + masking', () => {
     // Now an expression field: the sealed envelope must NOT be carried in, and the
     // masked write-only affordance is gone.
     await expect(pwRow.getByText(/wave:enc:v1:/)).toHaveCount(0)
-    await expect(pwRow.locator('button[aria-label="Edit protected value"]')).toHaveCount(0)
+    await expect(pwRow.locator('button[aria-label="Password: Edit protected value"]')).toHaveCount(0)
 
     // Apply the config (sheet Save) + persist the workbench (toolbar Save).
     await applyConfigAndSave(page)
@@ -147,8 +147,8 @@ test.describe('V-CRED-FIELD-01: credential field status + masking', () => {
     const pwRow = () => configSheet(page).locator('[data-testid="param-row-password"]')
 
     // Clear-and-retype the sealed credential through the write-only flow.
-    await pwRow().locator('button[aria-label="Edit protected value"]').click()
-    const editConfirm = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+    await pwRow().locator('button[aria-label="Password: Edit protected value"]').click()
+    const editConfirm = page.getByRole('dialog', { name: 'Edit Protected Value?' })
     await expect(editConfirm).toBeVisible()
     await editConfirm.getByRole('button', { name: /Delete & Edit/i }).click()
     // FIELD-1: Delete & Edit leaves an ordinary field with the lock icon, and the focus in its box.
@@ -178,7 +178,7 @@ test.describe('V-CRED-FIELD-01: credential field status + masking', () => {
     // Reopen the config WITHOUT a page reload: the field masks write-only again (the
     // post-save store resync), never showing the typed plaintext.
     await openSshConfig(page)
-    await expect(pwRow().locator('button[aria-label="Edit protected value"]')).toBeVisible({
+    await expect(pwRow().locator('button[aria-label="Password: Edit protected value"]')).toBeVisible({
       timeout: 10_000,
     })
     await expect(pwRow().getByText(/fresh-pw-2b3c4d/)).toHaveCount(0)

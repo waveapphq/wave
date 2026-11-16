@@ -597,7 +597,7 @@ export async function editWindow(page: Page, name: string): Promise<Locator> {
 /** Open the Edit window of a watcher's variable at the value the watcher shows; returns the window. */
 export async function editFromWatcher(watcher: Locator): Promise<Locator> {
   const page = watcher.page()
-  const name = ((await watcher.getAttribute('aria-label')) ?? '').replace(/^Inspect variable /, '')
+  const name = ((await watcher.getByTestId('inspect-variable-name').textContent()) ?? '').trim()
   expect(name, 'the watcher names its variable').not.toBe('')
   const pill = watcher.locator('[data-testid="mode-dropdown"]')
   const shows = (await pill.count()) > 0 ? ((await pill.textContent()) ?? '').trim() : ''
@@ -752,7 +752,7 @@ export async function editProtectedValue(
 ): Promise<void> {
   const masked = valueField(win).getByRole('button', { name: /Edit protected value$/ })
   await masked.click()
-  const dialog = page.getByRole('dialog').filter({ hasText: 'Edit Protected Value?' })
+  const dialog = page.getByRole('dialog', { name: 'Edit Protected Value?' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: answer, exact: true }).click()
   await expect(dialog).toBeHidden()

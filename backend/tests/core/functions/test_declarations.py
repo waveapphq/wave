@@ -155,8 +155,8 @@ class TestWellFormedInputs:
 class TestEnumInputType:
     """An enum input is of type string, integer or float (REQ-3.1.2.11)."""
 
-    def test_the_old_array_enum_shape_is_refused(self) -> None:
-        old_enum = {
+    def test_an_array_enum_with_an_enum_value_type_is_refused(self) -> None:
+        array_enum = {
             "name": "level",
             "type": "array",
             "required": True,
@@ -164,7 +164,7 @@ class TestEnumInputType:
             "enumValues": ["low", "high"],
         }
 
-        assert _problems(old_enum) == sorted([_ENUM_INPUT_TYPE, _ENUM_INPUT_NO_DEFAULT])
+        assert _problems(array_enum) == sorted([_ENUM_INPUT_TYPE, _ENUM_INPUT_NO_DEFAULT])
 
     @pytest.mark.parametrize("value_type", ["boolean", "array", "map", "table", "text"])
     def test_any_other_type_is_refused(self, value_type: str) -> None:

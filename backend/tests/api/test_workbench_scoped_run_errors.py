@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wavecore.api.exceptions import ConflictException
+from wavecore.api.exceptions import ConflictException, NotFoundException
 from wavecore.api.services.workbench import _common as _wb_common
 from wavecore.api.services.workbench import service as workbench_service
 from wavecore.api.services.workbench.functions import FunctionCanvas
@@ -86,9 +86,9 @@ class TestStartScopedFunctionRunErrors:
                 session_id=None,
             )
 
-    def test_unknown_test_id_raises_lookup_error(self) -> None:
+    def test_unknown_test_id_raises_not_found(self) -> None:
         with patch.object(workbench_service.test_service, "get_test", return_value=None):
-            with pytest.raises(LookupError, match=r"Test with ID 'test-missing' not found"):
+            with pytest.raises(NotFoundException, match=r"Test with ID 'test-missing' not found"):
                 workbench_service._start_scoped_function_run(
                     test_id="test-missing",
                     environment_id="env-1",
@@ -97,7 +97,7 @@ class TestStartScopedFunctionRunErrors:
                     session_id=None,
                 )
 
-    def test_unknown_environment_id_raises_lookup_error(self) -> None:
+    def test_unknown_environment_id_raises_not_found(self) -> None:
         test_payload: dict[str, Any] = {
             "id": "test-1",
             "name": "T",
@@ -109,7 +109,9 @@ class TestStartScopedFunctionRunErrors:
                 workbench_service.environment_service, "get_environment", return_value=None
             ),
         ):
-            with pytest.raises(LookupError, match=r"Environment with ID 'env-missing' not found"):
+            with pytest.raises(
+                NotFoundException, match=r"Environment with ID 'env-missing' not found"
+            ):
                 workbench_service._start_scoped_function_run(
                     test_id="test-1",
                     environment_id="env-missing",

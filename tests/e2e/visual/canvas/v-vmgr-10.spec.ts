@@ -87,7 +87,7 @@ const rowFor = (page: Page, name: string): Locator =>
   page.locator(`[data-testid="variable-manager-content"] [aria-label="Variable ${name}"]`)
 
 const watcherFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 async function openWatcher(page: Page, name: string): Promise<Locator> {
   await rowFor(page, name).locator('[data-testid^="expand-button-"]').click()

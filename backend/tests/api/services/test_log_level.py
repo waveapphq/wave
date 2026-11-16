@@ -10,6 +10,7 @@ import pytest
 
 from wavecore.api.config import ConfigValidationError, get_config
 from wavecore.api.config.write_back import ConfigWriteError
+from wavecore.api.exceptions import ValidationException
 from wavecore.api.services import log_level
 from wavecore.core.logging import formatter
 
@@ -220,7 +221,7 @@ class TestSave:
         formatter.set_log_level("ERROR")
         before = config_file.read_bytes()
 
-        with pytest.raises(ValueError, match=INVALID_LEVEL):
+        with pytest.raises(ValidationException, match=INVALID_LEVEL):
             log_level.save("verbose")
 
         assert config_file.read_bytes() == before

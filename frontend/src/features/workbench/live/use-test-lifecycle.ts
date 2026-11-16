@@ -202,6 +202,8 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
     if (editTestId) return
     // Library-View owns the canvas; never restore a persisted Test over it.
     if (searchParams.get('viewFunction')) return
+    // A New Test visit starts blank; never reopen the Test that was open before it.
+    if (searchParams.get('newTest') === 'true') return
     if (editingTestId && nodes.length === 0) {
       hasRestoredPersistedTest.current = true
       loadTest(editingTestId).catch(alreadyReported)
@@ -424,6 +426,9 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
       }
       reset()
       clearDraft()
+      // The blank canvas is final: a later render must not restore the old draft or Test.
+      hasRestoredDraft.current = true
+      hasRestoredPersistedTest.current = true
       requestFitView({ padding: 0.2, duration: 0 })
       setIsNewTestMode(true)
     }
@@ -442,6 +447,8 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
     // Library-View owns the canvas; never restore a Test draft over it.
     if (viewOwnsCanvas) return
   /* v8 ignore stop */
+    // A New Test visit starts blank; never restore the old draft over it.
+    if (searchParams.get('newTest') === 'true') return
     hasRestoredDraft.current = true
     // A mirrored canvas is the holder's work, and this tab's once the mirror ends: never restore over it.
     if (isMirroring) return

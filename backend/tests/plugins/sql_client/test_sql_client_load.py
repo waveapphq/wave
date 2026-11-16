@@ -1189,12 +1189,14 @@ class TestFiles:
             ),
             pytest.param(
                 "testdata://orders.csv",
-                "testdata:// paths are not available on the remote host",
+                "testdata:// paths are not available on the remote host - "
+                "use an absolute or relative path on the remote host",
                 id="testdata",
             ),
             pytest.param(
                 "artifact://orders.csv",
-                "artifact:// paths are not available on the remote host",
+                "artifact:// paths are not available on the remote host - "
+                "use an absolute or relative path on the remote host",
                 id="artifact",
             ),
         ],

@@ -1,7 +1,7 @@
-"""Storing a block skipped and painting it skipped on the live canvas, as one step.
+"""Storing a block skipped or a lane taken, and painting it on the live canvas, as one step.
 
-A page reload paints the canvas from the stored block states and a live run paints it from
-the status events, so every skipped state the engine records goes through here.
+A page reload paints the canvas from the stored block states and lanes and a live run paints it
+from the events, so every skipped state and every lane taken the engine records goes through here.
 """
 
 from collections.abc import Iterable, Mapping
@@ -24,6 +24,7 @@ async def paint_skipped(
     """Store a block skipped and paint it skipped on the live canvas."""
     status = WorkbenchStatus.SKIPPED.value
     session["block_states"][block_id] = status
+    forget_lanes(session, block_id)
     await _broadcast_event(
         session_id,
         {
@@ -33,6 +34,38 @@ async def paint_skipped(
             "status": status,
         },
     )
+
+
+def forget_lanes(session: dict[str, Any], block_id: str) -> None:
+    """A block that starts again or paints skipped drops the lanes of its pass before."""
+    session.get("lanes_taken", {}).pop(block_id, None)
+
+
+async def take_lane(
+    session: dict[str, Any], session_id: str, block_id: str, handle: str | None
+) -> None:
+    """Store and paint a lane the flow entered from ``block_id``."""
+    if not handle:
+        return
+    lanes: list[str] = session.setdefault("lanes_taken", {}).setdefault(block_id, [])
+    if handle in lanes:
+        return
+    lanes.append(handle)
+    await _broadcast_event(
+        session_id, {"type": "lanes_taken", "block_id": block_id, "lanes": list(lanes)}
+    )
+
+
+async def take_wired_lane(
+    session: dict[str, Any],
+    session_id: str,
+    block_id: str,
+    handle: str | None,
+    adj: Mapping[str, list[tuple[str, str | None]]],
+) -> None:
+    """Store and paint the branch a block chose, when a link leaves by it."""
+    if any(link_handle == handle for _child, link_handle in adj.get(block_id, [])):
+        await take_lane(session, session_id, block_id, handle)
 
 
 async def skip_unrun(
@@ -66,9 +99,9 @@ def lane_blocks(
             continue
         seen.add(block_id)
         node = node_map.get(block_id)
-        if node is not None and node.get("type") != "workflowNode":
-            continue
-        order.append(block_id)
+        # A Note holds no block; the walk goes on past it.
+        if node is None or node.get("type") == "workflowNode":
+            order.append(block_id)
         queue.extend(child for child, _handle in adj.get(block_id, []))
     return order
 

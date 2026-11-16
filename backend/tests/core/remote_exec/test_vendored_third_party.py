@@ -39,6 +39,7 @@ CORES = (
     "_ping_core",
     "_netcat_core",
     "_file_ops",
+    "_plural",
     "_ports",
     "_process_group",
     "_sql_core",
@@ -354,10 +355,10 @@ class TestTheCarriedCheckSeesAViolation:
             ("wavecore.plugins", {"wavecore.plugins", "wavecore.plugins._ports"}),
             ("six.moves", {"six.moves", "six.moves._thread"}),
             (
-                "wavecore.connectivity.k8s.verbs._outputs",
+                "wavecore.connectivity.block_outputs",
                 {
-                    "wavecore.connectivity.k8s.verbs._outputs",
-                    "wavecore.connectivity.k8s.verbs._outputs.block_success",
+                    "wavecore.connectivity.block_outputs",
+                    "wavecore.connectivity.block_outputs.block_success",
                 },
             ),
             ("json", {"json"}),

@@ -54,17 +54,20 @@ class SSHSessionRegistry:
         local_port: int,
         remote_destination: str,
         held: tuple[Any, Any] | None = None,
-    ) -> None:
-        """Record a forwarded listener and any pair it holds (SSHTUN-7); no-op if it is gone."""
-        record = self._sessions.get(session_id)
-        if record is None:
-            return
-        record["tunnels"][tunnel_id] = {
+    ) -> bool:
+        """Record a forwarded listener and any pair it holds (SSHTUN-7); False, closed, if gone."""
+        tunnel = {
             "listener": listener,
             "local_port": local_port,
             "remote_destination": remote_destination,
             "held": held,
         }
+        record = self._sessions.get(session_id)
+        if record is None:
+            _close_tunnel(tunnel)
+            return False
+        record["tunnels"][tunnel_id] = tunnel
+        return True
 
     def close_tunnel(self, tunnel_id: str) -> bool:
         """Close one forwarded listener by id, across sessions; False when unknown."""

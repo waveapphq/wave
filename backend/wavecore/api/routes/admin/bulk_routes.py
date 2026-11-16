@@ -12,19 +12,26 @@ Endpoints:
 - POST /admin/bulk/profiles: Bulk profile operations
 """
 
-import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol
 
-from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
+
+from wavecore.api.exceptions import (
+    ConflictException,
+    InternalServerException,
+    NotFoundException,
+    ValidationException,
+    WaveException,
+)
 
 # Use the logger from the main admin routes module so test patches on
 # wavecore.api.routes.admin.logger affect bulk operations too
 from wavecore.api.routes.admin import routes as _routes_mod
+from wavecore.api.routes.shared import validate_uuid
 from wavecore.api.services.environments import service as environment_service
 from wavecore.api.services.executions import _storage as _exec_storage
 from wavecore.api.services.profiles import _common as _profile_common
@@ -35,7 +42,6 @@ from wavecore.api.services.tests import service as test_service
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 _TZ_UTC_SUFFIX = "+00:00"
-_LOG_BULK_VALIDATION_FAILED = "Bulk request validation failed"
 
 # Valid operation types
 VALID_OPS = {"add", "modify", "replace", "delete"}
@@ -83,20 +89,20 @@ class BulkResponse(BaseModel):
     timestamp: str
 
 
-class BulkErrorResponse(BaseModel):
-    """Response body for failed bulk operations."""
-
-    detail: str
-    failed_index: int
+def _operation_refusal(refusal: type[WaveException], idx: int, message: str) -> WaveException:
+    """The refusal of the operation at ``idx``; its index rides in the error details."""
+    return refusal(message, details={"failed_index": idx})
 
 
-class BulkStorageError(Exception):
-    """Exception raised when a bulk storage operation fails."""
-
-    def __init__(self, message: str, failed_index: int, partial_results: list[BulkResultItem]):
-        super().__init__(message)
-        self.failed_index = failed_index
-        self.partial_results = partial_results
+def _storage_fault(idx: int, partial_results: list[BulkResultItem]) -> InternalServerException:
+    """A storage fault at ``idx``: a fixed message and the results of the operations before it."""
+    return InternalServerException(
+        f"Operation at index {idx}: storage error",
+        details={
+            "failed_index": idx,
+            "partial_results": [result.model_dump() for result in partial_results],
+        },
+    )
 
 
 # =============================================================================
@@ -134,12 +140,10 @@ def _process_single_add(
 ) -> BulkResultItem:
     """Process a single 'add' bulk operation."""
     validate_required_fields(entity, required_fields, idx, "add")
-    validate_uuid(entity_id, idx, adapter.entity_type_name.lower())
+    _refuse_a_bad_uuid(entity_id, idx)
     if entity_id in existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"{adapter.entity_type_name} '{entity_id}' already exists",
-            headers={"X-Failed-Index": str(idx)},
+        raise _operation_refusal(
+            ConflictException, idx, f"{adapter.entity_type_name} '{entity_id}' already exists"
         )
     adapter.save(dict(entity))
     existing[entity_id] = entity
@@ -154,12 +158,7 @@ def _process_single_modify(
     idx: int,
 ) -> BulkResultItem:
     """Process a single 'modify' bulk operation."""
-    if entity_id not in existing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{adapter.entity_type_name} '{entity_id}' not found",
-            headers={"X-Failed-Index": str(idx)},
-        )
+    _refuse_a_missing_entity(adapter, entity_id, existing, idx)
     adapter.merge(entity_id, entity)
     return BulkResultItem(id=entity_id, status="modified")
 
@@ -174,7 +173,7 @@ def _process_single_replace(
 ) -> BulkResultItem:
     """Process a single 'replace' bulk operation."""
     validate_required_fields(entity, required_fields, idx, "replace")
-    validate_uuid(entity_id, idx, adapter.entity_type_name.lower())
+    _refuse_a_bad_uuid(entity_id, idx)
     existed = entity_id in existing
     adapter.save(dict(entity))
     existing[entity_id] = entity
@@ -188,12 +187,7 @@ def _process_single_delete(
     idx: int,
 ) -> BulkResultItem:
     """Process a single 'delete' bulk operation."""
-    if entity_id not in existing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{adapter.entity_type_name} '{entity_id}' not found",
-            headers={"X-Failed-Index": str(idx)},
-        )
+    _refuse_a_missing_entity(adapter, entity_id, existing, idx)
     adapter.delete(entity_id)
     existing.pop(entity_id, None)
     return BulkResultItem(id=entity_id, status="deleted")
@@ -235,9 +229,12 @@ def _process_bulk_operations(
         entity_id = entity.get("id")
 
         if entity_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operation at index {idx}: 'id' is required",
+            raise _operation_refusal(
+                ValidationException, idx, f"Operation at index {idx}: 'id' is required"
+            )
+        if not isinstance(entity_id, str):
+            raise _operation_refusal(
+                ValidationException, idx, f"Operation at index {idx}: 'id' must be a string"
             )
 
         try:
@@ -245,10 +242,17 @@ def _process_bulk_operations(
                 adapter, op_type, entity, entity_id, existing, required_fields, idx
             )
             results.append(result)
-        except HTTPException:
+        except WaveException:
             raise
         except Exception as e:
-            raise BulkStorageError(str(e), idx, results) from e
+            # The fault itself reaches the server log through the shared error handler.
+            _routes_mod.logger.error(
+                "Admin bulk %s storage error at operation %d, admin_reason=%s",
+                adapter.entity_type_name,
+                idx,
+                _routes_mod._admin_reason,
+            )
+            raise _storage_fault(idx, results) from e
 
     return results
 
@@ -261,25 +265,20 @@ def _process_bulk_operations(
 def validate_bulk_request(body: BulkRequest) -> list[BulkOperation]:
     """Validate bulk request and return operations list."""
     if body.operations is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Operations field is required"
-        )
+        raise ValidationException("Operations field is required")
 
     for idx, op in enumerate(body.operations):
         if op.op is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operation at index {idx}: 'op' field is required",
+            raise _operation_refusal(
+                ValidationException, idx, f"Operation at index {idx}: 'op' field is required"
             )
         if op.op not in VALID_OPS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operation at index {idx}: invalid op type '{op.op}'",
+            raise _operation_refusal(
+                ValidationException, idx, f"Operation at index {idx}: invalid op type '{op.op}'"
             )
         if op.entity is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operation at index {idx}: 'entity' field is required",
+            raise _operation_refusal(
+                ValidationException, idx, f"Operation at index {idx}: 'entity' field is required"
             )
 
     return body.operations
@@ -291,53 +290,31 @@ def validate_required_fields(
     """Validate required fields for an entity."""
     for field in required_fields:
         if field not in entity or entity[field] is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Operation at index {idx}: '{field}' is required for {op_type}",
+            raise _operation_refusal(
+                ValidationException,
+                idx,
+                f"Operation at index {idx}: '{field}' is required for {op_type}",
             )
 
 
-def validate_uuid(entity_id: str, idx: int, entity_type: str) -> None:
-    """Validate that an entity ID is a valid UUID."""
+def _refuse_a_bad_uuid(entity_id: str, idx: int) -> None:
+    """The shared UUID check, its message prefixed with the operation it refuses."""
     try:
-        uuid.UUID(entity_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Operation at index {idx}: '{entity_id}' is not a valid UUID for {entity_type}",
+        validate_uuid(entity_id)
+    except ValidationException as refusal:
+        raise _operation_refusal(
+            ValidationException, idx, f"Operation at index {idx}: {refusal.message}"
         ) from None
 
 
-def handle_bulk_operation_errors(
-    error: HTTPException | BulkStorageError, endpoint_name: str
-) -> JSONResponse:
-    """Handle errors from bulk operations and return appropriate response."""
-    from wavecore.api.routes.admin.routes import _admin_reason
-
-    if isinstance(error, HTTPException):
-        failed_index = 0
-        if error.headers and "X-Failed-Index" in error.headers:
-            failed_index = int(error.headers["X-Failed-Index"])
-        return JSONResponse(
-            status_code=error.status_code,
-            content={"detail": error.detail, "failed_index": failed_index},
+def _refuse_a_missing_entity(
+    adapter: BulkEntityAdapter, entity_id: str, existing: dict[str, Any], idx: int
+) -> None:
+    """Modify and delete need the entity to exist."""
+    if entity_id not in existing:
+        raise _operation_refusal(
+            NotFoundException, idx, f"{adapter.entity_type_name} '{entity_id}' not found"
         )
-
-    _routes_mod.logger.error(
-        "Admin %s storage error: %s, failed_index=%d, admin_reason=%s",
-        endpoint_name,
-        error,
-        error.failed_index,
-        _admin_reason,
-    )
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": str(error),
-            "failed_index": error.failed_index,
-            "partial_results": [{"id": r.id, "status": r.status} for r in error.partial_results],
-        },
-    )
 
 
 # =============================================================================
@@ -477,6 +454,8 @@ def process_regression_operations(
 def process_execution_operations(
     operations: list[BulkOperation], required_fields: list[str]
 ) -> list[BulkResultItem]:
+    # A first load mid-request would replace the store and drop the rows added before it.
+    _exec_storage._ensure_cache_loaded()
     results = _process_bulk_operations(
         _DictStoreAdapter("Execution", _exec_storage._execution_storage),
         operations,
@@ -760,17 +739,8 @@ def process_profile_operations(
 
 def _admin_guard(endpoint: str) -> None:
     """Check admin allowed and enabled."""
-    from wavecore.api.routes.admin.routes import (
-        check_admin_allowed_or_404,
-        is_admin_enabled,
-    )
-
-    check_admin_allowed_or_404(endpoint)
-    if not is_admin_enabled():
-        _routes_mod.logger.warning("Blocked admin %s attempt: admin mode not enabled", endpoint)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin mode must be enabled first"
-        )
+    _routes_mod.check_admin_allowed_or_404(endpoint)
+    _routes_mod.require_admin_active(endpoint)
 
 
 def _bulk_endpoint(
@@ -778,7 +748,7 @@ def _bulk_endpoint(
     endpoint_name: str,
     required_fields: list[str],
     processor: Any,
-) -> BulkResponse | JSONResponse:
+) -> BulkResponse:
     """Generic bulk endpoint handler."""
     from wavecore.api.routes.admin.routes import (
         _admin_reason,
@@ -787,12 +757,7 @@ def _bulk_endpoint(
     )
 
     _admin_guard(endpoint_name)
-
-    try:
-        operations = validate_bulk_request(body)
-    except HTTPException:
-        _routes_mod.logger.debug(_LOG_BULK_VALIDATION_FAILED)
-        raise
+    operations = validate_bulk_request(body)
 
     if len(operations) == 0:
         timestamp = datetime.now(UTC).isoformat().replace(_TZ_UTC_SUFFIX, "Z")
@@ -804,10 +769,7 @@ def _bulk_endpoint(
         )
         return BulkResponse(processed=0, results=[], timestamp=timestamp)
 
-    try:
-        results = processor(operations, required_fields)
-    except (HTTPException, BulkStorageError) as e:
-        return handle_bulk_operation_errors(e, endpoint_name)
+    results = processor(operations, required_fields)
 
     invalidate_dashboard_cache()
     invalidate_entity_caches()
@@ -829,7 +791,7 @@ def _bulk_endpoint(
 
 
 @router.post("/bulk/executions", response_model=None)
-async def bulk_executions(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_executions(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk execution operations (REQ-5.2.6.4.1)."""
     return _bulk_endpoint(
         body,
@@ -840,19 +802,19 @@ async def bulk_executions(request: Request, body: BulkRequest) -> BulkResponse |
 
 
 @router.post("/bulk/tests", response_model=None)
-async def bulk_tests(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_tests(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk test operations (REQ-5.2.6.4.2)."""
     return _bulk_endpoint(body, "bulk/tests", ["id", "name", "version"], process_test_operations)
 
 
 @router.post("/bulk/suites", response_model=None)
-async def bulk_suites(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_suites(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk suite operations (REQ-5.2.6.4.3)."""
     return _bulk_endpoint(body, "bulk/suites", ["id", "name", "version"], process_suite_operations)
 
 
 @router.post("/bulk/regressions", response_model=None)
-async def bulk_regressions(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_regressions(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk regression operations (REQ-5.2.6.4.4)."""
     return _bulk_endpoint(
         body, "bulk/regressions", ["id", "name", "version"], process_regression_operations
@@ -860,12 +822,12 @@ async def bulk_regressions(request: Request, body: BulkRequest) -> BulkResponse 
 
 
 @router.post("/bulk/environments", response_model=None)
-async def bulk_environments(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_environments(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk environment operations (REQ-5.2.1.42)."""
     return _bulk_endpoint(body, "bulk/environments", ["id", "name"], process_environment_operations)
 
 
 @router.post("/bulk/profiles", response_model=None)
-async def bulk_profiles(request: Request, body: BulkRequest) -> BulkResponse | JSONResponse:
+async def bulk_profiles(request: Request, body: BulkRequest) -> BulkResponse:
     """Bulk profile operations (REQ-5.2.1.42)."""
     return _bulk_endpoint(body, "bulk/profiles", ["id", "name"], process_profile_operations)

@@ -29,6 +29,7 @@ from tests.api.regression_test_helpers import (
     get_regression_dir,
     load_regression_file,
     load_versions_file,
+    save_regression_file,
     set_version_attribute,
 )
 from wavecore.api.exceptions import ConflictException, ValidationException, WaveException
@@ -219,6 +220,19 @@ class TestCreateRegressionService:
             )
 
         assert f"Suite with ID '{fake_suite_id}' not found" in str(exc_info.value)
+
+    def test_create_regression_refuses_a_suite_id_that_is_not_text(self) -> None:
+        """A Suite ID that is not text matches no Suite."""
+        from wavecore.api.services.regressions import service as regression_service
+
+        clear_regression_storage()
+
+        with pytest.raises(ValidationException, match=r"^Suite with ID '\{'id': 1\}' not found$"):
+            regression_service.create_regression(
+                {"name": "Nightly Regression", "suites": [{"id": 1}]}
+            )
+
+        assert regression_service.list_regression_documents() == []
 
     def test_create_regression_with_variables(self) -> None:
         """Test creating regression with variable declarations."""
@@ -508,6 +522,49 @@ class TestUpdateRegressionService:
         assert result["metadata"]["owner"] == "team-b"
         assert result["metadata"]["priority"] == "high"
 
+    def test_update_regression_refuses_an_unknown_suite(self) -> None:
+        """Adding a Suite ID that matches no Suite refuses the update and changes nothing."""
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.suites import service as suite_service
+
+        clear_regression_storage()
+        member = suite_service.create_suite({"name": "Member Suite"})
+        created = regression_service.create_regression(
+            {"name": "Nightly Regression", "suites": [member["id"]]}
+        )
+        unknown_id = str(uuid.uuid4())
+
+        with pytest.raises(ValidationException, match=rf"^Suite with ID '{unknown_id}' not found$"):
+            regression_service.update_regression(
+                created["id"], {"suites": [member["id"], unknown_id]}
+            )
+
+        stored = load_regression_file(created["id"])
+        assert stored is not None
+        assert stored["suites"] == [member["id"]]
+        assert stored["version"] == "1.0.0"
+
+    def test_update_regression_keeps_a_held_suite_that_no_longer_exists(self) -> None:
+        """Only added Suites are checked, so a Suite the Regression already holds never blocks."""
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.suites import service as suite_service
+
+        clear_regression_storage()
+        member = suite_service.create_suite({"name": "Member Suite"})
+        created = regression_service.create_regression({"name": "Nightly Regression"})
+        gone_id = str(uuid.uuid4())
+        stored = load_regression_file(created["id"])
+        assert stored is not None
+        stored["suites"] = [gone_id]
+        save_regression_file(stored)
+
+        result = regression_service.update_regression(
+            created["id"], {"suites": [gone_id, member["id"]]}
+        )
+
+        assert result is not None
+        assert result["suites"] == [gone_id, member["id"]]
+
 
 class TestDeleteRegressionService:
     """Test suite for delete_regression service function."""
@@ -686,29 +743,31 @@ class TestDeleteRegressionService:
         assert regression_service.delete_regression(created["id"]) is True
 
 
-class TestLegacyVersionPadding:
-    """Exercise the legacy single-integer version padding branches."""
+class TestVersionThatIsNotSemantic:
+    """A stored version that is not MAJOR.MINOR.PATCH refuses the version bump."""
 
-    def test_add_regression_version_pads_legacy_single_integer_version(self) -> None:
-        """add_regression_version handles legacy version='N' by padding to 'N.0.0'."""
-        from tests.api.regression_test_helpers import (
-            load_regression_file,
-            save_regression_file,
-        )
+    def test_add_regression_version_refuses_a_single_integer_version(self) -> None:
+        """add_regression_version refuses version '1' and writes nothing."""
         from wavecore.api.services.regressions import service as regression_service
         from wavecore.api.services.regressions import version_service as _reg_version_svc
 
         clear_regression_storage()
 
-        regression = regression_service.create_regression({"name": "Legacy Reg"})
+        regression = regression_service.create_regression({"name": "Single Integer Reg"})
         stored = load_regression_file(regression["id"])
         assert stored is not None
         stored["version"] = "1"
         save_regression_file(stored)
+        history = load_versions_file(regression["id"])
 
-        result = _reg_version_svc.add_regression_version(regression["id"], {"description": "next"})
-        assert result is not None
-        assert result["version"] == "1.1.0"
+        with pytest.raises(ValidationException) as exc_info:
+            _reg_version_svc.add_regression_version(regression["id"], {"description": "next"})
+
+        assert exc_info.value.message == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_regression_file(regression["id"]) == stored
+        assert load_versions_file(regression["id"]) == history
 
 
 class TestBatchDeleteRegressionsService:
@@ -777,6 +836,18 @@ class TestBatchDeleteRegressionsService:
         assert len(result["failed"]) == 1
         assert "running or paused" in result["failed"][0]["error"]
 
+    def test_batch_delete_regressions_captures_any_wave_error(self) -> None:
+        """Any WAVE refusal of one regression is kept per item, as for Suites and Tests."""
+        from wavecore.api.services.regressions import service as regression_service
+
+        with patch(
+            "wavecore.api.services.regressions.service.delete_regression",
+            side_effect=WaveException("Delete failed"),
+        ):
+            result = regression_service.batch_delete_regressions(["reg-1"])
+
+        assert result == {"deleted": [], "failed": [{"index": 0, "error": "Delete failed"}]}
+
 
 class TestBatchCloneRegressionsService:
     """Test suite for batch_clone_regressions service function."""
@@ -835,6 +906,38 @@ class TestBatchCloneRegressionsService:
         assert result["cloned"] == []
         assert len(result["failed"]) == 1
         assert "Name already exists" in result["failed"][0]["error"]
+
+    def test_batch_clone_regressions_captures_any_wave_error(self) -> None:
+        """Any WAVE refusal of one regression is kept per item, as for Suites."""
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.api.services.regressions import version_service as _reg_version_svc
+
+        with patch.object(
+            _reg_version_svc, "clone_regression", side_effect=WaveException("Save failed")
+        ):
+            result = regression_service.batch_clone_regressions(["reg-1"])
+
+        assert result == {"cloned": [], "failed": [{"index": 0, "error": "Save failed"}]}
+
+    def test_batch_clone_regressions_names_each_copy_and_each_missing_one(self) -> None:
+        """Each copy takes its source name with '(Copy)'; a missing one is named by its index."""
+        from wavecore.api.services.regressions import service as regression_service
+
+        clear_regression_storage()
+
+        real = regression_service.create_regression({"name": "Real One"})
+        ghost_id = str(uuid.uuid4())
+
+        result = regression_service.batch_clone_regressions([ghost_id, real["id"]])
+
+        assert result["failed"] == [
+            {"index": 0, "error": f"Regression with ID '{ghost_id}' not found"}
+        ]
+        [entry] = result["cloned"]
+        assert entry["original_id"] == real["id"]
+        clone = regression_service.get_regression(entry["cloned_id"])
+        assert clone is not None
+        assert clone["name"] == "Real One (Copy)"
 
 
 class TestListRegressionVersionsService:

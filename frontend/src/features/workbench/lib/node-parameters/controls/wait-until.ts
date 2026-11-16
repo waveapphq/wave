@@ -19,6 +19,7 @@ export const inputs: InputParam[] = [
   }),
   param('fail_current_scope', 'Fail Current Scope', 'boolean', false, 'Fail the block and stop the flow when the wait gives up', {
     defaultValue: false,
+    noExpression: true,
   }),
 ]
 

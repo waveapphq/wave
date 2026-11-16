@@ -202,6 +202,7 @@ class TestPortStates:
         [
             pytest.param(never, FAST, "No answer within 0.05 seconds", id="never-answers"),
             pytest.param(gone, 10, "No answer within 10 seconds", id="integer-timeout"),
+            pytest.param(gone, 1, "No answer within 1 second", id="one-second-timeout"),
         ],
     )
     async def test_a_tcp_port_without_an_answer_times_out(
@@ -233,6 +234,16 @@ class TestPortStates:
         out = await run_check(log, silent.port, protocol="udp", timeout=FAST)
         assert verdicts(out) == [
             [silent.port, "udp", "open or filtered", "No reply within 0.05 seconds"]
+        ]
+
+    async def test_a_one_second_silence_is_named_in_the_singular(
+        self, monkeypatch: pytest.MonkeyPatch, listen: Listen, log: LogRecorder
+    ) -> None:
+        silent = await listen("udp-silent")
+        resolve_to(monkeypatch, "127.0.0.1")
+        out = await run_check(log, silent.port, protocol="udp", timeout=1)
+        assert verdicts(out) == [
+            [silent.port, "udp", "open or filtered", "No reply within 1 second"]
         ]
 
     @pytest.mark.parametrize(("kind", "timeout"), [("udp-silent", FAST), ("udp-echo", WAIT)])

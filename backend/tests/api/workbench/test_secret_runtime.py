@@ -10,6 +10,7 @@ Covers REQ-3.1.3.5 / REQ-4.5.3:
 - the proxy password in force when a run starts registers run-wide (REQ-4.7.14)
 """
 
+import json
 import os
 import uuid
 from collections.abc import Callable, Generator
@@ -476,7 +477,7 @@ class TestVariableSetterSecretSeeding:
                 "version": "1.0.0",
                 "config": {
                     "values": {"variables": variables},
-                    "variableSecretKeys": secret_keys,
+                    "secretFields": [f"variables.{key}" for key in secret_keys],
                 },
             },
         }
@@ -612,9 +613,9 @@ class TestS10CredentialRegistration:
 
 class TestSecretSchemaExtraction:
     """Secret outputs seed from model as well as dict output schemas; the input-parameter
-    reader (_extract_secret_fields) is removed."""
+    reader (_extract_secret_fields) does not exist."""
 
-    def test_extract_secret_fields_helper_is_removed(self) -> None:
+    def test_there_is_no_extract_secret_fields_helper(self) -> None:
         assert not hasattr(wb_plugins, "_extract_secret_fields")
 
     def test_secret_outputs_seed_from_output_field_models_when_none_are_marked(self) -> None:
@@ -825,7 +826,6 @@ class TestUnmaskSecretsNodeOption:
                 "config": config,
                 "expressionFields": ["message"],
                 "templateFields": [],
-                "variableExpressionKeys": [],
             },
         }
 
@@ -1168,8 +1168,10 @@ class TestScalarCredentialFieldReveal:
 
         assert line is not None
         assert self._PW not in line
-        assert "********" in line
-        assert "example.com" in line
+        assert json.loads(line.removeprefix("Inputs: ")) == {
+            "password": "********",
+            "host": "example.com",
+        }
 
     async def test_scalar_credential_revealed_when_in_unmasked_secret_fields(self) -> None:
         line = self._inputs_line(await self._run(unmasked_secret_fields=["password"]))
@@ -1526,7 +1528,6 @@ def _fn_log_node(node_id: str, message: str) -> dict[str, Any]:
             "config": {"values": {"message": message, "level": "INFO"}, "profileBindings": []},
             "expressionFields": ["message"],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

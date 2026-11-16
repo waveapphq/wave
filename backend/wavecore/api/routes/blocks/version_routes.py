@@ -16,18 +16,23 @@ Endpoints:
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Request, Response, status
-from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.exceptions import NotFoundException
+from wavecore.api.routes.blocks.routes import block_not_found
+from wavecore.api.routes.shared import read_json_object, validate_uuid
 from wavecore.api.services.blocks import version_service as _block_version_svc
 
 # Create router for block version endpoints
 router = APIRouter(tags=["Blocks"], prefix="/blocks")
 
 
+def _no_version(block_id: str, version: str) -> NotFoundException:
+    """The 404 for a version the block does not have."""
+    return NotFoundException(f"Version '{version}' not found for block '{block_id}'")
+
+
 @router.get("/{block_id}/versions", response_model=None)
-async def list_block_versions(block_id: str) -> dict[str, Any] | JSONResponse:
+async def list_block_versions(block_id: str) -> dict[str, Any]:
     """List all versions for a block.
 
     Args:
@@ -36,37 +41,18 @@ async def list_block_versions(block_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         List of version strings
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        versions = _block_version_svc.list_block_versions(block_id)
+    versions = _block_version_svc.list_block_versions(block_id)
 
-        if versions is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if versions is None:
+        raise block_not_found(block_id)
 
-        return {"success": True, "data": versions}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": versions}
 
 
 @router.post("/{block_id}/versions", status_code=status.HTTP_201_CREATED, response_model=None)
-async def add_block_version(block_id: str, request: Request) -> dict[str, Any] | JSONResponse:
+async def add_block_version(block_id: str, request: Request) -> dict[str, Any]:
     """Add a new version to a block.
 
     Args:
@@ -76,48 +62,20 @@ async def add_block_version(block_id: str, request: Request) -> dict[str, Any] |
     Returns:
         Created block version
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        body = await request.json()
+    body = await read_json_object(request)
 
-        result = _block_version_svc.add_block_version(block_id, body)
+    result = _block_version_svc.add_block_version(block_id, body)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "Version constraint violation" in error_message:
-            status_code = status.HTTP_409_CONFLICT
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}
 
 
 @router.get("/{block_id}/versions/{version}", response_model=None)
-async def get_block_version(
-    block_id: str, version: str, response: Response
-) -> dict[str, Any] | JSONResponse:
+async def get_block_version(block_id: str, version: str, response: Response) -> dict[str, Any]:
     """Get specific block version.
 
     Args:
@@ -128,39 +86,20 @@ async def get_block_version(
     Returns:
         Block version details
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_version_svc.get_block_version(block_id, version)
+    result = _block_version_svc.get_block_version(block_id, version)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Version '{version}' not found for block '{block_id}'",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise _no_version(block_id, version)
 
-        # Set cache headers based on whether this is latest version
-        if result.get("is_latest") is False:
-            response.headers["Cache-Control"] = "max-age=3600"
-        else:
-            response.headers["Cache-Control"] = "max-age=60"
+    # Set cache headers based on whether this is latest version
+    if result.get("is_latest") is False:
+        response.headers["Cache-Control"] = "max-age=3600"
+    else:
+        response.headers["Cache-Control"] = "max-age=60"
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return {"success": True, "data": result}
 
 
 @router.put("/{block_id}/versions/{version}", response_model=None)
@@ -169,7 +108,7 @@ async def update_block_version(
     version: str,
     request: Request,
     if_match: Annotated[str | None, Header()] = None,
-) -> dict[str, Any] | JSONResponse:
+) -> dict[str, Any]:
     """Update specific block version metadata.
 
     Args:
@@ -181,44 +120,16 @@ async def update_block_version(
     Returns:
         Updated block version
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        body = await request.json()
+    body = await read_json_object(request)
 
-        result = _block_version_svc.update_block_version(block_id, version, body, etag=if_match)
+    result = _block_version_svc.update_block_version(block_id, version, body, etag=if_match)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Version '{version}' not found for block '{block_id}'",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise _no_version(block_id, version)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "Precondition failed" in error_message:
-            status_code = status.HTTP_412_PRECONDITION_FAILED
-        elif "immutable" in error_message:
-            status_code = status.HTTP_400_BAD_REQUEST
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}
 
 
 @router.delete("/{block_id}/versions/{version}", status_code=status.HTTP_204_NO_CONTENT)
@@ -232,44 +143,16 @@ async def delete_block_version(block_id: str, version: str) -> Response:
     Returns:
         Empty response with 204 status code
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        deleted = _block_version_svc.delete_block_version(block_id, version)
+    if not _block_version_svc.delete_block_version(block_id, version):
+        raise _no_version(block_id, version)
 
-        if not deleted:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Version '{version}' not found for block '{block_id}'",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
-
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "Cannot delete" in error_message:
-            status_code = status.HTTP_409_CONFLICT
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "CONFLICT"},
-            },
-        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{block_id}/history", response_model=None)
-async def get_block_history(block_id: str) -> dict[str, Any] | JSONResponse:
+async def get_block_history(block_id: str) -> dict[str, Any]:
     """Get complete version history for a block.
 
     Args:
@@ -278,37 +161,18 @@ async def get_block_history(block_id: str) -> dict[str, Any] | JSONResponse:
     Returns:
         Version history
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_version_svc.get_block_history(block_id)
+    result = _block_version_svc.get_block_history(block_id)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return result
-
-    except (ValueError, ValidationException) as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {"message": str(e), "code": "INVALID_PARAMETER"},
-            },
-        )
+    return result
 
 
 @router.post("/{block_id}/restore/{version}", response_model=None)
-async def restore_block_version(block_id: str, version: str) -> dict[str, Any] | JSONResponse:
+async def restore_block_version(block_id: str, version: str) -> dict[str, Any]:
     """Restore block to a specific version.
 
     Args:
@@ -318,37 +182,11 @@ async def restore_block_version(block_id: str, version: str) -> dict[str, Any] |
     Returns:
         Block with new version created from restore
     """
-    try:
-        validate_uuid(block_id, "block_id")
+    validate_uuid(block_id, "block_id")
 
-        result = _block_version_svc.restore_block_version(block_id, version)
+    result = _block_version_svc.restore_block_version(block_id, version)
 
-        if result is None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={
-                    "success": False,
-                    "error": {
-                        "message": f"Block with ID '{block_id}' not found",
-                        "code": "NOT_FOUND",
-                    },
-                },
-            )
+    if result is None:
+        raise block_not_found(block_id)
 
-        return {"success": True, "data": result}
-
-    except (ValueError, ValidationException) as e:
-        error_message = str(e)
-
-        if "not found" in error_message.lower():
-            status_code = status.HTTP_404_NOT_FOUND
-        else:
-            status_code = status.HTTP_400_BAD_REQUEST
-
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "success": False,
-                "error": {"message": error_message, "code": "VALIDATION_ERROR"},
-            },
-        )
+    return {"success": True, "data": result}

@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 
@@ -40,6 +40,8 @@ vi.mock('@/features/functions/api/functions-api', () => ({
 import { FunctionsLibraryModal } from '@/features/functions/library/functions-library-modal'
 
 const NO_RESULTS_COPY = 'No Functions match these filters.'
+// The shared server-search wait: the library searches once typing stops.
+const SEARCH_WAIT_MS = 300
 const EMPTY_LIBRARY_COPY =
   'No published Functions yet. Build one in the canvas, then Publish it.'
 
@@ -52,12 +54,31 @@ const SAMPLE = [
 ]
 
 
+interface ListParams {
+  search?: string
+  search_in?: string[]
+}
+
+// The server's search: a case-insensitive substring of the fields named in search_in.
+function serverAnswer(params?: ListParams) {
+  const needle = (params?.search ?? '').toLowerCase()
+  const fields = params?.search_in ?? ['name']
+  const functions = SAMPLE.filter((fn) => {
+    if (!needle) return true
+    const texts = [
+      ...(fields.includes('name') ? [fn.name] : []),
+      ...(fields.includes('description') ? [fn.description] : []),
+      ...(fields.includes('tags') ? fn.tags : []),
+    ]
+    return texts.some((text) => text.toLowerCase().includes(needle))
+  })
+  return { functions, pagination: { page: 1, per_page: 100, total: functions.length, total_pages: 1 } }
+}
+
+
 beforeEach(() => {
   listFunctionsMock.mockReset()
-  listFunctionsMock.mockResolvedValue({
-    functions: SAMPLE,
-    pagination: { page: 1, per_page: 50, total: SAMPLE.length, total_pages: 1 },
-  })
+  listFunctionsMock.mockImplementation(async (params?: ListParams) => serverAnswer(params))
 })
 
 // Flush any pending state updates from the listFunctions effect so the
@@ -66,7 +87,26 @@ afterEach(async () => {
   await act(async () => {
     await Promise.resolve()
   })
+  vi.useRealTimers()
 })
+
+/** From a loaded library on: the clock stands still, so a test types and then lets the search wait pass. */
+function holdTheClock() {
+  vi.useFakeTimers()
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+}
+
+/** Lets `ms` of the search wait pass and flushes the answers that land meanwhile. */
+async function letWaitPass(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
+}
+
+/** The calls that searched: a catalog read carries no search text. */
+function searchCalls(): ListParams[] {
+  return listFunctionsMock.mock.calls.map(([params]) => params as ListParams).filter((params) => params?.search !== undefined)
+}
 
 
 describe('FunctionsLibraryModal - populated grid', () => {
@@ -91,8 +131,8 @@ describe('FunctionsLibraryModal - populated grid', () => {
     expect(style).toMatch(/grid-template-columns/)
     expect(style).toMatch(/auto-fill/)
     expect(style).toMatch(/minmax\(220px, 1fr\)/)
-    // Sanity: the grid sits inside the modal region.
-    expect(screen.getByRole('region', { name: 'Functions Library' })).toContainElement(grid)
+    // Sanity: the grid sits inside the library window.
+    expect(screen.getByRole('dialog', { name: 'Functions Library' })).toContainElement(grid)
   })
 })
 
@@ -104,7 +144,7 @@ describe('FunctionsLibraryModal - search filtering', () => {
     await screen.findByText('Greet User')
     const search = screen.getByPlaceholderText(/search/i)
     await user.type(search, 'EMAIL')
-    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Greet User')).not.toBeInTheDocument())
     expect(screen.getByText('Send Email')).toBeInTheDocument()
     expect(screen.queryByText('Charge Card')).not.toBeInTheDocument()
   })
@@ -116,6 +156,192 @@ describe('FunctionsLibraryModal - search filtering', () => {
     const search = screen.getByPlaceholderText(/search/i)
     await user.type(search, 'definitely-not-a-name')
     expect(await screen.findByText(NO_RESULTS_COPY)).toBeInTheDocument()
+  })
+
+  it('reads the empty line through a polite live region that is there before the list empties', async () => {
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    const regions = () => document.querySelectorAll('[aria-live="polite"]')
+    expect(regions()).toHaveLength(1)
+    const region = regions()[0]
+    expect(region).toBeEmptyDOMElement()
+    expect(region).toHaveClass('sr-only')
+
+    await user.type(screen.getByPlaceholderText(/search/i), 'definitely-not-a-name')
+
+    await waitFor(() => expect(region).toHaveTextContent(new RegExp(`^${NO_RESULTS_COPY}$`)))
+    expect(region).toBe(screen.getByText(NO_RESULTS_COPY))
+    expect(region).not.toHaveClass('sr-only')
+    expect(screen.queryByTestId('functions-library-grid')).not.toBeInTheDocument()
+  })
+
+  it('sends the search to the server over name, description and tags (CANVAS-205)', async () => {
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    await user.type(screen.getByPlaceholderText(/search/i), ' credit ')
+    await waitFor(() =>
+      expect(listFunctionsMock).toHaveBeenLastCalledWith({
+        page: 1,
+        per_page: 100,
+        search: 'credit',
+        search_in: ['name', 'description', 'tags'],
+      }),
+    )
+  })
+
+  it('finds a card by a word only its description holds', async () => {
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    await user.type(screen.getByPlaceholderText(/search/i), 'CREDIT')
+    await waitFor(() => expect(screen.queryByText('Greet User')).not.toBeInTheDocument())
+    expect(screen.getByText('Charge Card')).toBeInTheDocument()
+    expect(screen.queryByText('Refund')).not.toBeInTheDocument()
+  })
+
+  it('finds cards by a word only one of their tags holds', async () => {
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    await user.type(screen.getByPlaceholderText(/search/i), 'Payment')
+    await waitFor(() => expect(screen.queryByText('Send Email')).not.toBeInTheDocument())
+    expect(screen.getByText('Charge Card')).toBeInTheDocument()
+    expect(screen.getByText('Refund')).toBeInTheDocument()
+    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+  })
+
+  it('keeps every library tag in the Tags list while a search narrows the cards', async () => {
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    await user.type(screen.getByPlaceholderText(/search/i), 'credit')
+    await waitFor(() => expect(screen.queryByText('Greet User')).not.toBeInTheDocument())
+    await openTagsPopover(user)
+    const options = within(await screen.findByRole('listbox')).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual(['demo', 'greet', 'mail', 'payment'])
+  })
+
+  it('never lets the answer to an older search replace the newer one', async () => {
+    let answerFirst: (value: ReturnType<typeof serverAnswer>) => void = () => {}
+    listFunctionsMock.mockImplementation((params?: ListParams) => {
+      if (params?.search === 'c') {
+        return new Promise((resolve) => {
+          answerFirst = resolve
+        })
+      }
+      return Promise.resolve(serverAnswer(params))
+    })
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    const user = holdTheClock()
+    const search = screen.getByPlaceholderText(/search/i)
+    await user.type(search, 'c')
+    await letWaitPass(SEARCH_WAIT_MS)
+    await user.type(search, 'r')
+    await letWaitPass(SEARCH_WAIT_MS)
+    expect(searchCalls().map((params) => params.search)).toEqual(['c', 'cr'])
+    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+    await act(async () => {
+      answerFirst(serverAnswer())
+    })
+    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+    expect(screen.getByText('Charge Card')).toBeInTheDocument()
+  })
+
+  it('a failure of an older search never shows the error over the newer answer', async () => {
+    let failFirst: (reason: Error) => void = () => {}
+    listFunctionsMock.mockImplementation((params?: ListParams) => {
+      if (params?.search === 'c') {
+        return new Promise((_resolve, reject) => {
+          failFirst = reject
+        })
+      }
+      return Promise.resolve(serverAnswer(params))
+    })
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    const user = holdTheClock()
+    const search = screen.getByPlaceholderText(/search/i)
+    await user.type(search, 'c')
+    await letWaitPass(SEARCH_WAIT_MS)
+    await user.type(search, 'r')
+    await letWaitPass(SEARCH_WAIT_MS)
+    expect(searchCalls().map((params) => params.search)).toEqual(['c', 'cr'])
+    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+    await act(async () => {
+      failFirst(new Error('network down'))
+    })
+    expect(screen.queryByTestId('functions-library-error')).not.toBeInTheDocument()
+    expect(screen.getByText('Charge Card')).toBeInTheDocument()
+  })
+
+  it('asks the server once per pause in typing, with the whole text typed', async () => {
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    const user = holdTheClock()
+    const search = screen.getByPlaceholderText(/search/i)
+
+    await user.type(search, 'credit')
+    await letWaitPass(SEARCH_WAIT_MS - 1)
+    expect(searchCalls()).toEqual([])
+    await letWaitPass(1)
+    expect(searchCalls()).toEqual([
+      { page: 1, per_page: 100, search: 'credit', search_in: ['name', 'description', 'tags'] },
+    ])
+
+    await user.type(search, ' card')
+    await letWaitPass(SEARCH_WAIT_MS)
+    expect(searchCalls().map((params) => params.search)).toEqual(['credit', 'credit card'])
+    expect(screen.getByText('Charge Card')).toBeInTheDocument()
+    expect(screen.queryByText('Refund')).not.toBeInTheDocument()
+  })
+
+  it('Clear Filters drops a search still waiting for typing to stop', async () => {
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    const user = holdTheClock()
+
+    await user.type(screen.getByPlaceholderText(/search/i), 'credit')
+    await user.click(screen.getByRole('button', { name: 'Clear Filters' }))
+    await letWaitPass(SEARCH_WAIT_MS)
+
+    expect(searchCalls()).toEqual([])
+    expect(screen.getByText('Greet User')).toBeInTheDocument()
+  })
+
+  it('a failed search shows the error state, and Try Again runs the search again', async () => {
+    listFunctionsMock.mockImplementation(async (params?: ListParams) => {
+      if (params?.search) throw new Error('network down')
+      return serverAnswer(params)
+    })
+    const user = userEvent.setup()
+    render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
+    await screen.findByText('Greet User')
+    await user.type(screen.getByPlaceholderText(/search/i), 'credit')
+    expect(await screen.findByTestId('functions-library-error')).toBeInTheDocument()
+
+    listFunctionsMock.mockImplementation(async (params?: ListParams) => serverAnswer(params))
+    await user.click(screen.getByRole('button', { name: 'Try Again' }))
+    expect(await screen.findByText('Charge Card')).toBeInTheDocument()
+    expect(screen.queryByTestId('functions-library-error')).not.toBeInTheDocument()
+    expect(screen.queryByText('Greet User')).not.toBeInTheDocument()
+  })
+
+  it('a failed seeded search no longer shows the error once the seed is cleared', async () => {
+    listFunctionsMock.mockImplementation(async (params?: ListParams) => {
+      if (params?.search) throw new Error('network down')
+      return serverAnswer(params)
+    })
+    const { rerender } = render(
+      <FunctionsLibraryModal isOpen={true} onClose={() => {}} initialSearch="credit" />,
+    )
+    expect(await screen.findByTestId('functions-library-error')).toBeInTheDocument()
+
+    rerender(<FunctionsLibraryModal isOpen={true} onClose={() => {}} initialSearch="" />)
+    expect(await screen.findByText('Greet User')).toBeInTheDocument()
+    expect(screen.queryByTestId('functions-library-error')).not.toBeInTheDocument()
   })
 })
 
@@ -374,7 +600,7 @@ describe('FunctionsLibraryModal - Refresh button', () => {
     const user = userEvent.setup()
     render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
     await screen.findByText('Greet User')
-    const root = screen.getByRole('region', { name: /functions library/i })
+    const root = screen.getByRole('dialog', { name: /functions library/i })
     const before = root.style.transform
     await user.click(screen.getByRole('button', { name: /refresh/i }))
     // onClick + onPointerDown both stopPropagation, so the modal offset
@@ -399,10 +625,10 @@ describe('FunctionsLibraryModal - shell coexistence with populated body', () => 
     await screen.findByText('Greet User')
   })
 
-  it('keeps a single region label "Functions Library"', async () => {
+  it('keeps a single dialog named "Functions Library"', async () => {
     render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
     await screen.findByText('Greet User')
-    const region = screen.getByRole('region', { name: /functions library/i })
-    expect(within(region).getByText('Greet User')).toBeInTheDocument()
+    const library = screen.getByRole('dialog', { name: /functions library/i })
+    expect(within(library).getByText('Greet User')).toBeInTheDocument()
   })
 })

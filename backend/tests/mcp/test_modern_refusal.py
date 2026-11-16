@@ -60,7 +60,7 @@ def _basic(username: str, password: str) -> str:
 
 
 class TestSessionlessRevisionRefused:
-    def test_discover_post_gets_the_legacy_rejection(self) -> None:
+    def test_discover_post_gets_the_missing_session_rejection(self) -> None:
         with _client() as client:
             response = client.post(
                 "/mcp",

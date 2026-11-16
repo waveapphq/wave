@@ -61,8 +61,8 @@ IF_EXISTS_VALUES = ["overwrite", "append", "fail"]
 CHECKSUM_VALUES = ["none", "md5", "sha1", "sha256", "sha512"]
 OUTPUT_FORMAT_VALUES = ["individual", "map", "table"]
 
-REMOVED_PARAMETERS = ["overwrite", "mode", "encoding"]
-REMOVED_OUTPUTS = [
+ABSENT_PARAMETERS = ["overwrite", "mode", "encoding"]
+ABSENT_OUTPUTS = [
     "success",
     "path",
     "modified_time",
@@ -261,15 +261,15 @@ class TestFileIOOutputSchema:
         assert "type_when" not in _outputs()[name]
 
 
-class TestFileIORemovedSchema:
+class TestFileIOAbsentFields:
     """The schema has no mode, no encoding, no overwrite and no path output."""
 
-    @pytest.mark.parametrize("name", REMOVED_PARAMETERS)
-    def test_removed_parameters_are_absent(self, name: str) -> None:
+    @pytest.mark.parametrize("name", ABSENT_PARAMETERS)
+    def test_the_parameter_is_absent(self, name: str) -> None:
         assert name not in _parameters()
 
-    @pytest.mark.parametrize("name", REMOVED_OUTPUTS)
-    def test_removed_outputs_are_absent(self, name: str) -> None:
+    @pytest.mark.parametrize("name", ABSENT_OUTPUTS)
+    def test_the_output_is_absent(self, name: str) -> None:
         assert name not in _outputs()
 
     def test_every_output_wire_name_appears_once(self) -> None:

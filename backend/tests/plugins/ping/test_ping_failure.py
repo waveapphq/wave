@@ -255,6 +255,17 @@ class TestWholeBlockTimeout:
         )
         assert 1 <= len(rows(out["replies"])) < 4
 
+    async def test_a_one_second_timeout_is_named_in_the_singular(
+        self, monkeypatch: pytest.MonkeyPatch, log: LogRecorder, clock: FakeClock
+    ) -> None:
+        resolve_to(monkeypatch, TARGET)
+        sock = FakeSocket(clock=clock)
+        params = ping_params(count=1, timeout=1, on_error="record")
+
+        out = outputs(await run(params, log, opener=opener_for(sock), clock=clock))
+
+        assert (out["error"], out["reason"]) == ("Ping did not finish within 1 second", "Timeout")
+
     @pytest.mark.parametrize(
         ("on_error", "raises"),
         [

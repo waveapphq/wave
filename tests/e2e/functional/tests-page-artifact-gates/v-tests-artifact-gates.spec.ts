@@ -226,7 +226,7 @@ test.describe('tests-page gates over session artifacts', () => {
     await dialog.getByRole('button', { name: 'Reset & Create Test' }).click()
     await expect(dialog).toHaveCount(0)
     await expect(
-      page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'New Test' }) }),
+      page.getByRole('dialog', { name: 'New Test' }),
       'the New Test form dialog opens after the reset',
     ).toBeVisible()
     await expectBackendSessionCleared(page)
@@ -237,7 +237,7 @@ test.describe('tests-page gates over session artifacts', () => {
     await page.getByRole('button', { name: 'New Test' }).click()
 
     await expect(
-      page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: 'New Test' }) }),
+      page.getByRole('dialog', { name: 'New Test' }),
     ).toBeVisible()
     // No session + clean canvas -> no switch dialog in between.
     await expect(page.locator('[data-testid="switch-test-dialog"]')).toHaveCount(0)

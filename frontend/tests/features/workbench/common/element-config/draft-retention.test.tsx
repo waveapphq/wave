@@ -142,6 +142,7 @@ describe('ParameterTable - retainOnHide exemption from hidden-param auto-clear',
 describe('buildSaveData - strips inactive body-mode params at save', () => {
   const baseCtx = {
     elementId: 'node-1',
+    elementType: 'http-client',
     selectedVersion: '1.0.0',
     outputBindings: {},
     outputParameters: [],
@@ -152,23 +153,8 @@ describe('buildSaveData - strips inactive body-mode params at save', () => {
     templateFields: [],
     outputSecretFields: [],
     variables: [],
-    isVariableSetter: false,
     isXmlParser: false,
     isJsonParser: false,
-    isAssert: false,
-    isIfElse: false,
-    isSwitch: false,
-    isWhile: false,
-    assertAssertions: [],
-    assertMode: 'split' as const,
-    assertFailCurrentScope: false,
-    ifElseBranches: [],
-    switchBranches: [],
-    whileConditions: [],
-    variableExpressionKeys: [],
-    variableTemplateKeys: [],
-    variableSecretKeys: [],
-    variableTypes: {},
   }
 
   it('persists only the active mode payload, dropping hidden retained drafts', () => {

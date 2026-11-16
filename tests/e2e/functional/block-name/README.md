@@ -71,7 +71,7 @@ session, and deletes them afterwards. No server state is reset.
   ERROR, exactly `Block 'PSQL' failed: RuntimeError: seed rows are missing`. The only
   `Block '...' failed` lines are that one and the `Charge card` one. No console row holds
   any block's Description, in its message, in its Source or in its copied text
-- **Engine lines:** `Executing 'Say hello' (plugin/log)` and `Completed 'Say hello'`
+- **Engine lines:** `Executing 'Say hello' (plugin/log)` and `Completed 'Say hello' ({n} ms)`
   at DEBUG, `Skipping 'Muted step' (disabled)` and `Skipping 'Skipped step' (skipped)` at
   INFO, all from `SYSTEM`; neither skipped block writes its own line
 - **Status events:** every `block_status_changed` event carries, as `block_name`, the
@@ -112,6 +112,6 @@ session, and deletes them afterwards. No server state is reset.
   console at DEBUG) are exactly `SYSTEM`, `For Loop`, `CSV`, `Try / Catch`, `Var Setter` and
   `Log`, so every block wrote lines and none carries a `{type} : {Name}` Source
 - **Engine lines of the named blocks:** `Executing 'For Loop' (control/for)`,
-  `Completed 'For Loop'`, `Executing 'Try / Catch' (control/try-catch-finally)`,
+  `Completed 'For Loop' ({n} ms)`, `Executing 'Try / Catch' (control/try-catch-finally)`,
   `Executing 'Log' (plugin/log)`, `'For Loop' → pass_index` and `'CSV' → rows`, all from
   `SYSTEM` at DEBUG

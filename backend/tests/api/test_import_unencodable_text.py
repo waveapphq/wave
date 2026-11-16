@@ -61,7 +61,7 @@ IMPORTS: dict[str, Import] = {
     "tests": Import(
         "/tests/import",
         "/tests/import/validate",
-        "PARSE_ERROR",
+        "VALIDATION_ERROR",
         "description",
         lambda text: {
             "name": "Imported",

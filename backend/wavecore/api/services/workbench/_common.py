@@ -3,6 +3,8 @@
 import asyncio
 import contextlib
 import logging
+import math
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping, Sequence
 from contextvars import ContextVar
@@ -13,6 +15,7 @@ from enum import Enum
 from typing import Any
 
 from wavecore.api.services.workbench.block_source import node_source
+from wavecore.core.logging.log_safe import log_safe
 from wavecore.core.secrets import masking_settings
 from wavecore.core.table import Table
 
@@ -64,7 +67,7 @@ def _notify_terminal(session_id: str, status: str, halt_scope: str | None = None
         except Exception as e:  # noqa: BLE001 - never let a handler break workflow
             logger.warning(
                 "Terminal callback failed for session %s (status=%s): %s",
-                session_id,
+                log_safe(session_id),
                 status,
                 e,
             )
@@ -138,9 +141,9 @@ def current_instance_path() -> tuple[str, ...]:
 def get_session_snapshot(session_id: str) -> dict[str, Any] | None:
     """Return the end-of-run snapshot the Historical Test Canvas needs.
 
-    Captures the session's live ``block_states`` and ``variables`` maps
-    (kept up-to-date by the engine), plus its ``test_id``. Returns
-    ``None`` when the session is unknown so callers can fall back to
+    Captures the session's live ``block_states``, ``lanes_taken`` and
+    ``variables`` maps (kept up-to-date by the engine), plus its ``test_id``.
+    Returns ``None`` when the session is unknown so callers can fall back to
     their default behavior. Used at terminal time by the executions
     service and the sequential driver to persist a replayable snapshot
     of a workbench run.
@@ -153,8 +156,14 @@ def get_session_snapshot(session_id: str) -> dict[str, Any] | None:
     return {
         "test_id": session.get("test_id"),
         "block_states": dict(block_states),
+        "lanes_taken": copy_lanes(session),
         "variables": dict(variables),
     }
+
+
+def copy_lanes(session: Mapping[str, Any]) -> dict[str, list[str]]:
+    """A copy of the lanes each block of ``session`` took, by block."""
+    return {block: list(lanes) for block, lanes in (session.get("lanes_taken") or {}).items()}
 
 
 def _settle_running_blocks(
@@ -225,11 +234,6 @@ def _terminate_session(session_id: str) -> dict[str, Any]:
     _notify_terminal(session_id, WorkbenchStatus.STOPPED.value)
 
     return {"session_id": session_id, "status": WorkbenchStatus.STOPPED.value}
-
-
-def _get_test_profiles(_test_id: str) -> list[dict[str, Any]]:
-    """Get profiles associated with a test."""
-    return []
 
 
 async def _broadcast_event(session_id: str, event: dict[str, Any]) -> None:
@@ -317,7 +321,7 @@ async def _push_single_variable_change(
         )
 
     except Exception as e:
-        logger.warning("Failed to push variable change for '%s': %s", name, e)
+        logger.warning("Failed to push variable change for '%s': %s", log_safe(name), e)
 
 
 def _infer_variable_type(value: Any) -> str:
@@ -394,6 +398,33 @@ def _add_execution_log(
     }
     log_level = level_map.get(level.upper(), logging.INFO)
     terminal_logger.log(log_level, terminal_message)
+
+
+def _elapsed_ms(start_monotonic: float) -> int:
+    return int(math.ceil((time.monotonic() - start_monotonic) * 1000))
+
+
+def log_block_start(session_id: str, node_id: str, block_name: str, nf: Mapping[str, Any]) -> float:
+    """Write the start line of a Block run (REQ-3.7.2.5); returns its start time."""
+    _add_execution_log(
+        session_id,
+        "DEBUG",
+        f"Executing '{block_name}' ({nf['node_type']}/{nf['element_type']})",
+        "SYSTEM",
+        block_id=node_id,
+    )
+    return time.monotonic()
+
+
+def log_block_completion(session_id: str, node_id: str, block_name: str, duration_ms: int) -> None:
+    """Write the completion line of a Block run with its duration (REQ-3.7.2.5)."""
+    _add_execution_log(
+        session_id,
+        "DEBUG",
+        f"Completed '{block_name}' ({duration_ms} ms)",
+        "SYSTEM",
+        block_id=node_id,
+    )
 
 
 def _compute_subtree_boundary(
@@ -801,6 +832,7 @@ class BlockAttempt:
     error: Exception | None = None
     surfaced: bool = False
     shown: bool = False
+    duration_ms: int = 0
 
 
 @dataclass

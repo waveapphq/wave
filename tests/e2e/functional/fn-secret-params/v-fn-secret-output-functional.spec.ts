@@ -464,7 +464,7 @@ test.describe('V-FN-SECRET-OUTPUT: every variant of a secret output', () => {
         await expect(expand).toHaveAttribute('aria-label', 'Secret value for out_tok cannot be inspected')
         await row.hover()
         await expand.click({ force: true })
-        await expect(page.locator('section[aria-label="Inspect variable out_tok"]')).toHaveCount(0)
+        await expect(page.getByRole('dialog', { name: 'out_tok', exact: true, includeHidden: true })).toHaveCount(0)
         expect(await page.content(), 'the page while drilled').not.toContain(canary)
         await popToBreadcrumbSegment(page, seeded.testName)
       })

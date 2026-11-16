@@ -7,11 +7,13 @@ Implements comprehensive test coverage for requirement:
 Following TDD approach with exact error messages and 100% coverage requirement.
 """
 
+from decimal import Decimal
 from typing import Any
 
 import pytest
 
 from wavecore.core.expressions.errors import NullValueError
+from wavecore.core.variables.decimal_value import WaveDecimal
 from wavecore.plugins.json_parser import JSONParserPlugin
 
 SAMPLE_JSON = """{
@@ -822,7 +824,7 @@ class TestJSONParserPluginIndividualMode:
 
         assert result["success"] is True
         assert abs(result["price"] - 10.5) < 0.001
-        assert isinstance(result["price"], float)
+        assert isinstance(result["price"], WaveDecimal)
 
     async def test_individual_mode_coerce_to_boolean_true(self):
         """Test type coercion: value to boolean True."""
@@ -1090,7 +1092,7 @@ class TestJSONParserPluginIndividualMode:
 
         assert result["success"] is True
         assert result["open_float"] == 1.0
-        assert isinstance(result["open_float"], float)
+        assert isinstance(result["open_float"], WaveDecimal)
 
     async def test_individual_mode_coerce_float_from_int(self):
         """Test coercing integer value to float."""
@@ -1108,10 +1110,10 @@ class TestJSONParserPluginIndividualMode:
 
         assert result["success"] is True
         assert result["count_float"] == 2.0
-        assert isinstance(result["count_float"], float)
+        assert isinstance(result["count_float"], WaveDecimal)
 
     async def test_individual_mode_coerce_integer_from_float(self):
-        """Test coercing float value to integer (truncates)."""
+        """A fractional value asked for as an integer is refused, never truncated."""
         plugin = JSONParserPlugin()
         context = make_context(
             {
@@ -1124,9 +1126,11 @@ class TestJSONParserPluginIndividualMode:
 
         result = await plugin.execute(context)
 
-        assert result["success"] is True
-        assert result["price_int"] == 10  # 10.5 truncated to 10
-        assert isinstance(result["price_int"], int)
+        assert result["success"] is False
+        assert result["errors"] == [
+            {"query": "price_int", "error": "Cannot convert '10.5' to integer"}
+        ]
+        assert "price_int" not in result
 
     async def test_individual_mode_coerce_boolean_from_int(self):
         """Test coercing integer value to boolean."""
@@ -1230,8 +1234,9 @@ class TestJSONParserPluginTypeCoercion:
         assert self.plugin._coerce_value(42, "integer") == 42
 
     def test_coerce_integer_from_float(self):
-        """Test coercing float to integer truncates."""
-        assert self.plugin._coerce_value(3.7, "integer") == 3
+        """A fractional float asked for as an integer is refused, never truncated."""
+        with pytest.raises(ValueError, match="^Cannot convert '3.7' to integer$"):
+            self.plugin._coerce_value(3.7, "integer")
 
     def test_coerce_integer_from_bool(self):
         """Test coercing bool to integer."""
@@ -1243,8 +1248,9 @@ class TestJSONParserPluginTypeCoercion:
         assert self.plugin._coerce_value("42", "integer") == 42
 
     def test_coerce_integer_from_string_float(self):
-        """Test coercing float string to integer (via float conversion)."""
-        assert self.plugin._coerce_value("3.7", "integer") == 3
+        """Fractional text asked for as an integer is refused, never truncated."""
+        with pytest.raises(ValueError, match="^Cannot convert '3.7' to integer$"):
+            self.plugin._coerce_value("3.7", "integer")
 
     def test_coerce_integer_from_string_invalid(self):
         """Test coercing non-numeric string to integer raises ValueError."""
@@ -1259,14 +1265,14 @@ class TestJSONParserPluginTypeCoercion:
     # --- float coercion ---
 
     def test_coerce_float_from_float(self):
-        """Test coercing float to float is identity."""
-        assert self.plugin._coerce_value(3.14, "float") == 3.14
+        """A float becomes the exact decimal it prints as."""
+        assert self.plugin._coerce_value(3.14, "float") == Decimal("3.14")
 
     def test_coerce_float_from_int(self):
         """Test coercing int to float."""
         result = self.plugin._coerce_value(42, "float")
         assert result == 42.0
-        assert isinstance(result, float)
+        assert isinstance(result, WaveDecimal)
 
     def test_coerce_float_from_bool(self):
         """Test coercing bool to float."""
@@ -1281,7 +1287,7 @@ class TestJSONParserPluginTypeCoercion:
         """Test coercing integer string to float."""
         result = self.plugin._coerce_value("42", "float")
         assert result == 42.0
-        assert isinstance(result, float)
+        assert isinstance(result, WaveDecimal)
 
     def test_coerce_float_from_string_invalid(self):
         """Test coercing non-numeric string to float raises ValueError."""
@@ -1514,3 +1520,155 @@ class TestJSONParserPluginNullEntries:
         result = await _run_block(params)
 
         assert result == {"success": True, "errors": [], "count": "2", "open": True}
+
+
+def _individual(json_content: str, queries: dict[str, str], types: dict[str, str]) -> dict:
+    """Individual-mode parameters with one output type per query."""
+    return {
+        "json_content": json_content,
+        "queries": queries,
+        "output_mode": "individual",
+        "query_output_types": types,
+    }
+
+
+class TestJSONParserPluginExactNumbers:
+    """A number keeps every digit, and a fractional value asked for as an integer is refused
+    (REQ-3.1.3.14)."""
+
+    async def test_a_long_fraction_keeps_every_digit(self) -> None:
+        params = {"json_content": '{"v": -2123.123213123123699999}', "queries": {"v": "$.v"}}
+
+        result = await _run_block(params)
+
+        value = result["results"]["v"]["value"]
+        assert result["results"]["v"]["type"] == "float"
+        assert isinstance(value, WaveDecimal)
+        assert str(value) == "-2123.123213123123699999"
+
+    async def test_a_whole_number_written_with_an_exponent_is_an_exact_integer(self) -> None:
+        params = {"json_content": '{"v": 1.5E+3}', "queries": {"v": "$.v"}}
+
+        result = await _run_block(params)
+
+        assert result["results"]["v"] == {"type": "integer", "value": 1500}
+
+    async def test_a_small_fraction_reads_as_plain_digits(self) -> None:
+        params = {
+            "json_content": '{"v": 1E-7}',
+            "queries": {"v": "$.v"},
+            "output_mode": "individual",
+        }
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "v": "0.0000001"}
+
+    async def test_a_long_integer_text_asked_for_as_an_integer_keeps_every_digit(self) -> None:
+        params = _individual('{"id": "9007199254740993"}', {"id": "$.id"}, {"id": "integer"})
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "id": 9007199254740993}
+
+    async def test_a_fraction_asked_for_as_an_integer_is_refused(self) -> None:
+        params = _individual(
+            '{"a": 10.5, "b": "3.7"}', {"a": "$.a", "b": "$.b"}, {"a": "integer", "b": "integer"}
+        )
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [
+                {"query": "a", "error": "Cannot convert '10.5' to integer"},
+                {"query": "b", "error": "Cannot convert '3.7' to integer"},
+            ],
+        }
+
+    async def test_a_whole_number_text_asked_for_as_an_integer_is_taken(self) -> None:
+        params = _individual(
+            '{"a": "3.0", "b": " 42 ", "c": "1e3"}',
+            {"a": "$.a", "b": "$.b", "c": "$.c"},
+            {"a": "integer", "b": "integer", "c": "integer"},
+        )
+
+        result = await _run_block(params)
+
+        assert result == {"success": True, "errors": [], "a": 3, "b": 42, "c": 1000}
+
+    async def test_a_number_too_long_to_write_as_an_integer_is_refused(self) -> None:
+        params = _individual('{"a": "1e5000"}', {"a": "$.a"}, {"a": "integer"})
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [{"query": "a", "error": "Cannot convert '1e5000' to integer"}],
+        }
+
+    async def test_a_float_output_keeps_every_digit(self) -> None:
+        params = _individual(
+            '{"f": 0.1, "i": 12345678901234567891, "s": "3.14159265358979323846264338"}',
+            {"f": "$.f", "i": "$.i", "s": "$.s"},
+            {"f": "float", "i": "float", "s": "float"},
+        )
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": True,
+            "errors": [],
+            "f": Decimal("0.1"),
+            "i": Decimal("12345678901234567891"),
+            "s": Decimal("3.14159265358979323846264338"),
+        }
+        assert all(isinstance(result[name], WaveDecimal) for name in ("f", "i", "s"))
+
+    async def test_text_that_is_not_a_finite_number_asked_for_as_a_float_is_refused(self) -> None:
+        params = _individual(
+            '{"a": "NaN", "b": "Infinity"}', {"a": "$.a", "b": "$.b"}, {"a": "float", "b": "float"}
+        )
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [
+                {"query": "a", "error": "Cannot convert 'NaN' to float"},
+                {"query": "b", "error": "Cannot convert 'Infinity' to float"},
+            ],
+        }
+
+    async def test_a_map_read_as_text_is_written_in_print_form(self) -> None:
+        params = {
+            "json_content": '{"m": {"price": 10.5, "note": null, "ok": true}}',
+            "queries": {"m": "$.m"},
+            "output_mode": "individual",
+        }
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": True,
+            "errors": [],
+            "m": '{"price":10.5,"note":null,"ok":true}',
+        }
+
+    async def test_a_map_asked_for_as_a_number_or_a_boolean_is_refused(self) -> None:
+        params = _individual(
+            '{"m": {"a": 1}}',
+            {"i": "$.m", "f": "$.m", "b": "$.m"},
+            {"i": "integer", "f": "float", "b": "boolean"},
+        )
+
+        result = await _run_block(params)
+
+        assert result == {
+            "success": False,
+            "errors": [
+                {"query": "i", "error": "Cannot convert dict to integer"},
+                {"query": "f", "error": "Cannot convert dict to float"},
+                {"query": "b", "error": "Cannot convert dict to boolean"},
+            ],
+        }

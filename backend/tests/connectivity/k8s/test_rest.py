@@ -605,6 +605,17 @@ class TestTransportFailures:
         ):
             client.request("GET", "/api/v1/pods", None)
 
+    def test_a_one_second_request_timeout_is_named_in_the_singular(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(K8sClient, "_connect", lambda _self: _StalledWire([]))
+
+        with pytest.raises(
+            K8sApiError,
+            match=_exact("Kubernetes API request GET /api/v1/pods timed out after 1 second"),
+        ):
+            _client(_FAKE_SERVER, timeout=1).request("GET", "/api/v1/pods", None)
+
 
 class TestServerVersion:
     """/version fetch and parse (REQ-4.6.3 floor data source)."""
@@ -871,6 +882,13 @@ class _ScriptedWire:
             self._reads.insert(0, piece[size:])
             return piece[:size]
         return piece
+
+
+class _StalledWire(_ScriptedWire):
+    """A transport whose first read outlives the deadline."""
+
+    def read(self, size: int) -> bytes:
+        raise TimeoutError("timed out")
 
 
 def _wire_client(

@@ -331,6 +331,17 @@ class TestGetExecution:
         with pytest.raises(NotFoundException, match=r"^Execution 'ghost' not found$"):
             run_tools.get_execution("ghost")
 
+    def test_a_reference_walking_back_into_the_folder_is_not_found(self) -> None:
+        from wavecore.api.services.executions import _storage as exec_storage
+        from wavecore.mcp.tools import run as run_tools
+
+        execution_id = make_minimal_execution("passed")
+        exec_storage._execution_storage.clear()
+        ref = f"../api_executions/{execution_id}"
+
+        with pytest.raises(NotFoundException, match=rf"^Execution '{ref}' not found$"):
+            run_tools.get_execution(ref)
+
 
 class TestStartExecutionToolClientContext:
     def test_without_request_context_falls_back_to_client(self) -> None:

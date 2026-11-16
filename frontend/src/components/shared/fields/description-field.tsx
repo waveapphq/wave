@@ -12,6 +12,7 @@
 
 import type { ChangeEvent, KeyboardEvent } from 'react'
 import { cn } from '@/lib/utils'
+import { counterState } from '@/lib/field-constraints'
 
 export interface DescriptionFieldProps {
   id?: string
@@ -26,12 +27,6 @@ export interface DescriptionFieldProps {
   className?: string
   'aria-label'?: string
   'data-testid'?: string
-}
-
-function counterState(length: number, max: number): 'hidden' | 'muted' | 'destructive' {
-  if (length >= max) return 'destructive'
-  if (length >= 0.8 * max) return 'muted'
-  return 'hidden'
 }
 
 export function DescriptionField({

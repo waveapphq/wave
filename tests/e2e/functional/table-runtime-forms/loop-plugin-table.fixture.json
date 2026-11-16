@@ -43,7 +43,6 @@
           "hasNewerVersion": false,
           "expressionFields": ["collection"],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "collection": "orders" },
             "outputBindings": { "item": "row_item", "index": "row_idx" },

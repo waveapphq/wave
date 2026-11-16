@@ -21,6 +21,9 @@ _BOUNDARY = "wave-upload-boundary"
 _CONTENT_TYPE = f"multipart/form-data; boundary={_BOUNDARY}"
 _STARTER = "starter-session"
 _HOLDER = "holder-session"
+_UNKNOWN_TEST = "no-such-test"
+_UNKNOWN_TEST_MESSAGE = f"Test not found: {_UNKNOWN_TEST}"
+_NOTHING: dict[str, list[Any]] = {"uploads": [], "interruptions": []}
 
 Part = tuple[str, str | None, bytes]
 
@@ -104,8 +107,10 @@ class TestSnapshotRoute:
 
         assert _snapshot(client, test_id) == {"uploads": [], "interruptions": []}
 
-    def test_an_unknown_test_answers_the_same_empty_state(self, client: TestClient) -> None:
-        assert _snapshot(client, "no-such-test") == {"uploads": [], "interruptions": []}
+    def test_an_unknown_test_is_not_found(self, client: TestClient) -> None:
+        response = client.get(f"/tests/{_UNKNOWN_TEST}/testdata/uploads")
+
+        assert_error(response, status_code=404, code="NOT_FOUND", message=_UNKNOWN_TEST_MESSAGE)
 
 
 class TestInterruptionsFromTheUploadRoute:
@@ -181,6 +186,14 @@ class TestInterruptionsFromTheUploadRoute:
         assert _snapshot(client, test_id)["interruptions"][0]["reason"] == (
             "The upload did not complete"
         )
+
+    def test_an_upload_to_an_unknown_test_is_not_found_and_leaves_no_notice(
+        self, client: TestClient
+    ) -> None:
+        response = _upload(client, _UNKNOWN_TEST, "alpha.txt")
+
+        assert_error(response, status_code=404, code="NOT_FOUND", message=_UNKNOWN_TEST_MESSAGE)
+        assert testdata_uploads.snapshot(_UNKNOWN_TEST) == _NOTHING
 
 
 class TestRetry:
@@ -341,6 +354,13 @@ class TestCancelRoute:
 
         assert_error(response, status_code=404, code="NOT_FOUND", message="No such upload")
 
+    def test_an_unknown_test_is_not_found(self, client: TestClient) -> None:
+        response = client.post(
+            f"/tests/{_UNKNOWN_TEST}/testdata/uploads/u1/cancel", json={"session": _STARTER}
+        )
+
+        assert_error(response, status_code=404, code="NOT_FOUND", message=_UNKNOWN_TEST_MESSAGE)
+
     def test_a_canceled_upload_is_dropped_and_leaves_no_notice(
         self, client: TestClient, test_id: str
     ) -> None:
@@ -372,6 +392,11 @@ class TestDismissRoute:
         response = client.post(f"/tests/{test_id}/testdata/uploads/nothing/dismiss")
 
         assert_error(response, status_code=404, code="NOT_FOUND", message="No such upload")
+
+    def test_an_unknown_test_is_not_found(self, client: TestClient) -> None:
+        response = client.post(f"/tests/{_UNKNOWN_TEST}/testdata/uploads/u1/dismiss")
+
+        assert_error(response, status_code=404, code="NOT_FOUND", message=_UNKNOWN_TEST_MESSAGE)
 
 
 class TestInterruptRoute:
@@ -411,3 +436,12 @@ class TestInterruptRoute:
         )
 
         assert _snapshot(client, test_id)["interruptions"][0]["path"] == "huge.bin"
+
+    def test_an_unknown_test_is_not_found_and_keeps_no_notice(self, client: TestClient) -> None:
+        response = client.post(
+            f"/tests/{_UNKNOWN_TEST}/testdata/uploads/u9/interrupt",
+            json={"name": "huge.bin", "reason": "no room"},
+        )
+
+        assert_error(response, status_code=404, code="NOT_FOUND", message=_UNKNOWN_TEST_MESSAGE)
+        assert testdata_uploads.snapshot(_UNKNOWN_TEST) == _NOTHING

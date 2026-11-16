@@ -387,8 +387,7 @@
               "caught": "fail_caught"
             },
             "profileBindings": []
-          },
-          "variableExpressionKeys": []
+          }
         },
         "measured": {
           "width": 200,

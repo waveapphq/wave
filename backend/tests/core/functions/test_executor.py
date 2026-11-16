@@ -18,6 +18,7 @@ Behavior under test:
 
 from __future__ import annotations
 
+import logging
 import re
 from decimal import Decimal
 from typing import Any
@@ -269,6 +270,40 @@ class TestErrorPropagation:
 
         assert result.status == "failed"
         assert result.outputs == {}
+
+    @pytest.mark.asyncio
+    async def test_the_body_failure_log_line_masks_a_secret_value(
+        self, session_id: str, wavecore_log: list[logging.LogRecord]
+    ) -> None:
+        from wavecore.api.services import log_streaming_service
+        from wavecore.core.secrets.registry import SecretRegistry
+
+        registry = SecretRegistry()
+        _session(session_id)["secret_registry"] = registry
+        log_streaming_service.register_secret_registry(session_id, registry)
+        function_def = make_function_def(
+            name="secret_body",
+            inputs=[{"name": "token", "type": "string", "secret": True}],
+            nodes=[make_log_node("bad", message="int(token)")],
+            edges=[{"source": "start-node", "target": "bad"}],
+        )
+
+        result = await _run(function_def, session_id, {"token": "s3cr3t-t0ken-99"})
+
+        assert result.status == "failed"
+        assert [
+            record.getMessage()
+            for record in wavecore_log
+            if record.name == "wavecore.core.functions.executor"
+        ] == [
+            "Function 'secret_body' body failed: Expression evaluation failed for 'int(token)': "
+            "invalid literal for int() with base 10: '********'"
+        ]
+        assert [
+            record.getMessage()
+            for record in wavecore_log
+            if "s3cr3t-t0ken-99" in record.getMessage()
+        ] == []
 
 
 # ---------------------------------------------------------------------------
@@ -538,8 +573,7 @@ class TestFunctionFlowOnTheEngine:
                         "elementType": "variable-setter",
                         "nodeType": "control",
                         "version": "1.0.0",
-                        "variableExpressionKeys": ["run_time"],
-                        "variableTypes": {"run_time": "float"},
+                        "expressionFields": ["variables.run_time"],
                         "config": {
                             "values": {"variables": {"run_time": "3.14"}},
                             "outputBindings": {},
@@ -1805,7 +1839,6 @@ def _shell_script_node(
             "displayName": node_id,
             "expressionFields": expression_fields or [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 

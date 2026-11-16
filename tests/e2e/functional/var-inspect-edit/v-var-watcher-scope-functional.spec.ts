@@ -35,7 +35,7 @@ function expandButton(page: Page): Locator {
 }
 
 function watchers(page: Page): Locator {
-  return page.locator(`section[aria-label="Inspect variable ${NAME}"]`)
+  return page.getByRole('dialog', { name: NAME, exact: true, includeHidden: true })
 }
 
 function watcherOf(page: Page, value: string): Locator {

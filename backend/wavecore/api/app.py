@@ -15,6 +15,8 @@ from fastapi.responses import JSONResponse
 
 from wavecore.api.config import Config, ConfigValidationError, get_config
 from wavecore.api.middleware.middleware_module import (
+    _error_json_response,
+    _format_validation_errors,
     add_error_handling_middleware,
     add_request_response_logging_middleware,
 )
@@ -92,7 +94,7 @@ logger = logging.getLogger(__name__)
 
 def _refuse_to_start(message: str) -> NoReturn:
     """Log why WAVE cannot start and end the process with exit code 1."""
-    logger.error("%s", message)
+    logger.critical("%s", message)
     # A raised error in the startup event leaves the server hung, so the process ends here.
     os._exit(1)
 
@@ -264,27 +266,24 @@ app.include_router(network_ssh_hosts_router)
 app.include_router(server_router)
 
 
-# Custom exception handler to convert validation errors to appropriate status codes
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Every validation error is 400, never FastAPI's 422."""
+    """Every validation error is 400, never FastAPI's 422, in the shared error envelope."""
     errors = exc.errors()
     first_error = errors[0] if errors else {}
     error_msg = first_error.get("msg", "Validation error")
     error_loc = first_error.get("loc", [])
     field_name = error_loc[-1] if error_loc else "unknown"
 
-    return JSONResponse(
+    # Answered here, never raised: the error holds the request's values, which never reach a log
+    return _error_json_response(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={
-            "success": False,
-            "error": {
-                "message": f"Validation error for '{field_name}': {error_msg}",
-                "code": "VALIDATION_ERROR",
-            },
-        },
+        error_code="VALIDATION_ERROR",
+        message=f"Validation error for '{field_name}': {error_msg}",
+        request_id=request.state.request_id,
+        details=_format_validation_errors(exc),
     )
 
 

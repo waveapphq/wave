@@ -78,10 +78,10 @@ class TestTheBridgeHasItsOwnModule:
     def test_log_via_is_defined_in_the_verb_bridge_module(self) -> None:
         assert _bridge().log_via.__module__ == "wavecore.plugins._verb_bridge"
 
-    def test_k8s_common_no_longer_exposes_run_verb(self) -> None:
+    def test_k8s_common_does_not_expose_run_verb(self) -> None:
         assert not hasattr(common, "run_verb")
 
-    def test_k8s_common_no_longer_exposes_log_via(self) -> None:
+    def test_k8s_common_does_not_expose_log_via(self) -> None:
         assert not hasattr(common, "log_via")
 
     @pytest.mark.parametrize("name", _BRIDGE_PLUGIN_MODULES)

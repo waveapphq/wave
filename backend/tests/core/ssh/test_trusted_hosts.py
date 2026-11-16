@@ -135,7 +135,7 @@ HOSTS_WRITE_IDS = ["record_first_contact", "apply_change", "clear_hosts", "resto
 
 
 class TestLoad:
-    def test_the_default_policy_constant_is_gone(self) -> None:
+    def test_there_is_no_default_policy_constant(self) -> None:
         assert not hasattr(trusted_hosts, "DEFAULT_POLICY")
 
     def test_missing_file_gives_no_hosts(self, hosts_file: Path) -> None:

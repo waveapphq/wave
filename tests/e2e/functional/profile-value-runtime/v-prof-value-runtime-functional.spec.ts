@@ -90,7 +90,6 @@ function logNode(id: string, y: number, message: string, profileId: string, prof
       hasNewerVersion: false,
       expressionFields: ['message'],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { message, level: 'INFO' },
         outputBindings: {},

@@ -51,18 +51,14 @@
      "hasNewerVersion": false,
      "expressionFields": [],
      "templateFields": [],
-     "variableExpressionKeys": [],
-     "variableTypes": {
-      "setter_secret": "string"
-     },
      "config": {
       "values": {
        "variables": {
         "setter_secret": "STseal-7a2-sierra-real-bytes"
        }
       },
-      "variableSecretKeys": [
-       "setter_secret"
+      "secretFields": [
+       "variables.setter_secret"
       ],
       "outputBindings": {},
       "profileBindings": []
@@ -307,8 +303,8 @@
         "vm_plain_setter_secret": "VMonly-9f3-victor-real-bytes"
        }
       },
-      "variableSecretKeys": [
-       "vm_plain_setter_secret"
+      "secretFields": [
+       "variables.vm_plain_setter_secret"
       ],
       "outputBindings": {},
       "profileBindings": []

@@ -37,7 +37,7 @@ poetry run wave-new-secret-key
 
 ## When WAVE refuses to start
 
-WAVE logs one ERROR line and exits with code 1 in each of these cases. The
+WAVE logs one FATAL line and exits with code 1 in each of these cases. The
 message names the file, and the setting when one is at fault.
 
 | Case | Message |
@@ -58,8 +58,9 @@ have startup checks of their own; see `storage.base_path` and
 
 The file is YAML and its top level is a mapping of sections: `server`,
 `storage`, `logging`, `integration`, `security`, `secret_masking`, `network`,
-`mcp` and `backup`. Any other section is ignored without comment, so a typo'd
-section name looks exactly like a setting that had no effect.
+`mcp` and `backup`. Any other section is ignored, and WAVE logs one WARN line
+for each one when it loads the file, so a typo'd section name is easy to find:
+`Config file {path}: unknown section '{name}' is ignored`.
 
 A key the file does not hold takes its default, and a section that sets only
 some of its keys keeps the defaults of the others. In the sections the Settings

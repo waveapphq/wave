@@ -6,10 +6,15 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.blocks._storage import (
-    _bump_version,
     _check_backward_compatibility,
+    _check_name_unique,
     _generate_etag,
     _list_all_blocks,
     _load_block,
@@ -22,7 +27,7 @@ from wavecore.api.services.blocks._storage import (
     _validate_required_fields,
     get_block_dependents,
 )
-from wavecore.api.services.shared import refuse_unencodable_file
+from wavecore.api.services.shared import next_semantic_version, refuse_unencodable_file
 from wavecore.core.utf8_text import load_yaml
 
 
@@ -43,8 +48,7 @@ def add_block_version(block_id: str, data: dict[str, Any]) -> dict[str, Any] | N
 
     versions = _load_versions(block_id)
     version_bump = data.get("version_bump", "minor")
-    current_version = block.get("version", "1.0.0")
-    new_version = _bump_version(current_version, version_bump)
+    new_version = next_semantic_version(str(block.get("version", "1.0.0")), version_bump)
 
     if version_bump != "major":
         _check_backward_compatibility(block, data)
@@ -110,7 +114,7 @@ def update_block_version(
         current_etag = _generate_etag(block)
         etag_value = etag.strip('"')
         if etag_value != current_etag:
-            raise ConflictException(
+            raise PreconditionRequiredException(
                 f"Precondition failed: resource has been modified. "
                 f"Expected ETag '{etag_value}', current ETag '{current_etag}'"
             )
@@ -150,10 +154,11 @@ def delete_block_version(block_id: str, version: str) -> bool:
 def clone_block(
     block_id: str, new_name: str, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a block with a new name."""
+    """Clone a block with a new name no other block has."""
     source = _load_block(block_id)
     if source is None:
         return None
+    _check_name_unique(new_name)
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())
@@ -189,6 +194,8 @@ def import_block(content: bytes, filename: str = "", overwrite: bool = False) ->
         data = load_yaml(content)
     except yaml.YAMLError as e:
         raise ValidationException(f"Invalid YAML in '{filename}': {e!s}") from e
+    except ValueError as e:
+        raise ValidationException(f"Invalid YAML in '{filename}': could not parse file") from e
 
     refuse_unencodable_file(content, data)
     if not isinstance(data, dict):
@@ -281,12 +288,10 @@ def restore_block_version(block_id: str, version: str) -> dict[str, Any] | None:
     versions = _load_versions(block_id)
     version_entry = next((v for v in versions if v["version"] == version), None)
     if version_entry is None:
-        raise ValidationException(f"Version '{version}' not found for block '{block_id}'")
+        raise NotFoundException(f"Version '{version}' not found for block '{block_id}'")
 
     now = datetime.now(UTC).isoformat()
-    current_version = block.get("version", "1.0.0")
-    parts = [int(x) for x in current_version.split(".")]
-    new_version = f"{parts[0]}.{parts[1] + 1}.0"
+    new_version = next_semantic_version(str(block.get("version", "1.0.0")), "minor")
 
     block["version"] = new_version
     block["updated_at"] = now

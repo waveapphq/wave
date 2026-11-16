@@ -18,14 +18,17 @@ Endpoints:
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Query, Request, Response, status
-from fastapi.responses import JSONResponse
 
 from wavecore.api.exceptions import (
-    ConflictException,
     NotFoundException,
     ValidationException,
 )
-from wavecore.api.routes.shared import build_response_meta, validate_uuid
+from wavecore.api.routes.shared import (
+    build_response_meta,
+    read_json_object,
+    refuse_stale_etag,
+    validate_uuid,
+)
 from wavecore.api.services.environments import service as environment_service
 
 # Create router for environment endpoints
@@ -164,7 +167,7 @@ async def list_environments(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_environment(request: Request, response: Response) -> dict[str, Any]:
     """Create a new environment."""
-    body = await request.json()
+    body = await read_json_object(request)
     if "name" not in body:
         raise ValidationException("Field 'name' is required")
 
@@ -222,7 +225,7 @@ async def update_environment(
 ) -> dict[str, Any]:
     """Update an environment."""
     validate_uuid(environment_id, "environment_id")
-    body = await request.json()
+    body = await read_json_object(request)
 
     if "name" not in body and "description" not in body and "tags" not in body:
         raise ValidationException("At least one field (name, description, or tags) is required")
@@ -253,29 +256,11 @@ async def delete_environment(
 ) -> Response:
     """Delete an environment."""
     validate_uuid(environment_id, "environment_id")
-
-    if if_match:
-        env = environment_service.get_environment(environment_id)
-        if env:
-            current_etag = _generate_etag(env)
-            if if_match != current_etag:
-                exc = ConflictException("Precondition failed: resource has been modified")
-                exc.status_code = 412
-                exc.error_code = "PRECONDITION_FAILED"
-                raise exc
+    refuse_stale_etag(if_match, environment_service.get_environment, environment_id, _generate_etag)
 
     deleted = environment_service.delete_environment(environment_id)
     if not deleted:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {
-                    "message": f"Environment with ID '{environment_id}' not found",
-                    "code": "NOT_FOUND",
-                },
-            },
-        )
+        raise NotFoundException(f"Environment with ID '{environment_id}' not found")
 
     response.status_code = status.HTTP_204_NO_CONTENT
     response.headers["X-Cache-Invalidated"] = "environments"

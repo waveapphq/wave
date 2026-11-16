@@ -66,7 +66,6 @@ function pluginNode(
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: { values, outputBindings, profileBindings: [] },
     },
     measured: { width: 120, height: 62 },

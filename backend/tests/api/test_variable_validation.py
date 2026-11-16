@@ -6,7 +6,7 @@ functions used to prevent type conflicts across suites sharing tests.
 
 from typing import Any
 
-from tests.api.suite_test_helpers import clear_suite_storage
+from tests.api.suite_test_helpers import clear_suite_storage, store_suite_variables
 from wavecore.api.services.suites.variable_validation import (
     check_variable_type_collisions,
     compute_variable_delta,
@@ -206,13 +206,8 @@ class TestCheckVariableTypeCollisions:
                 "variables": {"retry": {"type": "string", "value": "3"}},
             }
         )
-        s2 = suite_service.create_suite(
-            {
-                "name": "S2",
-                "tests": [t1["id"]],
-                "variables": {"retry": {"type": "integer", "value": 3}},
-            }
-        )
+        s2 = suite_service.create_suite({"name": "S2", "tests": [t1["id"]]})
+        store_suite_variables(s2["id"], {"retry": {"type": "integer", "value": 3}})
 
         result = check_variable_type_collisions(
             s1["id"],
@@ -327,13 +322,8 @@ class TestCheckVariableTypeCollisions:
                 "variables": {"env": {"type": "string", "value": "dev"}},
             }
         )
-        s2 = suite_service.create_suite(
-            {
-                "name": "S2",
-                "tests": [t1["id"]],
-                "variables": {"env": {"type": "integer", "value": 1}},
-            }
-        )
+        s2 = suite_service.create_suite({"name": "S2", "tests": [t1["id"]]})
+        store_suite_variables(s2["id"], {"env": {"type": "integer", "value": 1}})
 
         # Delete S2 files but leave the relation index intact
         _delete_suite_files(s2["id"])
@@ -361,20 +351,10 @@ class TestCheckVariableTypeCollisions:
                 "variables": {"env": {"type": "string", "value": "dev"}},
             }
         )
-        suite_service.create_suite(
-            {
-                "name": "S2",
-                "tests": [t1["id"]],
-                "variables": {"env": {"type": "integer", "value": 1}},
-            }
-        )
-        suite_service.create_suite(
-            {
-                "name": "S3",
-                "tests": [t2["id"]],
-                "variables": {"env": {"type": "boolean", "value": True}},
-            }
-        )
+        s2 = suite_service.create_suite({"name": "S2", "tests": [t1["id"]]})
+        store_suite_variables(s2["id"], {"env": {"type": "integer", "value": 1}})
+        s3 = suite_service.create_suite({"name": "S3", "tests": [t2["id"]]})
+        store_suite_variables(s3["id"], {"env": {"type": "boolean", "value": True}})
 
         result = check_variable_type_collisions(
             s1["id"],

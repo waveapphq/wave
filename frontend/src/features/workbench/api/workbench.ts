@@ -62,7 +62,6 @@ export interface WorkbenchDebugOptionsResponse {
 
 export interface WorkbenchWarning {
   type: string
-  profile_name: string
   message: string
 }
 
@@ -135,6 +134,8 @@ export interface WorkbenchSessionResponse {
   error?: string
   /** V-CANVAS-04: Block execution states for session recovery - maps block_id to status */
   block_states?: Record<string, string>
+  /** The lanes each Block took in its last pass, by Block. */
+  lanes_taken?: Record<string, string[]>
   /** Present when the recovered session is a tracked execution. */
   execution_id?: string | null
   /** Present when the session is one step of a sequential suite/regression run.

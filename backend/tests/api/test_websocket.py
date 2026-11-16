@@ -7,16 +7,12 @@ and connected clients.
 Test Organization:
 - TestConnectionManagement: Connection lifecycle, IDs, metadata, heartbeat, limits
 - TestSubscriptionModel: Topic subscriptions, dynamic management, scoped subscriptions
-- TestEventCategories: Plugin, block, execution, variable, debug, system, error events
-- TestMessageProtocol: JSON format, envelope, sequence numbers, acknowledgment, compression
-- TestBroadcasting: System-wide, topic-based, unicast, execution-scoped, rate limiting, queuing
-- TestErrorHandling: Reconnection backoff, error codes, malformed messages, containment, health
+- TestBroadcasting: Topic-based, execution-scoped, queuing
+- TestErrorHandling: Malformed messages, stale connections, disconnect cleanup
 """
 
 import asyncio
-import json
 from datetime import datetime
-from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -386,25 +382,6 @@ class TestSubscriptionModel:
         metadata = manager.get_connection_metadata(conn_id)
         assert "execution" not in metadata.subscriptions
 
-    async def test_subscription_categories_execution_events(self) -> None:
-        """Execution events subscription category is supported."""
-        from wavecore.api.websocket import SubscriptionCategory, WebSocketManager
-
-        _manager = WebSocketManager()
-        assert SubscriptionCategory.EXECUTION in SubscriptionCategory
-
-    async def test_subscription_categories_system_events(self) -> None:
-        """System events subscription category is supported."""
-        from wavecore.api.websocket import SubscriptionCategory
-
-        assert SubscriptionCategory.SYSTEM in SubscriptionCategory
-
-    async def test_subscription_categories_debug_events(self) -> None:
-        """Debug events subscription category is supported."""
-        from wavecore.api.websocket import SubscriptionCategory
-
-        assert SubscriptionCategory.DEBUG in SubscriptionCategory
-
     async def test_dynamic_subscription_without_reconnect(self) -> None:
         """Subscriptions can be changed dynamically without reconnecting."""
         from wavecore.api.websocket import WebSocketManager
@@ -556,7 +533,7 @@ class TestSubscriptionModel:
 
     async def test_error_topic_subscription_receives_error_events(self) -> None:
         """Clients subscribed to error topics receive propagated error events."""
-        from wavecore.api.websocket import EventType, WebSocketManager, create_event
+        from wavecore.api.websocket import WebSocketManager
 
         manager = WebSocketManager()
         mock_ws = AsyncMock(spec=WebSocket)
@@ -566,13 +543,12 @@ class TestSubscriptionModel:
         conn_id = await manager.connect(mock_ws)
         manager.subscribe(conn_id, "error")
 
-        # Create and broadcast an error event
-        error_event = create_event(
-            EventType.ERROR_EXECUTION_FAILURE,
-            execution_id="exec-123",
-            error_code="PLUGIN_TIMEOUT",
-            error_message="Plugin execution timed out",
-        )
+        error_event = {
+            "type": "error_execution_failure",
+            "execution_id": "exec-123",
+            "error_code": "PLUGIN_TIMEOUT",
+            "error_message": "Plugin execution timed out",
+        }
         await manager.broadcast_to_topic("error", error_event)
 
         # Should receive the error event
@@ -583,536 +559,6 @@ class TestSubscriptionModel:
 
 
 # ============================================================================
-# Event Categories Tests
-# ============================================================================
-
-
-class TestEventCategories:
-    """Tests for WebSocket event categories (REQ-5.2.5.1).
-
-    Covers: Plugin, block, execution, variable, debug, system, error events.
-    """
-
-    def test_plugin_start_event_structure(self) -> None:
-        """Plugin start event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.PLUGIN_START,
-            execution_id="exec-123",
-            plugin_id="shell-script",
-            block_id="block-1",
-        )
-
-        assert event["type"] == "plugin_start"
-        assert event["execution_id"] == "exec-123"
-        assert event["plugin_id"] == "shell-script"
-        assert event["block_id"] == "block-1"
-        assert "timestamp" in event
-        assert "sequence" in event
-
-    def test_plugin_complete_event_structure(self) -> None:
-        """Plugin complete event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.PLUGIN_COMPLETE,
-            execution_id="exec-123",
-            plugin_id="shell-script",
-            block_id="block-1",
-            return_value={"stdout": "hello"},
-        )
-
-        assert event["type"] == "plugin_complete"
-        assert event["return_value"] == {"stdout": "hello"}
-
-    def test_plugin_error_event_structure(self) -> None:
-        """Plugin error event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.PLUGIN_ERROR,
-            execution_id="exec-123",
-            plugin_id="shell-script",
-            block_id="block-1",
-            error="Command failed with exit code 1",
-        )
-
-        assert event["type"] == "plugin_error"
-        assert event["error"] == "Command failed with exit code 1"
-
-    def test_block_start_event_structure(self) -> None:
-        """Block start event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.BLOCK_START,
-            execution_id="exec-123",
-            block_id="block-1",
-            block_name="Setup Database",
-        )
-
-        assert event["type"] == "block_start"
-        assert event["block_id"] == "block-1"
-        assert event["block_name"] == "Setup Database"
-
-    def test_block_complete_event_structure(self) -> None:
-        """Block complete event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.BLOCK_COMPLETE,
-            execution_id="exec-123",
-            block_id="block-1",
-        )
-
-        assert event["type"] == "block_complete"
-
-    def test_block_error_event_structure(self) -> None:
-        """Block error event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.BLOCK_ERROR,
-            execution_id="exec-123",
-            block_id="block-1",
-            error="Block execution failed",
-        )
-
-        assert event["type"] == "block_error"
-        assert event["error"] == "Block execution failed"
-
-    def test_execution_start_event_structure(self) -> None:
-        """Execution start event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.EXECUTION_START,
-            execution_id="exec-123",
-            test_id="test-456",
-            test_name="Integration Test",
-        )
-
-        assert event["type"] == "execution_start"
-        assert event["test_id"] == "test-456"
-        assert event["test_name"] == "Integration Test"
-
-    def test_execution_progress_event_structure(self) -> None:
-        """Execution progress event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.EXECUTION_PROGRESS,
-            execution_id="exec-123",
-            progress=50,
-            current_block="block-3",
-        )
-
-        assert event["type"] == "execution_progress"
-        assert event["progress"] == 50
-        assert event["current_block"] == "block-3"
-
-    def test_execution_complete_event_structure(self) -> None:
-        """Execution complete event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.EXECUTION_COMPLETE,
-            execution_id="exec-123",
-            status="completed",
-            duration_ms=5432,
-        )
-
-        assert event["type"] == "execution_complete"
-        assert event["status"] == "completed"
-        assert event["duration_ms"] == 5432
-
-    def test_variable_create_event_structure(self) -> None:
-        """Variable create event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.VARIABLE_CREATE,
-            execution_id="exec-123",
-            variable_name="db_host",
-            variable_value="localhost",
-            scope="test",
-        )
-
-        assert event["type"] == "variable_create"
-        assert event["variable_name"] == "db_host"
-        assert event["variable_value"] == "localhost"
-        assert event["scope"] == "test"
-
-    def test_variable_update_event_structure(self) -> None:
-        """Variable update event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.VARIABLE_UPDATE,
-            execution_id="exec-123",
-            variable_name="counter",
-            old_value=5,
-            new_value=6,
-        )
-
-        assert event["type"] == "variable_update"
-        assert event["old_value"] == 5
-        assert event["new_value"] == 6
-
-    def test_variable_delete_event_structure(self) -> None:
-        """Variable delete event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.VARIABLE_DELETE,
-            execution_id="exec-123",
-            variable_name="temp_var",
-        )
-
-        assert event["type"] == "variable_delete"
-        assert event["variable_name"] == "temp_var"
-
-    def test_debug_breakpoint_hit_event_structure(self) -> None:
-        """Debug breakpoint hit event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.DEBUG_BREAKPOINT_HIT,
-            execution_id="exec-123",
-            breakpoint_id="bp-1",
-            block_id="block-5",
-            line_number=42,
-        )
-
-        assert event["type"] == "debug_breakpoint_hit"
-        assert event["breakpoint_id"] == "bp-1"
-        assert event["line_number"] == 42
-
-    def test_debug_step_complete_event_structure(self) -> None:
-        """Debug step complete event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.DEBUG_STEP_COMPLETE,
-            execution_id="exec-123",
-            step_type="step_over",
-            next_block_id="block-6",
-        )
-
-        assert event["type"] == "debug_step_complete"
-        assert event["step_type"] == "step_over"
-
-    def test_debug_watch_change_event_structure(self) -> None:
-        """Debug watch value change event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.DEBUG_WATCH_CHANGE,
-            execution_id="exec-123",
-            watch_expression="user.name",
-            old_value="Alice",
-            new_value="Bob",
-        )
-
-        assert event["type"] == "debug_watch_change"
-        assert event["watch_expression"] == "user.name"
-
-    def test_system_status_event_structure(self) -> None:
-        """System status event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.SYSTEM_STATUS,
-            status="healthy",
-            active_executions=5,
-            connected_clients=12,
-        )
-
-        assert event["type"] == "system_status"
-        assert event["status"] == "healthy"
-        assert event["active_executions"] == 5
-
-    def test_system_config_change_event_structure(self) -> None:
-        """System configuration change event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.SYSTEM_CONFIG_CHANGE,
-            config_key="max_parallel_executions",
-            old_value=10,
-            new_value=20,
-        )
-
-        assert event["type"] == "system_config_change"
-        assert event["config_key"] == "max_parallel_executions"
-
-    def test_system_resource_warning_event_structure(self) -> None:
-        """System resource warning event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.SYSTEM_RESOURCE_WARNING,
-            resource_type="memory",
-            current_usage=85.5,
-            threshold=80.0,
-            message="Memory usage above threshold",
-        )
-
-        assert event["type"] == "system_resource_warning"
-        assert event["resource_type"] == "memory"
-        assert event["current_usage"] == 85.5
-
-    def test_error_execution_failure_event_structure(self) -> None:
-        """Error execution failure event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.ERROR_EXECUTION_FAILURE,
-            execution_id="exec-123",
-            error_code="PLUGIN_TIMEOUT",
-            error_message="Plugin execution timed out after 300s",
-        )
-
-        assert event["type"] == "error_execution_failure"
-        assert event["error_code"] == "PLUGIN_TIMEOUT"
-
-    def test_error_connection_error_event_structure(self) -> None:
-        """Error connection error event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.ERROR_CONNECTION,
-            connection_id="conn-456",
-            error_code="CONNECTION_LOST",
-            error_message="Connection lost unexpectedly",
-        )
-
-        assert event["type"] == "error_connection"
-        assert event["connection_id"] == "conn-456"
-
-    def test_error_subscription_error_event_structure(self) -> None:
-        """Error subscription error event has correct structure."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.ERROR_SUBSCRIPTION,
-            connection_id="conn-456",
-            topic="execution:invalid",
-            error_code="INVALID_TOPIC",
-            error_message="Invalid topic format",
-        )
-
-        assert event["type"] == "error_subscription"
-        assert event["topic"] == "execution:invalid"
-
-
-# ============================================================================
-# Message Protocol Tests
-# ============================================================================
-
-
-class TestMessageProtocol:
-    """Tests for WebSocket message protocol (REQ-5.2.5.1).
-
-    Covers: JSON format, envelope structure, sequence numbers, acknowledgment, compression.
-    """
-
-    def test_message_uses_json_format(self) -> None:
-        """Messages use JSON format for broad compatibility."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(EventType.EXECUTION_START, execution_id="exec-123")
-
-        # Should be JSON serializable
-        json_str = json.dumps(event)
-        parsed = json.loads(json_str)
-
-        assert parsed == event
-
-    def test_message_envelope_contains_event_type(self) -> None:
-        """Message envelope contains event type field."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(EventType.PLUGIN_START, execution_id="exec-123")
-
-        assert "type" in event
-        assert event["type"] == "plugin_start"
-
-    def test_message_envelope_contains_timestamp(self) -> None:
-        """Message envelope contains timestamp field."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(EventType.PLUGIN_START, execution_id="exec-123")
-
-        assert "timestamp" in event
-        # Should be ISO format
-        timestamp = event["timestamp"]
-        datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-
-    def test_message_envelope_contains_payload(self) -> None:
-        """Message envelope contains event-specific payload."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event = create_event(
-            EventType.PLUGIN_START,
-            execution_id="exec-123",
-            plugin_id="shell-script",
-        )
-
-        # Payload fields are at top level (flat structure)
-        assert event["execution_id"] == "exec-123"
-        assert event["plugin_id"] == "shell-script"
-
-    def test_message_sequence_numbers_increment(self) -> None:
-        """Message sequence numbers increment for ordering verification."""
-        from wavecore.api.websocket import EventType, create_event
-
-        event1 = create_event(EventType.PLUGIN_START, execution_id="exec-123")
-        event2 = create_event(EventType.PLUGIN_COMPLETE, execution_id="exec-123")
-        event3 = create_event(EventType.BLOCK_COMPLETE, execution_id="exec-123")
-
-        assert "sequence" in event1
-        assert "sequence" in event2
-        assert "sequence" in event3
-        assert event2["sequence"] > event1["sequence"]
-        assert event3["sequence"] > event2["sequence"]
-
-    def test_sequence_numbers_enable_gap_detection(self) -> None:
-        """Sequence numbers allow detection of missing messages."""
-        from wavecore.api.websocket import SequenceTracker
-
-        tracker = SequenceTracker()
-
-        tracker.record_received(1)
-        tracker.record_received(2)
-        tracker.record_received(4)  # Gap - missing 3
-
-        gaps = tracker.get_gaps()
-        assert 3 in gaps
-
-    async def test_acknowledgment_for_critical_messages(self) -> None:
-        """Critical messages support acknowledgment for delivery confirmation."""
-        from wavecore.api.websocket import EventType, WebSocketManager, create_event
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-
-        # Simulate receiving ack when message is sent
-        async def send_and_ack(message: dict[str, Any]) -> None:
-            if "ack_id" in message:
-                manager.handle_ack(message["ack_id"])
-
-        mock_ws.send_json = AsyncMock(side_effect=send_and_ack)
-
-        conn_id = await manager.connect(mock_ws)
-
-        event = create_event(
-            EventType.EXECUTION_COMPLETE,
-            execution_id="exec-123",
-            requires_ack=True,
-        )
-
-        await manager.send_with_ack(conn_id, event, timeout_seconds=5.0)
-
-        # Message should have ack_id
-        sent_message = mock_ws.send_json.call_args[0][0]
-        assert "ack_id" in sent_message
-
-    async def test_acknowledgment_timeout_handling(self) -> None:
-        """Unacknowledged messages trigger timeout handling."""
-        from wavecore.api.websocket import AcknowledgmentTimeout, WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        with pytest.raises(AcknowledgmentTimeout):
-            await manager.send_with_ack(
-                conn_id,
-                {"type": "test", "requires_ack": True},
-                timeout_seconds=0.1,
-            )
-
-    def test_compression_for_large_payloads(self) -> None:
-        """Large payloads support compression to reduce bandwidth."""
-        from wavecore.api.websocket import compress_message, decompress_message
-
-        large_payload = {"data": "x" * 10000}  # Large payload
-        message = json.dumps(large_payload)
-
-        compressed = compress_message(message)
-        decompressed = decompress_message(compressed)
-
-        assert len(compressed) < len(message.encode())
-        assert json.loads(decompressed) == large_payload
-
-    def test_compression_threshold(self) -> None:
-        """Compression only applied above threshold size."""
-        from wavecore.api.websocket import should_compress
-
-        small_message = json.dumps({"type": "ping"})
-        large_message = json.dumps({"data": "x" * 10000})
-
-        assert should_compress(small_message) is False
-        assert should_compress(large_message) is True
-
-    def test_compression_indicator_in_message(self) -> None:
-        """Compressed messages include compression indicator."""
-        from wavecore.api.websocket import wrap_compressed_message
-
-        compressed_data = b"compressed bytes"
-        wrapped = wrap_compressed_message(compressed_data)
-
-        assert wrapped["compressed"] is True
-        assert "data" in wrapped
-
-    async def test_manager_applies_compression_for_large_messages(self) -> None:
-        """WebSocketManager applies compression when sending large messages."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(compression_threshold=100)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-        mock_ws.send_bytes = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Send a large message that should be compressed
-        large_payload = {"data": "x" * 1000}
-        await manager.unicast(conn_id, large_payload, compress_if_large=True)
-
-        # Should use send_bytes for compressed data, not send_json
-        mock_ws.send_bytes.assert_called_once()
-        mock_ws.send_json.assert_not_called()
-
-    async def test_manager_skips_compression_for_small_messages(self) -> None:
-        """WebSocketManager skips compression for small messages."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(compression_threshold=1000)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-        mock_ws.send_bytes = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Send a small message that should NOT be compressed
-        small_payload = {"type": "ping"}
-        await manager.unicast(conn_id, small_payload, compress_if_large=True)
-
-        # Should use send_json, not send_bytes
-        mock_ws.send_json.assert_called_once()
-        mock_ws.send_bytes.assert_not_called()
-
-
-# ============================================================================
 # Broadcasting Tests
 # ============================================================================
 
@@ -1120,31 +566,8 @@ class TestMessageProtocol:
 class TestBroadcasting:
     """Tests for WebSocket broadcasting (REQ-5.2.5.1).
 
-    Covers: System-wide, topic-based, unicast, execution-scoped, rate limiting, queuing.
+    Covers: Topic-based, execution-scoped, queuing.
     """
-
-    async def test_broadcast_to_all_clients(self) -> None:
-        """System-wide broadcast reaches all connected clients."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws1 = AsyncMock(spec=WebSocket)
-        mock_ws2 = AsyncMock(spec=WebSocket)
-        mock_ws3 = AsyncMock(spec=WebSocket)
-
-        for ws in [mock_ws1, mock_ws2, mock_ws3]:
-            ws.accept = AsyncMock()
-            ws.send_json = AsyncMock()
-
-        await manager.connect(mock_ws1)
-        await manager.connect(mock_ws2)
-        await manager.connect(mock_ws3)
-
-        await manager.broadcast_all({"type": "system_announcement"})
-
-        mock_ws1.send_json.assert_called_once()
-        mock_ws2.send_json.assert_called_once()
-        mock_ws3.send_json.assert_called_once()
 
     async def test_topic_based_broadcast(self) -> None:
         """Topic-based broadcast reaches only subscribed clients."""
@@ -1168,51 +591,6 @@ class TestBroadcasting:
 
         mock_ws1.send_json.assert_called_once()
         mock_ws2.send_json.assert_not_called()
-
-    async def test_unicast_to_specific_connection(self) -> None:
-        """Unicast sends message to specific connection only."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws1 = AsyncMock(spec=WebSocket)
-        mock_ws2 = AsyncMock(spec=WebSocket)
-
-        for ws in [mock_ws1, mock_ws2]:
-            ws.accept = AsyncMock()
-            ws.send_json = AsyncMock()
-
-        conn_id1 = await manager.connect(mock_ws1)
-        await manager.connect(mock_ws2)
-
-        await manager.unicast(conn_id1, {"type": "direct_message"})
-
-        mock_ws1.send_json.assert_called_once()
-        mock_ws2.send_json.assert_not_called()
-
-    async def test_rate_limiting_prevents_flooding(self) -> None:
-        """Rate limiting prevents message flooding during high-frequency events."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(rate_limit_per_second=10)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Send many messages quickly
-        for i in range(50):
-            await manager.unicast(conn_id, {"type": "event", "index": i})
-
-        # Should be rate limited
-        assert mock_ws.send_json.call_count <= 15  # Some tolerance for timing
-
-    async def test_rate_limiting_configurable(self) -> None:
-        """Rate limiting threshold is configurable."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(rate_limit_per_second=100)
-        assert manager.rate_limit_per_second == 100
 
     async def test_message_queuing_for_disconnected_clients(self) -> None:
         """Messages are queued for temporarily disconnected clients."""
@@ -1304,70 +682,6 @@ class TestBroadcasting:
         queue = manager.get_session_queue(session_id)
         assert len(queue) <= 5
 
-    async def test_broadcast_handles_send_failures_gracefully(self) -> None:
-        """Broadcast continues even if some sends fail."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws1 = AsyncMock(spec=WebSocket)
-        mock_ws2 = AsyncMock(spec=WebSocket)
-
-        mock_ws1.accept = AsyncMock()
-        mock_ws2.accept = AsyncMock()
-        mock_ws1.send_json = AsyncMock(side_effect=Exception("Send failed"))
-        mock_ws2.send_json = AsyncMock()
-
-        await manager.connect(mock_ws1)
-        await manager.connect(mock_ws2)
-
-        # Should not raise, second client should still receive
-        await manager.broadcast_all({"type": "test"})
-
-        mock_ws2.send_json.assert_called_once()
-
-    async def test_rate_limited_messages_are_dropped(self) -> None:
-        """Rate-limited messages are dropped, not queued."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(rate_limit_per_second=5)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Send many messages quickly
-        dropped_count = 0
-        for i in range(20):
-            result = await manager.unicast(conn_id, {"type": "event", "index": i})
-            if result is False:
-                dropped_count += 1
-
-        # Some messages should have been dropped
-        assert dropped_count > 0
-        # And some should have been sent
-        assert mock_ws.send_json.call_count < 20
-        assert mock_ws.send_json.call_count > 0
-
-    async def test_rate_limit_returns_drop_status(self) -> None:
-        """Unicast returns False when message is rate-limited."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(rate_limit_per_second=1)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # First message should succeed
-        result1 = await manager.unicast(conn_id, {"type": "event", "index": 1})
-        assert result1 is True
-
-        # Immediate second message should be rate limited
-        result2 = await manager.unicast(conn_id, {"type": "event", "index": 2})
-        assert result2 is False
-
     async def test_message_queue_disabled_drops_messages_for_disconnected(self) -> None:
         """With queuing disabled, messages for disconnected clients are dropped."""
         from wavecore.api.websocket import WebSocketManager
@@ -1430,51 +744,8 @@ class TestBroadcasting:
 class TestErrorHandling:
     """Tests for WebSocket error handling (REQ-5.2.5.1).
 
-    Covers: Exponential backoff, error codes, malformed messages, containment, health monitoring.
+    Covers: Malformed messages, stale connections, disconnect cleanup.
     """
-
-    def test_reconnection_backoff_recommended(self) -> None:
-        """Connection errors include exponential backoff recommendation."""
-        from wavecore.api.websocket import calculate_reconnect_delay
-
-        delay1 = calculate_reconnect_delay(attempt=1)
-        delay2 = calculate_reconnect_delay(attempt=2)
-        delay3 = calculate_reconnect_delay(attempt=3)
-
-        assert delay2 > delay1
-        assert delay3 > delay2
-
-    def test_reconnection_backoff_has_max_delay(self) -> None:
-        """Exponential backoff has maximum delay cap."""
-        from wavecore.api.websocket import calculate_reconnect_delay
-
-        delay = calculate_reconnect_delay(attempt=100)
-
-        assert delay <= 60  # Max 60 seconds
-
-    def test_subscription_error_returns_clear_code(self) -> None:
-        """Subscription errors return clear error codes."""
-        from wavecore.api.websocket import SubscriptionError, WebSocketErrorCode
-
-        error = SubscriptionError(
-            code=WebSocketErrorCode.INVALID_TOPIC,
-            message="Invalid topic format",
-        )
-
-        assert error.code == WebSocketErrorCode.INVALID_TOPIC
-        assert "Invalid topic format" in str(error)
-
-    def test_error_codes_are_documented(self) -> None:
-        """All error codes have clear meanings."""
-        from wavecore.api.websocket import WebSocketErrorCode
-
-        # Verify error codes exist
-        assert hasattr(WebSocketErrorCode, "CONNECTION_LIMIT_EXCEEDED")
-        assert hasattr(WebSocketErrorCode, "INVALID_TOPIC")
-        assert hasattr(WebSocketErrorCode, "INVALID_MESSAGE")
-        assert hasattr(WebSocketErrorCode, "SEND_FAILED")
-        assert hasattr(WebSocketErrorCode, "ACKNOWLEDGMENT_TIMEOUT")
-        assert hasattr(WebSocketErrorCode, "CONNECTION_NOT_FOUND")
 
     async def test_malformed_message_sends_error_not_disconnect(self) -> None:
         """Malformed messages trigger error notification without disconnection."""
@@ -1515,119 +786,6 @@ class TestErrorHandling:
 
         assert "execution:e1" in manager.get_connection_metadata(conn_id).subscriptions
         assert conn_id in manager.active_connections
-
-    async def test_error_containment_isolates_client_issues(self) -> None:
-        """Single client errors don't affect other connections."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws1 = AsyncMock(spec=WebSocket)
-        mock_ws2 = AsyncMock(spec=WebSocket)
-
-        mock_ws1.accept = AsyncMock()
-        mock_ws2.accept = AsyncMock()
-        mock_ws1.send_json = AsyncMock(side_effect=Exception("Client 1 error"))
-        mock_ws2.send_json = AsyncMock()
-
-        _conn_id1 = await manager.connect(mock_ws1)
-        conn_id2 = await manager.connect(mock_ws2)
-
-        # Broadcast - client 1 will fail
-        await manager.broadcast_all({"type": "test"})
-
-        # Client 2 should still be operational
-        assert conn_id2 in manager.active_connections
-        mock_ws2.send_json.assert_called()
-
-    async def test_connection_health_monitoring(self) -> None:
-        """Connection health is monitored and reported."""
-        from wavecore.api.websocket import ConnectionHealth, WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        health = manager.get_connection_health(conn_id)
-
-        assert isinstance(health, ConnectionHealth)
-        assert hasattr(health, "is_healthy")
-        assert hasattr(health, "last_ping_latency_ms")
-        assert hasattr(health, "missed_heartbeats")
-
-    async def test_unhealthy_connection_marked(self) -> None:
-        """Unhealthy connections are marked for cleanup."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(heartbeat_timeout=0.1)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Simulate missed heartbeats
-        await asyncio.sleep(0.2)
-
-        health = manager.get_connection_health(conn_id)
-        assert health.is_healthy is False
-
-    async def test_ping_latency_measured_from_pong_response(self) -> None:
-        """Ping latency is measured from time between ping and pong."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Send a ping (this records the ping time)
-        await manager.send_heartbeat(conn_id)
-
-        # Simulate some network delay
-        await asyncio.sleep(0.05)
-
-        # Receive pong (this measures the latency)
-        manager.handle_pong(conn_id)
-
-        # Check that latency was measured
-        health = manager.get_connection_health(conn_id)
-        assert health.last_ping_latency_ms is not None
-        # Should be approximately 50ms (with some tolerance for test timing)
-        assert health.last_ping_latency_ms >= 40
-        assert health.last_ping_latency_ms <= 150
-
-    async def test_ping_latency_updates_on_each_pong(self) -> None:
-        """Ping latency is updated on each pong response."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # First ping/pong cycle
-        await manager.send_heartbeat(conn_id)
-        await asyncio.sleep(0.02)
-        manager.handle_pong(conn_id)
-
-        health1 = manager.get_connection_health(conn_id)
-        latency1 = health1.last_ping_latency_ms
-
-        # Second ping/pong cycle with different delay
-        await manager.send_heartbeat(conn_id)
-        await asyncio.sleep(0.05)
-        manager.handle_pong(conn_id)
-
-        health2 = manager.get_connection_health(conn_id)
-        latency2 = health2.last_ping_latency_ms
-
-        # Latencies should be different (second one longer)
-        assert latency2 > latency1
 
     async def test_automatic_stale_connection_termination(self) -> None:
         """Stale connections are automatically terminated."""
@@ -1705,14 +863,6 @@ class TestErrorHandling:
 class TestAdditionalCoverage:
     """Additional tests for complete code coverage."""
 
-    def test_sequence_tracker_get_gaps_empty(self) -> None:
-        """SequenceTracker returns empty list when no sequences recorded."""
-        from wavecore.api.websocket import SequenceTracker
-
-        tracker = SequenceTracker()
-        gaps = tracker.get_gaps()
-        assert gaps == []
-
     async def test_handle_message_with_invalid_connection(self) -> None:
         """handle_message returns early for invalid connection ID."""
         from wavecore.api.websocket import WebSocketManager
@@ -1737,27 +887,6 @@ class TestAdditionalCoverage:
 
         updated_activity = manager.get_connection_metadata(conn_id).last_activity
         assert updated_activity > initial_activity
-
-    async def test_handle_message_ack(self) -> None:
-        """handle_message processes ack messages."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Set up a pending ack
-        ack_event = asyncio.Event()
-        manager._pending_acks["test-ack-123"] = ack_event
-
-        # Send ack message
-        await manager.handle_message(conn_id, '{"type": "ack", "ack_id": "test-ack-123"}')
-
-        # Event should be set
-        assert ack_event.is_set()
 
     async def test_handle_message_subscribe(self) -> None:
         """handle_message processes subscribe messages."""
@@ -1806,28 +935,6 @@ class TestAdditionalCoverage:
 
         # Connection should still be active
         assert conn_id in manager.active_connections
-
-    async def test_unicast_returns_false_for_invalid_connection(self) -> None:
-        """unicast returns False for non-existent connection."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        result = await manager.unicast("invalid-conn-id", {"type": "test"})
-        assert result is False
-
-    async def test_unicast_handles_send_exception(self) -> None:
-        """unicast returns False when send_json raises exception."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock(side_effect=Exception("Send failed"))
-
-        conn_id = await manager.connect(mock_ws)
-        result = await manager.unicast(conn_id, {"type": "test"})
-
-        assert result is False
 
     async def test_cleanup_stale_connections_handles_close_exception(self) -> None:
         """cleanup_stale_connections handles websocket.close() exceptions."""
@@ -2028,15 +1135,6 @@ class TestAdditionalCoverage:
         # Should not raise
         await manager.send_heartbeat("invalid-conn-id")
 
-    async def test_get_connection_health_for_invalid_connection(self) -> None:
-        """get_connection_health returns unhealthy for invalid connection."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        health = manager.get_connection_health("invalid-conn-id")
-
-        assert health.is_healthy is False
-
     async def test_deliver_queued_messages_skipped_when_disabled(self) -> None:
         """_deliver_queued_messages does nothing when queuing disabled."""
         from wavecore.api.websocket import WebSocketManager
@@ -2160,43 +1258,6 @@ class TestAdditionalCoverage:
         # No queue should exist or be empty
         queue = manager.get_session_queue(session_id)
         assert queue is None or len(queue) == 0
-
-    async def test_unicast_rate_limited_returns_false(self) -> None:
-        """unicast returns False when rate limited."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager(rate_limit_per_second=1)
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # First message should succeed
-        result1 = await manager.unicast(conn_id, {"type": "test1"})
-        assert result1 is True
-
-        # Immediately try another - should be rate limited
-        result2 = await manager.unicast(conn_id, {"type": "test2"})
-        assert result2 is False
-
-    async def test_unicast_websocket_removed_but_rate_limit_exists(self) -> None:
-        """unicast returns False when websocket removed but rate limit data exists."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-        mock_ws = AsyncMock(spec=WebSocket)
-        mock_ws.accept = AsyncMock()
-        mock_ws.send_json = AsyncMock()
-
-        conn_id = await manager.connect(mock_ws)
-
-        # Remove websocket but keep rate limit tokens
-        del manager.active_connections[conn_id]
-
-        # Should return False because websocket is None
-        result = await manager.unicast(conn_id, {"type": "test"})
-        assert result is False
 
 
 class TestFastAPIEndpoint:
@@ -2340,35 +1401,6 @@ class TestWebSocketShutdown:
         assert len(manager.active_connections) == 0
 
     @pytest.mark.asyncio
-    async def test_shutdown_unblocks_pending_acks(self) -> None:
-        """Shutdown unblocks any pending acknowledgment waiters."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-
-        # Simulate pending ack
-        event = asyncio.Event()
-        manager._pending_acks["test-ack-id"] = event
-
-        # Start a task waiting for the ack
-        async def waiter() -> bool:
-            await event.wait()
-            return True
-
-        wait_task = asyncio.create_task(waiter())
-
-        # Give the task time to start waiting
-        await asyncio.sleep(0.01)
-
-        # Shutdown should unblock the waiter
-        await manager.shutdown()
-
-        # Waiter should complete
-        result = await asyncio.wait_for(wait_task, timeout=1.0)
-        assert result is True
-        assert len(manager._pending_acks) == 0
-
-    @pytest.mark.asyncio
     async def test_shutdown_with_no_connections(self) -> None:
         """Shutdown works correctly with no active connections."""
         from wavecore.api.websocket import WebSocketManager
@@ -2379,26 +1411,6 @@ class TestWebSocketShutdown:
         await manager.shutdown()
 
         assert len(manager.active_connections) == 0
-
-    @pytest.mark.asyncio
-    async def test_shutdown_clears_rate_limit_tracking(self) -> None:
-        """Shutdown clears rate limit tracking data."""
-        from wavecore.api.websocket import WebSocketManager
-
-        manager = WebSocketManager()
-
-        mock_ws = AsyncMock()
-        conn_id = await manager.connect(mock_ws, client_type="test")
-
-        # Verify rate limit data exists
-        assert conn_id in manager._rate_limit_tokens
-        assert conn_id in manager._rate_limit_last_update
-
-        await manager.shutdown()
-
-        # Rate limit data should be cleared
-        assert len(manager._rate_limit_tokens) == 0
-        assert len(manager._rate_limit_last_update) == 0
 
     @pytest.mark.asyncio
     async def test_try_send_returns_early_when_connection_missing(self) -> None:

@@ -25,6 +25,8 @@ export interface StringEditBodyProps {
   extraExtensions?: Extension[]
   /** The editor's accessible name. */
   ariaLabel?: string
+  /** The editor takes the cursor once it is built. */
+  autoFocus?: boolean
 }
 
 export function StringEditBody({
@@ -34,6 +36,7 @@ export function StringEditBody({
   format,
   extraExtensions,
   ariaLabel,
+  autoFocus,
 }: Readonly<StringEditBodyProps>) {
   const extensions = useMemo(
     () =>
@@ -58,6 +61,7 @@ export function StringEditBody({
           onChange={handleChange}
           format={format}
           extraExtensions={extensions}
+          autoFocus={autoFocus}
         />
       </div>
     </div>

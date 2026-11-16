@@ -2,11 +2,9 @@
  * FilterBlockBuilder - a controlled editor for per-column table filter blocks.
  */
 
-import { Fragment } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { safeStringify } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -14,27 +12,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TextField } from '@/components/shared/fields/text-field'
-import { ExpressionToggle } from '@/components/shared/fields/expression-toggle'
-import { numberEntryProps, takesEntryText } from '@/lib/number-entry'
+import { EntryChangeQuestions, useEntryChange } from '@/components/shared/variable-bodies/entry-change-questions'
+import type { AvailableVariable } from '@/features/workbench/lib/codemirror/type-inference'
+import { compareValueFits, conditionRowProblem } from '@/features/workbench/lib/validation/condition-checks'
 import {
-  ExpressionField,
-  type AvailableVariable,
-} from '@/features/workbench/common/element-config/expressions/expression-field'
-import {
-  UNARY_OPERATORS,
-  getOperatorsForType,
+  newLiteralRow,
   nextId,
-  withOperator,
   withValueType,
+  withoutCompareValue,
   type AssertionItem,
   type LiteralAssertion,
 } from '@/features/workbench/common/config/assertion-builder/types'
 import {
   appendWithOperator,
-  compareToProblem,
   removeAtPath,
 } from '@/features/workbench/common/config/assertion-builder/tree-helpers'
+import {
+  ConditionExpressionRow,
+  ConditionLiteralRow,
+} from '@/features/workbench/common/config/assertion-builder/condition-row'
 import { ColumnRefControl } from './column-ref-control'
 import type { ColumnRef, ColumnRefContext, TableColumnType, TableFilterBlock } from './types'
 
@@ -53,24 +49,22 @@ function replaceAt<T>(items: T[], index: number, next: T): T[] {
   return copy
 }
 
+/** A filter row compares the table cell, so it starts bound to `_cell` (CSV-12). */
 function newLiteral(asType: TableColumnType): LiteralAssertion {
-  return withOperator(
-    {
-      id: nextId('csv-filter-cond'),
-      type: 'literal',
-      variable: '_cell',
-      value_type: asType,
-      operator: '',
-      reference_value: '',
-      reference_is_expression: false,
-    },
-    getOperatorsForType(asType)[0].value,
-  )
+  return { ...newLiteralRow(asType), variable: '_cell' }
 }
 
-/** A filter's as Type is the type every literal row compares the cell as (CSV-12). */
-function retypeLiterals(conditions: AssertionItem[], asType: TableColumnType): AssertionItem[] {
-  return conditions.map((item) => (item.type === 'literal' ? withValueType(item, asType) : item))
+/** A filter's as Type is the type every literal row compares the cell as (CSV-12); `lost` counts the values that go. */
+function retypeLiterals(conditions: AssertionItem[], asType: TableColumnType): { conditions: AssertionItem[]; lost: number } {
+  let lost = 0
+  const retyped = conditions.map((item) => {
+    if (item.type !== 'literal') return item
+    const next = withValueType(item, asType)
+    if (compareValueFits(item, next)) return next
+    lost++
+    return withoutCompareValue(next)
+  })
+  return { conditions: retyped, lost }
 }
 
 function ConditionDeleteButton({
@@ -106,6 +100,7 @@ export function FilterBlockBuilder({
   availableVariables = NO_VARIABLES,
   onChange,
 }: Readonly<FilterBlockBuilderProps>) {
+  const change = useEntryChange()
   const updateBlock = (index: number, next: TableFilterBlock) =>
     onChange(replaceAt(filters, index, next))
 
@@ -115,12 +110,20 @@ export function FilterBlockBuilder({
       { id: nextId('csv-filter'), column: { mode: 'name', value: '' }, asType: 'string', conditions: [] },
     ])
 
+  // An as Type change that would lose a compare value asks the shared value-loss question once for the block (FIELD-13).
+  const changeAsType = (blockIndex: number, block: TableFilterBlock, asType: TableColumnType) => {
+    const { conditions, lost } = retypeLiterals(block.conditions, asType)
+    const apply = () => updateBlock(blockIndex, { ...block, asType, conditions })
+    if (lost === 0) apply()
+    else change.askType(block.asType, asType, lost, apply)
+  }
+
   return (
     <div className="space-y-3">
       {filters.map((block, blockIndex) => {
         const setConditions = (conditions: AssertionItem[]) =>
           updateBlock(blockIndex, { ...block, conditions })
-        const operators = getOperatorsForType(block.asType)
+        const cellVariables = [...availableVariables, { name: '_cell', type: block.asType }]
 
         return (
           <div key={block.id} className="space-y-1">
@@ -148,10 +151,7 @@ export function FilterBlockBuilder({
               <span className="text-xs text-muted-foreground shrink-0">as</span>
               <Select
                 value={block.asType}
-                onValueChange={(value) => {
-                  const asType = value as TableColumnType
-                  updateBlock(blockIndex, { ...block, asType, conditions: retypeLiterals(block.conditions, asType) })
-                }}
+                onValueChange={(value) => changeAsType(blockIndex, block, value as TableColumnType)}
               >
                 <SelectTrigger
                   data-testid={`filter-astype-${block.id}`}
@@ -186,135 +186,44 @@ export function FilterBlockBuilder({
                     </Badge>
                   )
                 }
+                if (cond.type === 'group') return null
+                const problem = conditionRowProblem(cond)
+                const deleteButton = (
+                  <ConditionDeleteButton
+                    testId={`filter-condition-delete-${cond.id}`}
+                    label="Delete filter condition"
+                    onDelete={() => setConditions(removeAtPath(block.conditions, [condIndex]))}
+                  />
+                )
+                const onRow = (next: AssertionItem) => setConditions(replaceAt(block.conditions, condIndex, next))
                 if (cond.type === 'expression') {
                   return (
-                    <div key={cond.id} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <ExpressionField
-                          name={`csv-filter-expr-${cond.id}`}
-                          displayName="filter expression"
-                          value={cond.expression}
-                          onChange={(value: string) =>
-                            setConditions(
-                              replaceAt(block.conditions, condIndex, { ...cond, expression: value }),
-                            )
-                          }
-                          availableVariables={[...availableVariables, { name: '_cell', type: block.asType }]}
-                          placeholder="_cell != None"
-                          isFieldExpression={false}
-                        />
-                      </div>
-                      <ConditionDeleteButton
-                        testId={`filter-condition-delete-${cond.id}`}
-                        label="Delete filter condition"
-                        onDelete={() => setConditions(removeAtPath(block.conditions, [condIndex]))}
-                      />
-                    </div>
+                    <ConditionExpressionRow
+                      key={cond.id}
+                      row={cond}
+                      onRow={onRow}
+                      availableVariables={cellVariables}
+                      testIdStem={`filter-condition-expr-${cond.id}`}
+                      message={problem?.message}
+                      grows={problem !== null}
+                      actions={deleteButton}
+                    />
                   )
                 }
-                if (cond.type === 'literal') {
-                  const isUnary = UNARY_OPERATORS.has(cond.operator)
-                  const valueProblem = compareToProblem(cond)
-                  const valueErrorId = `filter-condition-error-${cond.id}`
-                  return (
-                    <Fragment key={cond.id}>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={cond.operator}
-                          onValueChange={(value) =>
-                            setConditions(replaceAt(block.conditions, condIndex, withOperator(cond, value)))
-                          }
-                        >
-                          <SelectTrigger
-                            data-testid={`filter-condition-operator-${cond.id}`}
-                            className="h-8 w-[160px] shrink-0"
-                            aria-label="Filter condition operator"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {operators.map((op) => (
-                              <SelectItem key={op.value} value={op.value}>
-                                {op.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {!isUnary &&
-                          (cond.reference_is_expression ? (
-                            <div
-                              className="flex-1 min-w-0"
-                              data-testid={`filter-condition-value-${cond.id}`}
-                            >
-                              <ExpressionField
-                                name={`csv-filter-ref-${cond.id}`}
-                                displayName="filter value"
-                                value={safeStringify(cond.reference_value)}
-                                onChange={(value: string) =>
-                                  setConditions(
-                                    replaceAt(block.conditions, condIndex, {
-                                      ...cond,
-                                      reference_value: value,
-                                    }),
-                                  )
-                                }
-                                availableVariables={[...availableVariables, { name: '_cell', type: block.asType }]}
-                                placeholder="Expression"
-                                isFieldExpression={false}
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex-1 min-w-0">
-                              <TextField
-                                data-testid={`filter-condition-value-${cond.id}`}
-                                aria-label="Filter condition value"
-                                inputMode={numberEntryProps(block.asType).inputMode}
-                                aria-invalid={valueProblem === null ? undefined : true}
-                                aria-describedby={valueProblem === null ? undefined : valueErrorId}
-                                value={safeStringify(cond.reference_value)}
-                                onChange={(value) => {
-                                  if (!takesEntryText(value, block.asType)) return
-                                  setConditions(
-                                    replaceAt(block.conditions, condIndex, {
-                                      ...cond,
-                                      reference_value: value,
-                                    }),
-                                  )
-                                }}
-                                placeholder="Value"
-                              />
-                            </div>
-                          ))}
-                        {!isUnary && (
-                          <ExpressionToggle
-                            pressed={cond.reference_is_expression}
-                            onPressedChange={() =>
-                              setConditions(
-                                replaceAt(block.conditions, condIndex, {
-                                  ...cond,
-                                  reference_is_expression: !cond.reference_is_expression,
-                                }),
-                              )
-                            }
-                            data-testid={`filter-condition-expr-toggle-${cond.id}`}
-                            label="Toggle expression mode for value"
-                          />
-                        )}
-                        <ConditionDeleteButton
-                          testId={`filter-condition-delete-${cond.id}`}
-                          label="Delete filter condition"
-                          onDelete={() => setConditions(removeAtPath(block.conditions, [condIndex]))}
-                        />
-                      </div>
-                      {valueProblem !== null && (
-                        <p id={valueErrorId} data-testid={valueErrorId} role="alert" className="pl-1 text-xs text-destructive">
-                          {valueProblem}
-                        </p>
-                      )}
-                    </Fragment>
-                  )
-                }
-                return null
+                return (
+                  <ConditionLiteralRow
+                    key={cond.id}
+                    row={cond}
+                    onRow={onRow}
+                    availableVariables={cellVariables}
+                    testIdStem={`filter-condition-value-${cond.id}`}
+                    operatorTestId={`filter-condition-operator-${cond.id}`}
+                    toggleTestId={`filter-condition-expr-toggle-${cond.id}`}
+                    valueMessage={problem?.message}
+                    grows={false}
+                    actions={deleteButton}
+                  />
+                )
               })}
 
               <div className="flex items-center gap-2">
@@ -364,6 +273,7 @@ export function FilterBlockBuilder({
         <Plus className="h-3.5 w-3.5 mr-1" />
         Add Filter
       </Button>
+      <EntryChangeQuestions change={change} subject="entry" />
     </div>
   )
 }

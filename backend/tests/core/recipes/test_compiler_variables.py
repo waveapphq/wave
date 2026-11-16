@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from tests.core.recipes.conftest import LOG_STEP, find_finding, make_recipe
+from tests.core.recipes.test_compiler_constructs import variable_prefixed_keys
 
 
 def compile_recipe(text: str) -> dict[str, Any]:
@@ -431,7 +432,10 @@ class TestDeclaredElementTypes:
             "built": {"n": "16", "s": "16"},
             "note": "x",
         }
-        assert setter["data"]["variableElementTypes"] == {"built": {"n": "integer", "s": "string"}}
+        assert setter["data"]["elementTypes"] == {
+            "variables.built": {"n": "integer", "s": "string"}
+        }
+        assert variable_prefixed_keys(setter["data"]) == []
 
     def test_a_set_step_without_collections_carries_no_element_types(self) -> None:
         flow = [{"set": {"note": "x"}}]
@@ -439,7 +443,8 @@ class TestDeclaredElementTypes:
             "test_data"
         ]["workflow"]["nodes"]
         setter = next(node for node in nodes if node["data"]["elementType"] == "variable-setter")
-        assert "variableElementTypes" not in setter["data"]
+        assert setter["data"].get("elementTypes", {}) == {}
+        assert variable_prefixed_keys(setter["data"]) == []
 
     def test_a_local_function_parameter_default_takes_the_stored_form(self) -> None:
         functions = [
@@ -567,3 +572,132 @@ class TestNumberStoredForm:
 
         setter = result["test_data"]["workflow"]["nodes"][0]["data"]
         assert setter["config"]["values"] == {"variables": {"rates": {"1.50": "low"}}}
+
+
+SETTER_VARIABLES = {
+    "attempt": {"type": "integer", "value": 1},
+    "greeting": {"type": "string"},
+    "next_attempt": {"type": "integer"},
+    "summary": {"type": "string"},
+    "run_id": {"type": "string", "value": "r-1"},
+    "api_token": {"type": "string", "secret": True},
+    "host_list": {"type": "array"},
+    "next_host": {"type": "string", "value": "web-3"},
+    "label": {"type": "string"},
+    "raw": {"type": "string"},
+    "limits": {"type": "map"},
+    "hosts": {"type": "array"},
+    "base": {"type": "integer", "value": 2},
+}
+
+
+def compiled_setter(step: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The Setter node data and the Test variables of a one-step recipe."""
+    result = compile_clean(make_recipe([step], variables=SETTER_VARIABLES))
+    nodes = result["test_data"]["workflow"]["nodes"]
+    setter = next(node for node in nodes if node["data"]["elementType"] == "variable-setter")
+    return setter["data"], variables_of(result)
+
+
+class TestSetterRows:
+    """A set step compiles to the shared stored shape of the Variable Setter (REQ-3.4.1.14,
+    REQ-5.2.7.3): dotted flags per row and entry, entry types at the row's place, the
+    secret mark in config.secretFields, and no row type on the Block."""
+
+    def test_rows_take_the_shared_stored_shape(self) -> None:
+        step = {
+            "set": {
+                "greeting": "hi",
+                "next_attempt": {"expr": "attempt + 1"},
+                "summary": "Run {{ run_id }} done",
+                "api_token": "tok-123",
+                "host_list": ["web-1", "web-2", {"expr": "next_host"}],
+            },
+            "secret_rows": ["api_token"],
+        }
+        data, _variables = compiled_setter(step)
+        assert data["config"]["values"] == {
+            "variables": {
+                "greeting": "hi",
+                "next_attempt": "attempt + 1",
+                "summary": "Run {{ run_id }} done",
+                "api_token": "tok-123",
+                "host_list": ["web-1", "web-2", "next_host"],
+            }
+        }
+        assert data["expressionFields"] == ["variables.next_attempt", "variables.host_list.2"]
+        assert data["templateFields"] == ["variables.summary"]
+        assert data["elementTypes"] == {"variables.host_list": ["string", "string", "string"]}
+        assert data["config"]["secretFields"] == ["variables.api_token"]
+        assert variable_prefixed_keys(data) == []
+
+    def test_a_template_form_row_is_a_template_row(self) -> None:
+        data, _variables = compiled_setter({"set": {"label": {"template": "no markers"}}})
+        assert data["config"]["values"] == {"variables": {"label": "no markers"}}
+        assert data["templateFields"] == ["variables.label"]
+        assert data["expressionFields"] == []
+
+    def test_a_literal_row_holds_its_text_and_no_flag(self) -> None:
+        data, _variables = compiled_setter({"set": {"raw": {"literal": "{{ kept }}"}}})
+        assert data["config"]["values"] == {"variables": {"raw": "{{ kept }}"}}
+        assert data["templateFields"] == []
+        assert data["expressionFields"] == []
+
+    def test_entry_flags_address_the_row_and_the_entry(self) -> None:
+        step = {
+            "set": {
+                "limits": {"max": {"expr": "base * 2"}, "min": 1},
+                "hosts": ["web-1", {"expr": "next_host"}],
+            }
+        }
+        data, _variables = compiled_setter(step)
+        rows = data["config"]["values"]["variables"]
+        assert rows["limits"]["max"] == "base * 2"
+        assert rows["hosts"][1] == "next_host"
+        assert data["expressionFields"] == ["variables.limits.max", "variables.hosts.1"]
+        assert data["templateFields"] == []
+
+    def test_an_expression_entry_of_a_map_row_takes_no_entry_type(self) -> None:
+        """Only a map row's literal entries are typed, as in a typed map setting."""
+        step = {
+            "set": {
+                "limits": {"max": {"expr": "base * 2"}, "min": 1},
+                "hosts": ["web-1", {"expr": "next_host"}],
+            }
+        }
+        data, _variables = compiled_setter(step)
+        assert data["elementTypes"] == {
+            "variables.limits": {"min": "integer"},
+            "variables.hosts": ["string", "string"],
+        }
+
+    def test_template_and_literal_entries_take_the_entry_flags(self) -> None:
+        step = {
+            "set": {
+                "limits": {
+                    "tag": "run {{ run_id }}",
+                    "note": {"template": "plain"},
+                    "raw": {"literal": "{{ kept }}"},
+                },
+                "hosts": ["web-1", "{{ next_host }}-b"],
+            }
+        }
+        data, _variables = compiled_setter(step)
+        assert data["config"]["values"]["variables"] == {
+            "limits": {"tag": "run {{ run_id }}", "note": "plain", "raw": "{{ kept }}"},
+            "hosts": ["web-1", "{{ next_host }}-b"],
+        }
+        assert sorted(data["templateFields"]) == [
+            "variables.hosts.1",
+            "variables.limits.note",
+            "variables.limits.tag",
+        ]
+        assert data["expressionFields"] == []
+
+    def test_no_row_type_is_stored_and_the_declared_variable_holds_it(self) -> None:
+        step = {"set": {"greeting": "hi", "next_attempt": {"expr": "attempt + 1"}}}
+        data, variables = compiled_setter(step)
+        assert variable_prefixed_keys(data) == []
+        assert not any(place.startswith("variables") for place in data.get("elementTypes", {}))
+        assert variables["greeting"] == {"type": "string"}
+        assert variables["next_attempt"] == {"type": "integer"}

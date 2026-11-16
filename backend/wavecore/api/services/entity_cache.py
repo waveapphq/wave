@@ -17,6 +17,8 @@ from typing import Any
 
 import yaml
 
+from wavecore.api.services.storage_paths import entity_dir, is_entity_id
+
 # Entity labels already reconciled inside the current `reconcile_once` scope.
 _reconciled: ContextVar[set[str] | None] = ContextVar("wave_reconciled_entities", default=None)
 
@@ -73,11 +75,11 @@ class DirectoryCache:
 
     def record_path(self, entity_id: str) -> Path:
         """Where this entity's record file lives."""
-        return self._storage_dir() / entity_id / self._filename
+        return entity_dir(self._storage_dir(), entity_id) / self._filename
 
     def exists(self, entity_id: str) -> bool:
         """Whether the directory still holds this entity's record file."""
-        return self.record_path(entity_id).exists()
+        return is_entity_id(entity_id) and self.record_path(entity_id).exists()
 
     def read(self, entity_id: str) -> dict[str, Any] | None:
         """Read one stored record, or None when its file cannot become one.
@@ -87,6 +89,8 @@ class DirectoryCache:
         takes down a listing the other files can answer. A file still on disk
         that was skipped is logged once, so nothing drops out without a trace.
         """
+        if not is_entity_id(entity_id):
+            return None
         path = self.record_path(entity_id)
         try:
             with open(path, encoding="utf-8") as handle:

@@ -371,7 +371,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
     const sheet = await openTestDataSheet(page)
     const handle = page.getByTestId('testdata-sheet-drag-handle')
 
-    await expect(sheet).toHaveAttribute('aria-label', 'Test Data')
+    await expect(sheet).toHaveAccessibleName('Test Data')
     await expect(handle.getByRole('heading', { name: 'Test Data', exact: true })).toBeVisible()
 
     const iconLeadsTitle = await handle.evaluate((el) => {
@@ -517,7 +517,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
 
     await test.step('file mode on File I/O Read Path', async () => {
       const picker = await openPicker(page, 'fileio-read', 'param-browse-path')
-      await expect(picker).toHaveAttribute('aria-label', 'Choose a file')
+      await expect(picker).toHaveAccessibleName('Choose a file')
       await expect(picker.getByRole('heading', { name: 'Choose a file', exact: true })).toBeVisible()
       await expect(page.getByTestId('file-reference-picker')).toHaveAttribute(
         'data-picker-mode',
@@ -598,7 +598,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
 
     await test.step('file-or-folder mode on File I/O Copy Source', async () => {
       const picker = await openPicker(page, 'fileio-copy', 'param-browse-source')
-      await expect(picker).toHaveAttribute('aria-label', 'Choose a file or folder')
+      await expect(picker).toHaveAccessibleName('Choose a file or folder')
       await expect(
         picker.getByRole('heading', { name: 'Choose a file or folder', exact: true }),
       ).toBeVisible()
@@ -647,7 +647,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
 
     await test.step('folder mode on File I/O List Path', async () => {
       const picker = await openPicker(page, 'fileio-list', 'param-browse-path')
-      await expect(picker).toHaveAttribute('aria-label', 'Choose a folder')
+      await expect(picker).toHaveAccessibleName('Choose a folder')
       await expect(
         picker.getByRole('heading', { name: 'Choose a folder', exact: true }),
       ).toBeVisible()
@@ -698,7 +698,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
     await openTest(page, seededTestId)
     const picker = await openPicker(page, 'fileio-write', 'param-browse-path')
 
-    await expect(picker).toHaveAttribute('aria-label', 'Save as')
+    await expect(picker).toHaveAccessibleName('Save as')
     await expect(picker.getByRole('heading', { name: 'Save as', exact: true })).toBeVisible()
     await expect(page.getByTestId('file-reference-picker')).toHaveAttribute(
       'data-picker-mode',

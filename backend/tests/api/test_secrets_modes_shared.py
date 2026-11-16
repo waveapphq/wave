@@ -156,7 +156,7 @@ class TestApplySecretsModeToVariables:
     def test_plaintext_missing_key_raises_conflict(self, monkeypatch: pytest.MonkeyPatch) -> None:
         class _NoKeyProvider(KeyProvider):
             def get_key(self) -> bytes:
-                raise ValueError(_MISSING_KEY_MESSAGE)
+                raise key_provider.SecretKeyError(_MISSING_KEY_MESSAGE)
 
         sealed = _sealed_variables()
         monkeypatch.setattr(key_provider, "get_key_provider", lambda: _NoKeyProvider())
@@ -166,6 +166,33 @@ class TestApplySecretsModeToVariables:
 
         assert str(exc_info.value) == _MISSING_KEY_MESSAGE
         assert exc_info.value.status_code == 409
+
+    @pytest.mark.parametrize(
+        ("apply", "document"),
+        [
+            pytest.param(shared.apply_secrets_mode_to_variables, _sealed_variables, id="variables"),
+            pytest.param(
+                shared.apply_secrets_mode_to_variable_list,
+                lambda: [{"name": "api_token", **_sealed_variables()["api_token"]}],
+                id="variable-list",
+            ),
+        ],
+    )
+    def test_plaintext_unexpected_fault_is_not_a_conflict(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        apply: Callable[[Any, str], Any],
+        document: Callable[[], Any],
+    ) -> None:
+        class _BrokenProvider(KeyProvider):
+            def get_key(self) -> bytes:
+                raise ValueError("internal key fault")
+
+        sealed = document()
+        monkeypatch.setattr(key_provider, "get_key_provider", lambda: _BrokenProvider())
+
+        with pytest.raises(ValueError, match=r"^internal key fault$"):
+            apply(sealed, "plaintext")
 
 
 class TestCheckForeignEnvelopes:
@@ -236,7 +263,7 @@ def _setter_node(node_id: str, variables: dict[str, Any], secret_keys: list[str]
             "version": "1.0.0",
             "config": {
                 "values": {"variables": variables},
-                "variableSecretKeys": secret_keys,
+                "secretFields": [f"variables.{key}" for key in secret_keys],
             },
         },
     }

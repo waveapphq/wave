@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from wavecore.core.variables.declared_values import DeclaredStart, declared_start
+from wavecore.core.variables.declared_values import DeclaredKindError, DeclaredStart, declared_start
 
 
 class TestALiteral:
@@ -70,5 +70,7 @@ class TestNoValue:
 
 
 def test_expression_and_template_together_are_refused() -> None:
-    with pytest.raises(ValueError, match=r"^is_expression and is_template are mutually exclusive$"):
+    with pytest.raises(
+        DeclaredKindError, match=r"^is_expression and is_template are mutually exclusive$"
+    ):
         declared_start({"type": "string", "value": "x", "isExpression": True, "isTemplate": True})

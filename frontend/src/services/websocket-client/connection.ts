@@ -7,10 +7,11 @@
 
 import type { ClientContext } from './client-context'
 import { setState, emitError, sendMessage, clearTimers } from './client-context'
-import { classifyWebSocketError, createWebSocketError, generateUUID, calculateReconnectDelay, CONNECTION_TIMEOUT, WS_CONNECTING } from './utils'
+import { classifyWebSocketError, createWebSocketError, calculateReconnectDelay, CONNECTION_TIMEOUT, WS_CONNECTING } from './utils'
 import { handleMessage } from './message-handler'
 import { resetHeartbeatTimer } from './heartbeat'
 import { reportFailure as reportConnectionFailure } from '@/services/connection-monitor'
+import { randomUUID } from '@/lib/uuid'
 
 /**
  * Schedules a reconnection attempt with exponential backoff
@@ -64,7 +65,7 @@ export function performConnect(ctx: ClientContext, isReconnect: boolean = false)
   if (!isReconnect) {
     // Generate session ID for new connections
     if (!ctx.sessionId) {
-      ctx.sessionId = generateUUID()
+      ctx.sessionId = randomUUID()
     }
     ctx.reconnectAttempt = 0
     ctx.isExplicitDisconnect = false

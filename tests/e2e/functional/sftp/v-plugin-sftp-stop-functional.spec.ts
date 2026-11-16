@@ -11,7 +11,7 @@
  * test 2 leaves it to the cleanup run, whose Stats proves the source untouched.
  *
  * Pass Criteria:
- * 1. STOP-1: test 1 (Record and continue) records `Download did not finish within 1 seconds`,
+ * 1. STOP-1: test 1 (Record and continue) records `Download did not finish within 1 second`,
  *    Reason `Timeout`, a Summary with no rows, and no Download line.
  * 2. STOP-2: after test 1 no file named `big-<uuid>.bin` and no `.big-<uuid>.bin.<8 hex>.part`
  *    exists anywhere under `STORAGE_BASE_PATH`; the run passes.
@@ -128,7 +128,7 @@ test.describe('V-PLUGIN-SFTP-STOP-FUNCTIONAL: Timeout and Stop end a 4 GiB downl
         name: DOWNLOAD,
         operation: 'Download',
         reason: 'Timeout',
-        message: `Download did not finish within ${TYPED_TIMEOUT} seconds`,
+        message: `Download did not finish within ${TYPED_TIMEOUT} second`,
       })
       await expectNodeStatus(page, downloadId, 'warning')
       expect(summaryRows(vars, 'big_summary'), 'Summary').toEqual([])

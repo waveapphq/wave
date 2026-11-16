@@ -2,7 +2,8 @@
 
 The compiler-side enablers the amend loop rides on: every emitted node carries a
 stable opaque recipeKey, an explicit key sibling maps through verbatim, harvested
-keys drive pinned relayout, and construct rejoins survive recompile.
+keys drive pinned relayout, and construct rejoins survive recompile. A Test holding
+a setting no recipe can express is refused.
 """
 
 from typing import Any
@@ -145,6 +146,91 @@ class TestPinnedRelayout:
         assert positions[fresh["id"]] not in ({"x": 999.0, "y": -7.0}, harvested["k-b"])
 
 
+def log_step(label: str, message: str | None = None) -> dict[str, Any]:
+    return {"block": "log", "label": label, "settings": {"message": message or label.lower()}}
+
+
+RELEASE_BODY = [log_step("API health check"), log_step("Verify API health")]
+PING_STEP = log_step("Ping app server")
+
+
+def release_recipe(body: list[dict[str, Any]], name: str = "Release Smoke Check") -> str:
+    """An If/Else whose then-branch holds a Remote Execution running `body`, followed by
+    top-level steps the Remote's continuation carries; the else-branch ends in a Halt."""
+    remote = {"remote": {"settings": {"session_id": {"expr": "ssh_session"}}, "body": body}}
+    halt = {"halt": {"scope": "test", "status": "failed", "message": "service down"}}
+    flow = [
+        log_step("Connect to app server"),
+        log_step("Check orders-api service"),
+        {"if": {"when": "svc_ok", "then": [remote], "else": [log_step("Alert on-call"), halt]}},
+        log_step("Query release DB"),
+        log_step("Verify release"),
+        log_step("Disconnect"),
+    ]
+    variables = {
+        "svc_ok": {"type": "boolean", "value": True},
+        "ssh_session": {"type": "string", "value": "session"},
+    }
+    return make_recipe(flow, name=name, variables=variables)
+
+
+def positions_by_label(workflow: dict[str, Any]) -> dict[str, dict[str, float]]:
+    return {node["data"]["label"]: node["position"] for node in workflow["nodes"]}
+
+
+def overlapping_pairs(workflow: dict[str, Any]) -> list[tuple[str, str]]:
+    """Every pair of Blocks whose boxes, at the canvas's own sizes, overlap."""
+    from wavecore.core.layout.dimensions import estimate_node_size
+    from wavecore.core.layout.engine import ingress_counts
+
+    ingress = ingress_counts(workflow["edges"])
+    boxes = []
+    for node in workflow["nodes"]:
+        width, height = estimate_node_size(node, ingress.get(node["id"], 0))
+        boxes.append(
+            (node["data"]["label"], node["position"]["x"], node["position"]["y"], width, height)
+        )
+    return [
+        (first[0], second[0])
+        for index, first in enumerate(boxes)
+        for second in boxes[index + 1 :]
+        if first[1] < second[1] + second[3]
+        and second[1] < first[1] + first[3]
+        and first[2] < second[2] + second[4]
+        and second[2] < first[2] + first[4]
+    ]
+
+
+class TestRecompileCarriesGeometry:
+    """An amend recompiles the whole recipe; the stored geometry rides on each Block itself."""
+
+    def test_a_fresh_compile_of_the_nested_flow_overlaps_nothing(self) -> None:
+        workflow = compile_clean(release_recipe(RELEASE_BODY))["test_data"]["workflow"]
+        assert overlapping_pairs(workflow) == []
+
+    def test_a_step_inserted_first_in_a_nested_body_moves_only_the_blocks_below_it(self) -> None:
+        from wavecore.core.layout.revision import carry_geometry
+
+        before = compile_clean(release_recipe(RELEASE_BODY))["test_data"]["workflow"]
+        after = compile_clean(release_recipe([PING_STEP, *RELEASE_BODY]))["test_data"]["workflow"]
+        carry_geometry(before, after)
+        assert positions_by_label(after) == {
+            "Connect to app server": {"x": -134, "y": 140},
+            "Check orders-api service": {"x": -149, "y": 280},
+            "If/Else": {"x": -80, "y": 420},
+            "Remote Execution": {"x": -269, "y": 560},
+            "Ping app server": {"x": -424, "y": 700},
+            "API health check": {"x": -429, "y": 840},
+            "Verify API health": {"x": -434, "y": 980},
+            "Alert on-call": {"x": 226, "y": 560},
+            "Halt": {"x": 240, "y": 700},
+            "Query release DB": {"x": -269, "y": 1120},
+            "Verify release": {"x": -259, "y": 1260},
+            "Disconnect": {"x": -240, "y": 1400},
+        }
+        assert overlapping_pairs(after) == []
+
+
 class TestRejoinPreservation:
     def _compile_three_branch_if(self) -> dict[str, Any]:
         flow = [
@@ -169,3 +255,68 @@ class TestRejoinPreservation:
         # Amend re-pins keyed nodes on recompile, so each must carry a recipeKey.
         for node in nodes_of(result):
             assert node["data"]["recipeKey"]
+
+
+def _field_loss_workflow() -> dict[str, Any]:
+    """A For holding a stored value no recipe key writes: a setting the format cannot express."""
+    return {
+        "nodes": [
+            {
+                "id": "loop-1",
+                "type": "workflowNode",
+                "position": {"x": 100, "y": 100},
+                "data": {
+                    "label": "Count",
+                    "elementType": "for",
+                    "nodeType": "control",
+                    "version": "1.0.0",
+                    "config": {"values": {"mode": "count", "count": 2, "shade": "red"}},
+                },
+            }
+        ],
+        "edges": [{"id": "edge-start-loop-1", "source": "start-node", "target": "loop-1"}],
+    }
+
+
+class TestAmendRefusesAFieldLoss:
+    """A stored Test holding a setting the recipe format cannot express is never amended,
+    so nothing it holds is silently dropped (REQ-5.2.7.6)."""
+
+    def test_amending_a_test_that_holds_a_field_loss_is_refused_with_the_problem_text(
+        self,
+    ) -> None:
+        from tests.mcp.test_tools_author import _write_test_with_workflow
+        from wavecore.api.services.tests import service as test_service
+        from wavecore.mcp.tools import author
+
+        test_id = _write_test_with_workflow("Amend Field Loss", _field_loss_workflow())
+        readback = author.get_test_recipe(test_id)
+        assert readback["inexpressible"] == [
+            {"what": "setting 'shade' of block 'Count'", "where": "loop-1"}
+        ]
+
+        result = author.amend_test_from_recipe(
+            test_id, make_recipe([LOG_STEP], name="Amend Field Loss")
+        )
+
+        assert result == {
+            "amended": False,
+            "findings": [
+                {
+                    "step": "test",
+                    "code": "TARGET_NOT_RECIPE_EXPRESSIBLE",
+                    "severity": "error",
+                    "problem": (
+                        "The target test holds wiring or settings the recipe format cannot "
+                        "express; amending it through a recipe would drop them."
+                    ),
+                    "fix": (
+                        "Edit this test directly in the workbench. Recipe amendment is "
+                        "available only for tests that round-trip fully."
+                    ),
+                }
+            ],
+        }
+        stored = test_service.get_test(test_id)
+        assert stored is not None
+        assert stored["version"] == "1.0.0"

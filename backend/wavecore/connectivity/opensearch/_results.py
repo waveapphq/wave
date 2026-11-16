@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from wavecore.connectivity.k8s.verbs._outputs import typed_table
+from wavecore.connectivity.block_outputs import typed_table
 
 from ._fields import wildcard_pattern
 from ._json_text import dumps

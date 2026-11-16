@@ -18,13 +18,12 @@
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'
-import { operatorOptions } from '../../helpers/condition-builder'
+import { operatorOptions, sheetLiteralRow } from '../../helpers/condition-builder'
 import { ensureEnvironment } from '../../helpers/config'
 import { getTest } from '../../helpers/element-types'
 import { createValidTest } from '../../helpers/fn-seed'
 import { expectNodeStatus } from '../../helpers/k8s-run'
 import { formatEntries } from '../../helpers/log-reader'
-import { literalCondition } from '../../helpers/nesting-graph'
 import { runToEnd } from '../../helpers/workbench'
 import { LANE_VIEWPORT, deleteTest, openConfig, openLaneCanvas, saveCanvas } from '../canvas-lanes/lanes-helpers'
 import { buildAssertChain, type SheetRow } from './check-chain'
@@ -87,9 +86,7 @@ test.describe('V-NULL-CHECK-TABLE: the four table checks on a null, an empty and
         for (const [index, operator] of TABLE_OPERATORS.entries()) {
           const node = (stored.workflow.nodes as Array<Record<string, any>>).find((n) => n.id === ids[index])
           const saved = node?.data.config?.values?.assertions?.[0] as Record<string, unknown>
-          expect.soft({ ...saved, reference_value: saved?.reference_value ?? null }, `stored ${operator} row`).toEqual(
-            literalCondition(String(saved?.id), 'hosts', 'table', WIRE[operator], null),
-          )
+          expect.soft(saved, `stored ${operator} row`).toEqual(sheetLiteralRow(String(saved?.id), 'hosts', 'table', WIRE[operator]))
         }
       })
 

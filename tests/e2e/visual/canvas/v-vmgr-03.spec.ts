@@ -128,10 +128,10 @@ const expandButtonFor = (page: Page, name: string): Locator =>
   rowFor(page, name).locator('[data-testid^="expand-button-"]')
 
 const modalFor = (page: Page, name: string): Locator =>
-  page.locator(`section[aria-label="Inspect variable ${name}"]`)
+  page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 const allModals = (page: Page): Locator =>
-  page.locator('section[data-testid^="variable-inspect-modal-"]')
+  page.locator('dialog[data-testid^="variable-inspect-modal-"]')
 
 async function openInspector(page: Page, name: string): Promise<Locator> {
   await expandButtonFor(page, name).click()
@@ -591,7 +591,7 @@ test.describe('V-VMGR-03: Variable inspect modal', () => {
     // Functions Library sheet: 520x360.
     await expandPalette(page)
     await page.locator('[data-testid="palette-blocks-library-button"]').click()
-    const library = page.locator('section[aria-label="Functions Library"]')
+    const library = page.getByRole('dialog', { name: 'Functions Library', exact: true, includeHidden: true })
     await expect(library).toBeVisible()
     await expectCornerClampsAtMinimum(page, library, 520, 360)
     await page.keyboard.press('Escape')
@@ -661,10 +661,7 @@ test.describe('V-VMGR-03: Variable inspect modal', () => {
     await page.mouse.down()
     await page.mouse.move(hb.x + 80, hb.y + 80, { steps: 4 })
     // Mid-drag: hit-test at the watcher's center must resolve inside it.
-    const onTopMidDrag = await page.evaluate(() => {
-      const target = document.querySelector(
-        'section[aria-label="Inspect variable user_name"]',
-      )!
+    const onTopMidDrag = await buried.evaluate((target) => {
       const rect = target.getBoundingClientRect()
       const hit = document.elementFromPoint(
         rect.x + rect.width / 2,

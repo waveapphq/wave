@@ -134,7 +134,7 @@ async def _run(graph: Graph, run: _Run | None = None) -> _Outcome:
         workers[host] = worker
     by_connection = {id(connections[host]): workers[host] for host in workers}
 
-    async def _open(connection: Any) -> Any:
+    async def _open(connection: Any, _host: str) -> Any:
         worker = by_connection[id(connection)]
         events.append(f"open:{worker.host}")
         return worker
@@ -417,6 +417,80 @@ class TestARemoteExecutionInsideTheBody:
         assert outcome.variables["rsid_inner"] != outcome.variables["rsid"]
         assert outcome.variables["nest_inner"] == "inner", outcome.messages
         assert outcome.session["status"] == "passed", outcome.messages
+
+
+def _failing_catch_graph() -> Graph:
+    nodes, edges = _slot("catch")
+    boom = log_node("try-boom", "Try boom", "1/0")
+    return _body_around(
+        [try_catch_node("inner"), boom, *nodes], [edge("inner", "try-boom", "try"), *edges]
+    )
+
+
+FAILING_DEEPER: dict[str, tuple[Any, str]] = {
+    "for": (_for_graph, "Nested control in 'For Loop' failed"),
+    "for-each": (_for_each_graph, "Nested control in 'ForEach' failed"),
+    "while": (_while_graph, "Nested control in 'While Loop' failed"),
+    "parallel": (_parallel_graph, "Nested control in 'Parallel' failed"),
+    "try-catch": (_failing_catch_graph, "Nested control in 'Try/Catch' failed"),
+    "switch-case": (_switch_graph, "Nested control in 'Switch/Case' failed"),
+    "if-else": (_if_else_graph, "Nested control in 'If/Else' failed"),
+    "function": (_function_graph, "boom"),
+}
+
+
+class TestAFailureDeeperInTheBody:
+    """The container names its host for a block that failed there at any depth."""
+
+    @pytest.mark.parametrize("kind", sorted(FAILING_DEEPER))
+    async def test_the_container_names_the_host(self, kind: str) -> None:
+        graph, detail = FAILING_DEEPER[kind]
+        outcome = await _run(graph(), _Run(failing_paths={"/in"}))
+
+        line = (
+            f"Block 'Remote Execution' failed: Remote Execution failed on host '{HOST}': {detail}"
+        )
+        assert line in outcome.messages, outcome.messages
+        assert outcome.session["status"] == "failed", outcome.messages
+
+    async def test_a_block_failing_on_wave_deeper_leaves_the_host_out(self) -> None:
+        nodes, edges, variables = _for_graph()
+        nodes = [*nodes, assert_node("check", "1 == 2")]
+        edges = [*edges, edge("set-inner", "check")]
+
+        outcome = await _run((nodes, edges, variables))
+
+        line = "Block 'Remote Execution' failed: Nested control in 'For Loop' failed"
+        assert line in outcome.messages, outcome.messages
+        assert outcome.session["block_states"].get("check") == "failed", outcome.messages
+
+    async def test_an_inner_container_failing_deeper_names_only_its_own_host(self) -> None:
+        loop = make_node(
+            "loop",
+            label="For Loop",
+            element_type="for",
+            config_values={"mode": "count", "count": 1},
+            output_bindings={"index": "i"},
+        )
+        nodes, edges = _slot("body", then=False)
+        graph_nodes, graph_edges, variables = _body_around(
+            [loop, rex_node("inner", INNER_SESSION, "rsid_inner"), *nodes],
+            [edge("loop", "inner", "body"), edge("loop", "post", "then"), *edges],
+        )
+        graph_edges = [
+            *[e for e in graph_edges if (e["source"], e["target"]) != ("pre", "inner")],
+            edge("pre", "loop"),
+        ]
+
+        outcome = await _run((graph_nodes, graph_edges, variables), _Run(failing_paths={"/in"}))
+
+        assert outcome.served == [(HOST, "/pre"), (INNER_HOST, "/in")], outcome.served
+        assert (
+            f"Block 'Remote Execution' failed: Remote Execution failed on host '{INNER_HOST}': boom"
+            in outcome.messages
+        ), outcome.messages
+        line = "Block 'Remote Execution' failed: Nested control in 'For Loop' failed"
+        assert line in outcome.messages, outcome.messages
 
 
 class TestSignalsInsideAContainerInTheBody:

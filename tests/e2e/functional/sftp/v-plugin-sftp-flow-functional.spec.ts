@@ -280,7 +280,7 @@ async function addCondition(page: Page, sheet: Locator, expression: string, vari
   await expect(sheet.getByTestId('assertion-builder-empty'), 'the fresh block holds no condition').toBeVisible()
   await sheet.getByTestId('assert-add-assertion').click()
   await sheet.getByTestId('assert-add-expression').click()
-  const editor = sheet.locator('[data-testid="assert-expression-input-0"] .cm-content')
+  const editor = sheet.locator('[data-testid="param-input-assert-expr-0"] .cm-content')
   await typeExpression(page, sheet, editor, expression, variable)
 }
 

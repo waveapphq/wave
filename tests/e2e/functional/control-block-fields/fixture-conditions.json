@@ -1,0 +1,1154 @@
+{
+  "name": "zz-ctrl-fields-conditions",
+  "version": "1.0.0",
+  "description": "If/Else, Switch, Assert, While, Wait Until and CSV filter rows with literal, expression and template compare values",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "cf-if-route",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Route by health",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Route by health",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_healthy",
+                  "type": "if",
+                  "label": "Healthy",
+                  "conditions": [
+                    {
+                      "id": "cond-healthy-status",
+                      "type": "literal",
+                      "variable": "status",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "steady"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "or"
+                    },
+                    {
+                      "id": "cond-healthy-expected",
+                      "type": "literal",
+                      "variable": "status",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "ready"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_slow",
+                  "type": "else_if",
+                  "label": "Slow",
+                  "conditions": [
+                    {
+                      "id": "cond-slow-latency",
+                      "type": "literal",
+                      "variable": "latency_ms",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "450"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "grp-slow",
+                      "type": "group",
+                      "items": [
+                        {
+                          "id": "cond-slow-retries",
+                          "type": "literal",
+                          "variable": "retries",
+                          "value_type": "integer",
+                          "operator": "less_than",
+                          "reference_value": "3"
+                        },
+                        {
+                          "type": "operator",
+                          "value": "or"
+                        },
+                        {
+                          "id": "cond-slow-region",
+                          "type": "literal",
+                          "variable": "region",
+                          "value_type": "string",
+                          "operator": "starts_with",
+                          "reference_value": "eu"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "cond-slow-errors",
+                      "type": "expression",
+                      "expression": "len(errors) == 0"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_fallback",
+                  "type": "else",
+                  "label": "Fallback"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-if",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 160
+        },
+        "data": {
+          "label": "Log route if",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log route if",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route=if'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-slow",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 160
+        },
+        "data": {
+          "label": "Log route slow",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log route slow",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route=slow'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-fallback",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 160
+        },
+        "data": {
+          "label": "Log route fallback",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log route fallback",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route=fallback'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-if-template",
+        "type": "workflowNode",
+        "position": {
+          "x": 200,
+          "y": 260
+        },
+        "data": {
+          "label": "Match host",
+          "elementType": "if-else",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Match host",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "branch_tpl",
+                  "type": "if",
+                  "label": "Template",
+                  "conditions": [
+                    {
+                      "id": "cond-tpl-host",
+                      "type": "literal",
+                      "variable": "host",
+                      "value_type": "string",
+                      "operator": "equals",
+                      "reference_value": "db-1"
+                    }
+                  ]
+                },
+                {
+                  "id": "branch_else",
+                  "type": "else",
+                  "label": "Else"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-template",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 360
+        },
+        "data": {
+          "label": "Log route template",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log route template",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route=template'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-else",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 360
+        },
+        "data": {
+          "label": "Log route else",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log route else",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'route=else'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-switch",
+        "type": "workflowNode",
+        "position": {
+          "x": 100,
+          "y": 460
+        },
+        "data": {
+          "label": "Pick region",
+          "elementType": "switch-case",
+          "nodeType": "control",
+          "category": "conditional",
+          "version": "1.0.0",
+          "description": "Pick region",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "branches": [
+                {
+                  "id": "case_grouped",
+                  "type": "case",
+                  "label": "grouped",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "id": "cond-grouped-retries",
+                      "type": "literal",
+                      "variable": "retries",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "5"
+                    },
+                    {
+                      "type": "operator",
+                      "value": "and"
+                    },
+                    {
+                      "id": "grp-grouped",
+                      "type": "group",
+                      "items": [
+                        {
+                          "id": "cond-grouped-region",
+                          "type": "literal",
+                          "variable": "region",
+                          "value_type": "string",
+                          "operator": "starts_with",
+                          "reference_value": "us"
+                        },
+                        {
+                          "type": "operator",
+                          "value": "or"
+                        },
+                        {
+                          "id": "cond-grouped-host",
+                          "type": "literal",
+                          "variable": "host",
+                          "value_type": "string",
+                          "operator": "starts_with",
+                          "reference_value": "prefix",
+                          "reference_is_expression": true
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "case_eu",
+                  "type": "case",
+                  "label": "eu",
+                  "break": true,
+                  "conditions": [
+                    {
+                      "id": "cond-eu-region",
+                      "type": "literal",
+                      "variable": "region",
+                      "value_type": "string",
+                      "operator": "starts_with",
+                      "reference_value": "region_prefix",
+                      "reference_is_expression": true
+                    }
+                  ]
+                },
+                {
+                  "id": "case_default",
+                  "type": "default",
+                  "label": "default"
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-grouped",
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 560
+        },
+        "data": {
+          "label": "Log case grouped",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log case grouped",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'case=grouped'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-eu",
+        "type": "workflowNode",
+        "position": {
+          "x": 160,
+          "y": 560
+        },
+        "data": {
+          "label": "Log case eu",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log case eu",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'case=eu'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-default",
+        "type": "workflowNode",
+        "position": {
+          "x": 320,
+          "y": 560
+        },
+        "data": {
+          "label": "Log case default",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log case default",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'case=default'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-assert",
+        "type": "workflowNode",
+        "position": {
+          "x": 500,
+          "y": 460
+        },
+        "data": {
+          "label": "Check status",
+          "elementType": "assert",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Check status",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "assertions": [
+                {
+                  "id": "cond-assert-status",
+                  "type": "literal",
+                  "variable": "status",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "expected_status",
+                  "reference_is_expression": true
+                }
+              ],
+              "mode": "split",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-pass",
+        "type": "workflowNode",
+        "position": {
+          "x": 440,
+          "y": 560
+        },
+        "data": {
+          "label": "Log assert pass",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log assert pass",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'assert=pass'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-fail",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 560
+        },
+        "data": {
+          "label": "Log assert fail",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log assert fail",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'assert=fail'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-while",
+        "type": "workflowNode",
+        "position": {
+          "x": 440,
+          "y": 660
+        },
+        "data": {
+          "label": "Count to limit",
+          "elementType": "while",
+          "nodeType": "control",
+          "category": "loop",
+          "version": "1.0.0",
+          "description": "Count to limit",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "mode": "while-do",
+              "conditions": [
+                {
+                  "id": "cond-while-counter",
+                  "type": "literal",
+                  "variable": "counter",
+                  "value_type": "integer",
+                  "operator": "less_than",
+                  "reference_value": "limit",
+                  "reference_is_expression": true
+                }
+              ]
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-set-counter",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 760
+        },
+        "data": {
+          "label": "Step counter",
+          "elementType": "variable-setter",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Step counter",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "variables.counter"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "variables": {
+                "counter": "counter + 1"
+              }
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-while",
+        "type": "workflowNode",
+        "position": {
+          "x": 300,
+          "y": 860
+        },
+        "data": {
+          "label": "Log while",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log while",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'while=' + str(counter)",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-wait",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 760
+        },
+        "data": {
+          "label": "Wait for status",
+          "elementType": "wait-until",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "description": "Wait for status",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "conditions": [
+                {
+                  "id": "cond-wait-status",
+                  "type": "literal",
+                  "variable": "status",
+                  "value_type": "string",
+                  "operator": "equals",
+                  "reference_value": "expected_status",
+                  "reference_is_expression": true
+                }
+              ],
+              "timeout": 5000,
+              "check_interval": 100,
+              "message": "status never matched",
+              "mode": "retry",
+              "fail_current_scope": false
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 160,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-wait",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 860
+        },
+        "data": {
+          "label": "Log wait then",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log wait then",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'wait=then'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-csv",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 960
+        },
+        "data": {
+          "label": "Filter hosts",
+          "elementType": "csv-parser",
+          "nodeType": "plugin",
+          "category": "data",
+          "version": "1.0.0",
+          "description": "Filter hosts",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "operation": "parse",
+              "csv_content": "id,name\n1,web-1\n2,db-1\n3,web-3\n",
+              "filters": [
+                {
+                  "id": "flt-id",
+                  "column": {
+                    "mode": "name",
+                    "value": "id"
+                  },
+                  "asType": "integer",
+                  "conditions": [
+                    {
+                      "id": "flt-id-cond",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "integer",
+                      "operator": "greater_than",
+                      "reference_value": "0"
+                    }
+                  ]
+                },
+                {
+                  "id": "flt-name",
+                  "column": {
+                    "mode": "name",
+                    "value": "name"
+                  },
+                  "asType": "string",
+                  "conditions": [
+                    {
+                      "id": "flt-name-cond",
+                      "type": "literal",
+                      "variable": "_cell",
+                      "value_type": "string",
+                      "operator": "starts_with",
+                      "reference_value": "w"
+                    }
+                  ]
+                }
+              ]
+            },
+            "outputBindings": {
+              "table": "filtered"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "cf-log-done",
+        "type": "workflowNode",
+        "position": {
+          "x": 600,
+          "y": 1060
+        },
+        "data": {
+          "label": "Log done",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Log done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'conditions-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-cf-0",
+        "source": "start-node",
+        "target": "cf-if-route",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-1",
+        "source": "cf-if-route",
+        "target": "cf-log-if",
+        "type": "default",
+        "sourceHandle": "branch_healthy"
+      },
+      {
+        "id": "e-cf-2",
+        "source": "cf-if-route",
+        "target": "cf-log-slow",
+        "type": "default",
+        "sourceHandle": "branch_slow"
+      },
+      {
+        "id": "e-cf-3",
+        "source": "cf-if-route",
+        "target": "cf-log-fallback",
+        "type": "default",
+        "sourceHandle": "branch_fallback"
+      },
+      {
+        "id": "e-cf-4",
+        "source": "cf-log-if",
+        "target": "cf-if-template",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-5",
+        "source": "cf-if-template",
+        "target": "cf-log-template",
+        "type": "default",
+        "sourceHandle": "branch_tpl"
+      },
+      {
+        "id": "e-cf-6",
+        "source": "cf-if-template",
+        "target": "cf-log-else",
+        "type": "default",
+        "sourceHandle": "branch_else"
+      },
+      {
+        "id": "e-cf-7",
+        "source": "cf-log-template",
+        "target": "cf-switch",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-8",
+        "source": "cf-switch",
+        "target": "cf-log-grouped",
+        "type": "default",
+        "sourceHandle": "case_grouped"
+      },
+      {
+        "id": "e-cf-9",
+        "source": "cf-switch",
+        "target": "cf-log-eu",
+        "type": "default",
+        "sourceHandle": "case_eu"
+      },
+      {
+        "id": "e-cf-10",
+        "source": "cf-switch",
+        "target": "cf-log-default",
+        "type": "default",
+        "sourceHandle": "case_default"
+      },
+      {
+        "id": "e-cf-11",
+        "source": "cf-switch",
+        "target": "cf-assert",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-cf-12",
+        "source": "cf-assert",
+        "target": "cf-log-pass",
+        "type": "default",
+        "sourceHandle": "pass"
+      },
+      {
+        "id": "e-cf-13",
+        "source": "cf-assert",
+        "target": "cf-log-fail",
+        "type": "default",
+        "sourceHandle": "fail"
+      },
+      {
+        "id": "e-cf-14",
+        "source": "cf-log-pass",
+        "target": "cf-while",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-15",
+        "source": "cf-while",
+        "target": "cf-set-counter",
+        "type": "default",
+        "sourceHandle": "body"
+      },
+      {
+        "id": "e-cf-16",
+        "source": "cf-set-counter",
+        "target": "cf-log-while",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-17",
+        "source": "cf-while",
+        "target": "cf-wait",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-cf-18",
+        "source": "cf-wait",
+        "target": "cf-log-wait",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "e-cf-19",
+        "source": "cf-log-wait",
+        "target": "cf-csv",
+        "type": "default"
+      },
+      {
+        "id": "e-cf-20",
+        "source": "cf-csv",
+        "target": "cf-log-done",
+        "type": "default"
+      }
+    ]
+  },
+  "variables": {
+    "status": {
+      "value": "ready",
+      "type": "string",
+      "scope": "test"
+    },
+    "expected_status": {
+      "value": "ready",
+      "type": "string",
+      "scope": "test"
+    },
+    "region": {
+      "value": "eu-west-1",
+      "type": "string",
+      "scope": "test"
+    },
+    "region_prefix": {
+      "value": "eu",
+      "type": "string",
+      "scope": "test"
+    },
+    "host": {
+      "value": "web-1",
+      "type": "string",
+      "scope": "test"
+    },
+    "prefix": {
+      "value": "web",
+      "type": "string",
+      "scope": "test"
+    },
+    "latency_ms": {
+      "value": 600,
+      "type": "integer",
+      "scope": "test"
+    },
+    "retries": {
+      "value": 2,
+      "type": "integer",
+      "scope": "test"
+    },
+    "counter": {
+      "value": 0,
+      "type": "integer",
+      "scope": "test"
+    },
+    "limit": {
+      "value": 3,
+      "type": "integer",
+      "scope": "test"
+    },
+    "min_id": {
+      "value": 1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "errors": {
+      "value": [],
+      "type": "array",
+      "scope": "test",
+      "elementTypes": []
+    },
+    "filtered": {
+      "value": null,
+      "type": "table",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

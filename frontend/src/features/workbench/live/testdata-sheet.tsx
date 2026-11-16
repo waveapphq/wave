@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { Folder, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DraggableSheet } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle } from '@/components/shared/draggable-sheet'
 import { TestDataBrowser } from '@/features/workbench/common/testdata/testdata-browser'
 import { useTestData } from '@/features/workbench/common/testdata/use-testdata'
 
@@ -80,7 +80,6 @@ function OpenTestDataSheet({ onClose, testId, readOnly }: Readonly<OpenSheetProp
       open
       onClose={onClose}
       sheetId="testdata"
-      ariaLabel="Test Data"
       data-testid="testdata-sheet"
       initialWidth={480}
       minWidth={460}
@@ -88,7 +87,7 @@ function OpenTestDataSheet({ onClose, testId, readOnly }: Readonly<OpenSheetProp
         <>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Folder className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-[13px] font-semibold">Test Data</h2>
+            <SheetTitle className="text-[13px] font-semibold">Test Data</SheetTitle>
             <div ref={setToolbarSlot} className="ml-auto flex items-center gap-1" />
           </div>
           <div className="flex items-center gap-1">

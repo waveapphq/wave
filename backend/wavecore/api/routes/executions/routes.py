@@ -15,18 +15,15 @@ import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response, status
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from wavecore.api.exceptions import (
     NotFoundException,
     ValidationException,
 )
-from wavecore.api.routes.executions.shared import (
-    _create_success_response,
-    _parse_datetime,
-)
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.executions.shared import _create_success_response, parse_filter_date
+from wavecore.api.routes.shared import id_list_field, read_json_object, validate_uuid
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.executions import service as execution_service
 from wavecore.api.services.file_tree import content_disposition
@@ -36,37 +33,15 @@ router = APIRouter(prefix="/executions", tags=["Executions"])
 VALID_EXPORT_FORMATS = {"yaml", "json"}
 
 
-def _invalid_test_id_response(bad_value: str) -> JSONResponse:
-    """Return the standardized 400 body for an invalid test_id entry."""
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={
-            "success": False,
-            "error": {
-                "code": "INVALID_UUID",
-                "message": f"Invalid test_id: '{bad_value}'",
-            },
-        },
-    )
-
-
-def _parse_test_ids_csv(raw: str) -> tuple[list[str] | None, JSONResponse | None]:
-    """Parse a ``test_ids`` CSV into a list of UUID strings.
-
-    Returns a tuple of (parsed_list, error_response). Exactly one of the
-    two is not None. Whitespace around each element is trimmed before
-    validation; empty elements (from ``a,,b``) are treated as invalid
-    test_ids rather than skipped.
-    """
+def _parse_test_ids_csv(raw: str) -> list[str]:
+    """A ``test_ids`` CSV as trimmed UUID strings; an empty element (``a,,b``) is refused too."""
     entries = [part.strip() for part in raw.split(",")]
-    parsed: list[str] = []
     for entry in entries:
         try:
             uuid.UUID(entry)
         except ValueError:
-            return None, _invalid_test_id_response(entry)
-        parsed.append(entry)
-    return parsed, None
+            raise ValidationException(f"Invalid test_id: '{entry}'") from None
+    return entries
 
 
 class StartExecutionRequest(BaseModel):
@@ -129,8 +104,8 @@ async def list_executions(
     Returns:
         Paginated list of executions.
     """
-    from_dt = _parse_datetime(from_date) if from_date else None
-    to_dt = _parse_datetime(to_date) if to_date else None
+    from_dt = parse_filter_date(from_date, "from_date")
+    to_dt = parse_filter_date(to_date, "to_date")
 
     status_list = [s.strip() for s in status.split(",") if s.strip()] if status else None
     type_list = [t.strip() for t in type.split(",") if t.strip()] if type else None
@@ -179,8 +154,8 @@ async def get_execution_statistics(
     Returns:
         Statistics including counts, rates, and durations.
     """
-    from_dt = _parse_datetime(from_date) if from_date else None
-    to_dt = _parse_datetime(to_date) if to_date else None
+    from_dt = parse_filter_date(from_date, "from_date")
+    to_dt = parse_filter_date(to_date, "to_date")
 
     result = execution_service.get_execution_statistics(
         entity_type=entity_type,
@@ -209,21 +184,16 @@ async def start_execution(request: StartExecutionRequest) -> Response:
     if not request.id:
         raise ValidationException("Field 'id' is required")
 
-    try:
-        result = execution_service.start_execution(
-            entity_type=request.type,
-            entity_id=request.id,
-            environment_id=request.environment_id,
-            variables=request.variables,
-            profile_id=request.profile,
-            version=request.version,
-            selected_tests=request.selected_tests,
-        )
-
-        return _create_success_response(data=result, status_code=201)
-
-    except LookupError as e:
-        raise NotFoundException(str(e)) from e
+    result = execution_service.start_execution(
+        entity_type=request.type,
+        entity_id=request.id,
+        environment_id=request.environment_id,
+        variables=request.variables,
+        profile_id=request.profile,
+        version=request.version,
+        selected_tests=request.selected_tests,
+    )
+    return _create_success_response(data=result, status_code=201)
 
 
 @router.post("/export")
@@ -236,8 +206,8 @@ async def export_executions_bulk(request: Request) -> Response:
     Returns:
         Single file download for one id, ZIP archive for two or more.
     """
-    body = await request.json()
-    execution_ids = body.get("execution_ids", [])
+    body = await read_json_object(request)
+    execution_ids = id_list_field(body, "execution_ids")
     fmt = body.get("format", "json")
 
     if not execution_ids:
@@ -247,12 +217,7 @@ async def export_executions_bulk(request: Request) -> Response:
         raise ValidationException(f"Invalid format: '{fmt}'. Must be 'yaml' or 'json'")
 
     for execution_id in execution_ids:
-        try:
-            uuid.UUID(execution_id)
-        except ValueError as err:
-            raise ValidationException(
-                f"Invalid UUID format for execution_id: '{execution_id}'"
-            ) from err
+        validate_uuid(execution_id, "execution_id")
 
     # NotFoundException propagates to middleware if any execution not found
     results = execution_service.export_executions_batch(execution_ids, fmt)
@@ -310,6 +275,8 @@ async def delete_execution(execution_id: str) -> Response:
     Returns:
         204 No Content on success.
     """
+    validate_uuid(execution_id, "execution_id")
+
     # ConflictException propagates to middleware from service
     result = execution_service.delete_execution(execution_id)
 
@@ -407,10 +374,10 @@ async def get_execution_logs(
             idx_part, child_part = before.rsplit(":", 1)
             child_seq = None if child_part == "x" else int(child_part)
             cursor = (int(idx_part), child_seq)
-        except (ValueError, TypeError) as exc:
+        except ValueError:
             raise ValidationException(
                 f"Invalid cursor '{before}'. Expected '<chronology_index>:<child_seq|x>'."
-            ) from exc
+            ) from None
 
     result = execution_service.paginate_execution_logs(execution_id, cursor, limit)
     if result is None:
@@ -473,8 +440,8 @@ async def get_historical_test_run(run_id: str) -> Response:
 
     Returns:
         ``{ run_id, execution_id, test_id, suite_id, status, started_at,
-        ended_at, workflow, block_states, variables, logs,
-        environment_id, environment_name }`` - the payload the
+        ended_at, workflow, block_states, variables, variable_definitions,
+        secret_variables, logs, environment_id, environment_name }`` - the payload the
         Historical Test Canvas needs to paint the snapshot and wire
         the Back link back to the parent execution page.
     """
@@ -510,62 +477,14 @@ async def export_execution(
     Returns:
         Streaming file download with ``Content-Disposition: attachment``.
     """
-    try:
-        uuid.UUID(execution_id)
-    except ValueError:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "code": "INVALID_UUID",
-                    "message": f"Invalid UUID format for execution_id: '{execution_id}'",
-                },
-            },
-        )
-
+    validate_uuid(execution_id, "execution_id")
     if format not in VALID_EXPORT_FORMATS:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                "success": False,
-                "error": {
-                    "code": "INVALID_PARAMETER",
-                    "message": f"Invalid format: '{format}'. Must be 'yaml' or 'json'",
-                },
-            },
-        )
+        raise ValidationException(f"Invalid format: '{format}'. Must be 'yaml' or 'json'")
+    parsed_test_ids = None if test_ids is None else _parse_test_ids_csv(test_ids)
 
-    parsed_test_ids: list[str] | None
-    if test_ids is None:
-        parsed_test_ids = None
-    else:
-        parsed_test_ids, error_response = _parse_test_ids_csv(test_ids)
-        if error_response is not None:
-            return error_response
-
-    try:
-        result = execution_service.export_execution(execution_id, parsed_test_ids, format)
-    except NotFoundException as exc:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {"code": "NOT_FOUND", "message": str(exc)},
-            },
-        )
-
+    result = execution_service.export_execution(execution_id, parsed_test_ids, format)
     if result is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "success": False,
-                "error": {
-                    "code": "NOT_FOUND",
-                    "message": f"Execution not found: {execution_id}",
-                },
-            },
-        )
+        raise NotFoundException(f"Execution not found: {execution_id}")
 
     content_val, filename = result
     content_type = "application/json" if format == "json" else "application/x-yaml"

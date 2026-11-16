@@ -14,6 +14,7 @@ from wavecore.api.services.workbench._common import (
     _broadcast_event,
     _push_single_variable_change,
 )
+from wavecore.api.services.workbench.block_status import take_lane
 from wavecore.api.services.workbench.for_loop import (
     LoopLanes,
     _execute_body_chain_iteration,
@@ -99,6 +100,7 @@ async def _run_for_each_iteration_loop(
         if not body_chain:
             continue
 
+        await take_lane(session, session_id, node_id, "body")
         result = await _execute_body_chain_iteration(
             body_chain,
             node_map,

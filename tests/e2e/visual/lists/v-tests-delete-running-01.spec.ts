@@ -46,7 +46,6 @@ function buildDelayTestFixture(name: string): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: {
               values: { duration: RUNNING_DELAY_MS },
               outputBindings: {},

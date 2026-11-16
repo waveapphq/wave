@@ -1,31 +1,40 @@
-"""Canvas -> recipe readback: invert the compiler, flag inexpressible wiring.
+"""Canvas -> recipe readback: invert the compiler, flag inexpressible wiring and settings.
 
 Reconstructs a recipe from an emitted test_data by walking the graph the same
 way the layout engine does (construct handles, then-egress, ingress rejoins),
 inverting each ``_emit_*`` shape. Secret values are never surfaced. A near-tree
 predicate flags graphs a recipe cannot express (orphans, cycles, cross-branch
-edges, unstructured joins) so the amend loop refuses them.
+edges, unstructured joins), and the walk reports each stored setting no recipe
+form carries, so the amend loop refuses them.
 """
 
-import copy
 from collections import defaultdict
+from collections.abc import Mapping
 from typing import Any
 
 from wavecore.api.services.block_schema import block_schema
 from wavecore.api.services.typed_numbers import block_numbers
+from wavecore.controls.note import edgeless_notes
+from wavecore.core.execution.row_checks import BRANCH_KEYS, LANE_KEYS
 from wavecore.core.functions.declarations import DeclarationKind, declaration_numbers
 from wavecore.core.layout.engine import (
     START_NODE_ID,
     _is_section_handle,
     _section_sort_key,
 )
+from wavecore.core.recipes.model import CONDITION_MARKERS, CONTROL_STEP_KEYWORDS, readback_keys
 from wavecore.core.recipes.typed_elements import readback_element_types
 from wavecore.core.recipes.validator import (
     BlockEntry,
+    is_template_value,
     load_block_catalog,
     remote_execution_entry,
+    value_form,
 )
+from wavecore.core.secrets.cipher import is_secret_envelope
+from wavecore.core.secrets.sealing import setter_secret_target
 from wavecore.core.utf8_text import dump_exact_yaml
+from wavecore.core.variables.declared_types import types_of_declarations, types_of_function
 from wavecore.core.variables.value_checks import text_as_number
 
 _THEN_EGRESS = {
@@ -40,13 +49,21 @@ _THEN_EGRESS = {
 }
 _REJOIN_EGRESS = {"if-else"}
 _DECLARED_BRANCH_ELEMENTS = {"if-else", "switch-case", "parallel"}
-_LOOP_KEYWORD = {"for": "for", "for-each": "for_each", "while": "while"}
+_LOOP_ELEMENTS = frozenset({"for", "for-each", "while"})
 _SUGAR_KEYWORD = {
     "delay": "delay",
     "halt": "halt",
     "break": "break",
     "continue": "continue",
 }
+# Stored fields a construct's own shape carries; every other field goes through the table.
+_SHAPE_FIELDS = frozenset(
+    {"branches", "conditions", "assertions", "variables", "target_loop"}
+    | {"enable_catch", "enable_finally"}
+)
+_SETTER_PLACE = "variables"
+
+_Losses = list[dict[str, str]]
 
 
 def _label(node: dict[str, Any]) -> str:
@@ -54,28 +71,98 @@ def _label(node: dict[str, Any]) -> str:
     return str(data.get("label") or node.get("id") or "")
 
 
-def _rewrap_entry(value: Any, tail: str) -> None:
-    """Wraps the entry a dotted expressionFields tail addresses as {expr}, in place."""
-    container: Any = value
-    key: Any = tail
+def _identity(data: Mapping[str, Any]) -> dict[str, Any]:
+    """A Block's description and disabled mark, when it has them."""
+    identity: dict[str, Any] = {}
+    if data.get("description"):
+        identity["description"] = data["description"]
+    if data.get("disabled") is True:
+        identity["disabled"] = True
+    return identity
+
+
+def _is_form_shaped(value: Any) -> bool:
+    """A map whose only key is `expr`, `template` or `literal`: plain data a compile would read
+    as that form."""
+    return isinstance(value, dict) and value_form(value)[0] != "plain"
+
+
+def _plain_readback(value: Any, *, template_place: bool) -> Any:
+    """Plain stored data in the shortest form that compiles back to itself: text holding
+    `{{ }}` in a template place and data shaped like a form as `{literal: ...}`."""
+    if template_place and is_template_value(value):
+        return {"literal": value}
+    if _is_form_shaped(value):
+        return {"literal": value}
+    if isinstance(value, dict):
+        return {key: _plain_readback(item, template_place=False) for key, item in value.items()}
     if isinstance(value, list):
-        index, _, key = tail.partition(".")
-        held = index.isdigit() and int(index) < len(value)
-        container = value[int(index)] if held else None
-        if held and not key:
-            # A plain list item is addressed by its index alone.
-            container, key = value, int(index)
-    if (isinstance(container, dict) and key in container) or isinstance(key, int):
-        container[key] = {"expr": container[key]}
-
-
-def _rewrap_nested(value: Any, tails: list[str]) -> Any:
-    if not tails:
-        return value
-    value = copy.deepcopy(value)
-    for tail in tails:
-        _rewrap_entry(value, tail)
+        return [_plain_readback(item, template_place=False) for item in value]
     return value
+
+
+def _readback_value(value: Any, kind: str, *, template_place: bool) -> Any:
+    """One stored value in its recipe form for the mode it holds (REQ-5.2.7.6)."""
+    if kind == "expr":
+        return {"expr": value}
+    if kind == "template":
+        return value if is_template_value(value) else {"template": value}
+    return _plain_readback(value, template_place=template_place)
+
+
+def _address(value: Any, path: str) -> bool:
+    """Whether a dotted place below a stored value names something the value holds."""
+    if isinstance(value, dict):
+        if path in value:
+            return True
+        head, dot, rest = path.partition(".")
+        return bool(dot) and head in value and _address(value[head], rest)
+    if isinstance(value, list):
+        head, dot, rest = path.partition(".")
+        if not head.isdigit() or int(head) >= len(value):
+            return False
+        return not dot or _address(value[int(head)], rest)
+    return False
+
+
+class _Flags:
+    """A Block's expression and template marks, each consumed once the readback writes it."""
+
+    def __init__(self, data: Mapping[str, Any]) -> None:
+        self.marks = {
+            "expr": [str(place) for place in data.get("expressionFields") or []],
+            "template": [str(place) for place in data.get("templateFields") or []],
+        }
+        self.placed: set[tuple[str, str]] = set()
+
+    def kind(self, place: str, *, template: bool = True) -> str:
+        """The mode the Block holds at ``place``; reading it consumes the mark. Where a
+        template has no recipe form, a template mark stays unread."""
+        for kind, places in self.marks.items():
+            if place in places and (template or kind == "expr"):
+                self.placed.add((kind, place))
+                return kind
+        return "plain"
+
+    def consume_under(self, head: str) -> None:
+        """Marks at and below a place whose value the readback leaves out on purpose."""
+        for kind, places in self.marks.items():
+            for place in places:
+                if place == head or place.startswith(f"{head}."):
+                    self.placed.add((kind, place))
+
+    def losses(self, values: Mapping[str, Any], label: str, node_id: str) -> _Losses:
+        """Each mark that addresses a stored value the readback could not mark."""
+        found: _Losses = []
+        for kind, places in self.marks.items():
+            mode = "expression" if kind == "expr" else "template"
+            for place in places:
+                if (kind, place) in self.placed or not _address(values, place):
+                    continue
+                found.append(
+                    {"what": f"the {mode} mode of '{place}' in block '{label}'", "where": node_id}
+                )
+        return found
 
 
 _STORED_KIND_KEYS = {"isExpression": "expr", "isTemplate": "template"}
@@ -138,6 +225,33 @@ def _block_secret_outputs(
     return None if set(marked) == set(entry.secret_outputs) else marked
 
 
+def _secret_setter_row(place: str, value: Any, flags: _Flags) -> Any:
+    """A secret Setter row reads back without its value; an expression or a template names
+    its inputs, so it reads back as written."""
+    kind = flags.kind(place)
+    flags.consume_under(place)
+    if kind == "plain" or is_secret_envelope(value):
+        return None
+    return _readback_value(value, kind, template_place=True)
+
+
+def _fill_if_branch(
+    target: dict[str, Any],
+    label_key: str,
+    label: Any,
+    when: Any,
+    steps_key: str,
+    steps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """An If branch's label when it has one, its condition when it has one, then its steps."""
+    if label:
+        target[label_key] = label
+    if when is not None:
+        target["when"] = when
+    target[steps_key] = steps
+    return target
+
+
 class _LibraryNames:
     """Library Function names by id, read once per readback."""
 
@@ -164,6 +278,9 @@ class _Walker:
         remote_entry: BlockEntry,
         functions: dict[str, dict[str, Any]],
         library_names: _LibraryNames,
+        *,
+        declared_types: Mapping[str, str],
+        losses: _Losses,
     ) -> None:
         self.nodes = nodes
         self.edges = edges
@@ -180,7 +297,11 @@ class _Walker:
         self.remote_entry = remote_entry
         self.functions = functions
         self.library_names = library_names
+        self.declared_types = declared_types
+        self.losses = losses
         self.visited: set[str] = set()
+        # Each enclosing loop's node id and its label, else its block name.
+        self.loop_stack: list[tuple[str, str]] = []
 
     # ------------------------------------------------------------------
     # Graph walk
@@ -191,6 +312,10 @@ class _Walker:
         head = starts[0] if starts else None
         steps, _exit = self._walk(head)
         return steps
+
+    def side_notes(self) -> list[dict[str, Any]]:
+        """The note steps of the Notes beside the flow, the ones with no connection at all."""
+        return [self._leaf(node, "note") for node in edgeless_notes(self.nodes, self.edges)]
 
     def _declared_branch_handles(self, node_id: str) -> list[str]:
         """If-else and Switch branch ids are author-controlled; they define sections."""
@@ -290,51 +415,86 @@ class _Walker:
         section: list[dict[str, Any]],
         then_edge: dict[str, Any] | None,
     ) -> tuple[dict[str, Any], str | None]:
+        loop = elem in _LOOP_ELEMENTS
+        if loop:
+            data = node.get("data") or {}
+            name = self._custom_label(data) or self._default_name(elem)
+            self.loop_stack.append((str(node.get("id") or ""), name))
         section_steps: dict[str, list[dict[str, Any]]] = {}
         for edge in section:
             sub, _sub_exit = self._walk_section(edge)
             section_steps[str(edge["sourceHandle"])] = sub
+        if loop:
+            self.loop_stack.pop()
         exit_target = str(then_edge["target"]) if then_edge is not None else None
         return self._build_then_step(elem, node, section_steps), exit_target
+
+    # ------------------------------------------------------------------
+    # Field-loss report
+    # ------------------------------------------------------------------
+
+    def _lose(self, node: dict[str, Any], what: str) -> None:
+        self.losses.append({"what": what, "where": str(node.get("id") or "")})
+
+    def _settle(self, node: dict[str, Any], flags: _Flags, values: Mapping[str, Any]) -> None:
+        """Report each mark of the Block the readback could not write."""
+        self.losses.extend(flags.losses(values, _label(node), str(node.get("id") or "")))
+
+    def _control_settings(
+        self, node: dict[str, Any], elem: str, values: dict[str, Any], flags: _Flags
+    ) -> dict[str, Any]:
+        """A control's own settings in their recipe form; a stored value its field list does
+        not declare has no recipe place and is reported (REQ-5.2.7.6)."""
+        entry = self.catalog.get(elem)
+        declared = set(entry.parameters) if entry is not None else set(values)
+        settings: dict[str, Any] = {}
+        for name, value in values.items():
+            if name not in declared:
+                self._lose(node, f"setting '{name}' of block '{_label(node)}'")
+                flags.consume_under(name)
+            elif name not in _SHAPE_FIELDS:
+                settings[name] = _readback_value(value, flags.kind(name), template_place=True)
+        return settings
+
+    def _construct_fields(
+        self, node: dict[str, Any], elem: str, values: dict[str, Any], flags: _Flags
+    ) -> dict[str, Any]:
+        """A construct's settings as recipe keys, read back through the control field table."""
+        settings = self._control_settings(node, elem, values, flags)
+        return dict(readback_keys(CONTROL_STEP_KEYWORDS[elem], settings))
 
     # ------------------------------------------------------------------
     # Leaf steps
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _values(data: dict[str, Any]) -> dict[str, Any]:
+    def _values(self, data: dict[str, Any]) -> dict[str, Any]:
         """A Block's values, digit text in each number place read back as that number."""
         values = (data.get("config") or {}).get("values")
-        return block_numbers(data, text_as_number) if isinstance(values, dict) else {}
+        if not isinstance(values, dict):
+            return {}
+        return block_numbers(data, text_as_number, self.declared_types)
 
     def _leaf(self, node: dict[str, Any], elem: str) -> dict[str, Any]:
         data = node.get("data") or {}
         config = data.get("config") or {}
         values = self._values(data)
+        flags = _Flags(data)
         if elem == "variable-setter":
-            step: dict[str, Any] = {"set": self._decompile_set(data, values)}
-            # A secret row's element types are sealed with its value and stay out of the recipe.
-            element_types = {
-                name: types
-                for name, types in (data.get("variableElementTypes") or {}).items()
-                if isinstance(types, dict | list)
-            }
-            if element_types:
-                step["element_types"] = element_types
-            return self._with_label(step, data)
-        if elem == "function":
-            return self._decompile_function_block(data, config, values)
-        if elem == "assert":
-            value: dict[str, Any] = {
-                "that": self._decompile_conditions(values.get("assertions") or [])
-            }
-            if "fail_current_scope" in values:
-                value["fail_current_scope"] = values["fail_current_scope"]
-            return {"assert": self._with_label(value, data)}
-        if elem in _SUGAR_KEYWORD:
-            sugar = {_SUGAR_KEYWORD[elem]: self._decompile_sugar(elem, data, values)}
-            return self._with_label(sugar, data)
-        return self._decompile_block(data, config, values, elem)
+            step = self._decompile_setter(node, values, flags)
+        elif elem == "function":
+            step = self._decompile_function_block(node, config, values, flags)
+        elif elem == "assert":
+            assertion = self._assert_value(node, values, flags, {})
+            step = {"assert": self._with_identity(assertion, data, config)}
+        elif elem == "note":
+            step = self._decompile_note(node, values, flags)
+        elif elem in _SUGAR_KEYWORD:
+            sugar = {_SUGAR_KEYWORD[elem]: self._decompile_sugar(node, elem, values, flags)}
+            step = self._with_identity(sugar, data)
+        else:
+            step = self._decompile_block(data, config, values, elem, flags)
+        self._settle(node, flags, values)
+        return step
 
     def _default_name(self, elem: str) -> str:
         entry = self.remote_entry if elem == self.remote_entry.id else self.catalog.get(elem)
@@ -348,9 +508,27 @@ class _Walker:
         return str(label)
 
     def _with_label(self, step: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
-        """A step or construct mapping with the Block's own label, when it has one."""
+        """A step with the Block's own label, when it has one."""
         label = self._custom_label(data)
         return step if label is None else {**step, "label": label}
+
+    def _with_identity(
+        self,
+        step: dict[str, Any],
+        data: dict[str, Any],
+        config: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """A step or construct mapping with the Block's own label, description and disabled
+        mark when it has them, and its capture when ``config`` is given."""
+        result = dict(step)
+        label = self._custom_label(data)
+        if label is not None:
+            result["label"] = label
+        result.update(_identity(data))
+        capture = dict((config or {}).get("outputBindings") or {})
+        if capture:
+            result["capture"] = capture
+        return result
 
     def _secret_settings(self, entry: BlockEntry | None) -> set[str]:
         if entry is None:
@@ -367,15 +545,11 @@ class _Walker:
         config: dict[str, Any],
         values: dict[str, Any],
         elem: str,
+        flags: _Flags,
     ) -> dict[str, Any]:
-        step: dict[str, Any] = {"block": elem}
-        label = data.get("label")
-        if label and str(label) != self._default_name(elem):
-            step["label"] = label
+        step: dict[str, Any] = self._with_identity({"block": elem}, data)
         entry = self.catalog.get(elem)
-        settings = self._decompile_settings(
-            values, set(data.get("expressionFields") or []), self._secret_settings(entry)
-        )
+        settings = self._decompile_settings(values, flags, self._secret_settings(entry))
         if settings:
             step["settings"] = settings
         capture = dict(config.get("outputBindings") or {})
@@ -398,27 +572,102 @@ class _Walker:
             step["element_types"] = dict(element_types)
         return step
 
-    def _decompile_set(self, data: dict[str, Any], values: dict[str, Any]) -> dict[str, Any]:
-        variables = values.get("variables") or {}
-        expr_keys = set(data.get("variableExpressionKeys") or [])
+    def _setter_row(self, row: str, value: Any, flags: _Flags) -> Any:
+        """One Setter row in the value forms it compiles from: the row's own mode, else each
+        first-level entry's (REQ-3.4.1.14)."""
+        place = f"{_SETTER_PLACE}.{row}"
+        kind = flags.kind(place)
+        if kind != "plain" or not isinstance(value, dict | list):
+            return _readback_value(value, kind, template_place=True)
+        entries = list(value.items()) if isinstance(value, dict) else list(enumerate(value))
+        kinds = {key: flags.kind(f"{place}.{key}") for key, _item in entries}
+        if isinstance(value, dict) and _is_form_shaped(value) and set(kinds.values()) == {"plain"}:
+            return {"literal": value}
+        read = [
+            (key, _readback_value(item, kinds[key], template_place=True)) for key, item in entries
+        ]
+        return dict(read) if isinstance(value, dict) else [item for _key, item in read]
+
+    def _decompile_setter(
+        self, node: dict[str, Any], values: dict[str, Any], flags: _Flags
+    ) -> dict[str, Any]:
+        data = node.get("data") or {}
+        target = setter_secret_target(node)
+        secret_rows = target[1] if target is not None else []
+        rows = values.get(_SETTER_PLACE)
+        rows = rows if isinstance(rows, dict) else {}
+        stored_types = data.get("elementTypes") or {}
         result: dict[str, Any] = {}
-        for name, val in variables.items():
-            result[name] = {"expr": val} if name in expr_keys else val
-        return result
+        element_types: dict[str, Any] = {}
+        for row, value in rows.items():
+            place = f"{_SETTER_PLACE}.{row}"
+            if row in secret_rows:
+                result[row] = _secret_setter_row(place, value, flags)
+                continue
+            result[row] = self._setter_row(row, value, flags)
+            types = stored_types.get(place)
+            if isinstance(types, dict | list) and isinstance(value, dict | list):
+                element_types[row] = types
+        step: dict[str, Any] = {"set": result}
+        marked = [row for row in secret_rows if row in rows]
+        if marked:
+            step["secret_rows"] = marked
+        if element_types:
+            step["element_types"] = element_types
+        return self._with_identity(step, data)
 
-    def _loop_label(self, node_id: str) -> str | None:
-        """A loop's authored label, when it carries one (the break/continue target)."""
-        node = self.by_id.get(str(node_id))
-        return None if node is None else self._custom_label(node.get("data") or {})
+    def _jump_target(self, node: dict[str, Any], elem: str, values: dict[str, Any]) -> Any:
+        """A Break / Continue target: `{}` for the innermost loop, else the enclosing loop's
+        label or block name (REQ-3.5.1.2, REQ-3.5.1.3)."""
+        target = str(values.get("target_loop") or "")
+        ids = [node_id for node_id, _name in self.loop_stack]
+        if target not in ids:
+            self._lose(
+                node,
+                f"a {elem} aimed at a loop that does not enclose it, in block '{_label(node)}'",
+            )
+            return {}
+        index = ids.index(target)
+        if index == len(ids) - 1:
+            return {}
+        name = self.loop_stack[index][1]
+        if any(nearer == name for _id, nearer in self.loop_stack[index + 1 :]):
+            self._lose(
+                node, f"a {elem} aimed past a loop of the same name, in block '{_label(node)}'"
+            )
+        return {"loop": name}
 
-    def _decompile_sugar(self, elem: str, data: dict[str, Any], values: dict[str, Any]) -> Any:
-        expr_fields = set(data.get("expressionFields") or [])
-        if elem == "delay" and set(values.keys()) == {"duration"} and "duration" not in expr_fields:
-            return values["duration"]
+    def _decompile_sugar(
+        self, node: dict[str, Any], elem: str, values: dict[str, Any], flags: _Flags
+    ) -> Any:
         if elem in ("break", "continue"):
-            label = self._loop_label(str(values.get("target_loop") or ""))
-            return {"loop": label} if label else {}
-        return self._decompile_settings(values, expr_fields, set())
+            self._control_settings(node, elem, values, flags)
+            return self._jump_target(node, elem, values)
+        settings = self._control_settings(node, elem, values, flags)
+        fields = dict(readback_keys(CONTROL_STEP_KEYWORDS[elem], settings))
+        duration = fields.get("duration")
+        if elem == "delay" and set(fields) == {"duration"} and not isinstance(duration, dict):
+            return duration
+        return fields
+
+    def _decompile_note(
+        self, node: dict[str, Any], values: dict[str, Any], flags: _Flags
+    ) -> dict[str, Any]:
+        """A Note's text and color as stored; the settle reports a mode mark on it."""
+        declared = self.catalog["note"].parameters
+        for name in values:
+            if name not in declared:
+                self._lose(node, f"setting '{name}' of block '{_label(node)}'")
+                flags.consume_under(name)
+        data = node.get("data") or {}
+        # A note step has no form for these; the canvas never sets them on a Note.
+        identity = _identity(data)
+        if "description" in identity:
+            self._lose(node, f"the description of block '{_label(node)}'")
+        if "disabled" in identity:
+            self._lose(node, f"the disabled mark of block '{_label(node)}'")
+        note = readback_keys(CONTROL_STEP_KEYWORDS["note"], values)
+        return self._with_label({"note": note}, data)
 
     def _function_name(self, data: dict[str, Any]) -> str:
         """The name a Function step gives: the Function's own, never the Block's label."""
@@ -430,21 +679,27 @@ class _Walker:
         return self.library_names.get(str(data.get("functionId") or "")) or label
 
     def _decompile_function_block(
-        self, data: dict[str, Any], config: dict[str, Any], values: dict[str, Any]
+        self,
+        node: dict[str, Any],
+        config: dict[str, Any],
+        values: dict[str, Any],
+        flags: _Flags,
     ) -> dict[str, Any]:
+        data = node.get("data") or {}
         name = self._function_name(data)
+        if data.get("editMode") and data.get("draft") is not None:
+            self._lose(node, f"an unpublished edit of Function '{name}' in block '{_label(node)}'")
         step: dict[str, Any] = {"function": name}
         if data.get("functionLifecycle") != "local" and data.get("functionVersion"):
             step["version"] = data["functionVersion"]
         label = data.get("label")
         if label and str(label) != name:
             step["label"] = label
+        step.update(_identity(data))
         secret_inputs = {
             str(field["name"]) for field in block_schema(data).fields if field.get("secret")
         }
-        settings = self._decompile_settings(
-            values, set(data.get("expressionFields") or []), secret_inputs
-        )
+        settings = self._decompile_settings(values, flags, secret_inputs)
         if settings:
             step["settings"] = settings
         capture = dict(config.get("outputBindings") or {})
@@ -469,6 +724,8 @@ class _Walker:
             self.remote_entry,
             self.functions,
             self.library_names,
+            declared_types=types_of_function(local_def, every_input=True),
+            losses=self.losses,
         )
         self.functions[name] = {
             "name": name,
@@ -489,6 +746,12 @@ class _Walker:
         if own_variables:
             self.functions[name]["variables"] = own_variables
         self.functions[name]["flow"] = inner_walker.flow()
+        notes = inner_walker.side_notes()
+        if notes:
+            self.functions[name]["notes"] = notes
+        self.losses.extend(
+            _inexpressible_items(inner_walker.nodes, inner_walker.edges, inner_walker.visited)
+        )
 
     # ------------------------------------------------------------------
     # Construct step builders
@@ -498,50 +761,74 @@ class _Walker:
         self, elem: str, node: dict[str, Any], branch_steps: dict[str, list[dict[str, Any]]]
     ) -> dict[str, Any]:
         data = node.get("data") or {}
+        config = data.get("config") or {}
         values = self._values(data)
+        flags = _Flags(data)
         if elem == "if-else":
-            return {"if": self._with_label(self._build_if(values, branch_steps), data)}
-        return {"assert": self._with_label(self._build_assert_split(values, branch_steps), data)}
+            self._control_settings(node, elem, values, flags)
+            step = {"if": self._with_identity(self._build_if(node, values, branch_steps), data)}
+        else:
+            built = self._assert_value(node, values, flags, branch_steps)
+            step = {"assert": self._with_identity(built, data, config)}
+        self._settle(node, flags, values)
+        return step
+
+    def _branch_losses(self, node: dict[str, Any], record: Any, allowed: frozenset[str]) -> None:
+        if isinstance(record, dict):
+            for key in record:
+                if key not in allowed:
+                    self._lose(node, f"key '{key}' of a branch in block '{_label(node)}'")
+
+    def _branch_when(self, node: dict[str, Any], branch: dict[str, Any], index: int) -> Any:
+        """A branch's conditions as one condition, or a list when it holds more."""
+        place = f"branches.{index}.conditions"
+        conditions = self._decompile_conditions(node, branch.get("conditions") or [], place)
+        return conditions[0] if len(conditions) == 1 else conditions
 
     def _build_if(
-        self, values: dict[str, Any], branch_steps: dict[str, list[dict[str, Any]]]
+        self,
+        node: dict[str, Any],
+        values: dict[str, Any],
+        branch_steps: dict[str, list[dict[str, Any]]],
     ) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for index, branch in enumerate(values.get("branches") or []):
+            self._branch_losses(node, branch, BRANCH_KEYS)
             handle = str(branch.get("id") or f"branch_{index}")
             steps = branch_steps.get(handle, [])
             btype = branch.get("type")
-            conditions = branch.get("conditions") or []
+            label = branch.get("label")
             if btype == "else":
-                result["else"] = steps
-            elif btype == "else_if":
-                entry: dict[str, Any] = {}
-                if conditions:
-                    entry["when"] = self._decompile_condition(conditions[0])
-                entry["then"] = steps
+                _fill_if_branch(result, "else_label", label, None, "else", steps)
+                continue
+            when = self._branch_when(node, branch, index) if branch.get("conditions") else None
+            if btype == "else_if":
+                entry = _fill_if_branch({}, "label", label, when, "then", steps)
                 result.setdefault("elif", []).append(entry)
             else:
-                if conditions:
-                    result["when"] = self._decompile_condition(conditions[0])
-                result["then"] = steps
+                _fill_if_branch(result, "if_label", label, when, "then", steps)
         return result
 
     def _build_switch(
         self,
+        node: dict[str, Any],
         values: dict[str, Any],
         section_steps: dict[str, list[dict[str, Any]]],
     ) -> dict[str, Any]:
         result: dict[str, Any] = {"cases": []}
         for index, branch in enumerate(values.get("branches") or []):
+            self._branch_losses(node, branch, BRANCH_KEYS)
             handle = str(branch.get("id") or f"branch_{index}")
             steps = section_steps.get(handle, [])
+            label = branch.get("label")
             if branch.get("type") == "default":
+                if label:
+                    result["default_label"] = label
                 result["default"] = steps
                 continue
-            entry: dict[str, Any] = {}
-            conditions = branch.get("conditions") or []
-            if conditions:
-                entry["when"] = self._decompile_condition(conditions[0])
+            entry: dict[str, Any] = {"label": label} if label else {}
+            if branch.get("conditions"):
+                entry["when"] = self._branch_when(node, branch, index)
             entry["steps"] = steps
             # True is the compile default, so only an explicit False round-trips.
             if branch.get("break") is False:
@@ -549,51 +836,50 @@ class _Walker:
             result["cases"].append(entry)
         return result
 
-    @staticmethod
     def _build_parallel(
-        values: dict[str, Any], section_steps: dict[str, list[dict[str, Any]]]
+        self,
+        node: dict[str, Any],
+        values: dict[str, Any],
+        flags: _Flags,
+        section_steps: dict[str, list[dict[str, Any]]],
     ) -> dict[str, Any]:
         branches: list[dict[str, Any]] = []
         for index, branch in enumerate(values.get("branches") or []):
+            self._branch_losses(node, branch, LANE_KEYS)
             handle = str(branch.get("id") or f"branch_{index + 1}")
             entry: dict[str, Any] = {}
             # A blank name and an unset limit are the defaults, so both stay unwritten.
             if branch.get("name"):
                 entry["name"] = branch["name"]
             if branch.get("time_limit") is not None:
-                entry["time_limit"] = branch["time_limit"]
+                kind = flags.kind(f"branches.{index}.time_limit", template=False)
+                entry["time_limit"] = _readback_value(
+                    branch["time_limit"], kind, template_place=False
+                )
             entry["steps"] = section_steps.get(handle, [])
             branches.append(entry)
-        result: dict[str, Any] = {"branches": branches}
-        if values.get("join") and values["join"] != "all":
-            result["join"] = values["join"]
-        if values.get("time_limit") is not None:
-            result["time_limit"] = values["time_limit"]
-        return result
+        return {"branches": branches, **self._construct_fields(node, "parallel", values, flags)}
 
-    def _build_assert_split(
-        self, values: dict[str, Any], branch_steps: dict[str, list[dict[str, Any]]]
+    def _assert_value(
+        self,
+        node: dict[str, Any],
+        values: dict[str, Any],
+        flags: _Flags,
+        branch_steps: dict[str, list[dict[str, Any]]],
     ) -> dict[str, Any]:
+        """An Assert in both modes; `mode` is written only when the sections do not imply it."""
         result: dict[str, Any] = {
-            "that": self._decompile_conditions(values.get("assertions") or [])
+            "that": self._decompile_conditions(node, values.get("assertions") or [], "assertions")
         }
+        fields = self._construct_fields(node, "assert", values, flags)
+        mode = fields.pop("mode", None)
         if "pass" in branch_steps:
             result["on_pass"] = branch_steps["pass"]
         if "fail" in branch_steps:
             result["on_fail"] = branch_steps["fail"]
-        if "fail_current_scope" in values:
-            result["fail_current_scope"] = values["fail_current_scope"]
-        return result
-
-    def _labeled_step(
-        self, keyword: str, value: dict[str, Any], node_id: str, capture: dict[str, Any]
-    ) -> dict[str, Any]:
-        label = self._loop_label(node_id)
-        if label:
-            value["label"] = label
-        if capture:
-            value["capture"] = capture
-        return {keyword: value}
+        if mode == "split" and not branch_steps:
+            result["mode"] = mode
+        return {**result, **fields}
 
     def _build_then_step(
         self, elem: str, node: dict[str, Any], section_steps: dict[str, list[dict[str, Any]]]
@@ -601,116 +887,93 @@ class _Walker:
         data = node.get("data") or {}
         config = data.get("config") or {}
         values = self._values(data)
-        expr_fields = set(data.get("expressionFields") or [])
-        capture = dict(config.get("outputBindings") or {})
+        flags = _Flags(data)
         body = section_steps.get("body", [])
+        step: dict[str, Any]
         if elem == "switch-case":
-            return {"switch": self._with_label(self._build_switch(values, section_steps), data)}
-        if elem == "parallel":
-            built = self._build_parallel(values, section_steps)
-            return {"parallel": self._with_label(built, data)}
-        if elem == "try-catch-finally":
-            built = self._build_try(values, section_steps, capture)
-            return {"try": self._with_label(built, data)}
-        if elem == "remote-execution":
-            built = self._build_remote(values, expr_fields, body, capture)
-            return {"remote": self._with_label(built, data)}
-        node_id = str(node.get("id") or "")
-        if elem == "wait-until":
-            value = self._wait_until_value(values, expr_fields, section_steps)
-            return self._labeled_step("wait_until", value, node_id, capture)
-        value = self._build_loop(elem, values, expr_fields, body)
-        return self._labeled_step(_LOOP_KEYWORD[elem], value, node_id, capture)
-
-    @staticmethod
-    def _for_loop_value(settings: dict[str, Any]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        if settings.get("mode") == "range":
-            result["range"] = {
-                key: settings[key] for key in ("start", "end", "step") if key in settings
-            }
-        elif "count" in settings:
-            result["count"] = settings["count"]
-        if "timeout" in settings:
-            result["timeout"] = settings["timeout"]
-        return result
-
-    def _while_value(self, settings: dict[str, Any]) -> dict[str, Any]:
-        conditions = self._decompile_conditions(settings.get("conditions") or [])
-        result: dict[str, Any] = {
-            "conditions": conditions[0] if len(conditions) == 1 else conditions
-        }
-        for key in ("mode", "max_iterations", "timeout"):
-            if key in settings:
-                result[key] = settings[key]
-        return result
+            self._control_settings(node, elem, values, flags)
+            built = self._build_switch(node, values, section_steps)
+            step = {"switch": self._with_identity(built, data)}
+        elif elem == "parallel":
+            built = self._build_parallel(node, values, flags, section_steps)
+            step = {"parallel": self._with_identity(built, data)}
+        elif elem == "try-catch-finally":
+            self._control_settings(node, elem, values, flags)
+            built = self._build_try(values, section_steps)
+            step = {"try": self._with_identity(built, data, config)}
+        elif elem == "remote-execution":
+            built = self._build_remote(values, flags, body, config)
+            step = {"remote": self._with_identity(built, data, config)}
+        elif elem == "wait-until":
+            built = self._wait_until_value(node, values, flags, section_steps)
+            step = {"wait_until": self._with_identity(built, data, config)}
+        else:
+            built = self._build_loop(node, elem, values, flags, body)
+            step = {CONTROL_STEP_KEYWORDS[elem]: self._with_identity(built, data, config)}
+        self._settle(node, flags, values)
+        return step
 
     def _wait_until_value(
         self,
+        node: dict[str, Any],
         values: dict[str, Any],
-        expr_fields: set[str],
+        flags: _Flags,
         section_steps: dict[str, list[dict[str, Any]]],
     ) -> dict[str, Any]:
-        settings = self._decompile_settings(values, expr_fields, set())
         result: dict[str, Any] = {
             # `that` is Assert's vocabulary: always a list, at any length.
-            "that": self._decompile_conditions(settings.get("conditions") or []),
-            "timeout": settings.get("timeout"),
+            "that": self._decompile_conditions(node, values.get("conditions") or [], "conditions"),
+            **self._construct_fields(node, "wait-until", values, flags),
         }
-        if "check_interval" in settings:
-            result["interval"] = settings["check_interval"]
-        for key in ("message", "fail_current_scope"):
-            if key in settings:
-                result[key] = settings[key]
-        if settings.get("mode") != "watch":
+        if values.get("mode") != "watch":
             result["retry"] = section_steps.get("retry", [])
         return result
 
     def _build_loop(
-        self, elem: str, values: dict[str, Any], expr_fields: set[str], body: list[dict[str, Any]]
+        self,
+        node: dict[str, Any],
+        elem: str,
+        values: dict[str, Any],
+        flags: _Flags,
+        body: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        settings = self._decompile_settings(values, expr_fields, set())
-        if elem == "for":
-            result = self._for_loop_value(settings)
-        elif elem == "for-each":
-            result = {"collection": settings.get("collection")}
-            if "timeout" in settings:
-                result["timeout"] = settings["timeout"]
-        else:
-            result = self._while_value(settings)
+        result = self._construct_fields(node, elem, values, flags)
+        if elem == "while":
+            conditions = self._decompile_conditions(
+                node, values.get("conditions") or [], "conditions"
+            )
+            result = {
+                "conditions": conditions[0] if len(conditions) == 1 else conditions,
+                **result,
+            }
         result["body"] = body
         return result
 
+    @staticmethod
     def _build_try(
-        self,
-        values: dict[str, Any],
-        section_steps: dict[str, list[dict[str, Any]]],
-        capture: dict[str, Any],
+        values: dict[str, Any], section_steps: dict[str, list[dict[str, Any]]]
     ) -> dict[str, Any]:
         result: dict[str, Any] = {"steps": section_steps.get("try", [])}
         if values.get("enable_catch"):
             result["catch"] = section_steps.get("catch", [])
         if values.get("enable_finally"):
             result["finally"] = section_steps.get("finally", [])
-        if capture:
-            result["capture"] = capture
         return result
 
     def _build_remote(
         self,
         values: dict[str, Any],
-        expr_fields: set[str],
+        flags: _Flags,
         body: list[dict[str, Any]],
-        capture: dict[str, Any],
+        config: dict[str, Any],
     ) -> dict[str, Any]:
         result: dict[str, Any] = {}
-        settings = self._decompile_settings(
-            values, expr_fields, self._secret_settings(self.remote_entry)
-        )
+        settings = self._decompile_settings(values, flags, self._secret_settings(self.remote_entry))
         if settings:
             result["settings"] = settings
-        if capture:
-            result["capture"] = capture
+        profiles = self._decompile_profiles(config.get("profileBindings") or [])
+        if profiles:
+            result["profiles"] = profiles
         result["body"] = body
         return result
 
@@ -718,22 +981,47 @@ class _Walker:
     # Value inversion
     # ------------------------------------------------------------------
 
+    def _setting_entries(self, name: str, value: Any, flags: _Flags) -> Any:
+        """A plain setting whose first-level entries and row fields may each hold an
+        expression; any other string inside it is plain text."""
+        if not isinstance(value, dict | list):
+            return _plain_readback(value, template_place=True)
+        if isinstance(value, dict):
+            kinds = {key: flags.kind(f"{name}.{key}", template=False) for key in value}
+            if _is_form_shaped(value) and set(kinds.values()) == {"plain"}:
+                return {"literal": value}
+            return {
+                key: _readback_value(item, kinds[key], template_place=False)
+                for key, item in value.items()
+            }
+        items: list[Any] = []
+        for index, item in enumerate(value):
+            kind = flags.kind(f"{name}.{index}", template=False)
+            if kind == "plain" and isinstance(item, dict) and not _is_form_shaped(item):
+                fields = {key: flags.kind(f"{name}.{index}.{key}", template=False) for key in item}
+                items.append(
+                    {
+                        key: _readback_value(field, fields[key], template_place=False)
+                        for key, field in item.items()
+                    }
+                )
+            else:
+                items.append(_readback_value(item, kind, template_place=False))
+        return items
+
     def _decompile_settings(
-        self, values: dict[str, Any], expr_fields: set[str], secret_names: set[str]
+        self, values: dict[str, Any], flags: _Flags, secret_names: set[str]
     ) -> dict[str, Any]:
-        nested: dict[str, list[str]] = defaultdict(list)
-        for expr_field in expr_fields:
-            head, dot, tail = expr_field.partition(".")
-            if dot:
-                nested[head].append(tail)
         result: dict[str, Any] = {}
         for name, value in values.items():
-            if name in secret_names:
-                continue
-            if name in expr_fields:
-                result[name] = {"expr": value}
+            kind = flags.kind(name)
+            # A secret written as an expression names a variable, so only a literal one stays out.
+            if kind == "plain" and name in secret_names:
+                flags.consume_under(name)
+            elif kind != "plain":
+                result[name] = _readback_value(value, kind, template_place=True)
             else:
-                result[name] = _rewrap_nested(value, nested.get(name, []))
+                result[name] = self._setting_entries(name, value, flags)
         return result
 
     def _decompile_profiles(self, bindings: list[Any]) -> list[dict[str, Any]]:
@@ -749,28 +1037,76 @@ class _Walker:
             result.append(entry)
         return result
 
-    def _decompile_condition(self, item: Any) -> Any:
-        if not isinstance(item, dict):
-            return item
-        if item.get("type") == "expression":
-            return item.get("expression")
+    def _decompile_comparison(self, item: dict[str, Any]) -> dict[str, Any]:
         condition: dict[str, Any] = {
             "variable": item.get("variable"),
             "operator": item.get("operator"),
         }
-        # A null compare-to value and a missing value_type compile back the same when left out.
-        if item.get("reference_value") is not None:
-            condition["value"] = item["reference_value"]
+        value = item.get("reference_value")
+        # A null value is left out; the read values hold none for an operator that takes none.
+        if value is not None:
+            kind = "plain"
+            if item.get("reference_is_expression"):
+                kind = "expr"
+            elif item.get("reference_is_template"):
+                kind = "template"
+            condition["value"] = _readback_value(value, kind, template_place=True)
         if item.get("value_type"):
             condition["value_type"] = item["value_type"]
         return condition
 
-    def _decompile_conditions(self, items: list[Any]) -> list[Any]:
-        return [
-            self._decompile_condition(item)
-            for item in items
-            if isinstance(item, dict) and item.get("type") != "operator"
-        ]
+    def _decompile_condition(self, node: dict[str, Any], item: Any, place: str, index: int) -> Any:
+        """One condition item of the list at ``place``."""
+        item_type = item.get("type") if isinstance(item, dict) else None
+        if item_type == "expression":
+            text = item.get("expression")
+            if text in CONDITION_MARKERS:
+                self._lose_item(node, "expression", place)
+            return text
+        if item_type == "literal":
+            return self._decompile_comparison(item)
+        if item_type == "group":
+            items = item.get("items") or []
+            return {"group": self._decompile_conditions(node, items, f"{place}.{index}.items")}
+        self._lose_item(node, str(item_type), place)
+        return item
+
+    def _lose_item(self, node: dict[str, Any], item_type: str, place: str) -> None:
+        self._lose(
+            node,
+            f"a condition item of type '{item_type}' in '{place}' of block '{_label(node)}'",
+        )
+
+    def _decompile_conditions(
+        self, node: dict[str, Any], items: list[Any], place: str
+    ) -> list[Any]:
+        """A stored condition list in its recipe form: `and` left out, `or` written, groups
+        as `{group: [...]}`; a list the run would not read whole is reported."""
+        written: list[Any] = []
+        joined = True
+        for index, item in enumerate(items):
+            if isinstance(item, dict) and item.get("type") == "operator":
+                marker = item.get("value")
+                if joined or marker not in CONDITION_MARKERS or index == len(items) - 1:
+                    self._lose_joins(node, place)
+                elif marker == "or":
+                    written.append("or")
+                joined = True
+                continue
+            if not joined:
+                self._lose_joins(node, place)
+            written.append(self._decompile_condition(node, item, place, index))
+            joined = False
+        return written
+
+    def _lose_joins(self, node: dict[str, Any], place: str) -> None:
+        what = (
+            f"a condition list in '{place}' of block '{_label(node)}' whose items are not "
+            "joined by and / or"
+        )
+        where = str(node.get("id") or "")
+        if {"what": what, "where": where} not in self.losses:
+            self._lose(node, what)
 
 
 # ---------------------------------------------------------------------------
@@ -826,13 +1162,12 @@ def _reachable_from_start(
 
 
 def _unreachable_node_items(
-    nodes: list[dict[str, Any]], reachable: set[str]
+    nodes: list[dict[str, Any]], reachable: set[str], beside: set[str]
 ) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     for node in nodes:
         node_id = str(node["id"])
-        # Notes are free-floating annotations: unreachable by design.
-        if node_id not in reachable and node.get("type") != "noteNode":
+        if node_id not in reachable and node_id not in beside:
             items.append({"what": f"unreachable block '{_label(node)}'", "where": node_id})
     return items
 
@@ -886,7 +1221,8 @@ def _inexpressible_items(
         incoming[str(edge["target"])].append(edge)
 
     reachable = _reachable_from_start(by_id, edges, outgoing)
-    items = _unreachable_node_items(nodes, reachable)
+    beside = {str(node["id"]) for node in edgeless_notes(nodes, edges)}
+    items = _unreachable_node_items(nodes, reachable, beside)
     cycle_node = _find_cycle(by_id, outgoing)
     if cycle_node is not None:
         items.append({"what": "a cycle outside a loop construct", "where": cycle_node})
@@ -898,20 +1234,6 @@ def _inexpressible_items(
 # ---------------------------------------------------------------------------
 # Public entry
 # ---------------------------------------------------------------------------
-
-
-def _floating_note_steps(
-    nodes: list[dict[str, Any]], edges: list[dict[str, Any]], walker: _Walker
-) -> list[dict[str, Any]]:
-    """Free-floating canvas notes read back as trailing note steps."""
-    wired = {str(edge["target"]) for edge in edges}
-    steps: list[dict[str, Any]] = []
-    for node in nodes:
-        if node.get("type") != "noteNode" or str(node["id"]) in wired:
-            continue
-        data = node.get("data") or {}
-        steps.append(walker._with_label({"note": dict(data.get("config") or {})}, data))
-    return steps
 
 
 def _decompile_variables(variables: dict[str, Any]) -> dict[str, Any]:
@@ -948,12 +1270,20 @@ def decompile_test_data(test_data: dict[str, Any]) -> dict[str, Any]:
     edges = workflow.get("edges") or []
 
     functions: dict[str, dict[str, Any]] = {}
+    losses: _Losses = []
     walker = _Walker(
-        nodes, edges, load_block_catalog(), remote_execution_entry(), functions, _LibraryNames()
+        nodes,
+        edges,
+        load_block_catalog(),
+        remote_execution_entry(),
+        functions,
+        _LibraryNames(),
+        declared_types=types_of_declarations(test_data.get("variables") or {}),
+        losses=losses,
     )
     flow = walker.flow()
-    flow.extend(_floating_note_steps(nodes, edges, walker))
-    inexpressible = _inexpressible_items(nodes, edges, walker.visited)
+    notes = walker.side_notes()
+    inexpressible = [*_inexpressible_items(nodes, edges, walker.visited), *losses]
 
     recipe: dict[str, Any] = {"test": {"name": str(test_data.get("name") or "Untitled Test")}}
     version = test_data.get("version")
@@ -973,6 +1303,8 @@ def decompile_test_data(test_data: dict[str, Any]) -> dict[str, Any]:
     if functions:
         recipe["functions"] = list(functions.values())
     recipe["flow"] = flow
+    if notes:
+        recipe["notes"] = notes
 
     recipe_yaml = dump_exact_yaml(recipe)
     return {

@@ -1565,7 +1565,6 @@ class TestCircularDependencyDetection:
         """Test to ensure _check_circular_dependency method covers current block branch."""
         validator = BlockValidator()
 
-        # Direct test of the refactored method
         # Register a block that will create a dependency back to the current block
         block_a = create_test_block(
             id="block-a",

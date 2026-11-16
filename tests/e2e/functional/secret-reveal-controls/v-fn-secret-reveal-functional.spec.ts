@@ -66,7 +66,6 @@ function sshOpenNode(password: string): Record<string, unknown> {
       version: '1.0.0',
       expressionFields: [],
       templateFields: [],
-      variableExpressionKeys: [],
       config: {
         values: { host: 'example.host', port: 22, username: 'admin', password, host_key_verification: 'strict' },
         outputBindings: {},
@@ -106,7 +105,7 @@ const rowValue = (page: Page, name: string): Locator =>
   variableRow(page, name).locator('[data-testid^="variable-value-"]')
 const expandButton = (page: Page, name: string): Locator =>
   variableRow(page, name).locator('[data-testid^="expand-button-"]')
-const watcher = (page: Page, name: string): Locator => page.locator(`section[aria-label="Inspect variable ${name}"]`)
+const watcher = (page: Page, name: string): Locator => page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 
 /** Open the watcher of `name` and prove it shows `value` with that value's own metric, then close it. */
 async function expectWatcherShows(page: Page, name: string, value: string): Promise<void> {

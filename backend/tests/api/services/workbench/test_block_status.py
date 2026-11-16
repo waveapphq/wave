@@ -23,7 +23,7 @@ NODE_MAP: dict[str, Any] = {
         block_id: _block(block_id)
         for block_id in ("loop", "a", "b", "inner", "deep", "join", "after")
     },
-    "note": {"id": "note", "type": "note", "data": {}},
+    "note": {"id": "note", "type": "noteNode", "data": {}},
 }
 
 # loop -body-> a -> inner (-body-> deep) -then-> join; loop -then-> after; b -> join.
@@ -44,6 +44,9 @@ class TestLaneBlocks:
 
     def test_an_absent_start_and_a_note_hold_no_block(self) -> None:
         assert lane_blocks([None, "note"], ADJ, NODE_MAP) == []
+
+    def test_the_walk_passes_a_note_on_to_the_blocks_after_it(self) -> None:
+        assert lane_blocks(["note"], {"note": [("b", None)], **ADJ}, NODE_MAP) == ["b", "join"]
 
 
 @pytest.fixture

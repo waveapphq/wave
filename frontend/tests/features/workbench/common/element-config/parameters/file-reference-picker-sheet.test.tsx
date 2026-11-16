@@ -272,6 +272,18 @@ describe('FileReferencePickerSheet chrome', () => {
       'save-as',
     )
   })
+
+  it.each([
+    { mode: 'file', title: 'Choose a file' },
+    { mode: 'file-or-folder', title: 'Choose a file or folder' },
+    { mode: 'folder', title: 'Choose a folder' },
+    { mode: 'save-as', title: 'Save as' },
+  ] as const)('is a non-modal dialog named $title in $mode mode', ({ mode, title }) => {
+    renderPicker({ mode })
+    const sheet = screen.getByTestId('file-reference-picker-sheet')
+    expect(screen.getByRole('dialog', { name: title })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
+  })
 })
 
 describe('FileReferencePickerSheet tabs', () => {

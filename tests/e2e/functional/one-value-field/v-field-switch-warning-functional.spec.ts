@@ -17,7 +17,9 @@
  * 6. Out of {x}: Clear & Empty leaves empty text / `[]` / `{}` / an empty table as the user's value, stored with no
  *    flag; Clear & Default (or Clear) leaves the field not set (the gray default; `null` on a field that takes null;
  *    an empty box otherwise), and Save stores nothing; a choice list or true / false gets its default written.
- * 7. A field holding nothing switches with no warning and copies nothing in.
+ * 7. A field holding nothing switches with no warning and copies nothing in. The OpenSearch Query, holding no text,
+ *    reopens as a Template on its Template face (the gray hint `''` while not set, the empty text with the reset icon
+ *    after Clear & Empty); its switches follow the same answers.
  * 8. A masked stored secret asks its own `Discard protected value?` (confirm `Switch to expression`), never the switch
  *    warning; Cancel keeps it masked; the switch leaves {x} empty and Save stores nothing for it.
  *
@@ -58,6 +60,7 @@ import {
   type StoredFields,
   type SwitchAnswer,
 } from '../../helpers/default-rule'
+import { expectBlankTemplate, expectTemplateText } from './template-face'
 
 interface BlockRef {
   id: string
@@ -86,6 +89,8 @@ interface EmptyField extends FieldBase {
   nullable: boolean
   emptyExpression: string
   emptyStored: unknown
+  /** A row holding no text opens as a Template, on its Template face (the OpenSearch Query). */
+  opensAsTemplate?: boolean
 }
 
 interface NumberField extends FieldBase {
@@ -131,7 +136,7 @@ const EMPTY_FIELDS: readonly EmptyField[] = [
   },
   {
     block: SEARCH, name: 'query', type: 'string', start: 'msg:alpha', notSet: { kind: 'empty-default' }, hint: "''",
-    nullable: false, emptyExpression: "''", emptyStored: '', expression: "'msg:beta'",
+    nullable: false, emptyExpression: "''", emptyStored: '', expression: "'msg:beta'", opensAsTemplate: true,
   },
   {
     block: FN, name: 'grid', type: 'table', start: '[{"name": "gamma"}]', notSet: { kind: 'default', shown: '[{"name": "alpha"}]' },
@@ -307,7 +312,8 @@ test.describe('V-FIELD-SWITCH-WARNING-FUNCTIONAL: the switch warning on every fi
 
     await round(page, testId, 'a field holding nothing switches into {x} with no warning and copies nothing in', EMPTY_FIELDS,
       async (p, sheet, field) => {
-        await expectNotSet(sheet, field.name, field.notSet)
+        if (field.opensAsTemplate) await expectBlankTemplate(sheet, field.name, field.hint as string)
+        else await expectNotSet(sheet, field.name, field.notSet)
         await switchSilently(p, sheet, field.name, true)
         await expectExpression(sheet, field.name, '', field.hint)
         await typeExpression(p, sheet, field.name, field.expression)
@@ -326,7 +332,8 @@ test.describe('V-FIELD-SWITCH-WARNING-FUNCTIONAL: the switch warning on every fi
 
     await round(page, testId, 'into {x}: Clear & Default / Clear leaves the box empty under the default hint', EMPTY_FIELDS,
       async (p, sheet, field) => {
-        await expectEmptyUserValue(sheet, field)
+        if (field.opensAsTemplate) await expectTemplateText(sheet, field.name, '')
+        else await expectEmptyUserValue(sheet, field)
         await switchWithAnswer(p, sheet, field.name, SWITCH_TO_EXPRESSION_TITLE, emptyButtons(field), clearLabel(field))
         await expectExpression(sheet, field.name, '', field.hint)
       },

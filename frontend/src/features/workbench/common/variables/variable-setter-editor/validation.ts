@@ -8,17 +8,20 @@
 
 import { PYTHON_KEYWORD_SET } from '@/features/workbench/lib/python-builtins'
 import { NAMESPACE_ROOTS } from '@/features/workbench/lib/namespace-roots'
-import type { AvailableVariable, RowValidation, VariableRow } from './types'
-import { VARIABLE_NAME_PATTERN } from './types'
-import { VARIABLE_NAME_REQUIRED_MESSAGE, VARIABLE_NAME_RULE_MESSAGE } from '@/lib/field-constraints'
-import { isStoredSecretValue } from '@/lib/secret-envelope'
-import { plainNumberText } from '@/lib/number-rule'
-import { unfinishedNumberError, validateAndParseScalarValue } from '@/lib/variable-validation'
+import { blankEntryMessage } from '@/features/workbench/lib/node-parameters/field-modes'
+import { literalNumberProblem } from '@/features/workbench/lib/validation/number-bounds'
+import {
+  VARIABLE_NAME_PATTERN,
+  VARIABLE_NAME_REQUIRED_MESSAGE,
+  VARIABLE_NAME_RULE_MESSAGE,
+} from '@/lib/field-constraints'
+import { expressionIsHeld } from '@/lib/value-loss'
+import type { AvailableVariable, RowProblems, VariableRow } from './types'
 
 type FieldCheck = { error: string | null }
 
 const VALID: FieldCheck = { error: null }
-const EXPRESSION_REQUIRED_MESSAGE = 'Expression is required'
+const VALUE_REQUIRED_MESSAGE = 'Value is required'
 
 export function validateName(
   name: string,
@@ -53,50 +56,45 @@ export function validateName(
   if (aliasConflict) {
     return { error: `'${name}' conflicts with profile alias from ${aliasConflict.source}` }
   }
-  // Function inputs are read-only - the caller binds them, the body cannot
-  // overwrite them via Variable Setter. Function outputs ARE writable
-  // targets (the setter assigns the body-side value the Function returns
-  // to the caller); they pass validation and are simply assigned rather
-  // than created on save (see `createVariableSetterVariables`).
+  // A Function's inputs are read-only inside its body; its outputs are writable targets (REQ-3.4.3.8).
   const inputConflict = availableVariables.find(
     (v) => v.name === name && v.source === 'Function input',
   )
   if (inputConflict) {
-    return { error: `'${name}' is a Function input and is read-only inside the body` }
+    return { error: `Writes to declared input '${name}'; inputs are read-only` }
   }
   return VALID
 }
 
-/** An expression row needs an expression; one that gives null at run time is still one. */
-export function validateExpression(value: unknown): FieldCheck {
-  if (typeof value !== 'string' || !value.trim()) {
-    return { error: EXPRESSION_REQUIRED_MESSAGE }
+/** The first blank {x} entry of a list or map row, named by its row (FIELD-13). */
+function blankEntryProblem(row: VariableRow): string | null {
+  const held = row.value
+  if (held === null || typeof held !== 'object') return null
+  for (const key of row.entryExpressions ?? []) {
+    const entry = Array.isArray(held) ? held[Number(key)] : (held as Record<string, unknown>)[key]
+    if (!expressionIsHeld(entry)) return blankEntryMessage(row.name, held, key)
   }
-  return VALID
+  return null
 }
 
-/** A literal number row's text or number must keep the number rule; a stored null or a sealed secret is valid. */
-function literalNumberError(row: VariableRow): string | undefined {
-  if (row.type !== 'integer' && row.type !== 'float') return undefined
-  if (typeof row.value === 'number') return validateAndParseScalarValue(row.type, '', plainNumberText(row.value), false).error
-  if (typeof row.value !== 'string' || isStoredSecretValue(row.value)) return undefined
-  const parsed = validateAndParseScalarValue(row.type, '', row.value, false)
-  if (!parsed.valid) return unfinishedNumberError(row.value, row.type) ?? parsed.error
-  // The number is the text as written: a space around the digits is no number.
-  if (parsed.value === row.value) return undefined
-  return row.type === 'integer' ? 'Must be a valid integer' : 'Must be a valid number'
+/** A row value's problem: a blank {x}, a literal with no value, the number rule, then a blank {x} entry. */
+export function setterValueProblem(row: VariableRow): string | null {
+  if (row.isExpression) return expressionIsHeld(row.value) ? null : VALUE_REQUIRED_MESSAGE
+  if (row.value === undefined) return VALUE_REQUIRED_MESSAGE
+  // A Template is text, kept as written on a variable retyped since (FNCFG-9).
+  if (row.isTemplate === true) return null
+  return literalNumberProblem(row.type, row.value, false) ?? blankEntryProblem(row)
 }
 
-/** A row's first problem, its name before its value. */
-export function validateRow(
+/** A row's name and value messages. */
+export function rowProblems(
   row: VariableRow,
   allNames: string[],
   currentIndex: number,
   availableVariables: AvailableVariable[],
-): RowValidation {
-  const name = validateName(row.name, allNames, currentIndex, availableVariables)
-  if (name.error) return { ...name, field: 'name' }
-  const valueError = row.isExpression ? validateExpression(row.value).error : literalNumberError(row)
-  if (!valueError) return { error: null, field: null }
-  return { error: valueError, field: 'value' }
+): RowProblems {
+  return {
+    name: validateName(row.name, allNames, currentIndex, availableVariables).error,
+    value: setterValueProblem(row),
+  }
 }

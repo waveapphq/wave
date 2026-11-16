@@ -3,7 +3,8 @@
 One launch under the watchdog: stream both pipes as lines, keep a capped tail of
 each, and stop on a pattern match or the deadline (SHRUN-12, SHRUN-13, SHRUN-15).
 A pattern match terminates the group so the shell may run its exit handler, then
-kills it once the grace has passed; the deadline and a cancel kill it at once. The
+kills it once the grace has passed; the deadline and a cancel kill it at once, and a
+cancel hands what the program printed to on_stop before it reaches the caller. The
 core builds no block message; _local_process_common.judge_outcome reads the outcome.
 """
 
@@ -13,9 +14,10 @@ import re
 import select
 import sys
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from wavecore.plugins import _process_group
 
@@ -28,6 +30,8 @@ READ_SIZE = 65536
 PATTERN_STOP_SETTLE = 0.05
 PATTERN_STOP_NUDGE = 0.25
 PATTERN_STOP_GRACE = 2.0
+# Once the watchdog has ended; a program in a session of its own may keep the pipes open.
+PIPE_CLOSE_GRACE = 1.0
 MATCH_LINE_LIMIT = 200
 STOPPED_EXIT_CODE = 137
 PASS_MATCH = "Output matched the pass pattern"
@@ -79,6 +83,31 @@ class _StreamState:
         return self.tail.decode("utf-8", errors="replace")
 
 
+class _Output:
+    """The read ends of both output pipes, which WAVE closes whoever still holds a write end."""
+
+    def __init__(self, stdout_fd: int, stderr_fd: int) -> None:
+        self.pipes = {
+            "stdout": open(stdout_fd, "rb", buffering=0),
+            "stderr": open(stderr_fd, "rb", buffering=0),
+        }
+        self.transports: list[asyncio.ReadTransport] = []
+
+    async def reader(self, stream: str) -> asyncio.StreamReader:
+        reader = asyncio.StreamReader()
+        transport, _ = await asyncio.get_running_loop().connect_read_pipe(
+            lambda: asyncio.StreamReaderProtocol(reader), self.pipes[stream]
+        )
+        self.transports.append(transport)
+        return reader
+
+    def close(self) -> None:
+        for transport in self.transports:
+            transport.close()
+        for pipe in self.pipes.values():
+            pipe.close()
+
+
 def match_message(prefix: str, line: str | None, stream: str | None, secret: frozenset[str]) -> str:
     """The prefix alone for a secret stream; otherwise the prefix and the line cut short."""
     if stream in secret:
@@ -126,6 +155,12 @@ class _Halt:
         for timer in self.timers:
             timer.cancel()
 
+    def abort(self) -> None:
+        """End the group at once, whatever stop was under way."""
+        _kill_group(self.pgid)
+        self.settle()
+        self.stop, self.match_line, self.match_stream = "cancel", None, None
+
 
 def _timeout_errors() -> tuple[type[BaseException], ...]:
     """asyncio.TimeoutError is its own class below Python 3.11, the bundle's interpreter floor."""
@@ -165,12 +200,13 @@ def _line(raw: bytes, spec: LaunchSpec, stream: str, on_match: OnMatch) -> None:
 
 
 async def _read_stream(
-    reader: asyncio.StreamReader,
+    output: _Output,
     state: _StreamState,
     spec: LaunchSpec,
     stream: str,
     on_match: OnMatch,
 ) -> None:
+    reader = await output.reader(stream)
     while chunk := await reader.read(READ_SIZE):
         state.keep(chunk)
         *lines, state.pending = (state.pending + chunk).split(b"\n")
@@ -184,70 +220,41 @@ async def _read_stream(
         state.pending = b""
 
 
-async def _supervise(
-    proc: asyncio.subprocess.Process,
+async def _read_output(
+    output: _Output, states: dict[str, _StreamState], spec: LaunchSpec, on_match: OnMatch
+) -> None:
+    await asyncio.gather(
+        _read_stream(output, states["stdout"], spec, "stdout", on_match),
+        _read_stream(output, states["stderr"], spec, "stderr", on_match),
+    )
+
+
+async def _watch(proc: asyncio.subprocess.Process, halt: _Halt, spec: LaunchSpec) -> None:
+    """Wait for the watchdog to end, which it does with the program; the deadline kills it."""
+    try:
+        await asyncio.wait_for(proc.wait(), spec.timeout)
+    except _timeout_errors():
+        halt("timeout", None, None)
+        await proc.wait()
+
+
+async def _drain(work: asyncio.Future[None]) -> None:
+    """Let the readers take what is left for a grace, then stop them where they are."""
+    try:
+        await asyncio.wait_for(asyncio.shield(work), PIPE_CLOSE_GRACE)
+    except _timeout_errors():
+        work.cancel()
+
+
+def _outcome(
     states: dict[str, _StreamState],
     spec: LaunchSpec,
-    on_match: OnMatch,
-) -> None:
-    """Read both pipes to EOF, then wait for the watchdog to end."""
-    await asyncio.gather(
-        _read_stream(
-            cast(asyncio.StreamReader, proc.stdout), states["stdout"], spec, "stdout", on_match
-        ),
-        _read_stream(
-            cast(asyncio.StreamReader, proc.stderr), states["stderr"], spec, "stderr", on_match
-        ),
-    )
-    await proc.wait()
-
-
-async def run_local_process(spec: LaunchSpec) -> ProcessOutcome:
-    lifeline_r, lifeline_w = os.pipe()
-    status_r, status_w = os.pipe()
-    states = {"stdout": _StreamState(), "stderr": _StreamState()}
-    try:
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable,
-                "-I",
-                str(WATCHDOG_PATH),
-                str(lifeline_r),
-                str(status_w),
-                *spec.argv,
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=spec.cwd,
-                env=spec.env,
-                start_new_session=True,
-                pass_fds=(lifeline_r, status_w),
-            )
-        except OSError as exc:
-            return ProcessOutcome("", "", -1, False, None, None, None, exc.strerror or str(exc))
-        finally:
-            os.close(lifeline_r)
-            os.close(status_w)
-        halt = _Halt(proc.pid, status_r, spec)
-        work = asyncio.ensure_future(_supervise(proc, states, spec, halt))
-        try:
-            try:
-                await asyncio.wait_for(asyncio.shield(work), spec.timeout)
-            except _timeout_errors():
-                halt("timeout", None, None)
-                await work
-            halt.settle()
-            ended_on_own, exit_code, start_error = _read_status(status_r)
-            if halt.terminated:
-                ended_on_own, exit_code = False, STOPPED_EXIT_CODE
-        except BaseException:
-            _kill_group(proc.pid)
-            halt.settle()
-            work.cancel()
-            raise
-    finally:
-        os.close(lifeline_w)
-        os.close(status_r)
+    halt: _Halt,
+    ended_on_own: bool,
+    exit_code: int,
+    start_error: str | None,
+) -> ProcessOutcome:
+    """The captured tails with the run's status; a stream that dropped its front says so."""
     for stream, state in states.items():
         if state.dropped and spec.logger is not None:
             spec.logger.warn(f"{stream.capitalize()} truncated: {state.dropped} bytes dropped")
@@ -261,3 +268,61 @@ async def run_local_process(spec: LaunchSpec) -> ProcessOutcome:
         match_stream=halt.match_stream,
         start_error=start_error,
     )
+
+
+async def run_local_process(
+    spec: LaunchSpec, on_stop: Callable[[ProcessOutcome], None] | None = None
+) -> ProcessOutcome:
+    lifeline_r, lifeline_w = os.pipe()
+    status_r, status_w = os.pipe()
+    stdout_r, stdout_w = os.pipe()
+    stderr_r, stderr_w = os.pipe()
+    output = _Output(stdout_r, stderr_r)
+    states = {"stdout": _StreamState(), "stderr": _StreamState()}
+    try:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-I",
+                str(WATCHDOG_PATH),
+                str(lifeline_r),
+                str(status_w),
+                *spec.argv,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=stdout_w,
+                stderr=stderr_w,
+                cwd=spec.cwd,
+                env=spec.env,
+                start_new_session=True,
+                pass_fds=(lifeline_r, status_w),
+            )
+        except OSError as exc:
+            return ProcessOutcome("", "", -1, False, None, None, None, exc.strerror or str(exc))
+        finally:
+            for fd in (lifeline_r, status_w, stdout_w, stderr_w):
+                os.close(fd)
+        halt = _Halt(proc.pid, status_r, spec)
+        work = asyncio.ensure_future(_read_output(output, states, spec, halt))
+        try:
+            await _watch(proc, halt, spec)
+            await _drain(work)
+            halt.settle()
+            ended_on_own, exit_code, start_error = _read_status(status_r)
+            if halt.terminated:
+                ended_on_own, exit_code = False, STOPPED_EXIT_CODE
+        except BaseException as exc:
+            halt.abort()
+            try:
+                if on_stop is not None and isinstance(exc, asyncio.CancelledError):
+                    # The cancel must reach the caller whatever the readers raise.
+                    with suppress(Exception):
+                        await _drain(work)
+                    on_stop(_outcome(states, spec, halt, False, STOPPED_EXIT_CODE, None))
+            finally:
+                work.cancel()
+            raise
+    finally:
+        os.close(lifeline_w)
+        os.close(status_r)
+        output.close()
+    return _outcome(states, spec, halt, ended_on_own, exit_code, start_error)

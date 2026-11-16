@@ -8,7 +8,7 @@ from sqlglot.errors import ParseError, TokenError
 from wavecore.api.exceptions import UnprocessableEntityException, ValidationException
 from wavecore.connectivity.sql._params import placeholders
 from wavecore.connectivity.sql._split import Statement, split_script
-from wavecore.connectivity.sql.dialects import dialect
+from wavecore.connectivity.sql.dialects import UnknownDatabaseTypeError, dialect
 
 MAX_SCRIPT_BYTES = 1024 * 1024
 
@@ -17,7 +17,7 @@ def check_syntax(database_type: str, script: str) -> list[dict[str, Any]]:
     """Every parse finding of the script as {line, col, message}, in script order."""
     try:
         sqlglot_dialect = dialect(database_type).SQLGLOT
-    except ValueError as error:
+    except UnknownDatabaseTypeError as error:
         raise ValidationException(str(error)) from None
     if len(script.encode("utf-8")) > MAX_SCRIPT_BYTES:
         raise UnprocessableEntityException("Script exceeds 1 MB")
@@ -31,16 +31,28 @@ def check_syntax(database_type: str, script: str) -> list[dict[str, Any]]:
 def _statement_issues(
     database_type: str, sqlglot_dialect: str, statement: Statement
 ) -> list[dict[str, Any]]:
+    text = _without_placeholders(database_type, statement.text)
     try:
-        sqlglot.parse(_without_placeholders(database_type, statement.text), read=sqlglot_dialect)
+        sqlglot.parse(text, read=sqlglot_dialect)
     except ParseError as error:
         return [
             _issue(statement, entry["line"], entry["col"], entry["description"])
             for entry in error.errors
         ]
     except TokenError as error:
-        return [{"line": statement.line, "col": statement.column, "message": str(error)}]
+        return [_token_issue(statement, error.start or 0, error.end)]
     return []
+
+
+def _token_issue(statement: Statement, start: int, end: int | None) -> dict[str, Any]:
+    """The tokenizer's wording around the script as written, found where that quote starts."""
+    text = statement.text
+    # The tokenizer stops its quote one character short of the statement's end.
+    if end is None or end >= len(text) - 1:
+        end = len(text)
+    line = text.count("\n", 0, start) + 1
+    col = start - text.rfind("\n", 0, start)
+    return _issue(statement, line, col, f"Error tokenizing '{text[start:end]}'")
 
 
 def _without_placeholders(database_type: str, text: str) -> str:

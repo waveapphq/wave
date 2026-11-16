@@ -94,7 +94,6 @@ test.describe('V-FN-VERSION-CAP: 32-char version caps', () => {
         hasNewerVersion: false,
         expressionFields: [],
         templateFields: [],
-        variableExpressionKeys: [],
         config: { values: {}, outputBindings: {}, profileBindings: [] },
         editMode: true,
         upstreamLink: { functionId: lib.functionId, sourceVersion: '1.0.0' },

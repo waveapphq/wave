@@ -102,7 +102,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": { "collection": "rows_table" },
             "outputBindings": { "item": "row_item", "index": "row_idx" },
@@ -148,10 +147,8 @@
           "version": "1.0.0",
           "description": "Store Row",
           "hasNewerVersion": false,
-          "expressionFields": [],
+          "expressionFields": ["variables.seen_sku", "variables.stored_rows"],
           "templateFields": [],
-          "variableExpressionKeys": ["seen_sku", "stored_rows"],
-          "variableTypes": { "seen_sku": "string", "stored_rows": "table" },
           "config": {
             "values": {
               "variables": {

@@ -9,6 +9,7 @@ import time
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict, Unpack, cast
 
 import yaml
@@ -31,6 +32,7 @@ from wavecore.core.expressions.security import (
     is_blocked,
     mutating_method_message,
 )
+from wavecore.core.expressions.template import _TEMPLATE_PATTERN
 from wavecore.core.expressions.template_escape import render_escaped
 from wavecore.core.number_rule import (
     NumberType,
@@ -235,11 +237,7 @@ def evaluate_expression(expression: str, variables: MutableMapping[str, Any]) ->
     return _evaluate_expression(expression, variables)
 
 
-# Matches {{...}} template markers but NOT single braces {}
-_TEMPLATE_PATTERN = re.compile(r"\{\{(.+?)\}\}")
-
-
-def _evaluate_template(
+def evaluate_template(
     template: str,
     variables: dict[str, Any],
     *,
@@ -285,7 +283,7 @@ def template_read_only_violation(template: str) -> str | None:
     """The reason a ``{{ }}`` string would change data, or None.
 
     Reports the first offending marker; the reporting half of the rule that
-    ``_evaluate_template`` enforces at run time.
+    ``evaluate_template`` enforces at run time.
     """
     for match in _TEMPLATE_PATTERN.finditer(template):
         expression = match.group(1).strip()
@@ -381,7 +379,7 @@ def _resolve_single_parameter(
         resolved = _resolve_expression_field(name, value, variables, parameter_types, policy)
     elif name in template_fields and isinstance(value, str):
         if render_escaped_template is None:
-            resolved = _evaluate_template(
+            resolved = evaluate_template(
                 value,
                 variables,
                 setting=name,
@@ -441,23 +439,53 @@ def _resolve_map_expression_keys(
         map_value = resolved[param_name]
         if isinstance(map_value, list):
             _resolve_indexed_expression_keys(resolved, param_name, expr_keys, variables)
-            continue
-        if not isinstance(map_value, dict):
-            continue
-        # Shallow-copy the map so we don't mutate the original parameters
-        # dict. Without this, loop iterations would see previously-resolved
-        # values (e.g. int 8) instead of the original expression strings,
-        # because resolved[param_name] shares the same object reference as
-        # the caller's parameters[param_name].
-        map_copy = dict(map_value)
-        resolved[param_name] = map_copy
-        for key in map_copy.keys():
-            if key not in expr_keys:
-                continue
-            entry_value = map_copy[key]
-            if not isinstance(entry_value, str):
-                continue
-            map_copy[key] = _resolve_map_expression_entry(entry_value, variables)
+        elif isinstance(map_value, dict):
+            resolve = partial(_resolve_map_expression_entry, variables=variables)
+            _resolve_flagged_map_entries(resolved, param_name, expr_keys, resolve)
+
+
+def _resolve_flagged_map_entries(
+    resolved: dict[str, Any],
+    param_name: str,
+    flagged_keys: set[str],
+    resolve: Callable[[str], Any],
+) -> None:
+    """Resolve a map parameter's flagged string entries and the entries they name, on a copy."""
+    # A copy, so a loop's next iteration still reads the original expression strings.
+    map_copy = dict(resolved[param_name])
+    resolved[param_name] = map_copy
+    for key in map_copy.keys():
+        if key in flagged_keys and isinstance(map_copy[key], str):
+            map_copy[key] = resolve(map_copy[key])
+    for key in flagged_keys - map_copy.keys():
+        _resolve_sub_entry(map_copy, key, resolve)
+
+
+def _holds_entry(held: Any, sub: str) -> bool:
+    if isinstance(held, list):
+        return sub.isdigit() and int(sub) < len(held)
+    return isinstance(held, dict) and sub in held
+
+
+def _sub_entry(map_value: Mapping[str, Any], key: str) -> tuple[str, str] | None:
+    """The map entry and the item index or map key under it that a dotted key names."""
+    splits = ((key[:index], key[index + 1 :]) for index, char in enumerate(key) if char == ".")
+    return next(
+        ((entry, sub) for entry, sub in splits if _holds_entry(map_value.get(entry), sub)), None
+    )
+
+
+def _resolve_sub_entry(map_copy: dict[str, Any], key: str, resolve: Callable[[str], Any]) -> None:
+    """Resolve one entry of a list or map held by a map entry, on a copy (REQ-3.4.1.14)."""
+    found = _sub_entry(map_copy, key)
+    if found is not None:
+        entry, sub = found
+        held = map_copy[entry]
+        holder: Any = list(held) if isinstance(held, list) else dict(held)
+        index: Any = int(sub) if isinstance(held, list) else sub
+        if isinstance(holder[index], str):
+            holder[index] = resolve(holder[index])
+            map_copy[entry] = holder
 
 
 def _resolve_indexed_expression_keys(
@@ -494,7 +522,7 @@ def _resolve_map_template_entry(
     entry_value: str, variables: dict[str, Any], *, setting: str
 ) -> str:
     """Render one template entry's {{ }} markers (per-key template clone)."""
-    return _evaluate_template(entry_value, variables, setting=setting)
+    return evaluate_template(entry_value, variables, setting=setting)
 
 
 def _resolve_map_template_keys(
@@ -505,24 +533,15 @@ def _resolve_map_template_keys(
     """Render template keys within map parameters (eager per-key pass).
 
     Mirrors _resolve_map_expression_keys: each flagged entry is rendered via
-    _evaluate_template (an empty entry renders to "", not None). Modifies the
+    evaluate_template (an empty entry renders to "", not None). Modifies the
     resolved dict in place.
     """
     for param_name, tmpl_keys in map_template_keys.items():
         if param_name not in resolved:
             continue
-        map_value = resolved[param_name]
-        if not isinstance(map_value, dict):
-            continue
-        map_copy = dict(map_value)
-        resolved[param_name] = map_copy
-        for key in map_copy.keys():
-            if key not in tmpl_keys:
-                continue
-            entry_value = map_copy[key]
-            if not isinstance(entry_value, str):
-                continue
-            map_copy[key] = _resolve_map_template_entry(entry_value, variables, setting=param_name)
+        if isinstance(resolved[param_name], dict):
+            fill = partial(_resolve_map_template_entry, variables=variables, setting=param_name)
+            _resolve_flagged_map_entries(resolved, param_name, tmpl_keys, fill)
 
 
 _YAML_TIMESTAMP_TAG = "tag:yaml.org,2002:timestamp"
@@ -609,24 +628,25 @@ def _escaped_renderer(
 
     def escaped(template: str) -> str:
         rule = spec["rules"][resolved.get(spec["by"]) or spec["default"]]
+        secrets = registry.scan_values() if registry is not None else ()
         filled, pairs = render_escaped(
             template,
             rule,
             lambda expression: evaluate_expression(expression, variables),
             _TEMPLATE_PATTERN,
             setting=setting,
+            parts=secrets,
         )
-        _register_escaped_secrets(pairs, registry)
+        _register_escaped_secrets(pairs, secrets, registry)
         return filled
 
     return escaped
 
 
-def _register_escaped_secrets(pairs: list[tuple[str, str]], registry: Any) -> None:
-    """A secret filled in escaped form is scrubbed in that form too."""
-    if registry is None:
-        return
-    secrets = set(registry.scan_values())
+def _register_escaped_secrets(
+    pairs: list[tuple[str, str]], secrets: Collection[str], registry: Any
+) -> None:
+    """A secret filled escaped, whole or inside a larger value, is scrubbed in that form too."""
     for raw, escaped in pairs:
         if raw in secrets:
             registry.register_value(escaped, source="template escape")
@@ -802,12 +822,23 @@ def _base_name(key: str) -> str:
     return key.split(".", 1)[0]
 
 
-def _realized_default(field: Mapping[str, Any] | BaseModel) -> Any:
+def realized_default(field: Mapping[str, Any] | BaseModel) -> Any:
+    """A field's declared default, a fresh copy realized by its declared type."""
     declared_type = get_param_attr(field, "type")
     return realize_declared_value(
         copy.deepcopy(get_param_attr(field, "default")),
         declared_type if isinstance(declared_type, str) else "",
         copy.deepcopy(get_param_attr(field, "default_element_types")),
+    )
+
+
+def refuses_null(field: Mapping[str, Any] | BaseModel) -> bool:
+    """Whether a field given null fails: it takes no null and has a default or is Required;
+    only an optional field with no default holds null (REQ-3.1.3.21)."""
+    if get_param_attr(field, "accepts_null", False):
+        return False
+    return get_param_attr(field, "default") is not None or bool(
+        get_param_attr(field, "required", False)
     )
 
 
@@ -821,13 +852,13 @@ def _filled(
     for field in fields:
         name = _field_name(field)
         value = filled.get(name)
+        if name in filled and value is None and refuses_null(field):
+            raise NullValueError(null_failure_message(name))
         blank = name in expression_fields and isinstance(value, str) and not value.strip()
-        # A stored null is nothing given, unless the field takes null (REQ-3.1.3.21).
-        nothing = value is None and not get_param_attr(field, "accepts_null", False)
-        if name in filled and not blank and not nothing:
+        if name in filled and not blank:
             continue
         if get_param_attr(field, "default") is not None:
-            filled[name] = _realized_default(field)
+            filled[name] = realized_default(field)
             defaulted.add(name)
         elif get_param_attr(field, "required", False):
             raise NullValueError(null_failure_message(name))
@@ -840,15 +871,15 @@ def fill_field_defaults(
     *,
     expression_fields: set[str],
 ) -> dict[str, Any]:
-    """Every field the Block leaves out, leaves a blank expression or holds a null it does not
-    take, filled from its current default realized by its type and item types (REQ-3.1.1.5,
-    REQ-3.4.2.3).
+    """Every field the Block leaves out or leaves a blank expression, filled from its current
+    default realized by its type and item types (REQ-3.1.1.5, REQ-3.4.2.3).
 
-    A Required field with no value and no default fails and names it; a field with no
-    default otherwise stays left out. The stored mapping is never changed.
+    A field given null it does not take, or a Required field with no value and no default,
+    fails and names it; a field with no default otherwise stays as it is. The stored mapping
+    is never changed.
 
     Raises:
-        NullValueError: If a Required field has nothing and no default
+        NullValueError: If a field holds a null it refuses, or a Required field has nothing
     """
     return _filled(stored, fields, expression_fields)[0]
 

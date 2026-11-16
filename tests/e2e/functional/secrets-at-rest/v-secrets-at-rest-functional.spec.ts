@@ -42,6 +42,13 @@ import {
   STORAGE_BASE_PATH,
   ensureEnvironment,
 } from '../../helpers/config'
+import {
+  dirBytes,
+  storedYamlValues,
+  sweepStore,
+  SECRET_MASK,
+  SECRET_ENVELOPE,
+} from '../../helpers/secret-canary'
 import fs from 'fs'
 import path from 'path'
 
@@ -50,30 +57,8 @@ const CANARY_A = 'cnrA-4d1f9b2e77c1-alpha-real-bytes'
 const CANARY_B = 'cnrB-8c2a6e51d0f3-bravo-real-bytes'
 const PLAIN_MARKER = 'plain-sibling-1e6f00d5-cleartext'
 const PROFILE_BASE_URL = 'https://at-rest.example.local/v1'
-const MASK = '********'
-const ENVELOPE = 'wave:enc:v1:'
-
-// ---------------------------------------------------------------------------
-// Raw store inspection
-// ---------------------------------------------------------------------------
-
-function listFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) return []
-  return fs.readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => path.join(entry.parentPath, entry.name))
-}
-
-/** Every store file whose raw bytes contain the needle. */
-function sweepStore(needle: string): string[] {
-  return listFiles(STORAGE_BASE_PATH).filter((file) =>
-    fs.readFileSync(file).includes(needle),
-  )
-}
-
-function dirBytes(dir: string): Buffer {
-  return Buffer.concat(listFiles(dir).map((file) => fs.readFileSync(file)))
-}
+const MASK = SECRET_MASK
+const ENVELOPE = SECRET_ENVELOPE
 
 // ---------------------------------------------------------------------------
 // Seeding
@@ -136,9 +121,9 @@ test.describe('V-SECRETS-AT-REST-FUNCTIONAL', () => {
       expect(profileBytes.includes(ENVELOPE), 'profile credential must carry an envelope').toBeTruthy()
       expect(profileBytes.includes(CANARY_B), 'canary B must not sit in the profile').toBeFalsy()
       expect(
-        profileBytes.includes(PROFILE_BASE_URL),
+        [...new Set(storedYamlValues(profileBytes.toString('utf-8'), 'base_url'))],
         'non-secret profile field must stay cleartext',
-      ).toBeTruthy()
+      ).toEqual([PROFILE_BASE_URL])
 
       expect(sweepStore(CANARY_A), 'canary A found in the store').toEqual([])
       expect(sweepStore(CANARY_B), 'canary B found in the store').toEqual([])

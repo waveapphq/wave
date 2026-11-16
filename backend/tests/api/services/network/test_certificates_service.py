@@ -224,6 +224,13 @@ def _bundle() -> list[x509.Certificate]:
         return x509.load_pem_x509_certificates(Path(certifi.where()).read_bytes())
 
 
+def _load_error(block: str) -> str:
+    """What cryptography says when it refuses ``block``."""
+    with pytest.raises(ValueError) as refused:
+        x509.load_pem_x509_certificate(block.encode("utf-8"))
+    return str(refused.value)
+
+
 def _expected_name(cert: x509.Certificate) -> str:
     for oid in (NameOID.COMMON_NAME, NameOID.ORGANIZATION_NAME):
         values = cert.subject.get_attributes_for_oid(oid)
@@ -356,6 +363,25 @@ class TestBuiltin:
 
         for cert in _bundle():
             assert names[cert.fingerprint(hashes.SHA256()).hex()] == _expected_name(cert)
+
+    @pytest.mark.usefixtures("certifi_june_2026")
+    def test_an_unreadable_authority_is_left_out_and_logged(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        chain: _Chain,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        pem = chain.root.cert_pem + BAD_BLOCK + chain.intermediate.cert_pem
+        monkeypatch.setattr(trust_store, "builtin_pem", lambda: pem)
+
+        with caplog.at_level(logging.WARNING, logger=certificates.__name__):
+            rows = certificates.builtin_rows()
+
+        assert rows == [_root_row(chain), _intermediate_row(chain)]
+        assert certificates.builtin_label() == ("June 2026", 2)
+        assert _logged_warnings(caplog) == [
+            f"Built-in certificate 2 cannot be read and is left out: {_load_error(BAD_BLOCK)}"
+        ]
 
 
 class TestHostStoreSummary:

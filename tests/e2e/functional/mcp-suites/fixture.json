@@ -1,0 +1,45 @@
+{
+  "name": "MCP Organize Member",
+  "description": "One Log Block: a saved Test the Suite and Regression tools can hold",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "log-mcp-organize",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Member marker",
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "mcp-organize-member",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-start-node-log-mcp-organize",
+        "source": "start-node",
+        "target": "log-mcp-organize"
+      }
+    ]
+  },
+  "variables": {},
+  "metadata": {
+    "tags": []
+  }
+}

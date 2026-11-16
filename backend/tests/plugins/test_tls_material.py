@@ -3,7 +3,8 @@
 Certificate material is inline PEM text or a path to a PEM file: a path is `~`-expanded and
 a relative one starts from the home folder of the user the process runs as. The HTTP block,
 the SSH session, the SQL TLS context and the remote worker all read through this module, so
-the rule has one home and rides to a remote host unchanged.
+the rule has one home and rides to a remote host unchanged. The home-relative join it uses is
+the one the Netcat core and the Helm executable lookup share.
 """
 
 import ast
@@ -14,9 +15,10 @@ from types import ModuleType
 
 import pytest
 
+from wavecore.connectivity.helm import _cli as helm_cli
 from wavecore.core.remote_exec.bundle import _vendored_sources, build_bundle
-from wavecore.plugins import _ssh_session, _tls_material, http_client
-from wavecore.plugins._tls_material import PEM_MARKER, is_pem, read_pem
+from wavecore.plugins import _netcat_core, _ssh_session, _tls_material, http_client
+from wavecore.plugins._tls_material import PEM_MARKER, from_home, is_pem, read_pem
 from wavecore.plugins.http_client import HTTPClientPlugin
 
 _MODULE = "wavecore.plugins._tls_material"
@@ -70,6 +72,24 @@ class TestIsPem:
     @pytest.mark.parametrize("material", ["/etc/wave/ca.pem", "~/certs/ca.pem", "ca.pem", ""])
     def test_anything_else_is_a_path(self, material: str) -> None:
         assert is_pem(material) is False
+
+
+class TestFromHome:
+    """An absolute path stays as written; a relative one starts at the home folder."""
+
+    def test_an_absolute_path_is_unchanged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+        assert from_home("/srv/payload.bin") == "/srv/payload.bin"
+
+    def test_a_relative_path_starts_at_the_home_folder(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+        assert from_home("data/payload.bin") == str(tmp_path / "home" / "data" / "payload.bin")
 
 
 class TestReadPem:
@@ -142,3 +162,18 @@ class TestOneHome:
         tree = ast.parse(inspect.getsource(module))
 
         assert _MODULE in _imported(tree, package="wavecore.plugins")
+
+    @pytest.mark.parametrize("module", [_netcat_core, helm_cli], ids=["netcat", "helm"])
+    def test_each_home_relative_path_imports_the_join(self, module: ModuleType) -> None:
+        tree = ast.parse(inspect.getsource(module))
+
+        assert f"{_MODULE}.from_home" in _imported(tree)
+
+    def test_no_other_vendored_core_joins_the_home_folder(self) -> None:
+        joins = {
+            name
+            for name, source in _vendored_sources().items()
+            if name.startswith("wavecore.") and 'expanduser("~")' in source
+        }
+
+        assert joins == {_MODULE}

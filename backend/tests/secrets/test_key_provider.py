@@ -176,7 +176,10 @@ class TestNewSecretKey:
         assert ConfiguredKeyProvider(config).get_key() == base64.b64decode(key)
 
     def test_two_calls_make_different_keys(self) -> None:
-        assert new_secret_key() != new_secret_key()
+        first = new_secret_key()
+        second = new_secret_key()
+
+        assert first != second
 
     def test_new_key_is_32_bytes_from_the_secrets_module_in_standard_base64(self) -> None:
         # These bytes encode to '+' and '/', the two characters a URL-safe encoder changes.

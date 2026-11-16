@@ -22,7 +22,8 @@ VALID_KEYWORDS_FIX = (
     "parallel, assert, remote, set, delay, wait_until, halt, break, continue, note"
 )
 FUNCTION_STEP_KEYS_FIX = (
-    "Valid keys: capture, element_types, key, label, profiles, secret_outputs, settings, version"
+    "Valid keys: capture, description, disabled, element_types, key, label, profiles, "
+    "secret_outputs, settings, version"
 )
 
 
@@ -161,9 +162,9 @@ class TestStepShape:
         assert finding["severity"] == "error"
         assert finding["step"] == "flow[0]"
         assert finding["problem"] == "Unknown key 'captur' on a 'block' step"
-        assert (
-            finding["fix"]
-            == "Valid keys: capture, element_types, key, label, profiles, secret_outputs, settings"
+        assert finding["fix"] == (
+            "Valid keys: capture, description, disabled, element_types, key, label, profiles, "
+            "secret_outputs, settings"
         )
 
     def test_unknown_key_inside_a_construct(self) -> None:
@@ -253,7 +254,7 @@ class TestFunctionStepForm:
         assert finding["problem"] == "Unknown key 'version' on a 'block' step"
 
 
-SWITCH_KEYS_FIX = "Valid keys: cases, default, label"
+SWITCH_KEYS_FIX = "Valid keys: cases, default, default_label, description, disabled, label"
 
 BARE_ON_SWITCH_RECIPE = """\
 test: {name: T}
@@ -343,14 +344,14 @@ NESTED_KEY_CASES = [
         },
         "flow[0].if.elif[0]",
         "Unknown key 'invalid_key' on an 'elif' entry",
-        "Valid keys: then, when",
+        "Valid keys: label, then, when",
         id="elif-entry",
     ),
     pytest.param(
         {"switch": {"cases": [{"when": "x == 1", "steps": [LOG_STEP], "brake": False}]}},
         "flow[0].switch.cases[0]",
         "Unknown key 'brake' on a 'switch' case",
-        "Valid keys: break, steps, when",
+        "Valid keys: break, label, steps, when",
         id="switch-case",
     ),
     pytest.param(
@@ -506,6 +507,297 @@ class TestNestedEntryKeys:
 
     def test_a_condition_list_given_as_text_is_left_to_the_validator(self) -> None:
         doc, findings = parse(make_recipe([{"assert": {"that": "x == 1"}}]))
+        assert findings == []
+        assert doc is not None
+
+
+GROUP_KEYS_FIX = "Valid keys: group"
+
+
+def _unknown_step_key(step: str, problem: str, fix: str) -> dict[str, Any]:
+    return {
+        "step": step,
+        "code": "UNKNOWN_STEP_KEY",
+        "severity": "error",
+        "problem": problem,
+        "fix": fix,
+    }
+
+
+def _group(*items: Any, **extra: Any) -> dict[str, Any]:
+    return {"group": list(items), **extra}
+
+
+GROUP_KEY_CASES = [
+    pytest.param(
+        {"assert": {"that": [_group("x == 1", "or", "x == 2", negate=True)]}},
+        "flow[0].assert.that[0]",
+        id="assert-that",
+    ),
+    pytest.param(
+        {"if": {"when": _group("x == 1", negate=True), "then": [LOG_STEP]}},
+        "flow[0].if.when",
+        id="if-one-condition",
+    ),
+    pytest.param(
+        {"while": {"conditions": ["x == 1", _group("x == 2", negate=True)], "body": [LOG_STEP]}},
+        "flow[0].while.conditions[1]",
+        id="while-condition-list",
+    ),
+    pytest.param(
+        {"wait_until": {"that": [_group("x == 1", negate=True)], "timeout": 1000}},
+        "flow[0].wait_until.that[0]",
+        id="wait-until-that",
+    ),
+    pytest.param(
+        {"assert": {"that": [_group("x == 1", _group("x == 2", negate=True))]}},
+        "flow[0].assert.that[0].group[1]",
+        id="group-inside-a-group",
+    ),
+]
+
+WHEN_LIST_CASES = [
+    pytest.param(
+        {"if": {"when": ["x == 1", _comparison(invalid_key=1)], "then": [LOG_STEP]}},
+        "flow[0].if.when[1]",
+        id="if-when",
+    ),
+    pytest.param(
+        {
+            "if": {
+                "when": "x == 1",
+                "then": [LOG_STEP],
+                "elif": [
+                    {"when": ["x == 2", "or", _comparison(invalid_key=2)], "then": [LOG_STEP]}
+                ],
+            }
+        },
+        "flow[0].if.elif[0].when[2]",
+        id="elif-when",
+    ),
+    pytest.param(
+        {
+            "switch": {
+                "cases": [{"when": [_comparison(invalid_key="equals")], "steps": [LOG_STEP]}],
+            }
+        },
+        "flow[0].switch.cases[0].when[0]",
+        id="case-when",
+    ),
+]
+
+
+class TestConditionGroupKeys:
+    """A condition group takes only its own key, and the conditions inside it get the
+    comparison key check at their own place (REQ-5.2.7.3)."""
+
+    @pytest.mark.parametrize(("step", "path"), GROUP_KEY_CASES)
+    def test_an_unknown_key_on_a_group_is_refused(self, step: dict[str, Any], path: str) -> None:
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(path, "Unknown key 'negate' on a condition group", GROUP_KEYS_FIX)
+        ]
+
+    def test_a_comparison_inside_a_group_gets_the_comparison_key_check(self) -> None:
+        step = {"assert": {"that": [_group("x == 1", _comparison(invalid_key=1))]}}
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(
+                "flow[0].assert.that[0].group[1]",
+                "Unknown key 'invalid_key' on a comparison condition",
+                COMPARISON_KEYS_FIX,
+            )
+        ]
+
+    @pytest.mark.parametrize(("step", "path"), WHEN_LIST_CASES)
+    def test_a_when_list_is_walked_by_index(self, step: dict[str, Any], path: str) -> None:
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(
+                path, "Unknown key 'invalid_key' on a comparison condition", COMPARISON_KEYS_FIX
+            )
+        ]
+
+    def test_condition_lists_with_markers_and_groups_parse_clean(self) -> None:
+        nested = _group("x == 1", "or", _group(_comparison(), "and", "x == 3"))
+        flow = [
+            {
+                "if": {
+                    "when": ["x == 1", "or", nested],
+                    "then": [LOG_STEP],
+                    "elif": [{"when": [_comparison(), "x == 2"], "then": [LOG_STEP]}],
+                }
+            },
+            {"switch": {"cases": [{"when": [nested, "or", "x == 4"], "steps": [LOG_STEP]}]}},
+            {"while": {"conditions": [nested], "body": [LOG_STEP]}},
+            {"assert": {"that": ["x == 1", "or", nested]}},
+            {"wait_until": {"that": [nested], "timeout": 1000}},
+        ]
+        doc, findings = parse(make_recipe(flow))
+        assert findings == []
+        assert doc is not None
+
+
+CONSTRUCT_STEPS: list[tuple[str, dict[str, Any]]] = [
+    ("if", {"when": "x == 1", "then": [LOG_STEP]}),
+    ("switch", {"cases": [{"when": "x == 1", "steps": [LOG_STEP]}]}),
+    ("for", {"count": 1, "body": [LOG_STEP]}),
+    ("for_each", {"collection": {"expr": "items"}, "body": [LOG_STEP]}),
+    ("while", {"conditions": "x == 1", "body": [LOG_STEP]}),
+    ("try", {"steps": [LOG_STEP]}),
+    ("parallel", {"branches": [{"steps": [LOG_STEP]}, {"steps": [LOG_STEP]}]}),
+    ("assert", {"that": ["x == 1"]}),
+    ("remote", {"settings": {"session_id": {"expr": "sid"}}, "body": [LOG_STEP]}),
+    ("wait_until", {"that": ["x == 1"], "timeout": 1000}),
+]
+
+LEAF_STEPS: list[tuple[str, dict[str, Any]]] = [
+    ("block", {"block": "log", "settings": {"message": "hi"}}),
+    ("function", {"function": "helper", "settings": {"n": 1}}),
+    ("set", {"set": {"counter": 1}}),
+    ("delay", {"delay": 500}),
+    ("halt", {"halt": {}}),
+    ("break", {"break": {}}),
+    ("continue", {"continue": {}}),
+]
+
+IF_CONSTRUCT_KEYS_FIX = (
+    "Valid keys: description, disabled, elif, else, else_label, if_label, label, then, when"
+)
+
+
+def _article(keyword: str) -> str:
+    return "an" if keyword[0] in "aeiou" else "a"
+
+
+class TestKeysBesideAConstruct:
+    """Beside a construct keyword only `key` is accepted; a construct's own keys go inside
+    its mapping, and every key the format defines is accepted where it belongs (REQ-5.2.7.3)."""
+
+    @pytest.mark.parametrize(
+        ("key", "value"),
+        [
+            ("label", "Gate"),
+            ("settings", {"x": 1}),
+            ("capture", {"passed": "ok"}),
+            ("profiles", [{"profile": "creds"}]),
+        ],
+        ids=["label", "settings", "capture", "profiles"],
+    )
+    def test_a_key_beside_if_is_refused(self, key: str, value: Any) -> None:
+        step = {"if": {"when": "x == 1", "then": [LOG_STEP]}, key: value}
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key("flow[0]", f"Unknown key '{key}' on an 'if' step", "Valid keys: key")
+        ]
+
+    @pytest.mark.parametrize(
+        ("keyword", "construct"), CONSTRUCT_STEPS, ids=[k for k, _ in CONSTRUCT_STEPS]
+    )
+    def test_a_label_beside_any_construct_is_refused(
+        self, keyword: str, construct: dict[str, Any]
+    ) -> None:
+        doc, findings = parse(make_recipe([{keyword: construct, "label": "Named"}]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(
+                "flow[0]",
+                f"Unknown key 'label' on {_article(keyword)} '{keyword}' step",
+                "Valid keys: key",
+            )
+        ]
+
+    def test_capture_inside_if_is_refused(self) -> None:
+        step = {"if": {"when": "x == 1", "then": [LOG_STEP], "capture": {"passed": "ok"}}}
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(
+                "flow[0].if", "Unknown key 'capture' on an 'if' construct", IF_CONSTRUCT_KEYS_FIX
+            )
+        ]
+
+    def test_every_branch_label_key_is_accepted(self) -> None:
+        flow = [
+            {
+                "if": {
+                    "when": "x == 1",
+                    "then": [LOG_STEP],
+                    "elif": [{"when": "x == 2", "then": [LOG_STEP], "label": "Two"}],
+                    "else": [LOG_STEP],
+                    "if_label": "One",
+                    "else_label": "Other",
+                }
+            },
+            {
+                "switch": {
+                    "cases": [{"when": "x == 1", "steps": [LOG_STEP], "label": "One"}],
+                    "default": [LOG_STEP],
+                    "default_label": "Other",
+                }
+            },
+        ]
+        doc, findings = parse(make_recipe(flow))
+        assert findings == []
+        assert doc is not None
+
+    def test_the_for_step_and_the_for_each_collection_type_are_accepted(self) -> None:
+        flow = [
+            {"for": {"count": 6, "step": 2, "body": [LOG_STEP]}},
+            {"for_each": {"collection": {"expr": "items"}, "collection_type": "map", "body": []}},
+        ]
+        doc, findings = parse(make_recipe(flow))
+        assert findings == []
+        assert doc is not None
+
+    @pytest.mark.parametrize(
+        ("keyword", "construct"), CONSTRUCT_STEPS, ids=[k for k, _ in CONSTRUCT_STEPS]
+    )
+    def test_description_and_disabled_inside_every_construct_are_accepted(
+        self, keyword: str, construct: dict[str, Any]
+    ) -> None:
+        identity = {"description": "Checks the gate", "disabled": True}
+        doc, findings = parse(make_recipe([{keyword: {**construct, **identity}, "key": "k1"}]))
+        assert findings == []
+        assert doc is not None
+
+    @pytest.mark.parametrize(("keyword", "step"), LEAF_STEPS, ids=[k for k, _ in LEAF_STEPS])
+    def test_description_and_disabled_beside_every_leaf_step_are_accepted(
+        self, keyword: str, step: dict[str, Any]
+    ) -> None:
+        doc, findings = parse(
+            make_recipe([{**step, "description": "Checks the gate", "disabled": False}])
+        )
+        assert findings == []
+        assert doc is not None
+
+    @pytest.mark.parametrize(
+        ("key", "value"),
+        [("description", "Checks the gate"), ("disabled", True)],
+        ids=["description", "disabled"],
+    )
+    def test_a_note_takes_only_its_label_and_key(self, key: str, value: Any) -> None:
+        step = {"note": {"text": "Check the pods"}, "label": "Reminder", "key": "n1", key: value}
+        doc, findings = parse(make_recipe([step]))
+        assert doc is None
+        assert findings == [
+            _unknown_step_key(
+                "flow[0]", f"Unknown key '{key}' on a 'note' step", "Valid keys: key, label"
+            )
+        ]
+
+    def test_secret_rows_beside_set_is_accepted(self) -> None:
+        step = {
+            "set": {"api_token": {"expr": "raw_token"}, "user": "wave"},
+            "secret_rows": ["api_token"],
+            "label": "Store credentials",
+            "key": "creds",
+        }
+        doc, findings = parse(make_recipe([step]))
         assert findings == []
         assert doc is not None
 
@@ -753,9 +1045,9 @@ INPUT_KEYS_FIX = (
 OUTPUT_KEYS_FIX = (
     "Valid keys: default, description, element_types, expr, name, secret, template, type"
 )
-FUNCTION_KEYS_FIX = "Valid keys: flow, inputs, name, outputs, variables"
+FUNCTION_KEYS_FIX = "Valid keys: flow, inputs, name, notes, outputs, variables"
 
-OLD_ARRAY_ENUM_INPUT: dict[str, Any] = {
+ARRAY_ENUM_INPUT: dict[str, Any] = {
     "name": "level",
     "type": "array",
     "required": True,
@@ -783,7 +1075,7 @@ DECLARATION_KEY_CASES = [
         dump_recipe({"test": {"name": "T"}, "flow": [LOG_STEP], "invalid_key": "x"}),
         "recipe",
         "Unknown key 'invalid_key' on the recipe",
-        "Valid keys: flow, functions, test, variables",
+        "Valid keys: flow, functions, notes, test, variables",
         id="top-level",
     ),
     pytest.param(
@@ -818,11 +1110,11 @@ DECLARATION_KEY_CASES = [
         id="function-variable",
     ),
     pytest.param(
-        make_recipe([LOG_STEP], functions=[_function(inputs=[OLD_ARRAY_ENUM_INPUT])]),
+        make_recipe([LOG_STEP], functions=[_function(inputs=[ARRAY_ENUM_INPUT])]),
         "functions[f].inputs.level",
         "Unknown key 'enumValueType' on input 'level'",
         INPUT_KEYS_FIX,
-        id="input-old-enum-value-type",
+        id="input-enum-value-type",
     ),
     pytest.param(
         make_recipe(

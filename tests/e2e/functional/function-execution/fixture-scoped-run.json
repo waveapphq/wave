@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {},
             "outputBindings": { "result": "caller_var" },
@@ -44,7 +43,6 @@
                     "version": "1.0.0",
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": { "message": "'scoped run hit'", "level": "INFO" },
                       "outputBindings": { "line": "result" },

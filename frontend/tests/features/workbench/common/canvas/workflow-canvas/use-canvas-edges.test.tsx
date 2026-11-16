@@ -94,7 +94,7 @@ describe('useCanvasEdges', () => {
     expect(result.current.allEdges).toHaveLength(1)
   })
 
-  it('applies traversed style to for loop body handle edge when both source and target executed', () => {
+  it('applies traversed style to for loop body handle edge when the loop ran its body', () => {
     useExecutionStore.setState({
       activeExecutionId: 'exec-for',
       executions: {
@@ -104,7 +104,7 @@ describe('useCanvasEdges', () => {
           status: 'running',
           startTime: Date.now(),
           blocks: {
-            'for-1': { id: 'be-for', blockId: 'for-1', status: 'success' },
+            'for-1': { id: 'be-for', blockId: 'for-1', status: 'success', lanes: ['body'] },
             'body-1': { id: 'be-body', blockId: 'body-1', status: 'success' },
           },
           progress: 50,
@@ -126,9 +126,7 @@ describe('useCanvasEdges', () => {
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
     expect(result.current.allEdges).toHaveLength(1)
-    // Edge should be styled (not default) when both nodes have execution state
-    const edge = result.current.allEdges[0]
-    expect(edge.style).toBeDefined()
+    expect(result.current.allEdges[0].style).toEqual({ stroke: '#22C55E', strokeWidth: 2 })
   })
 
   it('returns no execution style for for loop edge when source not yet executed', () => {
@@ -301,12 +299,22 @@ describe('useCanvasEdges', () => {
 const TRAVERSED_STYLE = { stroke: '#22C55E', strokeWidth: 2 }
 const DIMMED_STYLE = { stroke: '#71717A', strokeWidth: 1, opacity: 0.3 }
 
-type BlockStatus = 'success' | 'failed' | 'skipped'
+const FAILED_STYLE = { stroke: '#EF4444', strokeWidth: 2 }
 
-function seedRun(executionId: string, statuses: Record<string, BlockStatus>) {
-  const blocks: Record<string, { id: string; blockId: string; status: BlockStatus }> = {}
+type BlockStatus = 'success' | 'failed' | 'skipped' | 'running' | 'pending'
+
+/** Seed a live run: each block's status, and the lanes each block took. */
+function seedRun(
+  executionId: string,
+  statuses: Record<string, BlockStatus>,
+  lanes: Record<string, string[]> = {},
+) {
+  const blocks: Record<
+    string,
+    { id: string; blockId: string; status: BlockStatus; lanes?: string[] }
+  > = {}
   for (const [blockId, status] of Object.entries(statuses)) {
-    blocks[blockId] = { id: `be-${blockId}`, blockId, status }
+    blocks[blockId] = { id: `be-${blockId}`, blockId, status, lanes: lanes[blockId] }
   }
 
   useExecutionStore.setState({
@@ -351,13 +359,17 @@ function styleOf(edges: Edge[], id: string): Edge['style'] {
 describe('useCanvasEdges - Switch lane styling', () => {
   it('paints a taken case lane with the branch traversed style', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-taken', {
-      'sw-1': 'success',
-      'case-a': 'success',
-      'case-b': 'skipped',
-      fallback: 'skipped',
-      after: 'success',
-    })
+    seedRun(
+      'exec-switch-taken',
+      {
+        'sw-1': 'success',
+        'case-a': 'success',
+        'case-b': 'skipped',
+        fallback: 'skipped',
+        after: 'success',
+      },
+      { 'sw-1': ['branch_0'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -379,12 +391,16 @@ describe('useCanvasEdges - Switch lane styling', () => {
       ],
       selectedEdgeIds: [],
     })
-    seedRun('exec-lane-parity', {
-      'sw-1': 'success',
-      'sw-target': 'success',
-      'ie-1': 'success',
-      'ie-target': 'success',
-    })
+    seedRun(
+      'exec-lane-parity',
+      {
+        'sw-1': 'success',
+        'sw-target': 'success',
+        'ie-1': 'success',
+        'ie-target': 'success',
+      },
+      { 'sw-1': ['branch_0'], 'ie-1': ['branch_0'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -397,13 +413,17 @@ describe('useCanvasEdges - Switch lane styling', () => {
   // Guard: only one lane could ever highlight in a single run.
   it('highlights every case lane that ran when Break is off', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-fallthrough', {
-      'sw-1': 'success',
-      'case-a': 'success',
-      'case-b': 'success',
-      fallback: 'skipped',
-      after: 'success',
-    })
+    seedRun(
+      'exec-switch-fallthrough',
+      {
+        'sw-1': 'success',
+        'case-a': 'success',
+        'case-b': 'success',
+        fallback: 'skipped',
+        after: 'success',
+      },
+      { 'sw-1': ['branch_0', 'branch_1'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -414,13 +434,17 @@ describe('useCanvasEdges - Switch lane styling', () => {
   // Guard: an untaken lane painted green because 'skipped' counted as executed.
   it('dims a case lane whose chain was skipped', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-untaken', {
-      'sw-1': 'success',
-      'case-a': 'success',
-      'case-b': 'skipped',
-      fallback: 'skipped',
-      after: 'success',
-    })
+    seedRun(
+      'exec-switch-untaken',
+      {
+        'sw-1': 'success',
+        'case-a': 'success',
+        'case-b': 'skipped',
+        fallback: 'skipped',
+        after: 'success',
+      },
+      { 'sw-1': ['branch_0'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -429,13 +453,17 @@ describe('useCanvasEdges - Switch lane styling', () => {
 
   it('dims the default lane when a case matched', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-default-untaken', {
-      'sw-1': 'success',
-      'case-a': 'success',
-      'case-b': 'skipped',
-      fallback: 'skipped',
-      after: 'success',
-    })
+    seedRun(
+      'exec-switch-default-untaken',
+      {
+        'sw-1': 'success',
+        'case-a': 'success',
+        'case-b': 'skipped',
+        fallback: 'skipped',
+        after: 'success',
+      },
+      { 'sw-1': ['branch_0'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -444,7 +472,7 @@ describe('useCanvasEdges - Switch lane styling', () => {
 
   it('dims a case lane whose chain never started', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-unstarted', { 'sw-1': 'success', 'case-a': 'success' })
+    seedRun('exec-switch-unstarted', { 'sw-1': 'success', 'case-a': 'success' }, { 'sw-1': ['branch_0'] })
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -454,13 +482,17 @@ describe('useCanvasEdges - Switch lane styling', () => {
   // Guard: the always-present then egress must take the container styling.
   it('paints the then egress traversed once the continuation ran', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-then', {
-      'sw-1': 'success',
-      'case-a': 'success',
-      'case-b': 'skipped',
-      fallback: 'skipped',
-      after: 'success',
-    })
+    seedRun(
+      'exec-switch-then',
+      {
+        'sw-1': 'success',
+        'case-a': 'success',
+        'case-b': 'skipped',
+        fallback: 'skipped',
+        after: 'success',
+      },
+      { 'sw-1': ['branch_0'] },
+    )
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -469,7 +501,7 @@ describe('useCanvasEdges - Switch lane styling', () => {
 
   it('dims the then egress while the continuation has not run', () => {
     seedSwitchGraph()
-    seedRun('exec-switch-then-pending', { 'sw-1': 'success', 'case-a': 'success' })
+    seedRun('exec-switch-then-pending', { 'sw-1': 'success', 'case-a': 'success' }, { 'sw-1': ['branch_0'] })
 
     const { result } = renderHook(() => useCanvasEdges(defaultParams))
 
@@ -490,6 +522,246 @@ describe('useCanvasEdges - Switch lane styling', () => {
 
     for (const id of ['e-case-a', 'e-case-b', 'e-default', 'e-then']) {
       expect(styleOf(result.current.allEdges, id)).toEqual(DIMMED_STYLE)
+    }
+  })
+})
+
+// ============================================================================
+// Lane wires show the lanes the run took (REQ-3.5.1.6, REQ-3.5.1.11,
+// REQ-3.5.1.17, REQ-3.5.4.3, REQ-3.2.2.6)
+// ============================================================================
+
+type Link = { id: string; source: string; target: string; sourceHandle?: string }
+
+/** Seed a graph whose Blocks are every end of ``links``. */
+function seedLinks(links: Link[]) {
+  const ids = [...new Set(links.flatMap((link) => [link.source, link.target]))]
+  useWorkflowStore.setState({
+    nodes: ids.map((id, index) => ({
+      id,
+      type: 'workflowNode',
+      data: { label: id, elementType: 'log' },
+      position: { x: index * 100, y: 0 },
+    })),
+    edges: links.map((link) => ({ ...link, type: 'smoothstep' })),
+    selectedEdgeIds: [],
+  })
+}
+
+function renderEdges() {
+  return renderHook(() => useCanvasEdges(defaultParams)).result.current.allEdges
+}
+
+describe('useCanvasEdges - lane wires show the lanes the run took', () => {
+  const JOINED_BRANCHES: Link[] = [
+    { id: 'e-if', source: 'ie-1', target: 'join', sourceHandle: 'branch_0' },
+    { id: 'e-elif', source: 'ie-1', target: 'join', sourceHandle: 'branch_1' },
+    { id: 'e-else', source: 'ie-1', target: 'join', sourceHandle: 'branch_2' },
+  ]
+
+  it('lights only the branch taken when every branch joins one Block', () => {
+    seedLinks(JOINED_BRANCHES)
+    seedRun('exec-joined', { 'ie-1': 'success', join: 'success' }, { 'ie-1': ['branch_0'] })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-if')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-elif')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-else')).toEqual(DIMMED_STYLE)
+  })
+
+  it('lights the branch taken when the branches lead to different Blocks', () => {
+    seedLinks([
+      { id: 'e-if', source: 'ie-1', target: 'a', sourceHandle: 'branch_0' },
+      { id: 'e-elif', source: 'ie-1', target: 'b', sourceHandle: 'branch_1' },
+      { id: 'e-else', source: 'ie-1', target: 'c', sourceHandle: 'branch_2' },
+    ])
+    seedRun('exec-apart', { 'ie-1': 'success', a: 'success' }, { 'ie-1': ['branch_0'] })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-if')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-elif')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-else')).toEqual(DIMMED_STYLE)
+  })
+
+  it('dims every branch of an If/Else that matched none', () => {
+    seedLinks(JOINED_BRANCHES)
+    seedRun('exec-no-match', { 'ie-1': 'success' })
+
+    const edges = renderEdges()
+
+    for (const id of ['e-if', 'e-elif', 'e-else']) {
+      expect(styleOf(edges, id)).toEqual(DIMMED_STYLE)
+    }
+  })
+
+  it.each([
+    ['pass', TRAVERSED_STYLE, DIMMED_STYLE],
+    ['fail', DIMMED_STYLE, FAILED_STYLE],
+  ])('paints the split Assert lane %s and dims the other where both join', (lane, pass, fail) => {
+    seedLinks([
+      { id: 'e-pass', source: 'gate', target: 'join', sourceHandle: 'pass' },
+      { id: 'e-fail', source: 'gate', target: 'join', sourceHandle: 'fail' },
+    ])
+    seedRun('exec-gate', { gate: 'success', join: 'success' }, { gate: [lane] })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-pass')).toEqual(pass)
+    expect(styleOf(edges, 'e-fail')).toEqual(fail)
+  })
+
+  it('dims the body of a loop that never ran it and lights its then lane', () => {
+    seedLinks([
+      { id: 'e-body', source: 'loop', target: 'body', sourceHandle: 'body' },
+      { id: 'e-then', source: 'loop', target: 'after', sourceHandle: 'then' },
+    ])
+    seedRun('exec-zero-rounds', { loop: 'success', body: 'skipped', after: 'success' })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-body')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-then')).toEqual(TRAVERSED_STYLE)
+  })
+
+  it('lights the body of a loop that ran it, whatever its first Block shows', () => {
+    seedLinks([{ id: 'e-body', source: 'loop', target: 'disabled', sourceHandle: 'body' }])
+    seedRun('exec-pass-through', { loop: 'success', disabled: 'skipped' }, { loop: ['body'] })
+
+    expect(styleOf(renderEdges(), 'e-body')).toEqual(TRAVERSED_STYLE)
+  })
+
+  it('lights the try path and dims the catch path that never ran', () => {
+    seedLinks([
+      { id: 'e-try', source: 'guard', target: 'trier', sourceHandle: 'try' },
+      { id: 'e-catch', source: 'guard', target: 'catcher', sourceHandle: 'catch' },
+      { id: 'e-then', source: 'guard', target: 'after', sourceHandle: 'then' },
+    ])
+    seedRun(
+      'exec-try',
+      { guard: 'success', trier: 'success', catcher: 'skipped', after: 'success' },
+      { guard: ['try'] },
+    )
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-try')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-catch')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-then')).toEqual(TRAVERSED_STYLE)
+  })
+
+  it('lights a Wait Until retry lane only when a round ran it', () => {
+    seedLinks([
+      { id: 'e-retried', source: 'wait-1', target: 'probe-1', sourceHandle: 'retry' },
+      { id: 'e-met', source: 'wait-2', target: 'probe-2', sourceHandle: 'retry' },
+    ])
+    seedRun(
+      'exec-wait',
+      { 'wait-1': 'success', 'probe-1': 'success', 'wait-2': 'success', 'probe-2': 'skipped' },
+      { 'wait-1': ['retry'] },
+    )
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-retried')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-met')).toEqual(DIMMED_STYLE)
+  })
+
+  it('lights every Parallel lane that started', () => {
+    seedLinks([
+      { id: 'e-one', source: 'fork', target: 'one', sourceHandle: 'branch_1' },
+      { id: 'e-two', source: 'fork', target: 'two', sourceHandle: 'branch_2' },
+    ])
+    seedRun(
+      'exec-fork',
+      { fork: 'running', one: 'success', two: 'running' },
+      { fork: ['branch_1', 'branch_2'] },
+    )
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-one')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-two')).toEqual(TRAVERSED_STYLE)
+  })
+
+  it('dims the then lane when the Block after it was skipped and lights it once that Block runs', () => {
+    seedLinks([
+      { id: 'e-skipped', source: 'guard', target: 'never', sourceHandle: 'then' },
+      { id: 'e-running', source: 'loop', target: 'next', sourceHandle: 'then' },
+    ])
+    seedRun('exec-then', { guard: 'failed', never: 'skipped', loop: 'success', next: 'running' })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-skipped')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-running')).toEqual(TRAVERSED_STYLE)
+  })
+
+  it('lights the lane a disabled Block passed the flow through', () => {
+    seedLinks([
+      { id: 'e-through', source: 'ie-1', target: 'first', sourceHandle: 'branch_0' },
+      { id: 'e-muted', source: 'ie-1', target: 'other', sourceHandle: 'branch_1' },
+    ])
+    seedRun(
+      'exec-disabled',
+      { 'ie-1': 'skipped', first: 'success', other: 'skipped' },
+      { 'ie-1': ['branch_0'] },
+    )
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-through')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-muted')).toEqual(DIMMED_STYLE)
+  })
+
+  it('leaves the lane wires of a Block that has not run unstyled', () => {
+    seedLinks([
+      { id: 'e-start', source: 'start-node', target: 'ie-1' },
+      { id: 'e-if', source: 'ie-1', target: 'a', sourceHandle: 'branch_0' },
+      { id: 'e-then', source: 'ie-1', target: 'b', sourceHandle: 'then' },
+    ])
+    seedRun('exec-not-yet', { a: 'success', b: 'success' })
+
+    const edges = renderEdges()
+
+    expect(styleOf(edges, 'e-if')).toBeUndefined()
+    expect(styleOf(edges, 'e-then')).toBeUndefined()
+  })
+
+  it('reads the lanes of a history canvas from its provider', () => {
+    seedLinks(JOINED_BRANCHES)
+    seedRun('exec-live-other', { 'ie-1': 'success', join: 'success' }, { 'ie-1': ['branch_2'] })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <HistoricalBlockStatesProvider
+        blockStates={{ 'ie-1': 'success', join: 'success' }}
+        lanes={{ 'ie-1': ['branch_1'] }}
+      >
+        {children}
+      </HistoricalBlockStatesProvider>
+    )
+
+    const edges = renderHook(() => useCanvasEdges(defaultParams), { wrapper }).result.current
+      .allEdges
+
+    expect(styleOf(edges, 'e-if')).toEqual(DIMMED_STYLE)
+    expect(styleOf(edges, 'e-elif')).toEqual(TRAVERSED_STYLE)
+    expect(styleOf(edges, 'e-else')).toEqual(DIMMED_STYLE)
+  })
+
+  it('dims every lane of a history canvas whose run stored no lanes', () => {
+    seedLinks(JOINED_BRANCHES)
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <HistoricalBlockStatesProvider blockStates={{ 'ie-1': 'success', join: 'success' }}>
+        {children}
+      </HistoricalBlockStatesProvider>
+    )
+
+    const edges = renderHook(() => useCanvasEdges(defaultParams), { wrapper }).result.current
+      .allEdges
+
+    for (const id of ['e-if', 'e-elif', 'e-else']) {
+      expect(styleOf(edges, id)).toEqual(DIMMED_STYLE)
     }
   })
 })

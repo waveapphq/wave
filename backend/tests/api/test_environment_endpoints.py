@@ -21,7 +21,11 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import NOT_OBJECT_BODIES, assert_refused, send_text
+from tests.api.error_reply_support import assert_error_reply
 from wavecore.api.exceptions import ConflictException, ValidationException
+
+_STALE_ETAG = "Precondition failed: resource has been modified"
 
 
 class TestListEnvironmentsEndpoint:
@@ -843,10 +847,9 @@ class TestDeleteEnvironmentEndpoint:
 
             response = client.delete(f"/environments/{env_id}")
 
-            assert response.status_code == 404
-            data = response.json()
-            assert data["success"] is False
-            assert "not found" in data["error"]["message"].lower()
+            assert_error_reply(
+                response, 404, "NOT_FOUND", f"Environment with ID '{env_id}' not found"
+            )
 
     def test_delete_environment_succeeds_when_in_use(self, client: TestClient) -> None:
         """DELETE /environments/{id} does not block on usage; cascade-removes."""
@@ -1322,26 +1325,16 @@ class TestEnvironmentConcurrencyControl:
 
     def test_update_with_if_match_fails_when_mismatched(self, client: TestClient) -> None:
         """Test that PUT with mismatched If-Match returns 412."""
-        env_id = str(uuid.uuid4())
+        env_id = client.post("/environments", json={"name": "Concurrent Env"}).json()["data"]["id"]
 
-        with patch(
-            "wavecore.api.routes.environments.routes.environment_service.update_environment"
-        ) as mock_update:
-            exc = ConflictException("Precondition failed: resource has been modified")
-            exc.status_code = 412
-            exc.error_code = "PRECONDITION_FAILED"
-            mock_update.side_effect = exc
+        response = client.put(
+            f"/environments/{env_id}",
+            json={"name": "Updated Env"},
+            headers={"If-Match": '"stale-etag"'},
+        )
 
-            response = client.put(
-                f"/environments/{env_id}",
-                json={"name": "Updated Env"},
-                headers={"If-Match": '"stale-etag"'},
-            )
-
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+        assert client.get(f"/environments/{env_id}").json()["data"]["name"] == "Concurrent Env"
 
     def test_update_returns_new_etag_header(self, client: TestClient) -> None:
         """Test that PUT returns new ETag header after successful update."""
@@ -1387,10 +1380,16 @@ class TestEnvironmentConcurrencyControl:
                 headers={"If-Match": '"definitely-wrong-etag"'},
             )
 
-            assert response.status_code == 412
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+            assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+
+    def test_delete_with_the_current_if_match_succeeds(self, client: TestClient) -> None:
+        env_id = client.post("/environments", json={"name": "Current Env"}).json()["data"]["id"]
+        etag = client.get(f"/environments/{env_id}").headers["ETag"]
+
+        response = client.delete(f"/environments/{env_id}", headers={"If-Match": etag})
+
+        assert response.status_code == 204, response.text
+        assert client.get(f"/environments/{env_id}").status_code == 404
 
     def test_delete_without_if_match_succeeds(self, client: TestClient) -> None:
         """Test that DELETE without If-Match header still works."""
@@ -1404,3 +1403,29 @@ class TestEnvironmentConcurrencyControl:
             response = client.delete(f"/environments/{env_id}")
 
             assert response.status_code == 204
+
+
+class TestAnEnvironmentBodyThatIsNotAJsonObject:
+    """An Environment write whose body is not a JSON object is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/environments", id="create"),
+            pytest.param("PUT", "/environments/{id}", id="update"),
+            pytest.param("POST", "/environments/export", id="export"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)

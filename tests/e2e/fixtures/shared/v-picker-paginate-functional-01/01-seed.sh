@@ -32,11 +32,11 @@ for i in $(seq 1 60); do
   SID="e9100003-0001-0001-0001-$(printf "%012d" "$i")"
   EID="e9100004-0001-0001-0001-$(printf "%012d" "$i")"
   [[ -n "$SUITE_OPS" ]] && SUITE_OPS+=","
-  SUITE_OPS+="{\"op\":\"add\",\"entity\":{\"id\":\"$SID\",\"name\":\"PKR2S Suite $NUM\",\"version\":\"1\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
+  SUITE_OPS+="{\"op\":\"add\",\"entity\":{\"id\":\"$SID\",\"name\":\"PKR2S Suite $NUM\",\"version\":\"1.0.0\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
   [[ -n "$EXEC_OPS" ]] && EXEC_OPS+=","
   EXEC_OPS+="{\"op\":\"add\",\"entity\":{\"id\":\"$EID\",\"entity_type\":\"suite\",\"entity_id\":\"$SID\",\"status\":\"failed\",\"progress\":100,\"started_at\":\"$TS\",\"updated_at\":\"$TS\",\"tests_total\":1,\"tests_selected\":1,\"completed_at\":\"$TS\"}}"
 done
-SUITE_OPS+=",{\"op\":\"add\",\"entity\":{\"id\":\"$TARGET_SUITE_ID\",\"name\":\"PKR2 Target Suite\",\"version\":\"1\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
+SUITE_OPS+=",{\"op\":\"add\",\"entity\":{\"id\":\"$TARGET_SUITE_ID\",\"name\":\"PKR2 Target Suite\",\"version\":\"1.0.0\",\"description\":\"\",\"tags\":[],\"variables\":{},\"created_at\":\"$TS\",\"updated_at\":\"$TS\",\"metadata\":{},\"tests\":[]}}"
 _bulk suites "[$SUITE_OPS]"
 _bulk executions "[$EXEC_OPS]"
 

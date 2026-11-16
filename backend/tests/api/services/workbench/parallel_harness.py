@@ -7,6 +7,7 @@ Parallel test modules describe only the behavior they cover.
 """
 
 import asyncio
+import re
 from typing import Any
 
 import pytest
@@ -80,7 +81,6 @@ def make_node(
             "disabled": disabled,
             "expressionFields": [],
             "templateFields": [],
-            "variableExpressionKeys": [],
         },
     }
 
@@ -127,7 +127,7 @@ def setter_node(
         name=name,
     )
     if expressions:
-        node["data"]["variableExpressionKeys"] = list(values)
+        node["data"]["expressionFields"] = [f"variables.{row}" for row in values]
     return node
 
 
@@ -379,3 +379,22 @@ def log_messages(session_id: str) -> list[str]:
         for entry in log_streaming_service.get_logs(session_id)
         if isinstance(entry, dict)
     ]
+
+
+_COMPLETION_LINE = re.compile(r"^Completed '(?P<name>.*)' \((?P<ms>\d+) ms\)$")
+_DURATION = re.compile(r" \(\d+ ms\)$")
+
+
+def lifecycle_lines(session_id: str) -> list[str]:
+    """The run's Block start and completion lines in order, each duration written as ``<n>``."""
+    return [
+        _DURATION.sub(" (<n> ms)", message)
+        for message in log_messages(session_id)
+        if message.startswith(("Executing '", "Completed '"))
+    ]
+
+
+def completion_durations(session_id: str, block_name: str) -> list[int]:
+    """The durations the run's completion lines give the Block named ``block_name``, in order."""
+    matches = (_COMPLETION_LINE.match(message) for message in log_messages(session_id))
+    return [int(found["ms"]) for found in matches if found and found["name"] == block_name]

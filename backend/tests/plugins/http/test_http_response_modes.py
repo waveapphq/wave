@@ -73,7 +73,7 @@ class TestResponseModeMetadata:
         assert file_path["required"] is False
         assert file_path["trim"] is True
 
-    def test_the_file_name_parameter_is_gone(self):
+    def test_there_is_no_file_name_parameter(self):
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         names = {p["name"] for p in HTTPClientPlugin().metadata["parameters"]}
@@ -807,7 +807,7 @@ class TestFileModeCap:
 
 
 class TestHTTPPluginBinaryResponse:
-    """Body-mode binary responses stay base64-encoded (migrated, unchanged)."""
+    """Body-mode binary responses are base64-encoded."""
 
     @pytest.mark.asyncio
     async def test_binary_response_base64_encoded(self):
@@ -832,7 +832,7 @@ class TestHTTPPluginBinaryResponse:
 
 
 class TestHTTPPluginEmptyResponseBody:
-    """Empty bodies (204 No Content) stay empty (migrated, unchanged)."""
+    """Empty bodies (204 No Content) stay empty."""
 
     @pytest.mark.asyncio
     async def test_204_no_content_empty_body(self):

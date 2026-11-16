@@ -395,3 +395,42 @@ class TestSharedFunctionBlockFromAGivenRegistry:
     def test_the_registry_is_a_keyword_argument(self) -> None:
         with pytest.raises(TypeError):
             block_schema(_shared_block("no-such-function", "1.0.0"), {})
+
+
+def _control_block(element_type: str, **values: Any) -> dict[str, Any]:
+    return {
+        "elementType": element_type,
+        "nodeType": "control",
+        "version": "1.0.0",
+        "config": {"values": dict(values)},
+    }
+
+
+class TestFieldDefault:
+    """One Block field's declared default, read from the Block's own field list (REQ-3.1.1.5)."""
+
+    @pytest.mark.parametrize(
+        ("data", "name", "expected"),
+        [
+            (_control_block("wait-until", mode="watch"), "mode", "retry"),
+            (_control_block("try-catch-finally", enable_catch=False), "enable_catch", True),
+        ],
+        ids=["wait-until-mode", "try-catch-finally-enable-catch"],
+    )
+    def test_field_default_reads_the_declared_default(
+        self, data: dict[str, Any], name: str, expected: Any
+    ) -> None:
+        from wavecore.api.services import block_schema as schema_module
+
+        assert schema_module.field_default(data, name) == expected
+        assert type(schema_module.field_default(data, name)) is type(expected)
+
+    @pytest.mark.parametrize(
+        "data",
+        [_control_block("wait-until"), _control_block("no-such-control")],
+        ids=["known-block", "unknown-block"],
+    )
+    def test_field_default_of_an_unknown_field_is_none(self, data: dict[str, Any]) -> None:
+        from wavecore.api.services import block_schema as schema_module
+
+        assert schema_module.field_default(data, "no_such_field") is None

@@ -8,8 +8,10 @@ import yaml
 
 from wavecore.api.exceptions import ConflictException, ValidationException
 from wavecore.api.services.storage_paths import (
+    entity_dir,
     get_base_path,
     get_blocks_storage_path,
+    is_entity_id,
 )
 from wavecore.storage import FileBasedStorage
 
@@ -59,11 +61,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_block_dir(block_id: str) -> Path:
     """Get directory path for a block."""
-    return get_blocks_storage_path() / block_id
+    return entity_dir(get_blocks_storage_path(), block_id)
 
 
 def _load_block(block_id: str) -> dict[str, Any] | None:
     """Load block from file storage."""
+    if not is_entity_id(block_id):
+        return None
     block_file = _get_block_dir(block_id) / "block.yaml"
     if not block_file.exists():
         return None
@@ -131,14 +135,14 @@ def _generate_etag(block: dict[str, Any]) -> str:
 
 
 def _check_name_unique(name: str) -> None:
-    """Raise ValueError if a block with the given name already exists."""
+    """Raise ConflictException if a block with the given name already exists."""
     for block in _list_all_blocks():
         if block.get("name") == name:
             raise ConflictException(f"Block with name '{name}' already exists")
 
 
 def _validate_plugin_exists(plugin_id: str) -> None:
-    """Raise ValueError if the plugin ID does not exist in storage."""
+    """Raise ValidationException if the plugin ID does not exist in storage."""
     # Late import to support test patching via service module
 
     try:
@@ -148,7 +152,7 @@ def _validate_plugin_exists(plugin_id: str) -> None:
 
 
 def _check_circular_dependencies(name: str, dependencies: list[str]) -> None:
-    """Raise ValueError if any dependency creates a circular reference."""
+    """Raise ValidationException if any dependency creates a circular reference."""
     all_blocks = {b["id"]: b for b in _list_all_blocks()}
     for dep_id in dependencies:
         if dep_id not in all_blocks:
@@ -260,18 +264,8 @@ def _validate_param_bindings(plugin_id: str, params: dict[str, Any]) -> list[str
     return errors
 
 
-def _bump_version(current_version: str, version_bump: str) -> str:
-    """Compute the next semantic version string."""
-    parts = [int(x) for x in current_version.split(".")]
-    if version_bump == "major":
-        return f"{parts[0] + 1}.0.0"
-    if version_bump == "minor":
-        return f"{parts[0]}.{parts[1] + 1}.0"
-    return f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
-
-
 def _check_backward_compatibility(block: dict[str, Any], data: dict[str, Any]) -> None:
-    """Raise ValueError if required parameters were removed in a non-major bump."""
+    """Raise ValidationException if required parameters were removed in a non-major bump."""
     old_params = block.get("parameters", {})
     new_params = data.get("parameters", old_params)
 

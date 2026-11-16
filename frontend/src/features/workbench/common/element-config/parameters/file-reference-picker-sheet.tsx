@@ -9,7 +9,7 @@ import { useId, useState, type KeyboardEvent, type Ref } from 'react'
 import { GripVertical, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { DraggableSheet, type SheetHandle } from '@/components/shared/draggable-sheet'
+import { DraggableSheet, SheetTitle, type SheetHandle } from '@/components/shared/draggable-sheet'
 import { useChildEditor } from '@/components/shared/child-editors/child-editor-scope'
 import { TextField } from '@/components/shared/fields/text-field'
 import { FileRow, rowEnterHandler } from '@/components/shared/file-row'
@@ -410,7 +410,6 @@ export function FileReferencePickerSheet({
       onClose={onClose}
       sheetId="file-reference-picker"
       resizable
-      ariaLabel={title}
       data-testid="file-reference-picker-sheet"
       initialWidth={520}
       initialHeight={600}
@@ -422,7 +421,7 @@ export function FileReferencePickerSheet({
         <>
           <div className="flex flex-1 items-center gap-2 min-w-0">
             <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-semibold truncate">{title}</h2>
+            <SheetTitle className="text-sm font-semibold truncate">{title}</SheetTitle>
           </div>
           <Button
             type="button"

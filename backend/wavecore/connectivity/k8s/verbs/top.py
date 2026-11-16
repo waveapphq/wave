@@ -13,10 +13,11 @@ from collections.abc import Callable, Iterable
 from decimal import Decimal
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
+
 from ..rest import K8sClient, K8sResource
 from ._context import require_context
 from ._errors import K8sReadRejected, map_api_error
-from ._outputs import block_failure, block_success
 from ._resources import DEFAULT_TIMEOUT, client_options, resolve_namespace, resource_path
 
 _METRICS_API = "metrics.k8s.io/v1beta1"

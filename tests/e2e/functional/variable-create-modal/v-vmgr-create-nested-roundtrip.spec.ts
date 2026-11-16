@@ -112,7 +112,7 @@ test.describe('V-VMGR-CREATE-NESTED-ROUNDTRIP: nested element type survives save
     // Inspect (read): the element shows as the map, NOT an escaped string.
     // ------------------------------------------------------------------
     await variableRow(page, 'cfg').locator('[data-testid^="expand-button-"]').click()
-    const inspect = page.locator('section[aria-label="Inspect variable cfg"]')
+    const inspect = page.getByRole('dialog', { name: 'cfg', exact: true, includeHidden: true })
     await expect(inspect).toBeVisible()
     const arrayBody = inspect.locator('[data-testid="array-body"]')
     await expect(arrayBody.locator('[data-testid="array-row"]')).toHaveCount(1)
@@ -147,7 +147,7 @@ test.describe('V-VMGR-CREATE-NESTED-ROUNDTRIP: nested element type survives save
     // Inspect immediately (no save / reload) - the in-session reseed already
     // re-types from the stored value.
     await variableRow(page, 'cfg2').locator('[data-testid^="expand-button-"]').click()
-    const inspect = page.locator('section[aria-label="Inspect variable cfg2"]')
+    const inspect = page.getByRole('dialog', { name: 'cfg2', exact: true, includeHidden: true })
     await expect(inspect.locator('[data-testid="array-body"]').getByText(MAP_TEXT, { exact: true }))
       .toBeVisible()
     await inspect.locator('[aria-label="Close inspector for cfg2"]').click()
@@ -179,7 +179,7 @@ test.describe('V-VMGR-CREATE-NESTED-ROUNDTRIP: nested element type survives save
 
   async function openInspectInCode(page: Page, name: string) {
     await variableRow(page, name).locator('[data-testid^="expand-button-"]').click()
-    const inspect = page.locator(`section[aria-label="Inspect variable ${name}"]`)
+    const inspect = page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
     await expect(inspect).toBeVisible()
     await inspect.locator('[data-testid="view-dropdown"]').click()
     await page.getByRole('option', { name: 'Code', exact: true }).click()

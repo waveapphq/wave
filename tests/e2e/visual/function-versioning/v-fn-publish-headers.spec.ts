@@ -62,7 +62,6 @@ async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<s
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
               localDefinition: {
                 name: 'Function',
@@ -91,7 +90,6 @@ async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<s
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
             },
           },

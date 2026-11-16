@@ -9,11 +9,10 @@ import { ModeRadioSection } from '../config/mode-radio-section'
 import { ParameterTable } from './parameters/parameter-table'
 import { deriveHeaderMapExtras } from './parameters/generated-header-rows'
 import { ConfigModalOutputs } from './outputs/config-modal-outputs'
-import { VariableSetterEditor } from '@/features/workbench/common/variables/variable-setter-editor'
-import {
-  AssertionBuilder,
-  type AssertionItem,
-} from '../config/assertion-builder'
+import { VariableSetterEditor } from '@/features/workbench/common/variables/variable-setter-editor/editor'
+import type { SetterSlots } from '@/features/workbench/common/variables/variable-setter-editor/types'
+import { AssertionBuilder } from '../config/assertion-builder/builder'
+import type { AssertionItem } from '../config/assertion-builder/types'
 import {
   ConditionBranchEditor,
   type ConditionBranch,
@@ -21,9 +20,10 @@ import {
 import { CaseBranchEditor, type CaseBranch } from '../config/case-branch-editor'
 import {
   ParallelBranchEditor,
-  type ParallelBranch,
+  type ParallelLane,
 } from '../config/parallel-branch-editor'
 import { TableTransformSections } from '../config/table-transform'
+import { controlDefault } from '@/features/workbench/lib/node-parameters'
 import type { TableFilterBlock, TableSort } from '../config/table-transform/types'
 import { LoopTargetSelector } from './loop-target-selector'
 import { SecretsSection } from './secrets-section'
@@ -111,13 +111,13 @@ interface ConfigModalBodyProps {
   testId?: string | null
   /** Python and SQL blocks only: what their script body carries into the editor sheet. */
   scriptEditor?: ScriptEditorProps
-  // Values
+  // Values: every field, control lists and choices and the Setter rows included (REQ-3.1.1.5)
   values: Record<string, unknown>
   setValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>
   // Parameters
   displayParameters: Parameter[]
   outputParameters: OutputTableParameter[]
-  /** A blank {x} entry's message under its row (FIELD-13). */
+  /** The window lines under the rows: a blank {x} entry (FIELD-13), a For step, a lane limit. */
   entryErrors?: Record<string, string>
   /** What the Input and Output sections show when the Block has no fields there. */
   emptyInputs?: ReactNode
@@ -129,16 +129,17 @@ interface ConfigModalBodyProps {
   outputErrors: Record<string, string>
   // Variables
   enrichedVariables: EnrichedVariable[]
-  variableExpressionKeys: string[]
-  variableTemplateKeys: string[]
-  variableSecretKeys: string[]
-  variableTypes: Record<string, string>
-  /** Element types of Setter rows and of typed block settings (REQ-3.1.3.19). */
-  variableElementTypes?: Record<string, ElementTypes>
+  /** Element types of typed block settings and of Setter list / map rows (REQ-3.1.3.19). */
   settingElementTypes?: Record<string, ElementTypes>
   // Expression/template fields
   expressionFields: string[]
   templateFields: string[]
+  /** Variable Setter rows marked secret, `variables.<row>`. */
+  secretFields: string[]
+  /** Variable Setter: the type each row picked, window state for a new target. */
+  setterRowTypes?: Record<string, string>
+  /** Changes when the canvas changed the stored Setter, so its editor rebuilds its rows. */
+  setterRevision?: number
   // Output secret fields (bound-variable secrecy)
   outputSecretFields: string[]
   // Per-block secret controls (tri-state run-output reveal + field list)
@@ -149,23 +150,6 @@ interface ConfigModalBodyProps {
   secretMaskFields: SecretMaskField[]
   unmaskedSecretFields: string[]
   setUnmaskedSecretFields: React.Dispatch<React.SetStateAction<string[]>>
-  // Assert state
-  assertAssertions: AssertionItem[]
-  assertMode: 'single' | 'split'
-  assertFailCurrentScope: boolean
-  // If-Else state
-  ifElseBranches: ConditionBranch[]
-  // While state
-  whileConditions: AssertionItem[]
-  // Switch/Case state
-  switchBranches: CaseBranch[]
-  // Wait Until state (only read while isWaitUntil)
-  waitConditions?: AssertionItem[]
-  waitMode?: 'retry' | 'watch'
-  waitFailCurrentScope?: boolean
-  // Parallel state (only read while isParallel)
-  parallelBranches?: ParallelBranch[]
-  parallelJoin?: 'all' | 'first'
   /** The element's author-declared export rows (only an element with an output list) */
   outputList?: OutputListEditState
   // Callbacks
@@ -174,38 +158,49 @@ interface ConfigModalBodyProps {
   handleFieldValidationChange: (state: { isValid: boolean; errors: Record<string, string> }) => void
   setExpressionFields: React.Dispatch<React.SetStateAction<string[]>>
   setTemplateFields: React.Dispatch<React.SetStateAction<string[]>>
-  setVariableExpressionKeys: React.Dispatch<React.SetStateAction<string[]>>
-  setVariableTemplateKeys: React.Dispatch<React.SetStateAction<string[]>>
-  setVariableSecretKeys: React.Dispatch<React.SetStateAction<string[]>>
+  setSecretFields: React.Dispatch<React.SetStateAction<string[]>>
+  setSetterRowTypes?: (types: Record<string, string>) => void
   setOutputSecretFields: React.Dispatch<React.SetStateAction<string[]>>
-  setVariableTypes: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  setVariableElementTypes?: (types: Record<string, ElementTypes>) => void
   setSettingElementTypes?: (name: string, types: ElementTypes | undefined) => void
   setVarSetterValid: (valid: boolean) => void
   setXmlQueryValid: (valid: boolean) => void
   setJsonQueryValid: (valid: boolean) => void
-  setAssertValid: (valid: boolean) => void
-  setIfElseValid: (valid: boolean) => void
-  setWhileValid: (valid: boolean) => void
-  setSwitchValid: (valid: boolean) => void
-  setWaitValid?: (valid: boolean) => void
-  setParallelValid?: (valid: boolean) => void
-  setAssertAssertions: React.Dispatch<React.SetStateAction<AssertionItem[]>>
-  setAssertMode: React.Dispatch<React.SetStateAction<'single' | 'split'>>
-  setAssertFailCurrentScope: React.Dispatch<React.SetStateAction<boolean>>
-  setIfElseBranches: React.Dispatch<React.SetStateAction<ConditionBranch[]>>
-  setWhileConditions: React.Dispatch<React.SetStateAction<AssertionItem[]>>
-  setSwitchBranches: React.Dispatch<React.SetStateAction<CaseBranch[]>>
-  setWaitConditions?: React.Dispatch<React.SetStateAction<AssertionItem[]>>
-  setWaitMode?: React.Dispatch<React.SetStateAction<'retry' | 'watch'>>
-  setWaitFailCurrentScope?: React.Dispatch<React.SetStateAction<boolean>>
-  setParallelBranches?: React.Dispatch<React.SetStateAction<ParallelBranch[]>>
-  setParallelJoin?: React.Dispatch<React.SetStateAction<'all' | 'first'>>
 }
 
-const NO_ASSERTIONS: AssertionItem[] = []
-const NO_BRANCHES: ParallelBranch[] = []
+const EMPTY_LIST: never[] = []
+const NO_TYPES: Record<string, never> = {}
 const NO_OP = () => {}
+
+const SETTER_PLACE = 'variables.'
+
+function isSetterPlace(place: string): boolean {
+  return place.startsWith(SETTER_PLACE)
+}
+
+/** The Setter's own places of a Block list: `variables.<row>` and its entries. */
+function setterPlaces(places: readonly string[]): string[] {
+  return places.filter(isSetterPlace)
+}
+
+/** The list with its Setter places replaced by the editor's. */
+function withSetterPlaces(places: readonly string[], next: readonly string[]): string[] {
+  return [...places.filter((place) => !isSetterPlace(place)), ...setterPlaces(next)]
+}
+
+/** The element types of the Setter rows, `variables.<row>`. */
+function setterElementTypes(types: Record<string, ElementTypes> | undefined): Record<string, ElementTypes> {
+  return Object.fromEntries(Object.entries(types ?? {}).filter(([place]) => isSetterPlace(place)))
+}
+
+/** The value a choice section shows: the stored one, else the field list default. */
+function shownChoice(values: Record<string, unknown>, elementType: string, name: string): string {
+  return String(values[name] ?? controlDefault(elementType, name))
+}
+
+/** The tick a true / false section shows: the stored one, else the field list default. */
+function shownTick(values: Record<string, unknown>, elementType: string, name: string): boolean {
+  return (values[name] ?? controlDefault(elementType, name)) === true
+}
 
 export function ConfigModalBody({
   elementId,
@@ -236,14 +231,12 @@ export function ConfigModalBody({
   outputBindings,
   outputErrors,
   enrichedVariables,
-  variableExpressionKeys,
-  variableTemplateKeys,
-  variableSecretKeys,
-  variableTypes,
-  variableElementTypes,
   settingElementTypes,
   expressionFields,
   templateFields,
+  secretFields,
+  setterRowTypes = NO_TYPES,
+  setterRevision = 0,
   outputSecretFields,
   isPlugin,
   secretMasking,
@@ -252,50 +245,19 @@ export function ConfigModalBody({
   secretMaskFields,
   unmaskedSecretFields,
   setUnmaskedSecretFields,
-  assertAssertions,
-  assertMode,
-  assertFailCurrentScope,
-  ifElseBranches,
-  whileConditions,
-  switchBranches,
-  waitConditions = NO_ASSERTIONS,
-  waitMode = 'retry',
-  waitFailCurrentScope = false,
-  parallelBranches = NO_BRANCHES,
-  parallelJoin = 'all',
   outputList,
   handleInputChange,
   handleOutputChange,
   handleFieldValidationChange,
   setExpressionFields,
   setTemplateFields,
-  setVariableExpressionKeys,
-  setVariableTemplateKeys,
-  setVariableSecretKeys,
+  setSecretFields,
+  setSetterRowTypes = NO_OP,
   setOutputSecretFields,
-  setVariableTypes,
-  setVariableElementTypes,
   setSettingElementTypes,
   setVarSetterValid,
   setXmlQueryValid,
   setJsonQueryValid,
-  setAssertValid,
-  setIfElseValid,
-  setWhileValid,
-  setSwitchValid,
-  setWaitValid = NO_OP,
-  setParallelValid = NO_OP,
-  setAssertAssertions,
-  setAssertMode,
-  setAssertFailCurrentScope,
-  setIfElseBranches,
-  setWhileConditions,
-  setSwitchBranches,
-  setWaitConditions = NO_OP,
-  setWaitMode = NO_OP,
-  setWaitFailCurrentScope = NO_OP,
-  setParallelBranches = NO_OP,
-  setParallelJoin = NO_OP,
 }: Readonly<ConfigModalBodyProps>) {
   // A bare namespace root is a container, never a pickable variable. Origins
   // stay on every entry - the Variable Setter's read-only guards read them;
@@ -331,6 +293,36 @@ export function ConfigModalBody({
     secretSaveTarget,
   }
 
+  // The Setter rows and their marks, as the editor reads them: only the Setter's own places (REQ-3.4.1.14).
+  const setterSlots: SetterSlots = {
+    variables: (values.variables as Record<string, unknown> | undefined) ?? NO_TYPES,
+    expressionFields: setterPlaces(expressionFields),
+    templateFields: setterPlaces(templateFields),
+    elementTypes: setterElementTypes(settingElementTypes),
+    secretFields: setterPlaces(secretFields),
+    rowTypes: setterRowTypes,
+  }
+
+  // The editor writes its rows into the shared values and its marks into the Block lists.
+  const handleSetterSlotsChange = (next: SetterSlots) => {
+    setValues((prev) => ({ ...prev, variables: next.variables }))
+    setExpressionFields((prev) => withSetterPlaces(prev, next.expressionFields))
+    setTemplateFields((prev) => withSetterPlaces(prev, next.templateFields))
+    setSecretFields((prev) => withSetterPlaces(prev, next.secretFields))
+    const nextTypes = setterElementTypes(next.elementTypes)
+    for (const place of Object.keys(setterSlots.elementTypes)) {
+      if (!Object.hasOwn(nextTypes, place)) setSettingElementTypes?.(place, undefined)
+    }
+    for (const [place, types] of Object.entries(nextTypes)) setSettingElementTypes?.(place, types)
+    setSetterRowTypes(next.rowTypes)
+  }
+
+  // A lane change carries the Block {x} list re-keyed with it (REQ-3.2.3.7).
+  const handleLanesChange = (lanes: ParallelLane[], flags: string[]) => {
+    handleInputChange('branches', lanes)
+    setExpressionFields(flags)
+  }
+
   return (
     <>
       {/* Break/Continue: minimal UI - just the loop target selector */}
@@ -351,52 +343,39 @@ export function ConfigModalBody({
           if (isVariableSetter) {
             return (
               <VariableSetterEditor
-                variables={(values.variables as Record<string, unknown>) ?? {}}
-                expressionKeys={variableExpressionKeys}
-                templateKeys={variableTemplateKeys}
-                secretKeys={variableSecretKeys}
-                variableTypes={variableTypes}
-                variableElementTypes={variableElementTypes}
+                key={setterRevision}
+                slots={setterSlots}
                 availableVariables={simpleVars}
-                onVariablesChange={(vars) =>
-                  setValues((prev) => ({ ...prev, variables: vars }))
-                }
-                onExpressionKeysChange={setVariableExpressionKeys}
-                onTemplateKeysChange={setVariableTemplateKeys}
-                onSecretKeysChange={setVariableSecretKeys}
-                onTypesChange={setVariableTypes}
-                onElementTypesChange={setVariableElementTypes}
+                onSlotsChange={handleSetterSlotsChange}
                 onValidChange={setVarSetterValid}
+                secretSaveTarget={secretSaveTarget}
               />
             )
           }
           if (isAssert) {
             return (
               <AssertionBuilder
-                assertions={assertAssertions}
+                assertions={(values.assertions as AssertionItem[] | undefined) ?? EMPTY_LIST}
                 availableVariables={simpleVars}
-                onAssertionsChange={setAssertAssertions}
-                onValidChange={setAssertValid}
+                onAssertionsChange={(next) => handleInputChange('assertions', next)}
               />
             )
           }
           if (isIfElse) {
             return (
               <ConditionBranchEditor
-                branches={ifElseBranches}
+                branches={(values.branches as ConditionBranch[] | undefined) ?? EMPTY_LIST}
                 availableVariables={simpleVars}
-                onBranchesChange={setIfElseBranches}
-                onValidChange={setIfElseValid}
+                onBranchesChange={(next) => handleInputChange('branches', next)}
               />
             )
           }
           if (isSwitch) {
             return (
               <CaseBranchEditor
-                branches={switchBranches}
+                branches={(values.branches as CaseBranch[] | undefined) ?? EMPTY_LIST}
                 availableVariables={simpleVars}
-                onBranchesChange={setSwitchBranches}
-                onValidChange={setSwitchValid}
+                onBranchesChange={(next) => handleInputChange('branches', next)}
               />
             )
           }
@@ -420,9 +399,12 @@ export function ConfigModalBody({
                   {...rowContext}
                 />
                 <ParallelBranchEditor
-                  branches={parallelBranches}
-                  onBranchesChange={setParallelBranches}
-                  onValidChange={setParallelValid}
+                  branches={(values.branches as ParallelLane[] | undefined) ?? EMPTY_LIST}
+                  onBranchesChange={handleLanesChange}
+                  expressionFields={expressionFields}
+                  onExpressionFieldsChange={setExpressionFields}
+                  availableVariables={enrichedVariables}
+                  messages={entryErrors ?? NO_TYPES}
                 />
               </>
             )
@@ -447,10 +429,9 @@ export function ConfigModalBody({
                   {...rowContext}
                 />
                 <AssertionBuilder
-                  assertions={isWaitUntil ? waitConditions : whileConditions}
+                  assertions={(values.conditions as AssertionItem[] | undefined) ?? EMPTY_LIST}
                   availableVariables={simpleVars}
-                  onAssertionsChange={isWaitUntil ? setWaitConditions : setWhileConditions}
-                  onValidChange={isWaitUntil ? setWaitValid : setWhileValid}
+                  onAssertionsChange={(next) => handleInputChange('conditions', next)}
                 />
               </>
             )
@@ -530,16 +511,16 @@ export function ConfigModalBody({
       {isAssert && (
         <ModeRadioSection
           title="Branching Mode"
-          value={assertMode}
+          value={shownChoice(values, 'assert', 'mode')}
           options={ASSERT_MODE_OPTIONS}
-          onValueChange={(v) => setAssertMode(v as 'single' | 'split')}
+          onValueChange={(v) => handleInputChange('mode', v)}
           idPrefix="mode"
           checkbox={{
             id: 'fail-current-scope',
             label: 'Fail Current Scope',
             description: ASSERT_FAIL_SCOPE_DESCRIPTION,
-            checked: assertFailCurrentScope,
-            onChange: setAssertFailCurrentScope,
+            checked: shownTick(values, 'assert', 'fail_current_scope'),
+            onChange: (checked) => handleInputChange('fail_current_scope', checked),
           }}
         />
       )}
@@ -548,9 +529,9 @@ export function ConfigModalBody({
       {isParallel && (
         <ModeRadioSection
           title="JOIN MODE"
-          value={parallelJoin}
+          value={shownChoice(values, 'parallel', 'join')}
           options={JOIN_MODE_OPTIONS}
-          onValueChange={(v) => setParallelJoin(v as 'all' | 'first')}
+          onValueChange={(v) => handleInputChange('join', v)}
           idPrefix="join-mode"
         />
       )}
@@ -559,16 +540,16 @@ export function ConfigModalBody({
       {isWaitUntil && (
         <ModeRadioSection
           title="Wait Mode"
-          value={waitMode}
+          value={shownChoice(values, 'wait-until', 'mode')}
           options={WAIT_MODE_OPTIONS}
-          onValueChange={(v) => setWaitMode(v as 'retry' | 'watch')}
+          onValueChange={(v) => handleInputChange('mode', v)}
           idPrefix="wait-mode"
           checkbox={{
             id: 'wait-fail-current-scope',
             label: 'Fail Current Scope',
             description: WAIT_FAIL_SCOPE_DESCRIPTION,
-            checked: waitFailCurrentScope,
-            onChange: setWaitFailCurrentScope,
+            checked: shownTick(values, 'wait-until', 'fail_current_scope'),
+            onChange: (checked) => handleInputChange('fail_current_scope', checked),
           }}
         />
       )}

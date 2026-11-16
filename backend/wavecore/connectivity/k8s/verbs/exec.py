@@ -12,9 +12,12 @@ transport, TLS and timeout failures always raise.
 from collections.abc import Callable
 from typing import Any
 
+from wavecore.connectivity.block_outputs import block_failure, block_success
+
 from .. import ws
+from ..rest import seconds
 from ._manifest import split_command
-from ._outputs import block_failure, block_success, empty_streams
+from ._outputs import empty_streams
 from ._resources import client_options, pod_exec
 
 TIMEOUT_DEFAULT = 60
@@ -37,7 +40,7 @@ def run(params: dict[str, Any], log: Callable[[str, str], None]) -> dict[str, An
             **client_options(params),
         )
     except ws.ExecTimeout as exc:
-        raise ValueError(f"Command execution timed out after {target.timeout} seconds") from exc
+        raise ValueError(f"Command execution timed out after {seconds(target.timeout)}") from exc
     except ws.ExecTransportError as exc:
         raise ValueError(f"Could not run the command in {target.where()}: {exc}") from exc
     except ws.ExecRejected as exc:

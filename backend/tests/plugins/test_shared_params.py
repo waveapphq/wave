@@ -1,9 +1,9 @@
 """The family-neutral parameter and output builders (REQ-3.4.2.2).
 
-The record gate, the On error enum, the timeout integer, the positive-number check, the
-blank / integer / boolean / floor row checks, the show_when gate, the Max size (MiB) / Max
-files rows with their check, the number-row default reader and the success / error /
-reason output core that every fail-or-record block declares. The K8s
+The record gate, the On error enum, the timeout integer, the on/off toggle, the
+positive-number check, the blank / integer / boolean / floor row checks, the show_when
+gate, the Max size (MiB) / Max files rows with their check, the number-row default reader
+and the success / error / reason output core that every fail-or-record block declares. The K8s
 family builds its cluster wording on the same builders, so its shipped descriptors are
 unchanged; tests/plugins/k8s/test_k8s_common.py stays green as it is.
 """
@@ -150,6 +150,30 @@ class TestTimeoutParameter:
         first["default"] = 1
 
         assert _shared_params.timeout_parameter(300, "Ours")["default"] == 300
+
+
+class TestToggleParameter:
+    """The on/off row that starts off, one shape for every Block that declares one."""
+
+    def test_it_is_an_optional_boolean_that_starts_off(self) -> None:
+        assert _shared_params.toggle_parameter("recursive", "Walk every level.") == {
+            "name": "recursive",
+            "type": "boolean",
+            "required": False,
+            "default": False,
+            "description": "Walk every level.",
+        }
+
+    def test_the_factory_hands_out_a_fresh_descriptor(self) -> None:
+        first = _shared_params.toggle_parameter("atomic", "Ours")
+        first["default"] = True
+
+        assert _shared_params.toggle_parameter("atomic", "Ours")["default"] is False
+
+    def test_the_stream_output_row_is_the_toggle_under_its_own_name(self) -> None:
+        assert _shared_params.stream_output_parameter(
+            "Log each line."
+        ) == _shared_params.toggle_parameter("stream_output", "Log each line.")
 
 
 class TestRequirePositive:

@@ -163,8 +163,7 @@ describe('SuitesFilters', () => {
       await waitFor(
         () => {
           expect(handleFilterChange).toHaveBeenCalled()
-        },
-        { timeout: 500 }
+        }
       )
 
       // Should only have the final value, not intermediate

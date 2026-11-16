@@ -32,7 +32,7 @@ export function HistoryBreadcrumbBar({
       return
     }
     /* v8 ignore next - COV-V8-003: defensive guard - back arrow hidden when backHref null */
-    if (backHref) navigate(backHref)
+    if (backHref) void navigate(backHref)
   }
   const handleNavigate = (href: string) => {
     const drillMatch = /^#drill-(\d+)$/.exec(href)
@@ -43,7 +43,7 @@ export function HistoryBreadcrumbBar({
         return
       }
     }
-    navigate(href)
+    void navigate(href)
   }
   return (
     <CanvasBreadcrumbBar

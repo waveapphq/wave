@@ -22,7 +22,12 @@ from typing import Any
 
 import yaml
 
-from wavecore.api.exceptions import ConflictException, NotFoundException, ValidationException
+from wavecore.api.exceptions import (
+    ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    ValidationException,
+)
 from wavecore.api.services.entity_cache import DirectoryCache
 from wavecore.api.services.shared import (
     export_file_stem,
@@ -30,7 +35,11 @@ from wavecore.api.services.shared import (
     parse_file,
     parse_zip_file,
 )
-from wavecore.api.services.storage_paths import get_environments_storage_path
+from wavecore.api.services.storage_paths import (
+    entity_dir,
+    get_environments_storage_path,
+    is_entity_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +69,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_env_dir(env_id: str) -> Path:
     """Get directory path for an environment."""
-    return get_environments_storage_path() / env_id
+    return entity_dir(get_environments_storage_path(), env_id)
 
 
 def _load_environment(env_id: str) -> dict[str, Any] | None:
     """Load environment from file storage, forgetting the cached entry when gone."""
+    if not is_entity_id(env_id):
+        return None
     env_file = _get_env_dir(env_id) / _ENVIRONMENT_FILENAME
     if not env_file.exists():
         _environment_directory.forget(env_id)
@@ -415,10 +426,7 @@ def _check_etag(env: dict[str, Any], etag: str | None) -> None:
         return
     current_etag = _generate_etag(env)
     if etag != current_etag:
-        exc = ConflictException("Precondition failed: resource has been modified")
-        exc.status_code = 412
-        exc.error_code = "PRECONDITION_FAILED"
-        raise exc
+        raise PreconditionRequiredException("Precondition failed: resource has been modified")
 
 
 def _check_name_conflict(environment_id: str, name: str) -> None:

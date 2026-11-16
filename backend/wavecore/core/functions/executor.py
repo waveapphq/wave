@@ -525,7 +525,13 @@ async def execute_function(
                 entry,
             )
     except Exception as exc:
-        logger.debug("Function '%s' body failed: %s", function_def.get("name"), exc)
+        from wavecore.api.services.log_streaming_service import scrub_message
+
+        logger.debug(
+            "Function '%s' body failed: %s",
+            function_def.get("name"),
+            scrub_message(session_id, str(exc), "SYSTEM"),
+        )
         return FunctionInvocationResult(status="failed", outputs={}, error=str(exc))
 
     return _build_invocation_result(state.function_outputs, captured_halt, body_scope_failed)
@@ -684,7 +690,7 @@ async def _push_initial_scope(
         from wavecore.api.services.workbench._common import _push_variable_changes
 
         await _push_variable_changes(session_id, {}, initial_scope)
-    except Exception:  # pragma: no cover - defensive: WS never blocks exec
+    except Exception:  # pragma: no cover - BCOV-GUARD-001 - defensive: WS never blocks exec
         pass
 
 

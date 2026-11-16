@@ -62,7 +62,7 @@ def _find_test_yaml(test_id: str) -> Path | None:
     return candidate if candidate.exists() else None
 
 
-class TestSavedYamlHasNoLegacyKey:
+class TestSavedYamlHasNoDisplayNameKey:
     """End-to-end: after a successful save, the on-disk YAML must not contain `displayName`."""
 
     @pytest.fixture
@@ -79,7 +79,7 @@ class TestSavedYamlHasNoLegacyKey:
         response = client.post(
             "/tests",
             json={
-                "name": "No Legacy Key",
+                "name": "No Display Name Key",
                 "workflow": {"nodes": [node], "edges": []},
                 "variables": {},
             },
@@ -90,7 +90,7 @@ class TestSavedYamlHasNoLegacyKey:
         yaml_path = _find_test_yaml(test_id)
         assert yaml_path is not None, "Expected test.yaml on disk after POST /tests"
         text = yaml_path.read_text()
-        assert "displayName" not in text, "Saved test.yaml still contains legacy `displayName` key"
+        assert "displayName" not in text, "Saved test.yaml still contains a `displayName` key"
 
         parsed = yaml.safe_load(text)
         for n in parsed["workflow"]["nodes"]:
@@ -99,7 +99,7 @@ class TestSavedYamlHasNoLegacyKey:
             assert "display_name" not in data
 
 
-class TestWorkbenchModulesNoLegacyReferences:
+class TestWorkbenchModulesHaveNoDisplayName:
     """Negative-grep: each workbench module file has no `displayName` / `display_name`."""
 
     _MODULES = [
@@ -116,9 +116,7 @@ class TestWorkbenchModulesNoLegacyReferences:
         mod = import_module(module_name)
         assert mod.__file__ is not None
         src = Path(mod.__file__).read_text(encoding="utf-8")
-        assert (
-            "displayName" not in src
-        ), f"{module_name} still references the legacy `displayName` key"
+        assert "displayName" not in src, f"{module_name} still references the `displayName` key"
 
     @pytest.mark.parametrize("module_name", _MODULES)
     def test_module_has_no_display_name_identifier(self, module_name: str) -> None:
@@ -127,10 +125,10 @@ class TestWorkbenchModulesNoLegacyReferences:
         src = Path(mod.__file__).read_text(encoding="utf-8")
         assert (
             "display_name" not in src
-        ), f"{module_name} still references the legacy `display_name` identifier"
+        ), f"{module_name} still references the `display_name` identifier"
 
 
-class TestNoLegacyParameterAnywhereInPluginsApi:
+class TestNoDisplayNameParameterInPluginsApi:
     """Every callable exported by the plugins module accepts `description=`, not `display_name=`."""
 
     def test_no_callable_in_plugins_takes_display_name(self) -> None:

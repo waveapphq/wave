@@ -451,7 +451,7 @@ export function SuiteDetailPage(): ReactNode {
     deleteSuite(id)
       .then(() => {
         setDeleteDialogOpen(false)
-        navigate('/suites')
+        void navigate('/suites')
       })
       .catch((err: unknown) => {
         const handled = handleDeleteConflict({
@@ -480,7 +480,7 @@ export function SuiteDetailPage(): ReactNode {
       /* v8 ignore next - COV-V8-003: suiteId always defined when this page mounts */
       if (suiteId) params.set('suiteId', suiteId)
       if (regressionOrigin) params.set('regressionId', regressionOrigin)
-      navigate(`/workbench?${params.toString()}`)
+      void navigate(`/workbench?${params.toString()}`)
     },
     [navigate, suiteId, regressionOrigin]
   )
@@ -639,14 +639,14 @@ export function SuiteDetailPage(): ReactNode {
                   // from the first paint and doesn't pop in once the fetch lands.
                   label: regressionName,
                   href: `/regressions/${regressionOrigin}`,
-                  onNavigate: () => { navigate(`/regressions/${regressionOrigin}`) },
+                  onNavigate: () => { void navigate(`/regressions/${regressionOrigin}`) },
                 },
               ]
             : undefined
         }
         /* v8 ignore start - COV-V8-003: ternary in onBack - regression-origin path only hit when arriving via regression URL */
         onBack={() => {
-          navigate(regressionOrigin ? `/regressions/${regressionOrigin}` : '/suites')
+          void navigate(regressionOrigin ? `/regressions/${regressionOrigin}` : '/suites')
         }}
         /* v8 ignore stop */
         onRun={() => runDialog.openForSuite(suite.id, suite.name)}

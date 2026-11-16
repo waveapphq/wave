@@ -204,7 +204,7 @@ export async function openPicker(
   const picker = pickerParts(page)
   await expect(picker.sheet, `the picker for ${param}`).toBeVisible({ timeout: 10_000 })
   await expect(picker.body).toHaveAttribute('data-picker-mode', mode)
-  await expect(picker.sheet).toHaveAttribute('aria-label', PICKER_TITLES[mode])
+  await expect(picker.sheet).toHaveAccessibleName(PICKER_TITLES[mode])
   // The primary button never changes its wording; only its disabled state moves.
   await expect(picker.select).toHaveText('Select')
   return picker

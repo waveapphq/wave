@@ -21,7 +21,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "branches": [
@@ -62,7 +61,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "duration": 600
@@ -95,7 +93,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'B1'",
@@ -125,11 +122,10 @@
           "version": "1.0.0",
           "description": "B2 bump 1",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "b_count"
+          "expressionFields": [
+            "variables.b_count"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -160,11 +156,10 @@
           "version": "1.0.0",
           "description": "B2 bump 2",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "b_count"
+          "expressionFields": [
+            "variables.b_count"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -195,11 +190,10 @@
           "version": "1.0.0",
           "description": "B2 bump 3",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "b_count"
+          "expressionFields": [
+            "variables.b_count"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -230,11 +224,10 @@
           "version": "1.0.0",
           "description": "B2 bump 4",
           "hasNewerVersion": false,
-          "expressionFields": [],
-          "templateFields": [],
-          "variableExpressionKeys": [
-            "b_count"
+          "expressionFields": [
+            "variables.b_count"
           ],
+          "templateFields": [],
           "config": {
             "values": {
               "variables": {
@@ -269,7 +262,6 @@
             "message"
           ],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "config": {
             "values": {
               "message": "'EXIT'",

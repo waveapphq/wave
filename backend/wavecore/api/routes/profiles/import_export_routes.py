@@ -11,7 +11,6 @@ Endpoints:
 """
 
 import io
-import json
 import zipfile
 from typing import Annotated
 
@@ -19,7 +18,12 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from wavecore.api.exceptions import NotFoundException, ValidationException
-from wavecore.api.routes.shared import validate_uuid
+from wavecore.api.routes.shared import (
+    id_list_field,
+    read_conflict_resolutions,
+    read_json_object,
+    validate_uuid,
+)
 from wavecore.api.services import shared as shared_service
 from wavecore.api.services.file_tree import content_disposition
 from wavecore.api.services.profiles import import_export as profile_import_export
@@ -33,8 +37,8 @@ VALID_EXPORT_FORMATS = {"yaml", "json"}
 @router.post("/profiles/export")
 async def export_profiles_bulk(request: Request) -> Response:
     """Export multiple profiles as single file or ZIP archive."""
-    body = await request.json()
-    profile_ids = body.get("profile_ids", [])
+    body = await read_json_object(request)
+    profile_ids = id_list_field(body, "profile_ids")
     fmt = body.get("format", "yaml")
     secrets_mode = shared_service.parse_secrets_mode(body.get("secrets"))
 
@@ -107,12 +111,7 @@ async def import_profiles(
 
     content = await file.read()
 
-    resolutions: dict[str, str] = {}
-    if conflict_resolutions:
-        try:
-            resolutions = json.loads(conflict_resolutions)
-        except json.JSONDecodeError as err:
-            raise ValidationException("Invalid JSON in conflict_resolutions") from err
+    resolutions = read_conflict_resolutions(conflict_resolutions)
 
     # ValidationException from service propagates to middleware
     result = profile_import_export.import_profiles(content, filename, resolutions)

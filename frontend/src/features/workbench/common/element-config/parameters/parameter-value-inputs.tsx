@@ -2,10 +2,10 @@
  * Type-specific value input widgets for literal-mode parameters.
  *
  * Every free-entry widget draws the one value field (REQ-3.1.1.5, FIELD-1) and opens
- * its editor from the field's expand; ParameterRow keeps layout and validation.
+ * its editor from the field's expand; the field cell keeps layout and validation.
  */
 
-import { use, type ReactNode } from 'react'
+import { use, type ReactNode, type RefObject } from 'react'
 import { AlertTriangle, Lock } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -38,9 +38,11 @@ import { CipherPickerSheet } from '../cipher-picker/cipher-picker-sheet'
 import { resolveTlsRange } from '../cipher-picker/tls-inventory'
 import { resolveKeyPolicy } from '@/features/workbench/lib/node-parameters/key-policy'
 import {
-  partsExprIndicesFor,
-  withPartsExprIndices,
-} from '@/features/workbench/lib/node-parameters/indexed-expression-fields'
+  entryFlagsFor,
+  indexedRowFlagsFor,
+  withEntryFlags,
+  withIndexedRowFlags,
+} from '@/features/workbench/lib/node-parameters/field-modes'
 import {
   analyzeCredentialExpression,
   mapEntryCredentialAdvisory,
@@ -183,6 +185,12 @@ export interface BlockFieldState {
   adornment?: ReactNode
   /** A list, map or table line that does not read as a value yet. */
   onValidation?: (messages: string[]) => void
+  /** A required field that takes null shows an empty box, not null, while not set (REQ-3.1.3.21). */
+  required?: boolean
+  /** The field's value box: a sheet whose opener is gone hands the focus back to it. */
+  returnFocus?: RefObject<HTMLElement | null>
+  /** What a screen reader hears in place of an empty label. */
+  accessibleName?: string
 }
 
 /** The standing of a widget used on its own: set once it holds a value, no default, no null. */
@@ -219,10 +227,12 @@ function fieldProps(parameter: Parameter, field: BlockFieldState) {
     readOnly: field.readOnly,
     testId: parameter.name,
     label: parameterLabel(parameter),
+    accessibleName: field.accessibleName,
     onUnset: field.onUnset,
     onNull: field.onNull,
     adornment: field.adornment,
     onValidation: field.onValidation,
+    required: field.required,
   }
 }
 
@@ -332,6 +342,7 @@ export function EnumInput({
   lockedDisplayText,
   valueClassName,
   id,
+  testId,
 }: Readonly<{
   parameter: Parameter
   effectiveValue: unknown
@@ -343,6 +354,8 @@ export function EnumInput({
   valueClassName?: string
   /** The trigger's id, so a caption label names and focuses it. */
   id?: string
+  /** The trigger's test id. */
+  testId?: string
 }>) {
   const errorId = use(FieldErrorContext)
   /* v8 ignore next - COV-BRANCH-111 */
@@ -362,6 +375,7 @@ export function EnumInput({
     <Select value={selected} onValueChange={(text) => onChange(enumValueOf(allowed, text))} disabled={locked}>
       <SelectTrigger
         id={id}
+        data-testid={testId}
         aria-label={parameterLabel(parameter)}
         aria-invalid={showRequiredError}
         aria-describedby={errorId}
@@ -441,20 +455,6 @@ export function NumberValueInput({
 
 const NO_EXPAND = () => {}
 
-/** Map keys whose dotted "<param>.<key>" entry appears in expressionFields. */
-function mapExprKeysFor(paramName: string, expressionFields: string[]): string[] {
-  const prefix = `${paramName}.`
-  return expressionFields.filter((f) => f.startsWith(prefix)).map((f) => f.slice(prefix.length))
-}
-
-/** Rewrite expressionFields so this param's dotted entries (map keys or list indices) equal exprKeys
- *  (other params' entries and the bare whole-param entry are preserved). */
-function withDottedExprKeys(paramName: string, expressionFields: string[], exprKeys: string[]): string[] {
-  const prefix = `${paramName}.`
-  const kept = expressionFields.filter((f) => !f.startsWith(prefix))
-  return [...kept, ...exprKeys.map((key) => `${paramName}.${key}`)]
-}
-
 function isPlainMap(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -486,7 +486,7 @@ export function mapLineCredentialAdvisory(
 ): boolean {
   const advisory = mapCredentialAdvisory(parameter.credentialCatalog, credentialCatalogKeys, availableVariables)
   if (advisory === undefined || !isPlainMap(value)) return false
-  const exprKeys = mapExprKeysFor(parameter.name, expressionFields)
+  const exprKeys = entryFlagsFor(parameter.name, expressionFields)
   return Object.entries(value).some(([key, entry]) => advisory(key, itemAsText(entry), exprKeys.includes(key)))
 }
 
@@ -551,7 +551,7 @@ export function MapInput({
   const label = parameterLabel(parameter)
   const typed = parameter.typedValues === true
   const fields = expressionFields ?? EMPTY_STRING_ARRAY
-  const exprKeys = mapExprKeysFor(paramName, fields)
+  const exprKeys = entryFlagsFor(paramName, fields)
   const credentialAdvisory = mapCredentialAdvisory(parameter.credentialCatalog, credentialCatalogKeys, vars)
   const mapEntryOptions = {
     quickInserts: parameter.quickInserts,
@@ -569,7 +569,7 @@ export function MapInput({
   // entries with it, and the empty editor opens on the same click.
   const handleConfirmClear = () => {
     onChange({})
-    onExpressionFieldsChange?.(withDottedExprKeys(paramName, fields, []))
+    onExpressionFieldsChange?.(withEntryFlags(paramName, fields, []))
     onElementTypesChange?.(undefined)
     sheet.show()
   }
@@ -605,9 +605,11 @@ export function MapInput({
           elementTypes={typed ? elementTypes : undefined}
           mapEntryOptions={mapEntryOptions}
           availableVariables={EMPTY_AVAILABLE}
+          // Delete & Edit takes the masked control away, so the sheet hands the focus to the value box.
+          returnFocus={state.returnFocus}
           onSave={(newValue, _isTemplate, savedKeys, newElementTypes) => {
             onChange(newValue)
-            onExpressionFieldsChange?.(withDottedExprKeys(paramName, fields, savedKeys ?? []))
+            onExpressionFieldsChange?.(withEntryFlags(paramName, fields, savedKeys ?? []))
             if (typed) onElementTypesChange?.(newElementTypes)
           }}
           onClose={sheet.hide}
@@ -618,10 +620,11 @@ export function MapInput({
   )
 }
 
+const LIST_INDEX = /^\d+$/
+
 /** Indices of a list whose dotted "<param>.<i>" entry appears in expressionFields. */
 function listExprIndicesFor(paramName: string, expressionFields: string[]): string[] {
-  const pattern = new RegExp(String.raw`^${paramName}\.(\d+)$`)
-  return expressionFields.flatMap((field) => pattern.exec(field)?.[1] ?? [])
+  return entryFlagsFor(paramName, expressionFields).filter((key) => LIST_INDEX.test(key))
 }
 
 /** List field + "Edit value" sheet; a text-only list saves items as text, and Save rewrites the `<param>.<i>` {x} flags. */
@@ -651,9 +654,19 @@ export function ArrayInput({
 }>) {
   const typedValues = parameter.typedValues === true
   const exprIndices = listExprIndicesFor(parameter.name, expressionFields)
+  const clearConfirm = useProtectedValueConfirm()
+  const secret = parameter.secret === true
+  // A STORED list credential is write-only: its items never reach the editor.
+  const masked = secret && isStoredSecretValue(effectiveValue)
   const save = (next: unknown, nextTypes?: ElementTypes) => {
     onChange(typedValues || !Array.isArray(next) ? next : next.map(itemAsText))
     if (typedValues) onElementTypesChange?.(nextTypes)
+  }
+  const handleConfirmClear = () => {
+    onChange([])
+    onExpressionFieldsChange(withEntryFlags(parameter.name, expressionFields, []))
+    if (typedValues) onElementTypesChange?.(undefined)
+    sheet.show()
   }
   return (
     <>
@@ -662,8 +675,10 @@ export function ArrayInput({
         type="array"
         value={effectiveValue}
         hasEditor
+        leftIcon={secret ? 'lock' : undefined}
         expressionEntries={exprIndices}
         elementTypes={typedValues ? elementTypes : undefined}
+        onEditSecret={() => clearConfirm.open(handleConfirmClear)}
         onChange={save}
         onExpand={sheet.show}
       />
@@ -673,7 +688,7 @@ export function ArrayInput({
           label={parameterLabel(parameter)}
           name=""
           type="array"
-          value={editorValue(field, effectiveValue, EMPTY_ARRAY)}
+          value={masked ? EMPTY_ARRAY : editorValue(field, effectiveValue, EMPTY_ARRAY)}
           isTemplate={false}
           allowTemplate={false}
           stringValuesOnly={!typedValues}
@@ -684,13 +699,15 @@ export function ArrayInput({
             codeView: true,
           }}
           availableVariables={EMPTY_AVAILABLE}
+          returnFocus={field.returnFocus}
           onSave={(newValue, _isTemplate, savedIndices, newElementTypes) => {
             save(newValue, newElementTypes)
-            onExpressionFieldsChange(withDottedExprKeys(parameter.name, expressionFields, savedIndices ?? []))
+            onExpressionFieldsChange(withEntryFlags(parameter.name, expressionFields, savedIndices ?? []))
           }}
           onClose={sheet.hide}
         />
       )}
+      {clearConfirm.dialog}
     </>
   )
 }
@@ -775,7 +792,7 @@ export function RecordListInput({
   field: BlockFieldState
 }>) {
   const items = (rows: unknown): unknown => (Array.isArray(rows) ? recordItems(rows) : rows)
-  const expressionRows = partsExprIndicesFor(parameter.name, expressionFields)
+  const expressionRows = indexedRowFlagsFor(parameter.name, 'value', expressionFields)
   const itemDefault = field.defaultValue === undefined ? undefined : items(field.defaultValue)
   return (
     <>
@@ -798,7 +815,7 @@ export function RecordListInput({
           availableVariables={availableVariables}
           onSave={(rows, savedRows) => {
             onChange(rows)
-            onExpressionFieldsChange(withPartsExprIndices(parameter.name, expressionFields, [...savedRows]))
+            onExpressionFieldsChange(withIndexedRowFlags(parameter.name, 'value', expressionFields, savedRows))
           }}
         />
       )}
@@ -820,6 +837,10 @@ export function TableInput({
   sheet: SheetOpener
   field: BlockFieldState
 }>) {
+  const clearConfirm = useProtectedValueConfirm()
+  const secret = parameter.secret === true
+  // A STORED table credential is write-only: its rows never reach the editor.
+  const masked = secret && isStoredSecretValue(effectiveValue)
   return (
     <>
       <BlockValueField
@@ -827,6 +848,13 @@ export function TableInput({
         type="table"
         value={effectiveValue}
         hasEditor
+        leftIcon={secret ? 'lock' : undefined}
+        onEditSecret={() =>
+          clearConfirm.open(() => {
+            onChange([])
+            sheet.show()
+          })
+        }
         onChange={(next) => onChange(next)}
         onExpand={sheet.show}
       />
@@ -836,14 +864,16 @@ export function TableInput({
           label={parameterLabel(parameter)}
           name=""
           type="table"
-          value={editorValue(field, effectiveValue, EMPTY_ARRAY)}
+          value={masked ? EMPTY_ARRAY : editorValue(field, effectiveValue, EMPTY_ARRAY)}
           isTemplate={false}
           allowTemplate={false}
           availableVariables={EMPTY_AVAILABLE}
+          returnFocus={field.returnFocus}
           onSave={(newValue) => onChange(newValue)}
           onClose={sheet.hide}
         />
       )}
+      {clearConfirm.dialog}
     </>
   )
 }
@@ -870,7 +900,7 @@ export function PartsInput({
   field: BlockFieldState
 }>) {
   const paramName = parameter.name
-  const exprIndices = partsExprIndicesFor(paramName, expressionFields)
+  const exprIndices = indexedRowFlagsFor(paramName, 'value', expressionFields)
   return (
     <>
       <BlockValueField
@@ -891,7 +921,7 @@ export function PartsInput({
           expressionIndices={exprIndices}
           onSave={(newParts, savedIndices) => {
             onChange(newParts)
-            onExpressionFieldsChange(withPartsExprIndices(paramName, expressionFields, savedIndices))
+            onExpressionFieldsChange(withIndexedRowFlags(paramName, 'value', expressionFields, savedIndices))
           }}
           onClose={sheet.hide}
         />
@@ -996,10 +1026,13 @@ export function StringInput({
     <>
       <BlockValueField
         {...fieldProps(parameter, state)}
+        mode={isTemplate ? 'template' : 'literal'}
         type="string"
         value={effectiveValue}
         hasEditor
         placeholder={parameter.placeholder}
+        // The Template face checks its {{ }} names against the names the {x} face reads.
+        availableVariables={availableVariables}
         suggestions={suggestions}
         showsEnd={parameter.fileReference !== undefined}
         onChange={(next) => onChange(next)}
@@ -1021,10 +1054,8 @@ export function StringInput({
             {...(scriptBody ? scriptEditor : NO_SCRIPT_EDITOR)}
             onSave={(newValue, newIsTemplate) => {
               onChange(newValue)
-              const updatedFields = newIsTemplate
-                ? [...templateFields, parameter.name]
-                : templateFields.filter((n) => n !== parameter.name)
-              onTemplateFieldsChange(updatedFields)
+              const others = templateFields.filter((n) => n !== parameter.name)
+              onTemplateFieldsChange(newIsTemplate ? [...others, parameter.name] : others)
             }}
             onClose={sheet.hide}
           />

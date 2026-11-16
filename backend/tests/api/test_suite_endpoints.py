@@ -21,12 +21,23 @@ Test Coverage:
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.body_shape_support import (
+    NOT_AN_ID_ITEM,
+    NOT_ARRAY_BODIES,
+    NOT_ID_ITEMS,
+    NOT_OBJECT_BODIES,
+    assert_refused,
+    send_text,
+)
 from wavecore.api.exceptions import ConflictException, ValidationException
+
+_STALE_ETAG = "Precondition failed: resource has been modified"
 
 
 class TestListSuitesEndpoint:
@@ -275,7 +286,7 @@ class TestCreateSuiteEndpoint:
         assert data["success"] is False
         assert re.match(
             r"^Suite name 'Invalid@Suite!Name' violates naming convention: must contain only "
-            r"alphanumeric characters, spaces, hyphens, and underscores$",
+            r"alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses$",
             data["error"]["message"],
         )
 
@@ -610,29 +621,24 @@ class TestUpdateSuiteEndpoint:
         assert data["success"] is False
         assert re.match(
             r"^Suite name 'Invalid@Name!' violates naming convention: must contain only "
-            r"alphanumeric characters, spaces, hyphens, and underscores$",
+            r"alphanumeric characters, spaces, hyphens, underscores, periods, and parentheses$",
             data["error"]["message"],
         )
 
     def test_update_suite_supports_optimistic_concurrency(self, client: TestClient) -> None:
-        """Test that PUT /suites/{suite_id} supports If-Match header for concurrency."""
-        suite_id = str(uuid.uuid4())
+        """Test that PUT /suites/{suite_id} refuses a stale If-Match with 412."""
+        from tests.api.error_reply_support import assert_error_reply
 
-        with patch("wavecore.api.routes.suites.routes.suite_service.update_suite") as mock_update:
-            mock_update.side_effect = ConflictException(
-                "Precondition failed: resource has been modified"
-            )
+        suite_id = client.post("/suites", json={"name": "Concurrent Suite"}).json()["data"]["id"]
 
-            response = client.put(
-                f"/suites/{suite_id}",
-                json={"name": "Updated Suite Name"},
-                headers={"If-Match": '"old-etag"'},
-            )
+        response = client.put(
+            f"/suites/{suite_id}",
+            json={"name": "Updated Suite Name"},
+            headers={"If-Match": '"old-etag"'},
+        )
 
-            assert response.status_code == 409
-            data = response.json()
-            assert data["success"] is False
-            assert "Precondition failed" in data["error"]["message"]
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+        assert client.get(f"/suites/{suite_id}").json()["data"]["name"] == "Concurrent Suite"
 
     def test_update_suite_sets_new_etag_header(self, client: TestClient) -> None:
         """Test that PUT /suites/{suite_id} sets new ETag header after update."""
@@ -720,7 +726,9 @@ class TestDeleteSuiteEndpoint:
             assert data["error"]["details"] == {"execution_ids": blocking}
 
     def test_delete_suite_supports_if_match_header(self, client: TestClient) -> None:
-        """Test that DELETE /suites/{suite_id} supports If-Match header."""
+        """Test that DELETE /suites/{suite_id} refuses a stale If-Match with 412."""
+        from tests.api.error_reply_support import assert_error_reply
+
         suite_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
 
@@ -746,8 +754,8 @@ class TestDeleteSuiteEndpoint:
                     headers={"If-Match": '"some-etag"'},
                 )
 
-                # Should either succeed or fail precondition (409 for etag mismatch)
-                assert response.status_code in [204, 409]
+                assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+                mock_delete.assert_not_called()
 
     def test_delete_suite_returns_400_for_generic_value_error(self, client: TestClient) -> None:
         """Test that DELETE returns 400 for generic ValueError from service."""
@@ -1081,6 +1089,34 @@ class TestUpdateSuiteVersionEndpoint:
                 r"^Cannot modify published version '1\.0\.0'\. Published versions are immutable\.$",
                 data["error"]["message"],
             )
+
+    def test_a_stale_if_match_is_a_failed_precondition(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        suite_id = client.post("/suites", json={"name": "Versioned Suite"}).json()["data"]["id"]
+        before = client.get(f"/suites/{suite_id}").json()["data"]
+
+        response = client.put(
+            f"/suites/{suite_id}/versions/1.0.0",
+            json={"description": "Changed"},
+            headers={"If-Match": '"stale"'},
+        )
+
+        assert_error_reply(response, 412, "PRECONDITION_REQUIRED", _STALE_ETAG)
+        assert client.get(f"/suites/{suite_id}").json()["data"] == before
+
+    def test_the_current_if_match_is_accepted(self, client: TestClient) -> None:
+        suite_id = client.post("/suites", json={"name": "Versioned Suite"}).json()["data"]["id"]
+        etag = client.get(f"/suites/{suite_id}").headers["ETag"]
+
+        response = client.put(
+            f"/suites/{suite_id}/versions/1.0.0",
+            json={"description": "Changed"},
+            headers={"If-Match": etag},
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["description"] == "Changed"
 
 
 class TestDeleteSuiteVersionEndpoint:
@@ -1436,7 +1472,8 @@ class TestCloneSuiteEndpoint:
         assert response.status_code == 400
         data = response.json()
         assert re.match(
-            r"^Version 'invalid' does not follow semantic versioning format \(x\.y\.z\)$",
+            r"^Invalid version format 'invalid': must follow semantic versioning "
+            r"\(MAJOR\.MINOR\.PATCH\)$",
             data["error"]["message"],
         )
 
@@ -1843,15 +1880,18 @@ class TestSuiteEndpointInvalidUUIDErrors:
         assert data["success"] is False
         assert "Invalid UUID format" in data["error"]["message"]
 
-    def test_delete_suite_with_invalid_uuid_returns_404(self, client: TestClient) -> None:
-        """Test that DELETE /suites/{suite_id} returns 404 for invalid UUID (not found)."""
-        # Delete skips UUID validation so invalid IDs can be cleaned up; unknown IDs get 404.
+    def test_delete_suite_with_invalid_uuid(self, client: TestClient) -> None:
+        """Test that DELETE /suites/{suite_id} returns 400 for invalid UUID."""
+        from tests.api.error_reply_support import assert_error_reply
+
         response = client.delete("/suites/not-a-valid-uuid")
 
-        assert response.status_code == 404
-        data = response.json()
-        assert data["success"] is False
-        assert "not found" in data["error"]["message"].lower()
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid UUID format for suite_id: 'not-a-valid-uuid'",
+        )
 
 
 class TestSuiteEndpointVersionCaching:
@@ -1940,6 +1980,77 @@ class TestUpdateSuiteVersionNotFound:
             data = response.json()
             assert data["success"] is False
             assert data["error"]["code"] == "NOT_FOUND"
+
+
+def _member_test() -> str:
+    """A stored test a suite can list."""
+    from wavecore.api.services.tests import service as test_service
+
+    return str(test_service.create_test({"name": "Member Test"})["id"])
+
+
+class TestASuiteThatListsATestTwice:
+    """A suite save that lists one test twice is refused with 400 and changes nothing."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def test_a_create_that_lists_a_test_twice_is_refused(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        test_id = _member_test()
+
+        response = client.post("/suites", json={"name": "Twice Suite", "tests": [test_id, test_id]})
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", f"Test with ID '{test_id}' is listed more than once"
+        )
+        assert client.get("/suites").json()["data"] == []
+
+    @pytest.mark.parametrize(
+        ("method", "suffix", "body"),
+        [("PUT", "", "tests"), ("POST", "/tests", "test_id")],
+        ids=["update", "add-test"],
+    )
+    def test_a_change_that_lists_a_test_twice_is_refused(
+        self, client: TestClient, method: str, suffix: str, body: str
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+        from tests.api.suite_test_helpers import load_suite_file
+
+        test_id = _member_test()
+        created = client.post("/suites", json={"name": "Twice Suite", "tests": [test_id]})
+        suite_id = created.json()["data"]["id"]
+        stored = load_suite_file(suite_id)
+        payload = {"tests": [test_id, test_id]} if body == "tests" else {"test_id": test_id}
+
+        response = client.request(method, f"/suites/{suite_id}{suffix}", json=payload)
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", f"Test with ID '{test_id}' is listed more than once"
+        )
+        assert load_suite_file(suite_id) == stored
+
+    @pytest.mark.parametrize("tests", [5, None, True, "abc"])
+    @pytest.mark.parametrize("method", ["POST", "PUT"], ids=["create", "update"])
+    def test_tests_that_are_not_a_list_are_a_bad_request(
+        self, client: TestClient, method: str, tests: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        path = "/suites"
+        if method == "PUT":
+            created = client.post("/suites", json={"name": "Twice Suite"})
+            path = f"/suites/{created.json()['data']['id']}"
+
+        response = client.request(method, path, json={"name": "Listed", "tests": tests})
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "'tests' must be a list of ID strings"
+        )
 
 
 class TestAddTestToSuiteCollisionEndpoint:
@@ -2256,3 +2367,389 @@ class TestASuiteBodyThatIsNotAJsonObject:
         assert response.status_code == 400, response.json()
         assert response.json()["error"]["message"] == message
         update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/suites/{id}/tests", id="add-test"),
+            pytest.param("PUT", "/suites/{id}/variables", id="variables"),
+            pytest.param("POST", "/suites/{id}/clone", id="clone"),
+            pytest.param("POST", "/suites/export", id="export"),
+            pytest.param("POST", "/suites/{id}/versions", id="add-version"),
+            pytest.param("PUT", "/suites/{id}/versions/1.0.0", id="update-version"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_OBJECT_BODIES)
+    def test_every_other_write_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        response = send_text(client, method, path.format(id=uuid.uuid4()), text)
+
+        assert_refused(response, message)
+
+
+class TestASuiteBatchBodyThatIsNotAJsonArray:
+    """A Suite batch whose body is not a JSON array is a bad request."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("DELETE", "/suites/batch", id="delete"),
+            pytest.param("POST", "/suites/batch/clone", id="clone"),
+        ],
+    )
+    @pytest.mark.parametrize(("text", "message"), NOT_ARRAY_BODIES)
+    def test_it_is_refused(
+        self, client: TestClient, method: str, path: str, text: str, message: str
+    ) -> None:
+        assert_refused(send_text(client, method, path, text), message)
+
+
+class TestASuiteBatchItemThatIsNotAnId:
+    """A Suite batch item that is not an ID string fails on its own; the other items still run."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _create(self, client: TestClient) -> str:
+        response = client.post("/suites", json={"name": f"Batch Item {uuid.uuid4().hex[:8]}"})
+        return str(response.json()["data"]["id"])
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_delete_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.request("DELETE", "/suites/batch", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        assert response.json() == {
+            "deleted": [suite_id],
+            "failed": [{"index": 0, "error": NOT_AN_ID_ITEM}],
+        }
+
+    @pytest.mark.parametrize("item", NOT_ID_ITEMS)
+    def test_a_clone_item_fails(self, client: TestClient, item: Any) -> None:
+        suite_id = self._create(client)
+
+        response = client.post("/suites/batch/clone", json=[item, suite_id])
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["failed"] == [{"index": 0, "error": NOT_AN_ID_ITEM}]
+        assert [entry["original_id"] for entry in body["cloned"]] == [suite_id]
+
+
+class TestStoredVersionThatIsNotSemantic:
+    """A suite whose stored version is not MAJOR.MINOR.PATCH refuses a change with 400."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        """Create FastAPI test client."""
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [("PUT", ""), ("POST", "/versions")],
+        ids=["update", "add-version"],
+    )
+    def test_refuses_the_change(self, client: TestClient, method: str, suffix: str) -> None:
+        from tests.api.suite_test_helpers import load_suite_file, save_suite_file
+
+        created = client.post("/suites", json={"name": f"Short {uuid.uuid4().hex[:8]}"})
+        suite_id = created.json()["data"]["id"]
+        stored = load_suite_file(suite_id)
+        assert stored is not None
+        stored["version"] = "1"
+        save_suite_file(stored)
+
+        response = client.request(method, f"/suites/{suite_id}{suffix}", json={"description": "x"})
+
+        assert response.status_code == 400, response.json()
+        assert response.json()["error"]["message"] == (
+            "Invalid version format '1': must follow semantic versioning (MAJOR.MINOR.PATCH)"
+        )
+        assert load_suite_file(suite_id) == stored
+
+
+_INTERNAL_TEXT = "internal suite route fault"
+_SUITE_ID = "5b1f0c2e-7a3d-4c8e-9f10-2d3c4b5a6e7f"
+
+
+class TestAnUnexpectedFaultInASuiteRoute:
+    """A fault below a Suite route answers the generic 500; on a batch item, the generic text."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def test_a_fault_listing_versions_answers_the_generic_500(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_internal_error
+        from wavecore.api.services.suites import version_service
+
+        with patch.object(
+            version_service, "list_suite_versions", side_effect=ValueError(_INTERNAL_TEXT)
+        ):
+            response = client.get(f"/suites/{_SUITE_ID}/versions")
+
+        assert_internal_error(response, _INTERNAL_TEXT)
+
+    @pytest.mark.parametrize(
+        ("method", "path", "patched", "answer_key"),
+        [
+            pytest.param(
+                "DELETE",
+                "/suites/batch",
+                "wavecore.api.services.suites.service.delete_suite",
+                "deleted",
+                id="delete",
+            ),
+            pytest.param(
+                "POST",
+                "/suites/batch/clone",
+                "wavecore.api.services.suites.version_service.clone_suite",
+                "cloned",
+                id="clone",
+            ),
+        ],
+    )
+    def test_a_fault_on_a_batch_item_fails_it_with_the_generic_message(
+        self, client: TestClient, method: str, path: str, patched: str, answer_key: str
+    ) -> None:
+        from tests.api.error_reply_support import INTERNAL_ERROR_MESSAGE
+
+        with patch(patched, side_effect=ValueError(_INTERNAL_TEXT)):
+            response = client.request(method, path, json=[_SUITE_ID])
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {
+            answer_key: [],
+            "failed": [{"index": 0, "error": INTERNAL_ERROR_MESSAGE}],
+        }
+
+
+class TestASuiteRouteRefusal:
+    """A Suite route's own refusal answers in the shared error envelope with its exact message."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def test_versions_of_a_bad_id_are_a_bad_request(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        response = client.get("/suites/bad/versions")
+
+        assert_error_reply(
+            response, 400, "VALIDATION_ERROR", "Invalid UUID format for suite_id: 'bad'"
+        )
+
+    def test_versions_of_a_missing_suite_are_not_found(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        response = client.get(f"/suites/{_SUITE_ID}/versions")
+
+        assert_error_reply(response, 404, "NOT_FOUND", f"Suite with ID '{_SUITE_ID}' not found")
+
+    @pytest.mark.parametrize("variables", [["x"], "x", 5])
+    def test_a_create_whose_variables_are_not_an_object_is_a_bad_request(
+        self, client: TestClient, variables: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        response = client.post("/suites", json={"name": "Shaped Suite", "variables": variables})
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Field 'variables' must be an object")
+
+
+_NAME_LENGTH = "Suite name must be between 1 and 255 characters"
+_NAME_NOT_TEXT = "Field 'name' must be a string"
+_NAME_CONVENTION = (
+    "Suite name '{}' violates naming convention: must contain only alphanumeric characters, "
+    "spaces, hyphens, underscores, periods, and parentheses"
+)
+
+
+class TestSuiteNamesHoldPeriodsAndParentheses:
+    """A Suite name may hold periods and parentheses, as a Regression name may."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize("name", ["Smoke (Copy)", "Smoke (2)", "Release 1.2.0"])
+    def test_create_and_rename_accept_the_name(self, client: TestClient, name: str) -> None:
+        created = client.post("/suites", json={"name": name})
+        assert created.status_code == 201, created.text
+        suite_id = created.json()["data"]["id"]
+
+        renamed = client.put(f"/suites/{suite_id}", json={"name": f"{name} again"})
+
+        assert renamed.status_code == 200, renamed.text
+        assert renamed.json()["data"]["name"] == f"{name} again"
+
+
+class TestCloneSuiteChecksTheNewName:
+    """A Suite clone takes a name the create rule accepts and no other Suite has."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        ("name", "message"),
+        [
+            ("", _NAME_LENGTH),
+            ("A" * 256, _NAME_LENGTH),
+            (5, _NAME_NOT_TEXT),
+            (None, _NAME_NOT_TEXT),
+            (["Copy"], _NAME_NOT_TEXT),
+        ],
+    )
+    def test_a_name_create_refuses_is_refused(
+        self, client: TestClient, name: Any, message: str
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        create = client.post("/suites", json={"name": name})
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+
+        response = client.post(f"/suites/{source_id}/clone", json={"new_name": name})
+
+        assert_error_reply(create, 400, "VALIDATION_ERROR", message)
+        assert_error_reply(response, 400, "VALIDATION_ERROR", message)
+        assert [s["id"] for s in client.get("/suites").json()["data"]] == [source_id]
+
+    def test_a_name_outside_the_convention_is_refused(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+
+        response = client.post(f"/suites/{source_id}/clone", json={"new_name": "Bad#Copy"})
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", _NAME_CONVENTION.format("Bad#Copy"))
+        assert [s["id"] for s in client.get("/suites").json()["data"]] == [source_id]
+
+    @pytest.mark.parametrize("name", ["Clone Source (Copy)", "Clone Source (2)", "Smoke v1.2"])
+    def test_a_name_with_periods_and_parentheses_is_cloned(
+        self, client: TestClient, name: str
+    ) -> None:
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+
+        response = client.post(f"/suites/{source_id}/clone", json={"new_name": name})
+
+        assert response.status_code == 201, response.text
+        assert response.json()["data"]["name"] == name
+
+    def test_a_name_another_suite_has_is_a_conflict(self, client: TestClient) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+        client.post("/suites", json={"name": "Taken Name"})
+
+        response = client.post(f"/suites/{source_id}/clone", json={"new_name": "Taken Name"})
+
+        assert_error_reply(response, 409, "CONFLICT", "Suite with name 'Taken Name' already exists")
+        assert sorted(s["name"] for s in client.get("/suites").json()["data"]) == [
+            "Clone Source",
+            "Taken Name",
+        ]
+
+    def test_a_second_batch_copy_under_the_same_name_fails_on_its_own(
+        self, client: TestClient
+    ) -> None:
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+        first = client.post("/suites/batch/clone", json=[source_id])
+
+        response = client.post("/suites/batch/clone", json=[source_id])
+
+        assert len(first.json()["cloned"]) == 1
+        assert response.json() == {
+            "cloned": [],
+            "failed": [
+                {"index": 0, "error": "Suite with name 'Clone Source (Copy)' already exists"}
+            ],
+        }
+
+    @pytest.mark.parametrize("new_version", [5, ["1.0.0"], "invalid"])
+    def test_a_new_version_that_is_not_semantic_is_a_bad_request(
+        self, client: TestClient, new_version: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+
+        source_id = client.post("/suites", json={"name": "Clone Source"}).json()["data"]["id"]
+
+        response = client.post(
+            f"/suites/{source_id}/clone",
+            json={"new_name": "Cloned Suite", "new_version": new_version},
+        )
+
+        assert_error_reply(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            f"Invalid version format '{new_version}': "
+            "must follow semantic versioning (MAJOR.MINOR.PATCH)",
+        )
+
+
+class TestAddTestToSuiteOrder:
+    """The position a Test is added at is a whole number, or left out to append."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize("order", ["1", True, False, 1.5, [0], {"at": 0}])
+    def test_an_order_that_is_not_an_integer_is_a_bad_request(
+        self, client: TestClient, order: Any
+    ) -> None:
+        from tests.api.error_reply_support import assert_error_reply
+        from tests.api.suite_test_helpers import load_suite_file
+
+        suite_id = client.post("/suites", json={"name": "Ordered Suite"}).json()["data"]["id"]
+        stored = load_suite_file(suite_id)
+
+        response = client.post(
+            f"/suites/{suite_id}/tests", json={"test_id": _member_test(), "order": order}
+        )
+
+        assert_error_reply(response, 400, "VALIDATION_ERROR", "Field 'order' must be an integer")
+        assert load_suite_file(suite_id) == stored
+
+    @pytest.mark.parametrize(("order", "position"), [(0, 0), (None, 1)])
+    def test_an_integer_order_places_the_test_and_none_appends_it(
+        self, client: TestClient, order: int | None, position: int
+    ) -> None:
+        from wavecore.api.services.tests import service as test_service
+
+        held = str(test_service.create_test({"name": "Held Test"})["id"])
+        suite_id = client.post("/suites", json={"name": "Ordered Suite", "tests": [held]}).json()[
+            "data"
+        ]["id"]
+        added = _member_test()
+
+        response = client.post(f"/suites/{suite_id}/tests", json={"test_id": added, "order": order})
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["tests"].index(added) == position

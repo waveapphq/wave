@@ -1,13 +1,17 @@
 /**
  * `useLibraryFilters` - derive the visible card list from search + tag state.
  *
- * Tag filtering uses AND semantics (a card must carry ALL selected tags).
- * Search is a case-insensitive substring match against the Function name.
+ * The search runs on the server over name, description and tags (CANVAS-205);
+ * the caller passes its matches. Until the first answer lands the catalog stays
+ * shown. Tag filtering uses AND semantics (a card must carry ALL selected tags).
  */
 
 import { useMemo, useState } from 'react'
 
-import type { FunctionSummary } from '@/features/functions/api/types'
+import type { FunctionSearchField, FunctionSummary } from '@/features/functions/api/types'
+
+/** What the library window's search reads (CANVAS-205). */
+export const LIBRARY_SEARCH_FIELDS: FunctionSearchField[] = ['name', 'description', 'tags']
 
 export interface UseLibraryFiltersResult {
   search: string
@@ -22,7 +26,8 @@ export interface UseLibraryFiltersResult {
 }
 
 export function useLibraryFilters(
-  allFunctions: FunctionSummary[],
+  catalog: FunctionSummary[],
+  searchMatches: FunctionSummary[] | null,
   initialSearch: string = '',
 ): UseLibraryFiltersResult {
   const [search, setSearch] = useState(initialSearch)
@@ -30,27 +35,24 @@ export function useLibraryFilters(
 
   const allTags = useMemo(() => {
     const set = new Set<string>()
-    for (const fn of allFunctions) {
+    for (const fn of catalog) {
       for (const tag of fn.tags) set.add(tag)
     }
     return [...set].sort((a, b) => a.localeCompare(b))
-  }, [allFunctions])
+  }, [catalog])
+
+  const searching = search.trim().length > 0
+  const shown = searching && searchMatches !== null ? searchMatches : catalog
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return allFunctions.filter((fn) => {
-      if (term && !fn.name.toLowerCase().includes(term)) return false
-      if (selectedTags.length > 0) {
-        const fnTagSet = new Set(fn.tags)
-        for (const tag of selectedTags) {
-          if (!fnTagSet.has(tag)) return false
-        }
-      }
-      return true
+    if (selectedTags.length === 0) return shown
+    return shown.filter((fn) => {
+      const fnTagSet = new Set(fn.tags)
+      return selectedTags.every((tag) => fnTagSet.has(tag))
     })
-  }, [allFunctions, search, selectedTags])
+  }, [shown, selectedTags])
 
-  const hasActiveFilters = search.trim().length > 0 || selectedTags.length > 0
+  const hasActiveFilters = searching || selectedTags.length > 0
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>

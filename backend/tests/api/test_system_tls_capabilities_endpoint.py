@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_internal_error
 from wavecore.connectivity import tls_capabilities
 
 _VERSIONS = ("1.0", "1.1", "1.2", "1.3")
@@ -75,14 +76,13 @@ class TestGetTlsCapabilitiesEndpoint:
 
         assert first == second
 
-    def test_internal_error_returns_500_with_correlation_id(self, client: TestClient) -> None:
+    @pytest.mark.parametrize("fault", [RuntimeError, ValueError])
+    def test_an_internal_error_answers_the_generic_500(
+        self, client: TestClient, fault: type[Exception]
+    ) -> None:
         with patch("wavecore.api.routes.system.tls_capabilities.capabilities") as mock_caps:
-            mock_caps.side_effect = RuntimeError("Unexpected error")
+            mock_caps.side_effect = fault("internal catalog fault")
 
             response = client.get("/api/v1/system/tls-capabilities")
 
-        assert response.status_code == 500
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "INTERNAL_ERROR"
-        assert "correlation_id" in data["error"]
+        assert_internal_error(response, "internal catalog fault")

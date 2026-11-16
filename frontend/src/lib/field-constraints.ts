@@ -40,3 +40,12 @@ export const MAX_BLOCK_NAME_LENGTH = 32
 /** Maximum length for a Function version string. Global cap, sibling of
  * MAX_BLOCK_NAME_LENGTH; mirrors the backend `_versioning.MAX_VERSION_LENGTH`. */
 export const MAX_VERSION_LENGTH = 32
+
+export type CounterState = 'hidden' | 'muted' | 'destructive'
+
+/** A capped field's counter: hidden under 80% of the cap, muted from 80%, destructive at the cap. */
+export function counterState(count: number, max: number): CounterState {
+  if (count >= max) return 'destructive'
+  if (count >= 0.8 * max) return 'muted'
+  return 'hidden'
+}

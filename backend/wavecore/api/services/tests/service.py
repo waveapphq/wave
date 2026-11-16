@@ -27,33 +27,46 @@ import yaml
 
 from wavecore.api.exceptions import (
     ConflictException,
+    NotFoundException,
+    PreconditionRequiredException,
+    UnprocessableEntityException,
     ValidationException,
-    WaveException,
 )
 from wavecore.api.services import file_tree, shared
 from wavecore.api.services.block_node_checks import (
+    DUPLICATE_EDGE_ID_CODE,
     READ_ONLY_CODE,
     REMOVE_BLOCK,
+    WAIT_RETRY_LANE,
+    WAIT_UNTIL,
+    RemovedByFlow,
+    RemovedWire,
     block_type_registered,
+    body_members,
     error_entry,
+    is_watch_wait,
+    put_body_wires_on_lanes,
+    put_wait_until_wires_on_lanes,
+    removed_wires_by_flow,
+    repeated_edge_id_message,
+    repeated_edge_ids,
+    validate_loop_targets,
     validate_node_element_type,
     validate_node_metadata,
     validate_read_only_expressions,
     variable_read_only_violation,
+    wait_until_watch_flags,
 )
 from wavecore.api.services.block_schema import BlockSchema, block_schema
 from wavecore.api.services.entity_cache import DirectoryCache
-from wavecore.api.services.storage_paths import get_tests_storage_path
+from wavecore.api.services.storage_paths import entity_dir, get_tests_storage_path, is_entity_id
 from wavecore.api.services.tests import testdata_service
 from wavecore.api.services.typed_numbers import store_workflow_numbers
 from wavecore.api.services.variable_service import refuse_value_problems
 from wavecore.api.services.workbench.block_source import node_type_name
-from wavecore.core.execution.field_checks import (
-    FieldFinding,
-    check_block_fields,
-    is_blank_expression,
-)
-from wavecore.core.execution.row_checks import literal_row_findings
+from wavecore.controls.assertion_evaluator import CHECK_OPERATORS
+from wavecore.core.execution.field_checks import FieldFinding, check_block_fields
+from wavecore.core.execution.row_checks import block_row_findings
 from wavecore.core.expressions.template import _TEMPLATE_PATTERN
 from wavecore.core.functions.declarations import (
     VARIABLE_NAME_PATTERN,
@@ -72,6 +85,7 @@ from wavecore.core.secrets.sealing import (
 )
 from wavecore.core.utf8_text import load_yaml
 from wavecore.core.variables.computed import extract_expression_names
+from wavecore.core.variables.declared_types import types_of_declarations
 from wavecore.core.variables.usage import (
     NameSite,
     SiteKind,
@@ -85,6 +99,8 @@ from wavecore.models.plugins import (
 )
 
 logger = logging.getLogger(__name__)
+
+ETAG_MISMATCH_MESSAGE = "Precondition failed: resource has been modified"
 
 _TEST_FILENAME = "test.yaml"
 # Each block site naming a variable, with the block it sits in.
@@ -197,8 +213,25 @@ class ReadOnlyExpressionImportError(ValidationException):
         self.errors = errors
 
 
+class RepeatedEdgeIdImportError(ValidationException):
+    """An imported test has two edges that carry one id."""
+
+    def __init__(self, message: str, errors: list[dict[str, Any]]) -> None:
+        super().__init__(message)
+        self.errors = errors
+
+
 class VariableValueImportError(ValidationException):
     """An imported test holds a variable value the number rule refuses (REQ-3.1.3.14)."""
+
+    error_code = "INVALID_VARIABLE_VALUE"
+
+
+class FatalImportError(UnprocessableEntityException):
+    """An imported test has validation errors no import fix can repair."""
+
+    error_code = "FATAL_VALIDATION"
+    message = "Fatal validation errors prevent import"
 
 
 def _collect_repairs(
@@ -223,16 +256,39 @@ def _collect_repairs(
         }
         for node_id in sorted(removed_nodes)
     ]
-    repairs.extend(
-        {
-            "kind": "edge",
-            "id": edge.get("id", ""),
-            "code": "",
-            "message": (f"Connection {edge.get('source')} -> {edge.get('target')} was removed"),
-        }
-        for edge in removed_edges
-    )
+    repairs.extend(_edge_repair(edge) for edge in removed_edges)
     return repairs
+
+
+def _edge_repair(edge: Mapping[str, Any]) -> dict[str, Any]:
+    """The repair record of one removed connection."""
+    return {
+        "kind": "edge",
+        "id": edge.get("id", ""),
+        "code": "",
+        "message": f"Connection {edge.get('source')} -> {edge.get('target')} was removed",
+    }
+
+
+def _body_wire_repair(wire: RemovedWire) -> dict[str, Any]:
+    """The repair record of a connection removed from a Function body, with its path."""
+    path = [_holder_segment(holder) for holder in wire.holders]
+    return {**_edge_repair(wire.edge), "function_path": path}
+
+
+def removed_wire_repairs(removed: Iterable[RemovedWire]) -> list[dict[str, Any]]:
+    """The repair records of the wires the lane rule removed; a body's wire carries its path."""
+    return [
+        _body_wire_repair(wire) if wire.holders else _edge_repair(wire.edge) for wire in removed
+    ]
+
+
+def _holder_segment(holder: Mapping[str, Any]) -> dict[str, Any]:
+    node_id = str(holder.get("id", "") or "")
+    label = (holder.get("data") or {}).get("label")
+    return _function_path_segment(
+        node_id, label if isinstance(label, str) and label.strip() else node_id
+    )
 
 
 _ContractLoader = Callable[[str, str], dict[str, Any] | None]
@@ -255,6 +311,7 @@ def _apply_safe_autofixes(
     function_registry: Mapping[str, Any] | None = None,
     contract_loader: _ContractLoader | None = None,
     reference_index: _ReferenceIndex | None = None,
+    removed_body_wires: list[RemovedWire] | None = None,
 ) -> dict[str, Any]:
     """Stage 1 of the unified write-path pipeline.
 
@@ -263,7 +320,8 @@ def _apply_safe_autofixes(
     returns the (mutated) test dict. Visible-class codes
     (REQUIRED_PARAM_MISSING/EMPTY, INVALID_OUTPUT_BINDING_TYPE) are NOT
     auto-fixable and remain to be surfaced by `_validate_for_persist`.
-    Deletions are recorded into `repairs` when the caller supplies a list.
+    Deletions are recorded into `repairs` when the caller supplies a list,
+    and the wires the lane rule took out of Function bodies into `removed_body_wires`.
     """
     workflow = test.get("workflow") or {"nodes": [], "edges": []}
     nodes = workflow.get("nodes", [])
@@ -276,7 +334,8 @@ def _apply_safe_autofixes(
         contract_loader=contract_loader,
         reference_index=reference_index,
     )
-    if validation.get("fatal"):
+    # The repairs find edges by id, so a workflow repeating one is refused as sent.
+    if validation.get("fatal") or _errors_with(validation, _REPEATED_EDGE_ID_CODES):
         return test
 
     node_labels = {
@@ -289,6 +348,9 @@ def _apply_safe_autofixes(
     errors = validation.get("errors", [])
     nodes, edges, nodes_to_remove = _apply_error_fixes(errors, test, nodes, edges)
     nodes, edges = _post_fix_edge_cleanup(nodes, edges, nodes_to_remove)
+    body_wires = put_body_wires_on_lanes(nodes)
+    if removed_body_wires is not None:
+        removed_body_wires.extend(body_wires)
 
     if repairs is not None:
         kept = {id(edge) for edge in edges}
@@ -300,6 +362,7 @@ def _apply_safe_autofixes(
                 node_labels,
             )
         )
+        repairs.extend(removed_wire_repairs(body_wires))
 
     workflow["nodes"] = nodes
     workflow["edges"] = edges
@@ -321,12 +384,14 @@ def _validate_for_persist(
     the residual user-actionable errors. The caller raises
     `SaveValidationError(errors)` if non-empty.
     """
+    removed_body_wires: list[RemovedWire] = []
     _apply_safe_autofixes(
         test,
         repairs,
         function_registry=function_registry,
         contract_loader=contract_loader,
         reference_index=reference_index,
+        removed_body_wires=removed_body_wires,
     )
     validation = _validate_test_data(
         test,
@@ -334,6 +399,7 @@ def _validate_for_persist(
         function_registry=function_registry,
         contract_loader=contract_loader,
         reference_index=reference_index,
+        removed_body_wires=removed_body_wires,
     )
     return list(validation.get("errors", []))
 
@@ -387,16 +453,6 @@ def _set_version_attribute(test_id: str, version: str, attr: str, value: Any) ->
     _save_versions(test_id, versions)
 
 
-def _save_executions(test_id: str, executions: list[dict[str, Any]]) -> None:
-    """Save execution history to storage."""
-    _ensure_storage_dir()
-    test_dir = _get_test_dir(test_id)
-    test_dir.mkdir(parents=True, exist_ok=True)
-    executions_file = test_dir / "executions.yaml"
-    with open(executions_file, "w", encoding="utf-8") as f:
-        yaml.dump(executions, f, default_flow_style=False, sort_keys=False)
-
-
 def _ensure_storage_dir() -> None:
     """Ensure storage directory exists."""
     get_tests_storage_path().mkdir(parents=True, exist_ok=True)
@@ -404,11 +460,13 @@ def _ensure_storage_dir() -> None:
 
 def _get_test_dir(test_id: str) -> Path:
     """Get directory path for a test."""
-    return get_tests_storage_path() / test_id
+    return entity_dir(get_tests_storage_path(), test_id)
 
 
 def _load_test(test_id: str) -> dict[str, Any] | None:
     """Load test from file storage, forgetting the cached entry when the file is gone."""
+    if not is_entity_id(test_id):
+        return None
     test_file = _get_test_dir(test_id) / _TEST_FILENAME
     if not test_file.exists():
         _test_directory.forget(test_id)
@@ -427,6 +485,12 @@ def _drop_local_input_defaults(workflow: Any) -> None:
         _drop_local_input_defaults(holder.get("workflow"))
 
 
+def _declared_types(test: Mapping[str, Any]) -> dict[str, str]:
+    """The declared type of each Test variable."""
+    variables = test.get("variables")
+    return types_of_declarations(variables) if isinstance(variables, Mapping) else {}
+
+
 def _save_test(test: dict[str, Any]) -> None:
     """Save test to file storage and update in-memory cache."""
     _ensure_storage_dir()
@@ -435,7 +499,7 @@ def _save_test(test: dict[str, Any]) -> None:
     if isinstance(test.get("workflow"), dict):
         from wavecore.api.services.functions.service import secret_input_names
 
-        store_workflow_numbers(test["workflow"])
+        store_workflow_numbers(test["workflow"], _declared_types(test))
         _drop_local_input_defaults(test["workflow"])
         test["workflow"] = seal_workflow_node_secrets(
             test["workflow"], secret_inputs=secret_input_names
@@ -476,15 +540,6 @@ def _save_versions(test_id: str, versions: list[dict[str, Any]]) -> None:
     versions_file = test_dir / "versions.yaml"
     with open(versions_file, "w", encoding="utf-8") as f:
         yaml.dump(versions, f, default_flow_style=False, sort_keys=False)
-
-
-def _load_executions(test_id: str) -> list[dict[str, Any]]:
-    """Load execution history from file storage."""
-    executions_file = _get_test_dir(test_id) / "executions.yaml"
-    if not executions_file.exists():
-        return []
-    with open(executions_file, encoding="utf-8") as f:
-        return yaml.safe_load(f) or []
 
 
 def _list_all_tests() -> list[dict[str, Any]]:
@@ -757,11 +812,7 @@ def create_test(data: dict[str, Any]) -> dict[str, Any]:
         ConflictException: If test name already exists
     """
     name = data.get("name", "")
-
-    # Check if test with same name already exists
-    for test in _list_all_tests():
-        if test.get("name") == name:
-            raise ConflictException(f"Test with name '{name}' already exists")
+    _refuse_taken_name(name)
 
     # Generate new test
     test_id = str(uuid.uuid4())
@@ -977,6 +1028,19 @@ def get_test(test_id: str) -> dict[str, Any] | None:
     return result
 
 
+def _refuse_taken_name(name: Any, own_id: Any = None) -> None:
+    """Raise when a test other than ``own_id`` already holds the name."""
+    if any(t.get("name") == name and t.get("id") != own_id for t in _list_all_tests()):
+        raise ConflictException(f"Test with name '{name}' already exists")
+
+
+def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> None:
+    """Raise when the update renames the test onto a name another test holds."""
+    if "name" not in data or data["name"] == test.get("name"):
+        return
+    _refuse_taken_name(data["name"], test.get("id"))
+
+
 def update_test(
     test_id: str, data: dict[str, Any], etag: str | None = None
 ) -> dict[str, Any] | None:
@@ -991,7 +1055,10 @@ def update_test(
         Updated test or None if not found
 
     Raises:
-        ValueError: If ETag mismatch
+        PreconditionRequiredException: If the ETag does not match
+        ConflictException: If the new name is taken
+        ValidationException: If the stored version is not MAJOR.MINOR.PATCH
+        SaveValidationError: If validation errors remain after autofix
     """
     test = _load_test(test_id)
     if test is None:
@@ -1001,18 +1068,11 @@ def update_test(
     if etag:
         current_etag = _generate_etag(test)
         if etag != current_etag:
-            raise ConflictException("Precondition failed: resource has been modified")
+            raise PreconditionRequiredException(ETAG_MISMATCH_MESSAGE)
 
-    # Increment version (minor bump)
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    _refuse_taken_rename(test, data)
+
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     now = datetime.now(UTC).isoformat()
 
@@ -1087,7 +1147,8 @@ def update_test_metadata(
         Updated test or None if not found
 
     Raises:
-        ConflictException: If ETag mismatch or duplicate name
+        PreconditionRequiredException: If the ETag does not match
+        ConflictException: If the new name is taken
     """
     test = _load_test(test_id)
     if test is None:
@@ -1097,13 +1158,9 @@ def update_test_metadata(
     if etag:
         current_etag = _generate_etag(test)
         if etag != current_etag:
-            raise ConflictException("Precondition failed: resource has been modified")
+            raise PreconditionRequiredException(ETAG_MISMATCH_MESSAGE)
 
-    # Check for name uniqueness if updating name
-    if "name" in data and data["name"] != test.get("name"):
-        for existing in _list_all_tests():
-            if existing.get("name") == data["name"] and existing.get("id") != test_id:
-                raise ConflictException(f"Test with name '{data['name']}' already exists")
+    _refuse_taken_rename(test, data)
 
     now = datetime.now(UTC).isoformat()
 
@@ -1132,9 +1189,10 @@ def update_test_metadata(
 def delete_test(test_id: str) -> bool:
     """Delete test.
 
-    Rejects with ``ConflictException`` when a tracked test execution is still
-    in ``running`` or ``paused`` state. The exception carries the blocking
-    execution IDs so the route layer can surface them in the 409 response.
+    Rejects with ``ConflictException`` while a tracked execution of the test,
+    a Suite or Regression execution running it, or a workbench session on it
+    is ``running`` or ``paused``. The exception carries the blocking IDs so
+    the route layer can surface them in the 409 response.
 
     Args:
         test_id: Test UUID
@@ -1143,7 +1201,6 @@ def delete_test(test_id: str) -> bool:
         True if deleted, False if not found
     """
     from wavecore.api.exceptions import ConflictException
-    from wavecore.api.services.executions import _storage as _exec_storage
     from wavecore.api.services.relations import service as relation_service
     from wavecore.api.services.suites import version_service as suite_version_service
 
@@ -1151,7 +1208,7 @@ def delete_test(test_id: str) -> bool:
     if test is None:
         return False
 
-    blocking = _exec_storage.get_active_tracked_executions("test", test_id)
+    blocking = testdata_service.running_holders(test_id)
     if blocking:
         raise ConflictException(
             f"Cannot delete test '{test_id}': execution is running or paused",
@@ -1172,29 +1229,38 @@ def delete_test(test_id: str) -> bool:
     return True
 
 
-def batch_create_tests(tests: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
     """Create multiple tests in a batch.
 
     Args:
         tests: List of test data dictionaries
 
     Returns:
-        Dictionary with created IDs and failed items
+        Dictionary with created IDs, failed items and each created test's repairs by its ID
     """
     created: list[str] = []
     failed: list[dict[str, Any]] = []
+    repairs: dict[str, list[dict[str, Any]]] = {}
 
     for idx, test_data in enumerate(tests):
+        if not isinstance(test_data, dict):
+            failed.append({"index": idx, "error": shared.NOT_AN_OBJECT_ITEM})
+            continue
         try:
             test = create_test(test_data)
-            created.append(test["id"])
-        except (WaveException, ValueError) as e:
-            failed.append({"index": idx, "error": str(e)})
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
+            continue
+        except Exception as e:
+            failed.append(shared.batch_failure(idx, e))
+            continue
+        created.append(test["id"])
+        repairs[test["id"]] = test["repairs"]
 
-    return {"created": created, "failed": failed}
+    return {"created": created, "failed": failed, "repairs": repairs}
 
 
-def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
+def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
     """Update multiple tests in a batch.
 
     Args:
@@ -1202,32 +1268,41 @@ def batch_update_tests(updates: list[dict[str, Any]]) -> dict[str, Any]:
                  Supports both {id, update: {...}} and {id, metadata: {...}} formats.
 
     Returns:
-        Dictionary with updated IDs and failed items
+        Dictionary with updated IDs, failed items and each updated test's repairs by its ID
     """
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
+    repairs: dict[str, list[dict[str, Any]]] = {}
 
-    for idx, update in enumerate(updates):
-        test_id = str(update.get("id", ""))
+    for idx, item in enumerate(updates):
+        problem = shared.batch_update_problem(item)
+        if problem is not None:
+            failed.append({"index": idx, "error": problem})
+            continue
+        test_id = str(item.get("id", ""))
         # Support both {id, update: {...}} and direct field formats like {id, metadata: {...}}
-        update_data = update.get("update", {})
+        update_data: dict[str, Any] = item.get("update", {})
         if not update_data:
             # If no "update" key, use remaining fields as update data
-            update_data = {k: v for k, v in update.items() if k != "id"}
-
+            update_data = {k: v for k, v in item.items() if k != "id"}
         try:
             result = update_test(test_id, update_data)
-            if result is None:
-                failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
-            else:
-                updated.append(test_id)
+        except SaveValidationError as e:
+            failed.append({"index": idx, "error": e.errors[0]["message"]})
+            continue
         except Exception as e:
-            failed.append({"index": idx, "error": str(e)})
+            failed.append(shared.batch_failure(idx, e))
+            continue
+        if result is None:
+            failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
+        else:
+            updated.append(test_id)
+            repairs[test_id] = result["repairs"]
 
-    return {"updated": updated, "failed": failed}
+    return {"updated": updated, "failed": failed, "repairs": repairs}
 
 
-def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
+def batch_delete_tests(test_ids: list[Any]) -> dict[str, Any]:
     """Delete multiple tests in a batch.
 
     Args:
@@ -1236,19 +1311,7 @@ def batch_delete_tests(test_ids: list[str]) -> dict[str, Any]:
     Returns:
         Dictionary with deleted IDs and failed items
     """
-    deleted: list[str] = []
-    failed: list[dict[str, Any]] = []
-
-    for idx, test_id in enumerate(test_ids):
-        try:
-            if delete_test(test_id):
-                deleted.append(test_id)
-            else:
-                failed.append({"index": idx, "error": f"Test with ID '{test_id}' not found"})
-        except (WaveException, ValueError) as e:
-            failed.append({"index": idx, "error": str(e)})
-
-    return {"deleted": deleted, "failed": failed}
+    return shared.batch_delete(test_ids, delete_test, "Test")
 
 
 def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
@@ -1269,21 +1332,7 @@ def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | Non
 
     # Determine version bump
     version_bump = data.get("version_bump", "minor")
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-    except (ValueError, AttributeError):
-        parts = [1, 0, 0]  # Default fallback
-
-    if version_bump == "major":
-        new_version = f"{parts[0] + 1}.0.0"
-    elif version_bump == "minor":
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    else:
-        new_version = f"{parts[0]}.{parts[1]}.{parts[2] + 1}"
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), version_bump)
 
     # Update test
     now = datetime.now(UTC).isoformat()
@@ -1323,7 +1372,7 @@ def delete_test_version(test_id: str, version: str) -> bool:
         True if deleted, False if not found
 
     Raises:
-        ValueError: If version has dependencies
+        ConflictException: If version has dependencies
     """
     test = _load_test(test_id)
     if test is None:
@@ -1472,7 +1521,7 @@ def update_test_variables(
         Updated variable declarations or None if not found
 
     Raises:
-        ValueError: If type mismatch or invalid expression syntax
+        ValidationException: If type mismatch or invalid expression syntax
     """
     test = _load_test(test_id)
     if test is None:
@@ -1804,6 +1853,7 @@ def _validate_node_params_and_assertions(
     add_error: Any,
     add_warning: Any,
     errors: list[dict[str, Any]],
+    declared_types: Mapping[str, str],
     library: _FunctionLibrary | None = None,
 ) -> None:
     """Validate parameter schema and assertion IDs for a single node."""
@@ -1831,18 +1881,7 @@ def _validate_node_params_and_assertions(
     if disabled or not is_block:
         return
 
-    site.report(literal_row_findings(data))
-    if is_control and element_type == "variable-setter":
-        _validate_setter_expression_rows(
-            data=data,
-            values=values,
-            node_path=node_path,
-            node_id=node_id,
-            node_label=node_label,
-            context=context,
-            add_error=add_error,
-            add_warning=add_warning,
-        )
+    site.report(block_row_findings(data, declared_types))
     if is_control and element_type == "assert":
         _check_assertion_ids(values, site, errors)
 
@@ -1864,36 +1903,6 @@ def _check_assertion_ids(
                 fix_action="Generate unique assertion IDs",
             )
         )
-
-
-def _validate_setter_expression_rows(
-    *,
-    data: dict[str, Any],
-    values: dict[str, Any],
-    node_path: str,
-    node_id: str,
-    node_label: str | None,
-    context: str,
-    add_error: Any,
-    add_warning: Any,
-) -> None:
-    """A Variable Setter expression row left empty is an issue; an empty text row is a value."""
-    rows = values.get("variables")
-    if not isinstance(rows, dict):
-        return
-    for name in data.get("variableExpressionKeys") or []:
-        if name in rows and is_blank_expression(rows[name]):
-            _report_required_param(
-                path=f"{node_path}.data.config.values.variables.{name}",
-                node_id=node_id,
-                node_label=node_label,
-                element_type="variable-setter",
-                code="REQUIRED_PARAM_EMPTY",
-                message="Expression is required",
-                context=context,
-                add_error=add_error,
-                add_warning=add_warning,
-            )
 
 
 def _emit_top_level_halt_scope_error(
@@ -1936,6 +1945,7 @@ def _validate_all_nodes(
     context: str,
     errors: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
+    declared_types: Mapping[str, str],
     library: _FunctionLibrary | None = None,
 ) -> set[str]:
     """Validate all workflow nodes. Returns set of valid node IDs."""
@@ -2040,6 +2050,7 @@ def _validate_all_nodes(
             _add_error,
             _add_warning,
             errors,
+            declared_types,
             library,
         )
 
@@ -2168,6 +2179,7 @@ def _validate_output_binding_types(
 
 _VALID_EDGE_TYPES = {"default", "smoothstep", "step", "straight"}
 _PATH_WORKFLOW_EDGES = "workflow.edges"
+_FIX_RETRY_LANE_EDGES = "Remove the retry lane edges (Watch mode has no retry lane)"
 
 
 def _validate_edges_basic(
@@ -2175,7 +2187,7 @@ def _validate_edges_basic(
     node_ids: set[str],
     errors: list[dict[str, Any]],
 ) -> None:
-    """Validate individual edges for dangling refs, self-loops, and invalid types."""
+    """Validate individual edges for dangling refs, self-loops, invalid types and repeated ids."""
     valid_sources = node_ids | {"start-node"}
     for idx, edge in enumerate(edges):
         edge_path = f"edges[{idx}]"
@@ -2223,6 +2235,15 @@ def _validate_edges_basic(
                 )
             )
 
+    for edge_id, index in repeated_edge_ids(edges).items():
+        errors.append(
+            error_entry(
+                path=f"edges[{index}]",
+                code=DUPLICATE_EDGE_ID_CODE,
+                message=repeated_edge_id_message(edge_id),
+            )
+        )
+
 
 def _build_node_label_map(nodes: list[dict[str, Any]]) -> dict[str, str | None]:
     """Build a mapping from node ID to label for error messages."""
@@ -2257,7 +2278,7 @@ def _get_node_branching_max(data: dict[str, Any], control_ids: set[str]) -> int 
 
     if hint_type == "branching":
         return _branching_max_from_hints(hints, data)
-    if element_type == "wait-until":
+    if element_type == WAIT_UNTIL:
         return _wait_until_max(data)
     if hint_type in ("scoped", "looping"):
         dynamic = _scoped_dynamic_max(hints, data)
@@ -2270,8 +2291,27 @@ def _get_node_branching_max(data: dict[str, Any], control_ids: set[str]) -> int 
 
 def _wait_until_max(data: dict[str, Any]) -> int:
     """Watch mode renders one default egress; Retry renders the lane plus the egress."""
-    values = (data.get("config") or {}).get("values") or {}
-    return 1 if values.get("mode", "retry") == "watch" else 2
+    return 1 if is_watch_wait(data) else 2
+
+
+def _retry_lane_cap_fixes(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    branching_max_edges: dict[str, int],
+) -> dict[str, str]:
+    """The cap fix text of each Watch Wait Until that only its retry wires put over the cap."""
+    watch_ids = {nid for nid, watch in wait_until_watch_flags(nodes).items() if watch}
+    egress_count: dict[str, int] = {}
+    for edge in edges:
+        source, target = edge.get("source"), edge.get("target")
+        on_egress = edge.get("sourceHandle") != WAIT_RETRY_LANE
+        if source in watch_ids and target and target != source and on_egress:
+            egress_count[source] = egress_count.get(source, 0) + 1
+    return {
+        nid: _FIX_RETRY_LANE_EDGES
+        for nid in watch_ids
+        if egress_count.get(nid, 0) <= branching_max_edges.get(nid, 1)
+    }
 
 
 def _scoped_dynamic_max(hints: dict[str, Any], data: dict[str, Any]) -> int | None:
@@ -2323,6 +2363,7 @@ def _validate_outgoing_edges(
     node_label_map: dict[str, str | None],
     branching_max_edges: dict[str, int],
     errors: list[dict[str, Any]],
+    cap_fix_actions: Mapping[str, str],
 ) -> None:
     """Validate outgoing edge counts per node."""
     outgoing_count: dict[str, int] = {}
@@ -2345,7 +2386,7 @@ def _validate_outgoing_edges(
                     message=(
                         f"Block '{label or nid}' has {count} outgoing edges (max {max_allowed})"
                     ),
-                    fix_action="Remove all outgoing edges from block",
+                    fix_action=cap_fix_actions.get(nid, "Remove all outgoing edges from block"),
                 )
             )
 
@@ -2425,9 +2466,10 @@ def _validate_edge_multiplicity(
     node_label_map: dict[str, str | None],
     branching_max_edges: dict[str, int],
     errors: list[dict[str, Any]],
+    cap_fix_actions: Mapping[str, str],
 ) -> None:
     """Validate outgoing and incoming edge counts per node."""
-    _validate_outgoing_edges(edges, node_label_map, branching_max_edges, errors)
+    _validate_outgoing_edges(edges, node_label_map, branching_max_edges, errors, cap_fix_actions)
     _validate_outgoing_handle_edges(edges, node_label_map, errors)
     _validate_incoming_edges(edges, node_label_map, errors)
 
@@ -2625,30 +2667,8 @@ _REMOTE_UNSUPPORTED_BODY_MODES = {
 
 def _remote_body_member_ids(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> set[str]:
     """Node ids inside any Remote Execution body sub-flow (reached over the body handle)."""
-    rex_ids = {
-        node.get("id")
-        for node in nodes
-        if ((node.get("data") or {}).get("elementType")) == "remote-execution"
-    }
-    if not rex_ids:
-        return set()
-    adjacency: dict[str, list[str]] = {}
-    stack: list[str] = []
-    for edge in edges:
-        source, target = edge.get("source"), edge.get("target")
-        if not source or not target:
-            continue
-        adjacency.setdefault(source, []).append(target)
-        if source in rex_ids and edge.get("sourceHandle") == "body":
-            stack.append(target)
     members: set[str] = set()
-    while stack:
-        current = stack.pop()
-        if current in members:
-            continue
-        members.add(current)
-        stack.extend(adjacency.get(current, []))
-    return members
+    return members.union(*body_members(nodes, edges, {"remote-execution"}).values())
 
 
 def _remote_unsupported_findings(
@@ -2796,12 +2816,14 @@ def _validate_test_data(
     function_registry: Mapping[str, Any] | None = None,
     contract_loader: _ContractLoader | None = None,
     reference_index: _ReferenceIndex | None = None,
+    removed_body_wires: Iterable[RemovedWire] = (),
 ) -> dict[str, Any]:
     """Validate test data with two-phase validation.
 
     Args:
         test: Test data dict (loaded or in-memory)
         context: Validation context - "load", "import", or "run"
+        removed_body_wires: The wires the save's lane rule took out of Function bodies
 
     Returns:
         Validation result with fatal flag, errors, and warnings
@@ -2828,7 +2850,9 @@ def _validate_test_data(
     )
 
     # Node-level validation
-    node_ids = _validate_all_nodes(nodes, control_ids, context, errors, warnings, library)
+    node_ids = _validate_all_nodes(
+        nodes, control_ids, context, errors, warnings, _declared_types(test), library
+    )
 
     # Edge-level validation
     _validate_edges_basic(edges, node_ids, errors)
@@ -2836,7 +2860,8 @@ def _validate_test_data(
     # Edge multiplicity validation
     node_label_map = _build_node_label_map(nodes)
     branching_max_edges = _compute_branching_max_edges(nodes, control_ids)
-    _validate_edge_multiplicity(edges, node_label_map, branching_max_edges, errors)
+    cap_fix_actions = _retry_lane_cap_fixes(nodes, edges, branching_max_edges)
+    _validate_edge_multiplicity(edges, node_label_map, branching_max_edges, errors, cap_fix_actions)
 
     # Try-catch scope isolation
     _validate_try_catch_scopes(nodes, edges, node_label_map, errors)
@@ -2846,6 +2871,7 @@ def _validate_test_data(
 
     # Remote Execution body rules (WAVE-side schemes, unsupported capabilities)
     _validate_remote_body_rules(nodes, edges, errors)
+    validate_loop_targets(nodes, edges, errors)
 
     # Variable-level validation
     variables = test.get("variables", {})
@@ -2859,7 +2885,9 @@ def _validate_test_data(
         _validate_output_binding_types(nodes, variables, context, errors, warnings, library)
 
     # Validate embedded Function instances (REQ-3.1.2.4).
-    _validate_embedded_function_instances(nodes, context, errors, warnings, library=library)
+    _validate_embedded_function_instances(
+        nodes, context, errors, warnings, library=library, removed_body_wires=removed_body_wires
+    )
 
     result = {"fatal": False, "errors": errors, "warnings": warnings}
     _log_validation_result(result, context, test_name)
@@ -2985,15 +3013,22 @@ def _walk_local_function(
     context: str,
     errors: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
+    *,
+    removed: RemovedByFlow,
 ) -> None:
     """Validate one Function flow (a Local body or a Shared draft) and descend into it."""
     from wavecore.api.services.functions._storage import validate_function_for_save
 
     local_def, fid, flabel = payload
     this_segment = _function_path_segment(fid, flabel)
+    body_path = [*enclosing_path, this_segment]
+    holder_ids = tuple(str(segment["node_id"] or "") for segment in body_path)
     # Only a save refuses a Function Block that leaves a Required input empty; the run names it.
     for issue in validate_function_for_save(
-        local_def, function_registry=library.registry, required_function_inputs=context == "save"
+        local_def,
+        function_registry=library.registry,
+        required_function_inputs=context == "save",
+        removed_retry_wires=removed.get(holder_ids, ()),
     ):
         _emit_embedded_issue(
             issue,
@@ -3004,7 +3039,7 @@ def _walk_local_function(
         )
     body_nodes = (local_def.get("workflow") or {}).get("nodes") or []
     _walk_function_instances(
-        body_nodes, [*enclosing_path, this_segment], library, context, errors, warnings
+        body_nodes, body_path, library, context, errors, warnings, removed=removed, in_body=True
     )
 
 
@@ -3041,11 +3076,13 @@ def _emit_nested_editmode_guard(
     enclosing_path: list[dict[str, Any]],
     context: str,
     errors: list[dict[str, Any]],
+    *,
+    in_body: bool,
 ) -> None:
-    """A Shared instance still in edit mode INSIDE another Function's body
-    blocks publish (a top-level edit-mode instance is the normal edit flow)."""
+    """A Shared instance still in edit mode INSIDE a Function flow blocks publish (one on
+    a Test's own canvas is the normal edit flow)."""
     # The run gate executes nested drafts; only persisting paths block.
-    if context == "run" or not enclosing_path or not data.get("editMode"):
+    if context == "run" or not in_body or not data.get("editMode"):
         return
     node_id = str(node.get("id", "") or "")
     label = data.get("label")
@@ -3114,22 +3151,27 @@ def _walk_function_instances(
     context: str,
     errors: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
+    *,
+    removed: RemovedByFlow,
+    in_body: bool = False,
 ) -> None:
     """Validate every Function instance reachable from ``nodes``.
 
     Local instances and Shared edit-mode drafts have their immediate body
     validated (issues carry a root-to-leaf ``function_path``) and are descended
     into. Shared instances at any depth are checked for a self-referential
-    composition cycle and, when nested, for an unresolved edit-mode draft.
-    Top-level Shared instances additionally run the version gate.
-    Descent is bounded by MAX_VALIDATION_DEPTH.
+    composition cycle and, inside a Function flow (``in_body``), for an unresolved
+    edit-mode draft. Shared instances on a Test's own canvas additionally run the
+    version gate. Descent is bounded by MAX_VALIDATION_DEPTH.
     """
     if len(enclosing_path) >= MAX_VALIDATION_DEPTH:
         return
     for node in nodes:
         payload = _local_function_node_payload(node)
         if payload is not None:
-            _walk_local_function(payload, enclosing_path, library, context, errors, warnings)
+            _walk_local_function(
+                payload, enclosing_path, library, context, errors, warnings, removed=removed
+            )
             continue
         if not isinstance(node, dict):
             continue
@@ -3137,10 +3179,14 @@ def _walk_function_instances(
         if _is_shared_function_instance(data):
             draft = _draft_node_payload(node, data)
             if draft is not None:
-                _walk_local_function(draft, enclosing_path, library, context, errors, warnings)
-            _emit_nested_editmode_guard(node, data, enclosing_path, context, errors)
+                _walk_local_function(
+                    draft, enclosing_path, library, context, errors, warnings, removed=removed
+                )
+            _emit_nested_editmode_guard(
+                node, data, enclosing_path, context, errors, in_body=in_body
+            )
             _emit_self_reference_guard(node, data, enclosing_path, library.reference_index, errors)
-        if not enclosing_path:
+        if not in_body:
             _maybe_validate_top_level_shared(node, library, errors)
 
 
@@ -3185,11 +3231,13 @@ def _validate_embedded_function_instances(
     contract_loader: _ContractLoader | None = None,
     reference_index: _ReferenceIndex | None = None,
     library: _FunctionLibrary | None = None,
+    removed_body_wires: Iterable[RemovedWire] = (),
 ) -> None:
     """Canonical Function-instance validation across the whole workflow.
 
     Descends Local bodies and Shared edit-mode drafts to any depth attaching a path
     trail, and gates top-level Shared instances on version availability.
+    ``removed_body_wires`` lets a body's unreached Block name the retry wire the save took out.
     """
     if library is None:
         library = _function_library(
@@ -3200,7 +3248,33 @@ def _validate_embedded_function_instances(
         )
     if library is None:
         return
-    _walk_function_instances(nodes, [], library, context, errors, warnings)
+    _walk_function_instances(
+        nodes,
+        [],
+        library,
+        context,
+        errors,
+        warnings,
+        removed=removed_wires_by_flow(removed_body_wires),
+    )
+
+
+def nested_function_errors(
+    nodes: list[dict[str, Any]],
+    *,
+    function_registry: Mapping[str, Any],
+    context: str,
+    removed: RemovedByFlow,
+) -> list[dict[str, Any]]:
+    """The errors of the Function Blocks a Function flow holds, each body at any depth
+    included, by the walk a Test runs under its Function bodies (REQ-3.1.2.4)."""
+    errors: list[dict[str, Any]] = []
+    library = _function_library(nodes, function_registry=function_registry)
+    if library is not None:
+        _walk_function_instances(
+            nodes, [], library, context, errors, [], removed=removed, in_body=True
+        )
+    return errors
 
 
 _REQUIRED_CODES = frozenset({"REQUIRED_PARAM_MISSING", "REQUIRED_PARAM_EMPTY"})
@@ -3727,11 +3801,26 @@ def _expected_types(found: _FoundSites) -> set[str]:
     """The types the settings and outputs naming a variable expect; a Setter target expects none."""
     types: set[str] = set()
     for node, site in found:
-        if site.kind != SiteKind.SETTER_TARGET:
-            expected = _expected_type(node, site.setting)
-            if expected:
-                types.add(expected)
+        expected = _site_expected_type(node, site)
+        if expected:
+            types.add(expected)
     return types
+
+
+def _site_expected_type(node: dict[str, Any], site: NameSite) -> str | None:
+    """The one type a site expects of the variable it names, or None."""
+    if site.kind == SiteKind.SETTER_TARGET:
+        return None
+    if site.kind == SiteKind.NAME:
+        return _condition_value_type(node, site)
+    return _expected_type(node, site.setting)
+
+
+def _condition_value_type(node: dict[str, Any], site: NameSite) -> str | None:
+    """The type a condition row checks its variable as."""
+    value_type = _at_path(node["data"], site.path[:-1]).get("value_type")
+    known = isinstance(value_type, str) and value_type in CHECK_OPERATORS
+    return value_type if known else None
 
 
 def _collect_profile_aliases(nodes: list[dict[str, Any]]) -> set[str]:
@@ -3763,28 +3852,19 @@ def _find_undeclared_variables(
     namespace_prefixes = tuple(f"{ns}." for ns in RESERVED_VARIABLE_NAMES)
 
     for node in nodes:
-        for site in _checked_sites(node):
+        for site in block_sites(node):
             if site.kind == SiteKind.OUTPUT_BINDING and (
                 site.text in RESERVED_VARIABLE_NAMES or site.text.startswith(namespace_prefixes)
             ):
                 namespace_binding_targets.append((site.node_id, site.text))
                 continue
+            # A condition row may check a namespace variable; the run holds it as `suite.<name>`.
+            if site.kind == SiteKind.NAME and site.text.startswith(namespace_prefixes):
+                continue
             for name in sorted(site.names - all_declared):
                 undeclared.setdefault(name, []).append((node, site))
 
     return undeclared, namespace_binding_targets
-
-
-def _checked_sites(node: dict[str, Any]) -> Iterator[NameSite]:
-    """The sites UNDECLARED checks: writes and expression or template settings and entries."""
-    data = node.get("data") or {}
-    fields = {*(data.get("expressionFields") or []), *(data.get("templateFields") or [])}
-    return (site for site in block_sites(node) if site.writes or _is_flagged_setting(site, fields))
-
-
-def _is_flagged_setting(site: NameSite, fields: set[str]) -> bool:
-    """A setting or one entry of it the block marks expression or template."""
-    return site.path[:2] == ("config", "values") and site.setting in fields
 
 
 def _schema_by_name(schema: list[Any]) -> dict[str, dict[str, Any]]:
@@ -4132,25 +4212,40 @@ def _renamed_key(name: Any, old_name: str, new_name: str) -> Any:
     return new_name if name == old_name else name
 
 
+def _renamed_row_place(place: Any, old_name: str, new_name: str) -> Any:
+    """A Setter row's place ``variables.<row>``, or one entry under it, moved to ``new_name``."""
+    old_row = f"variables.{old_name}"
+    if place == old_row or (isinstance(place, str) and place.startswith(f"{old_row}.")):
+        return f"variables.{new_name}{place[len(old_row) :]}"
+    return place
+
+
 def _rename_setter_target(data: dict[str, Any], old_name: str, new_name: str) -> None:
-    """A renamed Setter target moves across its row, kind keys, types and secret keys."""
+    """A renamed Setter target moves across its row, value flags, entry types and secret mark."""
     config = data["config"]
     rows = config["values"]["variables"]
     config["values"]["variables"] = {
         _renamed_key(key, old_name, new_name): value for key, value in rows.items()
     }
     for owner, key in (
-        (data, "variableExpressionKeys"),
-        (data, "variableTemplateKeys"),
-        (config, "variableSecretKeys"),
+        (data, "expressionFields"),
+        (data, "templateFields"),
+        (config, "secretFields"),
     ):
         if isinstance(owner.get(key), list):
-            owner[key] = [_renamed_key(name, old_name, new_name) for name in owner[key]]
-    for key in ("variableTypes", "variableElementTypes"):
-        if isinstance(data.get(key), dict):
-            data[key] = {
-                _renamed_key(name, old_name, new_name): value for name, value in data[key].items()
-            }
+            owner[key] = [_renamed_row_place(place, old_name, new_name) for place in owner[key]]
+    if isinstance(data.get("elementTypes"), dict):
+        data["elementTypes"] = {
+            _renamed_row_place(place, old_name, new_name): types
+            for place, types in data["elementTypes"].items()
+        }
+
+
+def _at_path(root: Any, parts: Sequence[str]) -> Any:
+    """The value a site's path parts lead to under a Block's ``data``."""
+    for part in parts:
+        root = root[int(part)] if isinstance(root, list) else root[part]
+    return root
 
 
 def _rename_sites(found: _FoundSites, old_name: str, new_name: str) -> None:
@@ -4160,10 +4255,8 @@ def _rename_sites(found: _FoundSites, old_name: str, new_name: str) -> None:
         if site.kind == SiteKind.SETTER_TARGET:
             _rename_setter_target(data, old_name, new_name)
             continue
-        holder: Any = data
         *parents, last = site.path
-        for part in parents:
-            holder = holder[int(part)] if isinstance(holder, list) else holder[part]
+        holder = _at_path(data, parents)
         holder[int(last) if isinstance(holder, list) else last] = _renamed_text(
             site, old_name, new_name
         )
@@ -4322,7 +4415,7 @@ def _post_fix_edge_cleanup(
     edges: list[dict[str, Any]],
     nodes_to_remove: set[str],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Clean up edges after error fixes: remove dangling, multi-edge, normalize handles."""
+    """Clean up edges after error fixes: dangling, Wait Until lanes, multi-edge, handles."""
     # Remove nodes marked for removal
     if nodes_to_remove:
         nodes = [n for n in nodes if n.get("id") not in nodes_to_remove]
@@ -4354,6 +4447,7 @@ def _post_fix_edge_cleanup(
         logger.debug("  Filtered %d dangling/self-loop edge(s)", dangling_removed)
 
     # Fix multiple edges
+    edges = put_wait_until_wires_on_lanes(nodes, edges)
     edges = _fix_multi_edges(nodes, edges)
     edges = _fix_duplicate_source_handles(edges)
 
@@ -4472,7 +4566,8 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
         validation warnings), or None if test not found
 
     Raises:
-        ValueError: If test has fatal errors that cannot be fixed
+        ValidationException: If test has fatal errors that cannot be fixed
+        SaveValidationError: If edges of the test repeat an id; nothing is repaired
     """
     test = _load_test(test_id)
     if test is None:
@@ -4482,6 +4577,10 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
 
     if validation.get("fatal"):
         raise ValidationException("Test has fatal errors that cannot be auto-fixed")
+    # The repairs find edges by id, so a test repeating one is refused as stored.
+    repeated = _errors_with(validation, _REPEATED_EDGE_ID_CODES)
+    if repeated:
+        raise SaveValidationError(repeated)
 
     test_name = test.get("name", "?")
     errors = validation.get("errors", [])
@@ -4514,6 +4613,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
 
     # Post-fix cleanup
     nodes, edges = _post_fix_edge_cleanup(nodes, edges, nodes_to_remove)
+    put_body_wires_on_lanes(nodes)
 
     workflow["nodes"] = nodes
     workflow["edges"] = edges
@@ -4537,7 +4637,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
 def clone_test(
     test_id: str, new_name: str, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a test with a new name.
+    """Clone a test with a new name no other test has.
 
     Args:
         test_id: Source test UUID
@@ -4550,6 +4650,7 @@ def clone_test(
     source = _load_test(test_id)
     if source is None:
         return None
+    _refuse_taken_name(new_name)
 
     now = datetime.now(UTC).isoformat()
     clone_id = str(uuid.uuid4())
@@ -4620,34 +4721,6 @@ def get_test_dependency_graph(test_id: str) -> dict[str, Any] | None:
     return {"nodes": dep_nodes, "edges": dep_edges}
 
 
-def get_test_executions(test_id: str, page: int = 1, per_page: int = 20) -> dict[str, Any] | None:
-    """Get test execution history.
-
-    Args:
-        test_id: Test UUID
-        page: Page number
-        per_page: Results per page
-
-    Returns:
-        Paginated execution history or None if test not found
-    """
-    test = _load_test(test_id)
-    if test is None:
-        return None
-
-    executions = _load_executions(test_id)
-    total = len(executions)
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-
-    return {
-        "executions": executions[start_idx:end_idx],
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-    }
-
-
 def get_test_history(test_id: str) -> dict[str, Any] | None:
     """Get complete version history for a test.
 
@@ -4680,7 +4753,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
         Test with new version created from restore, or None if not found
 
     Raises:
-        ValueError: If version not found
+        NotFoundException: If version not found
     """
     test = _load_test(test_id)
     if test is None:
@@ -4691,20 +4764,11 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
     # Check version exists
     version_entry = next((v for v in versions if v["version"] == version), None)
     if version_entry is None:
-        raise ValidationException(f"Version '{version}' not found for test '{test_id}'")
+        raise NotFoundException(f"Version '{version}' not found for test '{test_id}'")
 
     now = datetime.now(UTC).isoformat()
 
-    # Create new version from restore
-    current_version = test.get("version", "1.0.0")
-    # Parse version safely - handle malformed or empty versions
-    try:
-        parts = [int(x) for x in current_version.split(".")]
-        if len(parts) < 3:
-            parts = [1, 0, 0]  # Default to 1.0.0 if malformed
-        new_version = f"{parts[0]}.{parts[1] + 1}.0"
-    except (ValueError, AttributeError):
-        new_version = "1.1.0"  # Default fallback
+    new_version = shared.next_semantic_version(str(test.get("version", "1.0.0")), "minor")
 
     # Update test
     test["version"] = new_version
@@ -4789,23 +4853,28 @@ def _parse_test_file(content: bytes, filename: str) -> dict[str, Any]:
         Parsed test data dict
 
     Raises:
-        ValueError: If the file cannot be parsed
+        ValidationException: If the file cannot be parsed
     """
-    text = content.decode("utf-8")
     lower = filename.lower()
-
     if lower.endswith(_EXT_JSON):
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValidationException(f"Invalid JSON: {exc}") from exc
+        kind = "JSON"
     elif lower.endswith((_EXT_YAML, ".yml")):
-        try:
-            data = load_yaml(text)
-        except yaml.YAMLError as exc:
-            raise ValidationException(f"Invalid YAML: {exc}") from exc
+        kind = "YAML"
     else:
         raise ValidationException(f"Unsupported file format: {filename}")
+
+    unparsable = f"Invalid {kind}: could not parse file"
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValidationException(unparsable) from exc
+    try:
+        data = json.loads(text) if kind == "JSON" else load_yaml(text)
+    except (json.JSONDecodeError, yaml.YAMLError) as exc:
+        raise ValidationException(f"Invalid {kind}: {exc}") from exc
+    except ValueError as exc:
+        # A number too long to read, or a date that does not exist
+        raise ValidationException(unparsable) from exc
 
     shared.refuse_unencodable_file(text, data)
     if not isinstance(data, dict):
@@ -4932,7 +5001,7 @@ def export_tests_batch(
     selected test that has any.
 
     Raises:
-        ValidationException: If any test is not found
+        NotFoundException: If any test is not found
     """
     documents: list[tuple[str, str, str]] = []
     files: list[tuple[str, str, Path]] = []
@@ -4941,7 +5010,7 @@ def export_tests_batch(
     for tid in test_ids:
         test = _load_test(tid)
         if test is None:
-            raise ValidationException(f"Test not found: {tid}")
+            raise NotFoundException(f"Test not found: {tid}")
 
         content, filename = _export_document(test, fmt, secrets)
         base_filename = filename
@@ -4960,6 +5029,7 @@ def export_tests_batch(
 
 # A variable value the number rule refuses: no import fix can make it a number.
 _REFUSED_VALUE_CODE = "INVALID_VARIABLE_VALUE"
+_REPEATED_EDGE_ID_CODES = frozenset({DUPLICATE_EDGE_ID_CODE})
 
 
 def _errors_with(validation: dict[str, Any], codes: frozenset[str]) -> list[dict[str, Any]]:
@@ -4973,8 +5043,11 @@ def _read_only_errors(validation: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _blocking_import_errors(validation: dict[str, Any]) -> list[dict[str, Any]]:
-    """The findings that block an import: a read-only refusal or a refused variable value."""
-    return _errors_with(validation, frozenset({READ_ONLY_CODE, _REFUSED_VALUE_CODE}))
+    """The findings that block an import: a read-only refusal, a refused variable value or a
+    repeated edge id."""
+    return _errors_with(
+        validation, frozenset({READ_ONLY_CODE, _REFUSED_VALUE_CODE, DUPLICATE_EDGE_ID_CODE})
+    )
 
 
 def validate_test_import(content: bytes, filename: str) -> dict[str, Any]:
@@ -4988,7 +5061,7 @@ def validate_test_import(content: bytes, filename: str) -> dict[str, Any]:
         Validation results with per-test status
 
     Raises:
-        ValueError: If file cannot be parsed at all
+        ValidationException: If file cannot be parsed at all
     """
     documents, files_by_id = _parse_import_entries(content, filename)
 
@@ -5194,7 +5267,7 @@ def _validated_import_fixes(test_data: dict[str, Any], name: str) -> list[str]:
     """Validate an imported test and apply its auto-fixes; returns what was fixed."""
     validation = _validate_test_data(test_data, context="import")
     if validation.get("fatal"):
-        raise ValidationException("Fatal validation errors prevent import")
+        raise FatalImportError()
     read_only = _read_only_errors(validation)
     if read_only:
         reasons = " ".join(str(e.get("message", "")) for e in read_only)
@@ -5202,6 +5275,10 @@ def _validated_import_fixes(test_data: dict[str, Any], name: str) -> list[str]:
     refused = _errors_with(validation, frozenset({_REFUSED_VALUE_CODE}))
     if refused:
         raise VariableValueImportError(str(refused[0].get("message", "")))
+    repeated = _errors_with(validation, _REPEATED_EDGE_ID_CODES)
+    if repeated:
+        reasons = " ".join(str(e.get("message", "")) for e in repeated)
+        raise RepeatedEdgeIdImportError(f"Cannot import test '{name}'. {reasons}", repeated)
     errors = validation.get("errors", [])
     return _apply_import_fixes(errors, test_data) if errors else []
 
@@ -5257,7 +5334,8 @@ def import_tests(
         Import results dict
 
     Raises:
-        ValueError: If file cannot be parsed or has fatal errors
+        ValidationException: If file cannot be parsed or a test refuses to import
+        UnprocessableEntityException: If a test has errors no import fix repairs
     """
     if conflict_resolutions is None:
         conflict_resolutions = {}

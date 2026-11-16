@@ -35,7 +35,7 @@ import { importValidateAndNavigate } from '../../helpers/fixture-import'
 import { selectEnvironment } from '../../helpers/workbench'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { openStringParamSheet } from '../../helpers/param-config'
-import { fieldInput } from '../../helpers/value-field'
+import { expressionBox } from '../../helpers/value-field'
 import {
   deleteTest,
   openConfig,
@@ -369,7 +369,8 @@ test('G6 text inside quotes is never read as code', async ({ page }) => {
       await sheet.getByTestId('value-editor-cancel-button').click()
       await expect(sheet).toBeHidden()
 
-      await expect(fieldInput(dialog, 'message')).toHaveValue(QUOTED_CELL)
+      // A string field held as Template shows the Template face: its text sits in a code box.
+      await expect(expressionBox(dialog, 'message')).toHaveText(QUOTED_CELL)
       await expect(dialog.getByTestId('param-warning-message')).toHaveCount(0)
       await saveConfig(dialog)
     })

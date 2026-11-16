@@ -3,7 +3,7 @@ Unit tests for WAVE Control Versioning.
 
 Requirements tested:
 - REQ-3.5.0.5: Independent semantic versioning per control type
-- REQ-3.5.0.6: Test/Block models support control references (controlId + controlVersion)
+- REQ-3.5.0.6: Block models support control references (controlId + controlVersion)
 - REQ-3.5.0.7: Multiple control versions available simultaneously
 """
 
@@ -801,48 +801,6 @@ class TestControlReferenceInBlocks:
         errors = exc_info.value.errors()
         error_messages = [str(e) for e in errors]
         assert any("control_reference" in msg for msg in error_messages)
-
-
-class TestControlReferenceInTests:
-    """Test control references in Test model (REQ-3.5.0.6)."""
-
-    def test_test_blocks_can_include_control_blocks(self):
-        """Verify Test model can include blocks with control references."""
-        from wavecore.models.blocks import Block
-        from wavecore.models.controls.reference import ControlReference
-        from wavecore.models.entities import Test
-        from wavecore.models.enums import ControlId
-        from wavecore.models.plugins import BlockMetadata
-        from wavecore.models.workflow import WorkflowBlock
-
-        # Create a control block
-        control_block = Block(
-            id="if-else-block",
-            version="1.0.0",
-            metadata=BlockMetadata(name="If/Else Block"),
-            type="control",
-            control_reference=ControlReference(
-                control_id=ControlId.IF_ELSE,
-                control_version="^1.0.0",
-            ),
-        )
-
-        # Create a test that references the control block
-        test = Test(
-            id="test-with-controls",
-            name="Test With Controls",
-            version="1.0.0",
-            blocks=[
-                WorkflowBlock(
-                    block_id=control_block.id,
-                    block_version=control_block.version,
-                    order=1,
-                ),
-            ],
-        )
-
-        assert len(test.blocks) == 1
-        assert test.blocks[0].block_id == "if-else-block"
 
 
 class TestVersionRegistryLifecycle:

@@ -21,8 +21,8 @@
  *    sort (`amount` descending) and its filter (`amount` as Integer, greater than 5); the run
  *    keeps the ids in sort order: `kept=c,b`.
  * 7. A recipe filter row on not null written with a stray `reference_value: ''` is stored with
- *    none, `get_test_recipe` reads it back with none, the sheet shows "not null" with no value
- *    box, and the run keeps every row: `kept=a,b,c` (REQ-3.1.3.25).
+ *    no value key and no flag, `get_test_recipe` reads it back with none, the sheet shows "not null"
+ *    with no value box, and the run keeps every row: `kept=a,b,c` (REQ-3.1.3.25, REQ-3.5.1.5).
  */
 
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
@@ -243,9 +243,8 @@ test.describe('V-MCP-RECIPE-FILTERS: the filter form in the guide, the sheet and
       const operators = block.locator('[data-testid^="filter-condition-operator-"]')
       await expect(operators).toHaveCount(1)
       await expect(operators.first()).toHaveText('greater than')
-      await expect(block.locator(`[data-testid="filter-condition-value-${STORED_FILTER.conditions[0].id}"]`)).toHaveValue(
-        '5',
-      )
+      const valueId = `param-input-filter-condition-value-${STORED_FILTER.conditions[0].id}`
+      await expect(block.locator(`[data-testid="${valueId}"]`)).toHaveValue('5')
       await closeConfig(sheet)
     })
 
@@ -324,7 +323,7 @@ test.describe('V-MCP-RECIPE-FILTERS: the filter form in the guide, the sheet and
       const operators = block.locator('[data-testid^="filter-condition-operator-"]')
       await expect(operators).toHaveCount(1)
       await expect(operators.first()).toHaveText('greater than')
-      await expect(block.locator('[data-testid^="filter-condition-value-"]')).toHaveValue('5')
+      await expect(block.locator('[data-testid^="param-input-filter-condition-value-"]')).toHaveValue('5')
       await closeConfig(sheet)
     })
 
@@ -357,14 +356,10 @@ test.describe('V-MCP-RECIPE-FILTERS: the filter form in the guide, the sheet and
       const csv = nodes.find((node) => node.data.elementType === 'csv-parser')
       expect(csv, 'the CSV block is stored').toBeTruthy()
       csvId = csv?.id as string
-      // Per REQ-3.1.3.25: an operator that takes no compare-to value stores none.
+      // Per REQ-3.1.3.25 and REQ-3.5.1.5: an operator that takes no compare-to value stores no value key and no flag.
+      const { reference_value: _value, reference_is_expression: _flag, ...unaryRow } = STORED_FILTER.conditions[0]
       expect(csv?.data.config.values.filters).toEqual([
-        {
-          ...STORED_FILTER,
-          conditions: [
-            { ...STORED_FILTER.conditions[0], id: STRAY_ROW_ID, operator: 'is_not_null', reference_value: null },
-          ],
-        },
+        { ...STORED_FILTER, conditions: [{ ...unaryRow, id: STRAY_ROW_ID, operator: 'is_not_null' }] },
       ])
     })
 
@@ -372,8 +367,7 @@ test.describe('V-MCP-RECIPE-FILTERS: the filter form in the guide, the sheet and
       const readback = callTool(MCP_PORT, 'get_test_recipe', { test_ref: testId })
       const recipe = readback.payload.recipe as string
       expect(recipe, JSON.stringify(readback.payload)).toMatch(/^\s+operator: is_not_null$/m)
-      expect(recipe).toMatch(/^\s+reference_value: null$/m)
-      expect(recipe).not.toMatch(/reference_value: ''/)
+      expect(recipe).not.toMatch(/reference_value/)
     })
 
     await test.step('the sheet shows not null with no value box', async () => {
@@ -382,7 +376,7 @@ test.describe('V-MCP-RECIPE-FILTERS: the filter form in the guide, the sheet and
       await openSection(sheet, 'csv-filters-section')
       const block = filterBlocks(sheet).first()
       await expect(block.locator(`[data-testid="filter-condition-operator-${STRAY_ROW_ID}"]`)).toHaveText('not null')
-      await expect(block.locator(`[data-testid="filter-condition-value-${STRAY_ROW_ID}"]`)).toHaveCount(0)
+      await expect(block.locator(`[data-testid="param-input-filter-condition-value-${STRAY_ROW_ID}"]`)).toHaveCount(0)
       await closeConfig(sheet)
     })
 

@@ -13,7 +13,8 @@ The test suites are tuned for Ubuntu 22.04 on an x86_64 machine with 16 cores, 2
 | Node.js 22.13 or a later 22 release, or Node.js 24 or later | The frontend. |
 | Podman 3.4, the version that Ubuntu 22.04 ships | The three test suites, which run in containers. |
 | The `docker-compose` v2 binary, on your `PATH` | `scripts/e2e-stack.sh`, which starts the services that the E2E specs run against. |
-| `sonar-scanner`, on your `PATH` | The SonarQube step of the backend and frontend suites, as [The SonarQube step](#the-sonarqube-step) says. |
+| `sonar-scanner`, on your `PATH`, and a SonarQube Cloud token in `SONAR_TOKEN` | The SonarQube step of the backend and frontend suites, as [The SonarQube step](#the-sonarqube-step) says. |
+| The CodeQL CLI, `codeql`, on your `PATH` | The optional CodeQL check before a push, as [The CodeQL check](#the-codeql-check) says. |
 | `jq` | The test count at the end of `./scripts/ci-playwright-local.sh`. Without it, the count says 0. The result of the suite does not change. |
 
 Run these commands to clone WAVE and install its packages:
@@ -94,13 +95,31 @@ The text checks fail on spelling that `typos.toml` does not allow, on an em or e
 
 ### The SonarQube step
 
-The backend and frontend scripts each scan their code with SonarQube, on the host. The scan waits for the quality gate of its project, `wave-backend` or `wave-frontend`, and fails when the gate fails. The scan needs these on the host:
+The backend and frontend scripts each scan their code with SonarQube, on the host. The scan goes to SonarQube Cloud, to the project `waveapphq_wave-backend` or `waveapphq_wave-frontend` of the organization `waveapphq`. The scan needs these on the host:
 
 - `sonar-scanner`, on your `PATH`.
-- `SONAR_URL`, set to the address of a SonarQube server that you can reach.
-- `SONAR_TOKEN`, set to a token of that server.
+- `SONAR_TOKEN`, set to a token of your SonarQube Cloud account. The account needs scan rights on the two projects. A maintainer grants them together with collaborator access.
+- A checked-out branch. SonarQube Cloud analyzes a local scan as your current branch.
 
-A script stops before its tests when one of these is missing. A scan that does not run fails the suite. Both scripts refuse `--no-sonar` outside GitHub Actions.
+A script stops before its tests when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
+
+The scan waits for the quality gate of its project. A failed gate fails the suite, and so does a scan that does not run.
+
+### The CodeQL check
+
+GitHub runs CodeQL code scanning on each pull request. To see its findings before you push, run `./scripts/codeql-scan.sh` on the host; it runs the same checks and is not part of the CI scripts. It scans the files your push would carry and the branch your pull request goes into, and fails on every alert that branch does not have. It lists each such alert with its file and line; `--flows` also shows the path from the input to the problem. With `--all` it lists every alert in your files, fails when there is one, and does not scan the other branch. It needs these on the host:
+
+- The CodeQL CLI bundle from the `github/codeql-action` releases, with `codeql` on your `PATH`, or `CODEQL` set to its path.
+- Room for its work files while a scan runs, several GB, by default in `~/.cache/wave-codeql`. Set `CODEQL_WORK_DIR` to put them on another disk.
+- A checked-out branch. A `fix/<version>-<name>` or `feature/<version>-<name>` branch is compared with `release/<version>`, any other branch with `master`. Set `CODEQL_BASE` to compare with another branch.
+
+A maintainer dismisses a false alarm on GitHub. With `CODEQL_GITHUB_TOKEN` set to a token that can read code scanning alerts, the scan leaves out the alerts dismissed for your branch or its pull request; without it, the scan lists them too.
+
+### Skipped checks
+
+Every check that WAVE skips is listed in public with its reason in [tests/exclusions/README.md](tests/exclusions/README.md): code left out of coverage, SonarQube Cloud false positives and dismissed CodeQL alerts.
+
+Fix the code first. When your change needs an exclusion, add its entry to the right list and its ID in a comment at the spot, in the same pull request, and say why in the pull request description. A maintainer reviews the reason, then marks the issue or dismisses the alert in SonarQube Cloud or CodeQL.
 
 ### Run a part of the tests
 
@@ -209,7 +228,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    ```sh
    git fetch origin
-   git switch -c <branch> origin/release/<version>
+   git switch -c <branch> --no-track origin/release/<version>
    ```
 
 4. Install the packages that the release branch pins:
@@ -228,7 +247,12 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 5. Make the change, with its tests and docs. Follow [Code rules](#code-rules) and [Write docs](#write-docs). You can also make small fixes in the code that the change already touches. List each of them in the description of the pull request. Open a new issue for anything else, and leave it out of the branch.
 
-   If the change needs a docs change, make it in the docs repo. Make a branch there with the same name as your WAVE branch, such as `feature/1.0.0-csv-export`.
+   If the change needs a docs change, make it in the docs repo. In your clone of the docs repo, make a branch with the same name as your WAVE branch, such as `feature/1.0.0-csv-export`, from the release branch of the same version:
+
+   ```sh
+   git fetch origin
+   git switch -c <branch> --no-track origin/release/<version>
+   ```
 
 6. Run the three suites, one at a time:
 
@@ -252,13 +276,13 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 8. Open `https://github.com/waveapphq/wave/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. The page fills the description from a template. In it, link the issue of the change, such as with `Closes #123`.
 
-9. If the change needs a docs change, push the docs branch and open its pull request in the docs repo. Link that pull request in the description of your WAVE pull request. Use the full link, as the template shows. If the change needs no docs change, tick the box "No docs change needed" in the description.
+9. If the change needs a docs change, push the docs branch with `git push -u origin <branch>`. Open `https://github.com/waveapphq/wave-docs/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. Link that pull request in the description of your WAVE pull request. Use the full link, as the template shows. If the change needs no docs change, tick the box "No docs change needed" in the description.
 
-A check fails each pull request that neither ticks "No docs change needed" nor links a merged pull request of the docs repo with the same branch name. The docs pull request must be merged first. Then re-run the check, or edit the description of your pull request.
+A check blocks the merge of each pull request until it ticks "No docs change needed" or links a merged pull request of the docs repo with the same branch name. While the linked docs pull request is open, the check waits and the merge stays blocked. When the docs pull request is merged, re-run the check. The check fails when the description ticks no box and links no docs pull request, or when the linked docs pull request is on a branch with another name, was closed without a merge, or does not exist.
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 
-GitHub runs the backend and frontend checks and the SonarQube analysis on each pull request. It never runs the Playwright suite.
+GitHub runs the backend and frontend checks, the SonarQube analysis and CodeQL code scanning on each pull request. It never runs the Playwright suite.
 
 Only a maintainer merges, even when every check on a pull request is green. The maintainer reviews the pull request, then merges it into its release branch and deletes the branch.
 
@@ -277,7 +301,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `backend/wavecore/mcp/` | The MCP server that runs inside the backend. |
 | `backend/wavecore/models/` | The data models. |
 | `backend/wavecore/plugins/` | The plugins, one file each, such as HTTP, SSH, SQL, Kubernetes and Helm. |
-| `backend/wavecore/storage/` | The file storage of tests, profiles and run history. |
+| `backend/wavecore/storage/` | The loading of plugin definitions from the data folder. |
 | `backend/tests/` | The backend tests, which run with pytest. |
 | `backend/config/` | The example config file, `config.example.yaml`, and its README. |
 | `backend/vendor/` | `wheels.lock`, which pins the wheels that Remote Execution carries to a remote host. `./scripts/build-ci-image.sh` fetches them into `wheels/`. |
@@ -293,6 +317,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `frontend/src/types/` | The shared TypeScript types. |
 | `frontend/tests/` | The frontend tests, which run with Vitest. |
 | `tests/e2e/` | The Playwright specs in `functional/` and `visual/`, their helpers, and the services in `services/` that the specs run against. |
+| `tests/exclusions/` | The public lists of every check that WAVE skips, with the reason for each. |
 | `scripts/` | The scripts that build the test images, run the suites and set the version. |
 | `.github/` | The GitHub workflows, the pull request template and the code owners. |
 | `LICENSES/` | The license texts of the third-party work that `NOTICE` lists. |

@@ -32,6 +32,8 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.api.error_reply_support import assert_error_reply
+
 
 def _uuid() -> str:
     """Generate a valid UUID for test entities."""
@@ -70,6 +72,15 @@ def _reset_admin_state() -> None:
     admin_routes._admin_reason = None
     # Clear bulk entity stores
     admin_routes.clear_bulk_stores()
+
+
+def _assert_bulk_refusal(
+    response: Any, status_code: int, code: str, message: str, failed_index: int | None = None
+) -> None:
+    """A bulk refusal in the shared error envelope; one operation's refusal names its index."""
+    assert_error_reply(response, status_code, code, message)
+    expected = None if failed_index is None else {"failed_index": failed_index}
+    assert response.json()["error"]["details"] == expected
 
 
 # =============================================================================
@@ -127,8 +138,9 @@ class TestBulkEndpointSecurityGates:
             for endpoint in endpoints:
                 response = client.post(endpoint, json={"operations": []})
 
-                assert response.status_code == 403, f"Expected 403 for {endpoint}"
-                assert response.json()["detail"] == "Admin mode must be enabled first"
+                assert_error_reply(
+                    response, 403, "AUTHORIZATION_ERROR", "Admin mode must be enabled first"
+                )
 
         _reset_admin_state()
 
@@ -195,8 +207,7 @@ class TestBulkEndpointRequestValidation:
         for endpoint in endpoints:
             response = client_admin_active.post(endpoint, json={})
 
-            assert response.status_code == 400, f"Expected 400 for {endpoint}"
-            assert "operations" in response.json()["detail"].lower()
+            _assert_bulk_refusal(response, 400, "VALIDATION_ERROR", "Operations field is required")
 
     def test_bulk_requires_operations_as_list(
         self, client_admin_active: TestClient, endpoints: list[str]
@@ -216,8 +227,9 @@ class TestBulkEndpointRequestValidation:
                 endpoint, json={"operations": [{"entity": {"id": TEST_UUID_1}}]}
             )
 
-            assert response.status_code == 400, f"Expected 400 for {endpoint}"
-            assert "op" in response.json()["detail"].lower()
+            _assert_bulk_refusal(
+                response, 400, "VALIDATION_ERROR", "Operation at index 0: 'op' field is required", 0
+            )
 
     def test_bulk_operation_requires_entity_field(
         self, client_admin_active: TestClient, endpoints: list[str]
@@ -226,8 +238,13 @@ class TestBulkEndpointRequestValidation:
         for endpoint in endpoints:
             response = client_admin_active.post(endpoint, json={"operations": [{"op": "add"}]})
 
-            assert response.status_code == 400, f"Expected 400 for {endpoint}"
-            assert "entity" in response.json()["detail"].lower()
+            _assert_bulk_refusal(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Operation at index 0: 'entity' field is required",
+                0,
+            )
 
     def test_bulk_operation_rejects_invalid_op_type(
         self, client_admin_active: TestClient, endpoints: list[str]
@@ -239,8 +256,13 @@ class TestBulkEndpointRequestValidation:
                 json={"operations": [{"op": "invalid", "entity": {"id": TEST_UUID_1}}]},
             )
 
-            assert response.status_code == 400, f"Expected 400 for {endpoint}"
-            assert "op" in response.json()["detail"].lower()
+            _assert_bulk_refusal(
+                response,
+                400,
+                "VALIDATION_ERROR",
+                "Operation at index 0: invalid op type 'invalid'",
+                0,
+            )
 
     def test_bulk_accepts_valid_op_types(
         self, client_admin_active: TestClient, endpoints: list[str]
@@ -258,9 +280,9 @@ class TestBulkEndpointRequestValidation:
                 # Should not return 400 for invalid op type
                 # May return other errors (e.g., entity not found for modify/delete)
                 if response.status_code == 400:
-                    detail = response.json().get("detail", "")
+                    message = response.json()["error"]["message"]
                     assert (
-                        "op" not in detail.lower() or "invalid" not in detail.lower()
+                        "op" not in message.lower() or "invalid" not in message.lower()
                     ), f"Op '{op}' should be valid for {endpoint}"
 
     def test_bulk_add_rejects_invalid_uuid_format(self, client_admin_active: TestClient) -> None:
@@ -282,8 +304,33 @@ class TestBulkEndpointRequestValidation:
             },
         )
 
-        assert response.status_code == 400
-        assert "not a valid UUID" in response.json()["detail"]
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: Invalid UUID format for id: 'not-a-valid-uuid'",
+            0,
+        )
+
+    @pytest.mark.parametrize("op", ["add", "modify", "replace", "delete"])
+    @pytest.mark.parametrize("entity_id", [12345, ["not", "a", "string"]])
+    def test_an_id_that_is_not_a_string_is_refused(
+        self, client_admin_active: TestClient, op: str, entity_id: Any
+    ) -> None:
+        valid = {"id": _uuid(), "name": "Test", "version": "1.0.0"}
+        response = client_admin_active.post(
+            "/admin/bulk/tests",
+            json={
+                "operations": [
+                    {"op": "add", "entity": valid},
+                    {"op": op, "entity": {**valid, "id": entity_id}},
+                ]
+            },
+        )
+
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 1: 'id' must be a string", 1
+        )
 
 
 class TestBulkEndpointAtomicity:
@@ -359,10 +406,7 @@ class TestBulkEndpointAtomicity:
         )
 
         # Should fail due to conflict
-        assert response.status_code == 409
-        data = response.json()
-        assert data["failed_index"] == 1
-        assert "already exists" in data["detail"].lower()
+        _assert_bulk_refusal(response, 409, "CONFLICT", f"Test '{conflict_uuid}' already exists", 1)
 
         # Verify first operation was rolled back (new-test should not exist)
         # This would be verified by trying to get the entity
@@ -550,6 +594,15 @@ class TestBulkEndpointAuditLogging:
         _reset_admin_state()
 
 
+def _assert_storage_fault(response: Any, first_id: str) -> None:
+    """A storage fault at operation 1: 500, a fixed message, the first result kept."""
+    assert_error_reply(response, 500, "INTERNAL_ERROR", "Operation at index 1: storage error")
+    assert response.json()["error"]["details"] == {
+        "failed_index": 1,
+        "partial_results": [{"id": first_id, "status": "created"}],
+    }
+
+
 class TestBulkEndpointStorageErrors:
     """Test suite for bulk endpoint storage error handling.
 
@@ -574,7 +627,7 @@ class TestBulkEndpointStorageErrors:
     def test_storage_error_returns_500_with_partial_results(
         self, client_admin_active: TestClient
     ) -> None:
-        """Test that storage errors return 500 with partial results."""
+        """A storage fault answers 500 with partial results and a fixed error, never its text."""
         call_count = 0
 
         def mock_save_test(data: dict) -> None:
@@ -612,12 +665,8 @@ class TestBulkEndpointStorageErrors:
                 },
             )
 
-            # Should return 500 on storage error
-            assert response.status_code == 500
-            data = response.json()
-            # Should include partial results and error info
-            assert "error" in data
-            assert "partial_results" in data or "cleared" in data
+            _assert_storage_fault(response, TEST_UUID_1)
+            assert "Storage connection failed" not in response.text
 
     def test_storage_error_includes_failed_index(self, client_admin_active: TestClient) -> None:
         """Test that storage error response includes the index of the failed operation."""
@@ -658,10 +707,8 @@ class TestBulkEndpointStorageErrors:
                 },
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "failed_index" in data
-            assert data["failed_index"] == 1
+            _assert_storage_fault(response, TEST_UUID_1)
+            assert "Disk full" not in response.text
 
     def test_suite_storage_error_returns_500(self, client_admin_active: TestClient) -> None:
         """Test that suite storage errors return 500 with partial results."""
@@ -693,10 +740,7 @@ class TestBulkEndpointStorageErrors:
                 },
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "error" in data
-            assert data["failed_index"] == 1
+            _assert_storage_fault(response, SUITE_UUID_1)
 
     def test_regression_storage_error_returns_500(self, client_admin_active: TestClient) -> None:
         """Test that regression storage errors return 500 with partial results."""
@@ -728,10 +772,7 @@ class TestBulkEndpointStorageErrors:
                 },
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "error" in data
-            assert data["failed_index"] == 1
+            _assert_storage_fault(response, REG_UUID_1)
 
     def test_execution_storage_error_returns_500(self, client_admin_active: TestClient) -> None:
         """Test that execution storage errors return 500 with partial results."""
@@ -778,10 +819,7 @@ class TestBulkEndpointStorageErrors:
                 },
             )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "error" in data
-            assert data["failed_index"] == 1
+            _assert_storage_fault(response, EXEC_UUID_1)
         finally:
             _exec_storage._execution_storage = original_storage
 
@@ -875,8 +913,9 @@ class TestBulkExecutionOperationsAdd:
             },
         )
 
-        assert response.status_code == 409
-        assert "already exists" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 409, "CONFLICT", f"Execution '{EXEC_UUID_2}' already exists", 0
+        )
 
     def test_add_execution_requires_id(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires execution ID."""
@@ -896,8 +935,9 @@ class TestBulkExecutionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "id" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'id' is required", 0
+        )
 
     def test_add_execution_requires_entity_type(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires entity_type."""
@@ -917,8 +957,13 @@ class TestBulkExecutionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "entity_type" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'entity_type' is required for add",
+            0,
+        )
 
     def test_add_execution_requires_status(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires status."""
@@ -938,8 +983,13 @@ class TestBulkExecutionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "status" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'status' is required for add",
+            0,
+        )
 
     def test_add_execution_requires_entity_id(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires entity_id."""
@@ -959,8 +1009,52 @@ class TestBulkExecutionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "entity_id" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'entity_id' is required for add",
+            0,
+        )
+
+    def test_add_several_suite_executions_before_the_store_was_read(
+        self, client_admin_active: TestClient
+    ) -> None:
+        from wavecore.api.services.executions import _storage as exec_storage
+
+        suites = [SUITE_UUID_1, SUITE_UUID_2]
+        client_admin_active.post(
+            "/admin/bulk/suites",
+            json={
+                "operations": [
+                    {"op": "add", "entity": {"id": s, "name": f"Suite {s[:4]}", "version": "1.0.0"}}
+                    for s in suites
+                ]
+            },
+        )
+        exec_storage._clear_in_memory_cache()
+
+        response = client_admin_active.post(
+            "/admin/bulk/executions",
+            json={
+                "operations": [
+                    {
+                        "op": "add",
+                        "entity": {
+                            "id": exec_id,
+                            "entity_type": "suite",
+                            "entity_id": suite_id,
+                            "status": "failed",
+                        },
+                    }
+                    for exec_id, suite_id in zip([EXEC_UUID_1, EXEC_UUID_2], suites, strict=True)
+                ]
+            },
+        )
+
+        assert response.status_code == 200
+        assert [r["status"] for r in response.json()["results"]] == ["created", "created"]
+        assert {EXEC_UUID_1, EXEC_UUID_2} <= set(exec_storage._execution_storage)
 
 
 class TestBulkExecutionOperationsModify:
@@ -1040,8 +1134,7 @@ class TestBulkExecutionOperationsModify:
             },
         )
 
-        assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        _assert_bulk_refusal(response, 404, "NOT_FOUND", f"Execution '{EXEC_UUID_4}' not found", 0)
 
     def test_modify_execution_partial_update(self, client_admin_active: TestClient) -> None:
         """Test that modify operation supports partial updates."""
@@ -1244,8 +1337,7 @@ class TestBulkExecutionOperationsDelete:
             },
         )
 
-        assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        _assert_bulk_refusal(response, 404, "NOT_FOUND", f"Execution '{EXEC_UUID_4}' not found", 0)
 
 
 class TestBulkExecutionMixedOperations:
@@ -1441,8 +1533,9 @@ class TestBulkTestOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "id" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'id' is required", 0
+        )
 
     def test_add_test_requires_name(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires test name."""
@@ -1461,8 +1554,9 @@ class TestBulkTestOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "name" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'name' is required for add", 0
+        )
 
     def test_add_test_requires_version(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires test version."""
@@ -1481,8 +1575,13 @@ class TestBulkTestOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "version" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'version' is required for add",
+            0,
+        )
 
 
 class TestBulkTestOperationsModify:
@@ -1898,8 +1997,9 @@ class TestBulkSuiteOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "id" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'id' is required", 0
+        )
 
     def test_add_suite_requires_name(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires suite name."""
@@ -1918,8 +2018,9 @@ class TestBulkSuiteOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "name" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'name' is required for add", 0
+        )
 
     def test_add_suite_requires_version(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires suite version."""
@@ -1938,8 +2039,13 @@ class TestBulkSuiteOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "version" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'version' is required for add",
+            0,
+        )
 
 
 class TestBulkSuiteOperationsModify:
@@ -2355,8 +2461,9 @@ class TestBulkRegressionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "id" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'id' is required", 0
+        )
 
     def test_add_regression_requires_name(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires regression name."""
@@ -2375,8 +2482,9 @@ class TestBulkRegressionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "name" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response, 400, "VALIDATION_ERROR", "Operation at index 0: 'name' is required for add", 0
+        )
 
     def test_add_regression_requires_version(self, client_admin_active: TestClient) -> None:
         """Test that add operation requires regression version."""
@@ -2395,8 +2503,13 @@ class TestBulkRegressionOperationsAdd:
             },
         )
 
-        assert response.status_code == 400
-        assert "version" in response.json()["detail"].lower()
+        _assert_bulk_refusal(
+            response,
+            400,
+            "VALIDATION_ERROR",
+            "Operation at index 0: 'version' is required for add",
+            0,
+        )
 
 
 class TestBulkRegressionOperationsModify:
@@ -2822,12 +2935,9 @@ class TestBulkEndpointResponseStructure:
             },
         )
 
-        assert response.status_code == 404
-        data = response.json()
-
-        assert "detail" in data
-        assert "failed_index" in data
-        assert isinstance(data["failed_index"], int)
+        _assert_bulk_refusal(
+            response, 404, "NOT_FOUND", "Test 'nonexistent-error-struct' not found", 0
+        )
 
     def test_empty_operations_returns_success(self, client_admin_active: TestClient) -> None:
         """Test that empty operations list returns success with zero processed."""

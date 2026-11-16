@@ -1099,7 +1099,7 @@ describe('ProfilesListContainer', () => {
       })
 
       // Get the name input by ID
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       const nameInput = dialog.querySelector("textarea#name") as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'New Test Profile')
@@ -1156,7 +1156,7 @@ describe('ProfilesListContainer', () => {
       })
 
       // Get the name input by ID (it's the first textbox in the metadata section)
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Edit Profile' })
       const nameInput = dialog.querySelector("textarea#name") as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'Updated Profile Name')
@@ -1199,7 +1199,7 @@ describe('ProfilesListContainer', () => {
       })
 
       // Get the name input by ID
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       const nameInput = dialog.querySelector("textarea#name") as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'New Test Profile')
@@ -1256,7 +1256,7 @@ describe('ProfilesListContainer', () => {
       })
 
       // Get the name input by ID
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       const nameInput = dialog.querySelector("textarea#name") as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'New Test Profile')
@@ -1450,7 +1450,7 @@ describe('ProfilesListContainer', () => {
         expect(screen.getByText('Edit Profile')).toBeInTheDocument()
       })
 
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Edit Profile' })
       const nameInput = dialog.querySelector('textarea#name') as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'Renamed With No Environments')
@@ -1688,7 +1688,7 @@ describe('ProfilesListContainer', () => {
       })
 
       // Get the name input by ID
-      const dialog = screen.getByRole('dialog')
+      const dialog = screen.getByRole('dialog', { name: 'Create Profile' })
       const nameInput = dialog.querySelector("textarea#name") as HTMLTextAreaElement
       await user.clear(nameInput)
       await user.type(nameInput, 'Custom Test Profile')

@@ -7,14 +7,12 @@ does the same synchronously for the active session. GET /reports lists one
 row per reportable execution joined with report artifact metadata.
 """
 
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
-from wavecore.api.routes.executions.shared import _create_success_response, _parse_datetime
+from wavecore.api.routes.executions.shared import _create_success_response, parse_filter_date
 from wavecore.api.routes.shared import validate_uuid
 from wavecore.api.services.reports import service as report_service
 
@@ -24,17 +22,6 @@ router = APIRouter(tags=["Reports"])
 def _parse_csv(raw: str | None) -> list[str] | None:
     values = [part.strip() for part in raw.split(",") if part.strip()] if raw else None
     return values or None
-
-
-def _parse_filter_date(value: str | None, param: str) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return _parse_datetime(value)
-    except ValueError:
-        raise ValidationException(
-            f"Invalid {param} '{value}': expected an ISO 8601 datetime"
-        ) from None
 
 
 def _job_response(data: dict[str, object]) -> JSONResponse:
@@ -86,8 +73,8 @@ async def list_reports(
         entity_type=_parse_csv(type),
         triggered_by=_parse_csv(triggered_by),
         search=search,
-        from_date=_parse_filter_date(from_date, "from_date"),
-        to_date=_parse_filter_date(to_date, "to_date"),
+        from_date=parse_filter_date(from_date, "from_date"),
+        to_date=parse_filter_date(to_date, "to_date"),
         page=page,
         per_page=per_page,
         sort=sort,

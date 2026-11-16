@@ -69,7 +69,6 @@ async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<s
               hasNewerVersion: false,
               expressionFields: [],
               templateFields: [],
-              variableExpressionKeys: [],
               config: { values: {}, outputBindings: {}, profileBindings: [] },
             },
             measured: { width: 120, height: 62 },

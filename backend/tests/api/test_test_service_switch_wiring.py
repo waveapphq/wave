@@ -108,7 +108,7 @@ def _test_data(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict
     return {
         "name": "Switch Wiring Test",
         "workflow": {"nodes": nodes, "edges": edges},
-        "variables": {},
+        "variables": {"true": {"type": "boolean", "value": True}},
     }
 
 

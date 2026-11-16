@@ -167,6 +167,23 @@ class TestListFunctions:
 
         assert names == {"alpha_fn", "beta_alpha_fn"}
 
+    def test_search_matches_a_word_only_the_description_holds(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        _create_function("alpha_fn", description="Rotates the vault keys")
+        _create_function("beta_fn")
+
+        names = {card["name"] for card in discover.list_functions(search="VAULT")}
+
+        assert names == {"alpha_fn"}
+
+    def test_search_does_not_read_the_tags(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        _create_function("alpha_fn", tags=["vault-team"])
+
+        assert discover.list_functions(search="vault") == []
+
     def test_cards_carry_the_output_kind(self) -> None:
         # REQ-3.1.2.8, REQ-5.2.7.8: the kind keys and the source text, like a variable's.
         from wavecore.mcp.tools import discover
@@ -437,6 +454,65 @@ class TestResolveRef:
             )
 
 
+def _stored_entity(kind: str) -> str:
+    from tests.mcp.conftest import create_test_entity
+    from wavecore.api.services.regressions import service as regression_service
+    from wavecore.api.services.suites import service as suite_service
+
+    if kind == "test":
+        return str(create_test_entity("Stored Test")["id"])
+    if kind == "suite":
+        return str(suite_service.create_suite({"name": "Stored Suite"})["id"])
+    return str(regression_service.create_regression({"name": "Stored Regression"})["id"])
+
+
+class TestReferenceOutsideItsFolder:
+    """A reference that is not one plain path segment names no stored entity."""
+
+    @pytest.mark.parametrize(
+        ("kind", "folder"),
+        [("test", "api_tests"), ("suite", "api_suites"), ("regression", "api_regressions")],
+    )
+    def test_a_reference_walking_back_into_the_folder_is_not_found(
+        self, kind: str, folder: str
+    ) -> None:
+        from wavecore.mcp.tools import discover
+
+        ref = f"../{folder}/{_stored_entity(kind)}"
+        getter = getattr(discover, f"get_{kind}")
+
+        with pytest.raises(NotFoundException, match=rf"^{kind.capitalize()} '{ref}' not found$"):
+            getter(ref)
+
+    def test_a_name_holding_a_slash_still_resolves_by_name(self) -> None:
+        from tests.mcp.conftest import create_test_entity
+        from wavecore.mcp.tools import discover
+
+        created = create_test_entity("Smoke / Nightly")
+
+        assert discover.get_test("Smoke / Nightly")["id"] == created["id"]
+
+    def test_a_function_reference_walking_back_into_the_folder_is_not_found(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        ref = f"../functions/{_create_function('alpha_fn')['id']}"
+
+        with pytest.raises(NotFoundException, match=rf"^Function '{ref}' not found$"):
+            discover.get_function(ref)
+
+    def test_a_version_reaching_another_function_is_not_found(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        pinned = _create_function("alpha_fn")["id"]
+        other = _create_function("beta_fn")["id"]
+        version = f"../../{other}/versions/1.0.0"
+
+        with pytest.raises(
+            NotFoundException, match=rf"^Function '{pinned}' version '{version}' not found$"
+        ):
+            discover.get_function(pinned, version=version)
+
+
 class TestSuites:
     def _seed(self) -> tuple[str, str]:
         from tests.mcp.conftest import create_test_entity
@@ -488,6 +564,27 @@ class TestSuites:
         assert "suite-secret-value" not in str(rows)
         assert ENVELOPE_PREFIX not in str(rows)
 
+    def test_list_suites_search_matches_name_and_description_in_any_case(self) -> None:
+        from wavecore.api.services.suites import service as suite_service
+        from wavecore.mcp.tools import discover
+
+        by_name = suite_service.create_suite({"name": "Checkout Smoke"})
+        by_description = suite_service.create_suite(
+            {"name": "Nightly", "description": "Covers the checkout flow"}
+        )
+        suite_service.create_suite({"name": "Login", "description": "Sign in only"})
+
+        rows = discover.list_suites(search="CHECKOUT")
+
+        assert sorted(row["id"] for row in rows) == sorted([by_name["id"], by_description["id"]])
+
+    def test_list_suites_search_with_no_match_lists_nothing(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        self._seed()
+
+        assert discover.list_suites(search="no such suite") == []
+
     def test_unknown_suite_raises_exact_message(self) -> None:
         from wavecore.mcp.tools import discover
 
@@ -536,6 +633,27 @@ class TestRegressions:
         assert rows[0]["variables"]["token"]["value"] == MASK_PLACEHOLDER
         assert "reg-secret-value" not in str(rows)
 
+    def test_list_regressions_search_matches_name_and_description_in_any_case(self) -> None:
+        from wavecore.api.services.regressions import service as regression_service
+        from wavecore.mcp.tools import discover
+
+        by_name = regression_service.create_regression({"name": "Release Gate"})
+        by_description = regression_service.create_regression(
+            {"name": "Weekly", "description": "Runs before every release"}
+        )
+        regression_service.create_regression({"name": "Hotfix", "description": "Patch only"})
+
+        rows = discover.list_regressions(search="rElEaSe")
+
+        assert sorted(row["id"] for row in rows) == sorted([by_name["id"], by_description["id"]])
+
+    def test_list_regressions_search_with_no_match_lists_nothing(self) -> None:
+        from wavecore.mcp.tools import discover
+
+        self._seed()
+
+        assert discover.list_regressions(search="no such regression") == []
+
     def test_unknown_regression_raises_exact_message(self) -> None:
         from wavecore.mcp.tools import discover
 
@@ -572,10 +690,26 @@ class TestEnvironmentsAndProfiles:
         assert len(rows) == 1
         row = rows[0]
         assert row["name"] == "mcp-db"
-        assert row["type"] == "database"
         assert row["config"]["password"] == MASK_PLACEHOLDER
         assert row["config"]["host"] == "db.local"
         assert "profile-secret-pass" not in str(rows)
+
+    def test_list_profiles_names_the_type_as_create_profile_takes_it(self) -> None:
+        from wavecore.api.services.profiles import service as profile_service
+        from wavecore.mcp.tools import discover
+
+        profile_service.create_profile(
+            name="mcp-http", profile_type="http", config={"base_url": "http://api.local"}
+        )
+        stored = profile_service.list_profiles()["profiles"][0]
+
+        rows = discover.list_profiles()
+
+        assert rows[0]["profile_type"] == "http"
+        assert "type" not in rows[0]
+        assert {key: value for key, value in rows[0].items() if key != "profile_type"} == {
+            key: value for key, value in stored.items() if key != "type"
+        }
 
 
 class TestListVariables:

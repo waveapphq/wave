@@ -13,8 +13,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 
-# Ensure sonar-scanner is on PATH if installed locally
-export PATH="$HOME/bin:$PATH"
 COVERAGE_DIR="$BACKEND_DIR/.coverage"
 COVERAGE_DATA="$COVERAGE_DIR/.coverage"
 
@@ -286,6 +284,23 @@ get_coverage_targets() {
     fi
 }
 
+# pytest's ERRORS or FAILURES sections, without the warnings, then its short summary.
+print_failure_report() {
+    local report
+    # awk reads all of its input, so no reader exits early and breaks the pipe.
+    report=$(printf '%s\n' "$1" | awk '
+        /^=+ (ERRORS|FAILURES) =+$/ {on = 1}
+        on && /^=+ (warnings summary|short test summary)/ {on = 0}
+        on && traced++ < 60
+        /^=+ short test summary/ {summary = 1}
+        summary && summed++ < 50')
+    if [ -n "$report" ]; then
+        printf '%s\n' "$report"
+    else
+        printf '%s\n' "$1" | tail -30
+    fi
+}
+
 # Initialize aggregate counters used by both fast-path and suite-loop paths
 FAILED_RUNS=()
 declare -A FAILED_OUTPUT  # Store error output for failed suites
@@ -323,7 +338,7 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
     # across its test methods). The previous suite-by-suite approach
     # incidentally preserved this ordering; the single-invocation fast path
     # would break it under the default --dist=load mode.
-    FAST_PYTEST_ARGS=(tests/ --cov=wavecore --cov-report= --tb=short -q -n "$PARALLEL_WORKERS" --dist=loadfile)
+    FAST_PYTEST_ARGS=(tests/ --cov=wavecore --cov-report= --tb=short -q -n "$PARALLEL_WORKERS" --dist=loadfile --durations=20)
     if [ "$FAIL_FAST" = true ]; then
         FAST_PYTEST_ARGS+=(-x)
     fi
@@ -344,24 +359,27 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
     TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
     TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
 
+    # Marks the lines of pytest's slowest-durations block.
+    DURATIONS_BLOCK='/ slowest [0-9]+ durations / {in_block = 1} /^=/ && !/ slowest / {in_block = 0}'
+
     if [ $EXIT_CODE -eq 0 ]; then
         PASSED_SUITES=$TOTAL_SUITES
         echo "  ✅ Passed ($TOTAL_PASSED tests, ${FAST_DURATION}s)"
+        # The worker count and the slowest tests show where the time goes.
+        echo "$OUTPUT" | grep -E "^[0-9]+ workers? \[" | sed 's/^/  /' || true
+        echo "$OUTPUT" | awk "$DURATIONS_BLOCK in_block" | sed 's/^/  /'
     else
+        FAILURE_TEXT=$(echo "$OUTPUT" | awk "$DURATIONS_BLOCK !in_block")
         # Record as a single aggregate "suite failure" so the existing
         # reporting code can render failure output.
         FAILED_RUNS+=("(fast-path aggregate)")
-        FAILED_OUTPUT["(fast-path aggregate)"]="$OUTPUT"
+        FAILED_OUTPUT["(fast-path aggregate)"]="$FAILURE_TEXT"
         echo "  ❌ Failed ($FAILED tests failed, ${FAST_DURATION}s)"
         if [ "$FAIL_FAST" = true ]; then
             echo ""
             echo "❌ FAIL FAST: pytest stopped on first failure"
             echo ""
-            FAILURE_SECTION=$(echo "$OUTPUT" | sed -n '/=* short test summary/,$p' | head -50)
-            if [ -z "$FAILURE_SECTION" ]; then
-                FAILURE_SECTION=$(echo "$OUTPUT" | tail -30)
-            fi
-            echo "$FAILURE_SECTION"
+            print_failure_report "$FAILURE_TEXT"
             exit 1
         fi
     fi
@@ -448,12 +466,7 @@ for i in "${!TEST_SUITES[@]}"; do
             echo ""
             echo "❌ FAIL FAST: Stopping after first failure in suite: $SUITE_DIR"
             echo ""
-            # Show failure details immediately
-            FAILURE_SECTION=$(echo "$OUTPUT" | sed -n '/=* short test summary/,$p' | head -50)
-            if [ -z "$FAILURE_SECTION" ]; then
-                FAILURE_SECTION=$(echo "$OUTPUT" | tail -30)
-            fi
-            echo "$FAILURE_SECTION"
+            print_failure_report "$OUTPUT"
             exit 1
         fi
     fi
@@ -533,18 +546,7 @@ if [ ${#FAILED_RUNS[@]} -gt 0 ]; then
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "📁 $failed"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        # Extract and display just the failures section from pytest output
-        # Look for FAILURES section or short test summary
-        FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | sed -n '/=* FAILURES =*/,/=* short test summary/p' | head -100)
-        if [ -z "$FAILURE_SECTION" ]; then
-            # Try extracting from short test summary to end
-            FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | sed -n '/=* short test summary/,$p' | head -50)
-        fi
-        if [ -z "$FAILURE_SECTION" ]; then
-            # Fallback: show last 30 lines of output
-            FAILURE_SECTION=$(echo "${FAILED_OUTPUT[$failed]}" | tail -30)
-        fi
-        echo "$FAILURE_SECTION"
+        print_failure_report "${FAILED_OUTPUT[$failed]}"
     done
     echo ""
     echo "════════════════════════════════════════════"
@@ -565,15 +567,6 @@ if [ "$COV_MODE" = "clean" ] || [ ${#TEST_SUITES[@]} -eq ${#ALL_SUITES[@]} ]; th
     echo "  - JSON: coverage.json"
 fi
 echo ""
-
-# Run SonarQube scan if sonar-scanner is available (always, even if thresholds failed)
-if command -v sonar-scanner &> /dev/null && [ -f "sonar-project.properties" ]; then
-    echo ""
-    echo "================================"
-    echo "📡 Running SonarQube Analysis"
-    echo "================================"
-    sonar-scanner 2>&1 | tail -5
-fi
 
 # Check coverage threshold (only in clean mode or when running all tests)
 if [ "$COV_MODE" = "smart" ] && [ ${#TEST_SUITES[@]} -lt ${#ALL_SUITES[@]} ]; then

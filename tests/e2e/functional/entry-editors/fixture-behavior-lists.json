@@ -51,7 +51,6 @@
           "hasNewerVersion": false,
           "expressionFields": [],
           "templateFields": [],
-          "variableExpressionKeys": [],
           "elementTypes": { "codes": ["integer", "array"] },
           "config": {
             "values": { "codes": ["7", ["1", "2"]] },
@@ -80,7 +79,6 @@
                     "hasNewerVersion": false,
                     "expressionFields": ["message"],
                     "templateFields": [],
-                    "variableExpressionKeys": [],
                     "config": {
                       "values": {
                         "message": "f\"F9 item0={codes[0] + 1} item1={str(codes[1]) + '-tail'} text1={type(codes[1]) == str} len1={len(codes[1])}\"",

@@ -11,7 +11,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, Query, Response, status
 from fastapi.responses import JSONResponse
 
-from wavecore.api.exceptions import ValidationException
+from wavecore.api.exceptions import NotFoundException, ValidationException
+from wavecore.api.routes.shared import list_field
 from wavecore.api.services.functions import _storage as function_storage
 from wavecore.api.services.functions import _versioning as function_versioning
 from wavecore.api.services.functions import service as function_service
@@ -55,16 +56,19 @@ async def list_functions(
     page: Annotated[int, Query()] = 1,
     per_page: Annotated[int, Query()] = 50,
     search: Annotated[str, Query()] = "",
+    search_in: Annotated[str, Query()] = "",
     tags: Annotated[str, Query()] = "",
     sort_by: Annotated[str | None, Query()] = None,
     sort_order: Annotated[str | None, Query()] = "asc",
 ) -> dict[str, Any]:
     _validate_pagination(page, per_page)
     tag_list = [t for t in tags.split(",") if t] if tags else []
+    fields = [field for field in search_in.split(",") if field]
     result = function_service.list_functions(
         page=page,
         per_page=per_page,
         search=search,
+        search_in=fields or function_service.DEFAULT_SEARCH_FIELDS,
         tags=tag_list,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -86,7 +90,7 @@ async def list_functions(
 async def batch_create_functions(
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, Any]:
-    items = payload.get("items") or []
+    items = list_field(payload, "items", "'items' must be a list")
     result = function_service.batch_create_functions(items)
     return {"success": True, "data": result}
 
@@ -95,7 +99,8 @@ async def batch_create_functions(
 async def batch_delete_functions(
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> dict[str, Any]:
-    ids = payload.get("ids") or []
+    # Each item that is not an ID string fails on its own, so only the list shape is refused here
+    ids = list_field(payload, "ids", "'ids' must be a list of ID strings")
     cascade = bool(payload.get("cascade", False))
     result = function_service.batch_delete_functions(ids, cascade=cascade)
     return {"success": True, "data": result}
@@ -117,20 +122,6 @@ async def list_function_tags(response: Response) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Single-item CRUD
 # ---------------------------------------------------------------------------
-
-
-def _not_found_response(message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={
-            "success": False,
-            "error": {
-                "message": message,
-                "code": "NOT_FOUND",
-                "details": [{"message": message}],
-            },
-        },
-    )
 
 
 def _malformed_draft_response(reason: str) -> JSONResponse:
@@ -158,8 +149,8 @@ async def get_function(
     if version is not None and version != "":
         try:
             definition, etag = function_service.read_version(function_id, version)
-        except LookupError as exc:
-            return _not_found_response(str(exc))
+        except function_storage.FunctionNotFoundError as exc:
+            raise NotFoundException(str(exc)) from exc
         response.headers["ETag"] = etag
         return {"success": True, "data": definition}
     # NotFoundException is propagated through ExceptionHandler middleware;
@@ -174,8 +165,8 @@ async def list_function_versions(function_id: str) -> Any:
     """Return ``{versions, latest}`` for a Function."""
     try:
         result = function_storage.list_versions(function_id)
-    except LookupError:
-        return _not_found_response(f"Function '{function_id}' not found")
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(f"Function '{function_id}' not found") from exc
     return {"success": True, "data": result}
 
 
@@ -196,6 +187,7 @@ async def add_function_version(
         return _malformed_draft_response("draft_definition is required and must be a dict")
     if not isinstance(source_version, str) or not source_version:
         return _malformed_draft_response("source_version is required and must be a string")
+    repairs: list[dict[str, Any]] = []
     try:
         result = function_service.add_function_version(
             function_id,
@@ -206,10 +198,11 @@ async def add_function_version(
             description=payload.get("description", "") or "",
             tags=payload.get("tags") or [],
             details=payload.get("details", "") or "",
+            repairs=repairs,
         )
     except SaveValidationError as exc:
         return _save_validation_response(exc)
-    return {"success": True, "data": result}
+    return {"success": True, "data": result, "repairs": repairs}
 
 
 @router.get("/{function_id}/versions/{version}", response_model=None)
@@ -217,8 +210,8 @@ async def get_function_version(function_id: str, version: str, response: Respons
     """Return ``{definition, etag}`` for a specific version."""
     try:
         definition, etag = function_service.read_version(function_id, version)
-    except LookupError as exc:
-        return _not_found_response(str(exc))
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(str(exc)) from exc
     response.headers["ETag"] = etag
     return {"success": True, "data": {"definition": definition, "etag": etag}}
 
@@ -244,8 +237,8 @@ async def validate_function_bumps(
         return _malformed_draft_response("source_version is required and must be a string")
     try:
         source_def = function_storage.load_version(function_id, source_version)
-    except LookupError as exc:
-        return _not_found_response(str(exc))
+    except function_storage.FunctionNotFoundError as exc:
+        raise NotFoundException(str(exc)) from exc
     draft = function_service.draft_over_source(draft, source_def)
     result = function_versioning.compute_allowed_bumps(source_def, draft)
     return {
@@ -262,12 +255,13 @@ async def create_function(
     response: Response,
     payload: Annotated[dict[str, Any], Body(...)],
 ) -> Any:
+    repairs: list[dict[str, Any]] = []
     try:
-        definition, etag = function_service.create_function(payload)
+        definition, etag = function_service.create_function(payload, repairs=repairs)
     except SaveValidationError as exc:
         return _save_validation_response(exc)
     response.headers["ETag"] = etag
-    return {"success": True, "data": definition}
+    return {"success": True, "data": definition, "repairs": repairs}
 
 
 @router.delete("/{function_id}", response_model=None)

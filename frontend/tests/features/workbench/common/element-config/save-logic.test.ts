@@ -1,16 +1,20 @@
 /**
- * Tests for save-logic - validateOutputBindings + buildSaveData.
+ * Tests for save-logic - validateOutputBindings, buildSaveData, computeHasChanges
+ * and normalizeConditionLists.
  *
  * Covers the branches where the inline gate in useConfigModalState would
  * normally prevent buildSaveData from being called - the defensive
- * server-side check still has to behave correctly.
+ * server-side check still has to behave correctly. Control fields and the
+ * Variable Setter rows reach Save and the change check through the shared
+ * values and flag lists, like every other Block field (REQ-3.1.1.5).
  */
 
 import { describe, it, expect } from 'vitest'
 import { validateOutputBindings, buildSaveData, computeHasChanges } from '@/features/workbench/common/element-config/save-logic'
 import { getInputParams, getOutputParams } from '@/features/workbench/lib/node-parameters'
 import { resolveOutputType } from '@/features/workbench/lib/node-parameters/output-type'
-import type { Parameter, EnrichedVariable } from '@/features/workbench/common/element-config/types'
+import type { Parameter, EnrichedVariable, SaveData } from '@/features/workbench/common/element-config/types'
+import type { ElementTypes } from '@/lib/variable-validation'
 import type { Parameter as TableParameter } from '@/features/workbench/common/element-config/parameters/parameter-table-types'
 
 const intOutput = { name: 'status_code', type: 'integer' as Parameter['type'], required: false as const }
@@ -90,6 +94,7 @@ describe('validateOutputBindings', () => {
 describe('buildSaveData', () => {
   const baseCtx = {
     elementId: 'node-1',
+    elementType: 'http-client',
     selectedVersion: '1.0.0',
     values: {},
     outputParameters: [intOutput],
@@ -101,27 +106,8 @@ describe('buildSaveData', () => {
     templateFields: [],
     outputSecretFields: [],
     variables,
-    isVariableSetter: false,
     isXmlParser: false,
     isJsonParser: false,
-    isAssert: false,
-    isIfElse: false,
-    isSwitch: false,
-    isWhile: false,
-    isWaitUntil: false,
-    assertAssertions: [],
-    assertMode: 'split' as const,
-    assertFailCurrentScope: false,
-    ifElseBranches: [],
-    switchBranches: [],
-    whileConditions: [],
-    waitConditions: [],
-    waitMode: 'retry' as const,
-    waitFailCurrentScope: false,
-    variableExpressionKeys: [],
-    variableTemplateKeys: [],
-    variableSecretKeys: [],
-    variableTypes: {},
   }
 
   describe('a number row stores the JSON number its digits stand for (REQ-3.1.3.14)', () => {
@@ -199,22 +185,24 @@ describe('buildSaveData', () => {
       const result = buildSaveData({
         ...baseCtx,
         outputBindings: {},
-        isVariableSetter: true,
         values: { variables: { m: { n: '1' }, e: 'x + 1' } },
-        variableExpressionKeys: ['e'],
-        variableElementTypes: { m: { n: 'integer' }, e: { a: 'string' }, gone: [] },
+        expressionFields: ['variables.e'],
+        settingElementTypes: {
+          'variables.m': { n: 'integer' },
+          'variables.e': { a: 'string' },
+          'variables.gone': [],
+        },
       })
-      expect(result.data?.variableElementTypes).toEqual({ m: { n: 'integer' } })
+      expect(result.data?.elementTypes).toEqual({ 'variables.m': { n: 'integer' } })
     })
 
     it('saves no Setter element types when the Setter holds no variables', () => {
       const result = buildSaveData({
         ...baseCtx,
         outputBindings: {},
-        isVariableSetter: true,
-        variableElementTypes: { m: { n: 'integer' } },
+        settingElementTypes: { 'variables.m': { n: 'integer' } },
       })
-      expect(result.data?.variableElementTypes).toBeUndefined()
+      expect(result.data?.elementTypes).toBeUndefined()
     })
   })
 
@@ -244,6 +232,7 @@ describe('buildSaveData', () => {
     const savedResultType = (values: Record<string, unknown>) =>
       buildSaveData({
         ...baseCtx,
+        elementType: 'k8s-get',
         values,
         outputParameters: [{
           name: 'result',
@@ -314,144 +303,379 @@ describe('buildSaveData', () => {
   })
 
   // REQ-3.5.1.20: the Switch case list persists under values.branches,
-  // exactly as the If/Else branch list does.
-  it('writes the switch branches into values.branches verbatim', () => {
+  // exactly as the If/Else branch list does, through the shared values.
+  it('writes the switch branches into values.branches as the window holds them', () => {
     const result = buildSaveData({
       ...baseCtx,
+      elementType: 'switch-case',
       outputBindings: { status_code: 'count' },
-      isSwitch: true,
-      switchBranches: caseBranches,
-    } as unknown as Parameters<typeof buildSaveData>[0])
+      versionParameters: getInputParams('switch-case') ?? [],
+      values: { branches: caseBranches },
+    })
     expect(result.data?.values.branches).toEqual([
       { id: 'branch_0', type: 'case', label: '', conditions: caseConditions, break: true },
       { id: 'branch_1', type: 'case', label: 'Slow', conditions: caseConditions, break: false },
       { id: 'branch_2', type: 'default', label: '' },
     ])
-    expect(result.data?.values.branches).toBe(caseBranches)
   })
 
   it('preserves the break flags and the default entry keys unnormalized', () => {
     const result = buildSaveData({
       ...baseCtx,
+      elementType: 'switch-case',
       outputBindings: { status_code: 'count' },
-      isSwitch: true,
-      switchBranches: caseBranches,
-    } as unknown as Parameters<typeof buildSaveData>[0])
+      versionParameters: getInputParams('switch-case') ?? [],
+      values: { branches: caseBranches },
+    })
     const saved = result.data?.values.branches as Array<Record<string, unknown>>
     expect(saved[0].break).toBe(true)
     expect(saved[1].break).toBe(false)
     expect(Object.keys(saved[2])).toEqual(['id', 'type', 'label'])
   })
 
-  it('leaves branches unset when the element is not a switch', () => {
+  it('writes no branch list for a Block whose values hold none', () => {
     const result = buildSaveData({
       ...baseCtx,
       outputBindings: { status_code: 'count' },
-      isSwitch: false,
-      switchBranches: caseBranches,
-    } as unknown as Parameters<typeof buildSaveData>[0])
+    })
     expect(result.data?.values).not.toHaveProperty('branches')
   })
 
-  // Parallel's branch list and join mode live in their own editors, so the
-  // save has to fold them back into values.
+  // Parallel's lanes and join mode live in the shared values; the Save writes each lane limit
+  // in the number wire form (REQ-3.2.3.6, REQ-3.2.3.7, REQ-3.1.3.14).
   describe('Parallel write-back', () => {
-    const parallelBranches = [
-      { id: 'branch_1', name: 'ingest', timeLimit: 30000 },
+    const PARALLEL = getInputParams('parallel') ?? []
+
+    const parallelSave = (values: Record<string, unknown>, flags: { expressionFields?: string[] } = {}) =>
+      buildSaveData({ ...baseCtx, elementType: 'parallel', outputBindings: {}, versionParameters: PARALLEL, values, ...flags }).data
+
+    const LANES = [
+      { id: 'branch_1', name: 'ingest', time_limit: 30000 },
       { id: 'branch_2', name: 'probe' },
     ]
 
-    function parallelCtx(overrides: Record<string, unknown> = {}) {
-      return {
-        ...baseCtx,
-        outputBindings: {},
-        isParallel: true,
-        parallelBranches,
-        parallelJoin: 'all' as const,
-        ...overrides,
-      } as unknown as Parameters<typeof buildSaveData>[0]
-    }
+    it('writes the lanes into values.branches with each limit in the number wire form', () => {
+      const saved = parallelSave({
+        branches: [
+          { id: 'branch_1', name: 'ingest', time_limit: '30000' },
+          { id: 'branch_2', name: 'probe', time_limit: '060' },
+          { id: 'branch_3', name: '', time_limit: '9007199254740993' },
+          { id: 'branch_4', name: '', time_limit: 250 },
+        ],
+      })
 
-    it('writes the branch list into values.branches with snake_case limits', () => {
-      const result = buildSaveData(parallelCtx())
-
-      expect(result.data?.values.branches).toEqual([
+      expect(saved?.values.branches).toEqual([
         { id: 'branch_1', name: 'ingest', time_limit: 30000 },
-        { id: 'branch_2', name: 'probe' },
+        { id: 'branch_2', name: 'probe', time_limit: '060' },
+        { id: 'branch_3', name: '', time_limit: '9007199254740993' },
+        { id: 'branch_4', name: '', time_limit: 250 },
       ])
     })
 
-    it('omits an unset branch limit rather than writing null', () => {
+    it('omits an unset lane limit rather than writing null', () => {
       // Guard: a null limit would read back as a configured limit of zero.
-      const result = buildSaveData(parallelCtx())
-      const saved = result.data?.values.branches as Array<Record<string, unknown>>
+      const saved = parallelSave({
+        branches: [LANES[0], { id: 'branch_2', name: 'probe', time_limit: undefined }],
+      })?.values.branches as Array<Record<string, unknown>>
 
       expect(Object.keys(saved[1])).toEqual(['id', 'name'])
     })
 
-    it('writes the join mode into values.join', () => {
-      expect(buildSaveData(parallelCtx()).data?.values.join).toBe('all')
-      expect(buildSaveData(parallelCtx({ parallelJoin: 'first' })).data?.values.join).toBe('first')
+    it('keeps an {x} lane limit as written, with its flag', () => {
+      const saved = parallelSave(
+        { branches: [{ id: 'branch_1', name: 'ingest', time_limit: 'slow_ms' }, LANES[1]] },
+        { expressionFields: ['branches.0.time_limit'] },
+      )
+
+      expect(saved?.values.branches).toEqual([
+        { id: 'branch_1', name: 'ingest', time_limit: 'slow_ms' },
+        { id: 'branch_2', name: 'probe' },
+      ])
+      expect(saved?.expressionFields).toEqual(['branches.0.time_limit'])
     })
 
-    it('leaves branches and join unset when the element is not a parallel', () => {
-      const result = buildSaveData(parallelCtx({ isParallel: false }))
+    it('writes the join mode into values.join, and Wait for all while the person never picked one', () => {
+      expect(parallelSave({ branches: LANES, join: 'first' })?.values.join).toBe('first')
+      expect(parallelSave({ branches: LANES })?.values.join).toBe('all')
+    })
+
+    it('leaves branches and join unset for a Block that neither holds nor declares them', () => {
+      const result = buildSaveData({ ...baseCtx, outputBindings: {}, values: {} })
 
       expect(result.data?.values).not.toHaveProperty('branches')
       expect(result.data?.values).not.toHaveProperty('join')
     })
 
     it('keeps the section time limit as an ordinary parameter value', () => {
-      const result = buildSaveData(parallelCtx({ values: { time_limit: 60000 } }))
-
-      expect(result.data?.values.time_limit).toBe(60000)
+      expect(parallelSave({ branches: LANES, time_limit: 60000 })?.values.time_limit).toBe(60000)
     })
 
-    it('writes an empty branch list when the editor supplied none', () => {
-      // Guard: a parallel saved before its editor mounted must not write undefined.
-      const result = buildSaveData(parallelCtx({ parallelBranches: undefined }))
+    it('writes no branch key at all when the window holds no lanes', () => {
+      // Guard: a Save must never write an undefined branch list.
+      const saved = parallelSave({})?.values
 
-      expect(result.data?.values.branches).toEqual([])
+      expect(Object.hasOwn(saved ?? {}, 'branches')).toBe(false)
+    })
+
+    // Stored data the window never writes is stored back as it is; the save check names it.
+    it('stores a lane list that is not a list as it is', () => {
+      expect(parallelSave({ branches: 'ingest, probe' })?.values.branches).toBe('ingest, probe')
+    })
+
+    it('stores a lane that is not an object as it is, beside the lanes it shapes', () => {
+      const saved = parallelSave({ branches: [null, 'probe', { id: 'branch_3', name: 'ingest', time_limit: '500' }] })
+
+      expect(saved?.values.branches).toEqual([null, 'probe', { id: 'branch_3', name: 'ingest', time_limit: 500 }])
     })
   })
 
-  // Wait Until's condition, mode and scope checkbox live in their own editors,
-  // so the save has to fold them back into values.
+  // Wait Until's conditions, mode and scope checkbox live in the shared values (REQ-3.5.4.3).
   describe('Wait Until write-back', () => {
-    const waitConditions = [{ id: 'c-1', type: 'expression' as const, expression: 'ready' }]
+    const WAIT_CONDITIONS = [{ id: 'c-1', type: 'expression' as const, expression: 'ready' }]
+    const WAIT = getInputParams('wait-until') ?? []
 
-    const waitCtx = (overrides: Record<string, unknown> = {}) =>
-      ({
+    const waitSave = (values: Record<string, unknown>) =>
+      buildSaveData({
         ...baseCtx,
+        elementType: 'wait-until',
         outputBindings: { status_code: 'count' },
-        isWaitUntil: true,
-        waitConditions,
-        ...overrides,
-      }) as unknown as Parameters<typeof buildSaveData>[0]
+        versionParameters: WAIT,
+        values: { timeout: 30000, conditions: WAIT_CONDITIONS, ...values },
+      }).data?.values
 
     it('writes the conditions back into values', () => {
-      const result = buildSaveData(waitCtx())
-      expect(result.data?.values.conditions).toEqual(waitConditions)
+      expect(waitSave({})?.conditions).toEqual(WAIT_CONDITIONS)
     })
 
     it('writes the wait mode back into values', () => {
-      const result = buildSaveData(waitCtx({ waitMode: 'watch' }))
-      expect(result.data?.values.mode).toBe('watch')
+      expect(waitSave({ mode: 'watch' })?.mode).toBe('watch')
     })
 
     it('writes the fail-current-scope choice back into values', () => {
-      const result = buildSaveData(waitCtx({ waitFailCurrentScope: true }))
-      expect(result.data?.values.fail_current_scope).toBe(true)
+      expect(waitSave({ fail_current_scope: true })?.fail_current_scope).toBe(true)
     })
 
-    it('leaves the wait fields unset when the element is not a wait', () => {
+    it('writes no conditions for a Block whose values hold none', () => {
       const result = buildSaveData({
         ...baseCtx,
         outputBindings: { status_code: 'count' },
-        isWaitUntil: false,
-        waitConditions,
-      } as unknown as Parameters<typeof buildSaveData>[0])
+      })
       expect(result.data?.values).not.toHaveProperty('conditions')
+    })
+  })
+
+  // A choice or true / false the person never touched is saved with its declared default (REQ-3.1.1.5).
+  describe('untouched control choices are saved with their declared defaults', () => {
+    it.each([
+      ['assert', { assertions: [] }, { mode: 'split', fail_current_scope: false }],
+      ['wait-until', { timeout: 30000, conditions: [] }, { mode: 'retry', fail_current_scope: false }],
+      ['while', { conditions: [] }, { mode: 'while-do' }],
+      ['parallel', { branches: [] }, { join: 'all' }],
+      ['for', { count: 3 }, { mode: 'count' }],
+    ])('saves the defaults of an untouched %s', (elementType, values, defaults) => {
+      const saved = buildSaveData({
+        ...baseCtx,
+        elementType,
+        outputBindings: {},
+        versionParameters: getInputParams(elementType) ?? [],
+        values,
+      }).data?.values
+
+      expect(saved).toMatchObject(defaults)
+    })
+
+    it('keeps the choice the person made over the default', () => {
+      const saved = buildSaveData({
+        ...baseCtx,
+        elementType: 'assert',
+        outputBindings: {},
+        versionParameters: getInputParams('assert') ?? [],
+        values: { assertions: [], mode: 'single', fail_current_scope: true },
+      }).data?.values
+
+      expect(saved).toMatchObject({ mode: 'single', fail_current_scope: true })
+    })
+  })
+
+  // A compare value its operator hides is dropped at Save, also on rows a recipe or an import wrote (REQ-3.5.1.5).
+  describe('condition rows at Save', () => {
+    const UNARY_HOLDING = {
+      id: 'c-1',
+      type: 'literal' as const,
+      variable: 'ready',
+      value_type: 'boolean',
+      operator: 'is_true',
+      reference_value: 'yes',
+      reference_is_expression: true,
+      reference_is_template: false,
+    }
+    const BINARY = {
+      id: 'c-2',
+      type: 'literal' as const,
+      variable: 'status',
+      value_type: 'integer',
+      operator: 'equals',
+      reference_value: '200',
+      reference_is_expression: false,
+    }
+    const UNARY_CLEAN = { id: 'c-1', type: 'literal', variable: 'ready', value_type: 'boolean', operator: 'is_true' }
+
+    it('drops the compare value and both flags of an If/Else row whose operator takes none', () => {
+      const branches = [
+        { id: 'branch_0', type: 'if', label: '', conditions: [UNARY_HOLDING, { type: 'operator', value: 'and' }, BINARY] },
+        { id: 'branch_1', type: 'else', label: '' },
+      ]
+      const saved = buildSaveData({
+        ...baseCtx,
+        elementType: 'if-else',
+        outputBindings: {},
+        versionParameters: getInputParams('if-else') ?? [],
+        values: { branches },
+      }).data?.values.branches as Array<{ conditions?: unknown[] }>
+
+      expect(saved[0].conditions).toEqual([UNARY_CLEAN, { type: 'operator', value: 'and' }, BINARY])
+      expect(branches[0].conditions?.[0]).toEqual(UNARY_HOLDING)
+    })
+
+    it('drops them inside an Assert group a recipe wrote, which the window never touched', () => {
+      const saved = buildSaveData({
+        ...baseCtx,
+        elementType: 'assert',
+        outputBindings: {},
+        versionParameters: getInputParams('assert') ?? [],
+        values: { assertions: [{ id: 'g-1', type: 'group', items: [UNARY_HOLDING, BINARY] }] },
+      }).data?.values.assertions
+
+      expect(saved).toEqual([{ id: 'g-1', type: 'group', items: [UNARY_CLEAN, BINARY] }])
+    })
+  })
+
+  // The Variable Setter saves on the shared stored shape: flags, entry types and secret marks
+  // at `variables.<row>`; no row type on the Block (REQ-3.4.1.14, REQ-3.1.3.19).
+  describe('the Variable Setter on the shared stored shape', () => {
+    const SETTER = getInputParams('variable-setter') ?? []
+    const ROWS = {
+      greeting: 'hi',
+      next_attempt: 'attempt + 1',
+      summary: 'Run {{ run_id }} done',
+      api_token: 'sealed-token',
+      host_list: ['web-1', 'web-2', 'peer_host'],
+      last_error: null,
+    }
+
+    const setterSave = (overrides: Partial<Parameters<typeof buildSaveData>[0]> & { secretFields?: string[] }) =>
+      buildSaveData({
+        ...baseCtx,
+        elementType: 'variable-setter',
+        outputBindings: {},
+        versionParameters: SETTER,
+        values: { variables: ROWS },
+        ...overrides,
+      } as Parameters<typeof buildSaveData>[0]).data as (SaveData & { secretFields?: string[] }) | null
+
+    it('writes the rows, their flags, entry types and secret mark on the shared lists', () => {
+      const saved = setterSave({
+        expressionFields: ['variables.next_attempt', 'variables.host_list.2'],
+        templateFields: ['variables.summary'],
+        settingElementTypes: { 'variables.host_list': ['string', 'string', 'string'] },
+        secretFields: ['variables.api_token'],
+      })
+
+      expect(saved?.values.variables).toEqual(ROWS)
+      expect(saved?.expressionFields).toEqual(['variables.next_attempt', 'variables.host_list.2'])
+      expect(saved?.templateFields).toEqual(['variables.summary'])
+      expect(saved?.elementTypes).toEqual({ 'variables.host_list': ['string', 'string', 'string'] })
+      expect(saved?.secretFields).toEqual(['variables.api_token'])
+    })
+
+    it('writes no Setter list of its own and no row type beside the shared lists', () => {
+      const saved = setterSave({
+        expressionFields: ['variables.next_attempt'],
+        secretFields: ['variables.api_token'],
+      })
+
+      expect(Object.keys(saved ?? {}).filter((key) => key.startsWith('variable'))).toEqual([])
+    })
+
+    it('keeps a row\'s entry types while one entry is {x}, and drops them once the whole row is {x} or gone', () => {
+      const types: Record<string, ElementTypes> = {
+        'variables.host_list': ['string', 'string', 'string'],
+        'variables.next_attempt': ['integer'],
+        'variables.gone': { a: 'string' },
+      }
+
+      expect(
+        setterSave({ expressionFields: ['variables.host_list.2', 'variables.next_attempt'], settingElementTypes: types })
+          ?.elementTypes,
+      ).toEqual({ 'variables.host_list': ['string', 'string', 'string'] })
+      expect(
+        setterSave({ expressionFields: ['variables.host_list'], settingElementTypes: types, values: { variables: { host_list: 'hosts()' } } })
+          ?.elementTypes,
+      ).toBeUndefined()
+    })
+
+    it('drops the flags of a row that is gone', () => {
+      const saved = setterSave({
+        expressionFields: ['variables.next_attempt', 'variables.gone', 'variables.host_list.7'],
+        templateFields: ['variables.summary', 'variables.farewell'],
+      })
+
+      expect(saved?.expressionFields).toEqual(['variables.next_attempt'])
+      expect(saved?.templateFields).toEqual(['variables.summary'])
+    })
+
+    it('keeps a row set to null', () => {
+      expect(setterSave({})?.values.variables).toMatchObject({ last_error: null })
+    })
+
+    // A row's type is its declared variable's type; a literal number row keeps every digit it was given (REQ-3.1.3.14).
+    it('writes a literal number row in the number wire form of its declared variable\'s type', () => {
+      const declared: EnrichedVariable[] = [
+        { id: 'v-retries', name: 'retries', value: 0, type: 'integer' },
+        { id: 'v-padded', name: 'padded', value: 0, type: 'integer' },
+        { id: 'v-ratio', name: 'ratio', value: 0, type: 'float' },
+        { id: 'v-label', name: 'label', value: '', type: 'string' },
+        { id: 'v-next', name: 'next_try', value: 0, type: 'integer' },
+        { id: 'v-last', name: 'last_code', value: 0, type: 'integer' },
+      ]
+      const saved = setterSave({
+        variables: declared,
+        values: {
+          variables: { retries: '30000', padded: '060', ratio: '2.5', label: '42', next_try: 'retries + 1', last_code: null },
+        },
+        expressionFields: ['variables.next_try'],
+      })
+
+      expect(saved?.values.variables).toEqual({
+        retries: 30000,
+        padded: '060',
+        ratio: 2.5,
+        label: '42',
+        next_try: 'retries + 1',
+        last_code: null,
+      })
+    })
+
+    // A new target's row is typed by the type picked for it; the canvas declares only the targets Save keeps.
+    it('writes a new target row in the number wire form of its picked type and keeps only the picked types of kept rows', () => {
+      const saved = setterSave({
+        values: { variables: { fresh: '42', label: '7' } },
+        newTargetTypes: { fresh: 'integer', label: 'string', gone: 'float' },
+      })
+
+      expect(saved?.values.variables).toEqual({ fresh: 42, label: '7' })
+      expect(saved?.newTargetTypes).toEqual({ fresh: 'integer', label: 'string' })
+    })
+
+    it('stores Setter rows that are not a record as they are and keeps no picked type', () => {
+      const saved = setterSave({ values: { variables: ['fresh'] }, newTargetTypes: { fresh: 'integer' } })
+
+      expect(saved?.values.variables).toEqual(['fresh'])
+      expect(saved?.newTargetTypes).toEqual({})
+    })
+
+    it('keeps no picked type when the Save holds no Setter rows', () => {
+      expect(setterSave({ values: {}, newTargetTypes: { fresh: 'integer' } })?.newTargetTypes).toEqual({})
     })
   })
 
@@ -515,6 +739,7 @@ describe('buildSaveData', () => {
       expect(versionParameters, 'sql-client descriptors').toHaveLength(38)
       return buildSaveData({
         ...baseCtx,
+        elementType: 'sql-client',
         values,
         versionParameters,
         outputBindings: {},
@@ -611,7 +836,7 @@ describe('buildSaveData', () => {
     const sqlSaved = (values: Record<string, unknown>) => {
       const versionParameters: Parameter[] = getInputParams('sql-client') ?? []
       expect(versionParameters, 'sql-client descriptors').toHaveLength(38)
-      return saved(versionParameters, values)
+      return buildSaveData({ ...baseCtx, elementType: 'sql-client', values, versionParameters, outputBindings: {} }).data?.values
     }
 
     it('keeps the stored value of a hidden row', () => {
@@ -875,7 +1100,7 @@ describe('buildSaveData', () => {
     it('Netcat: Check hides CRLF line endings, Close after sending and Send; Talk stores what they show', () => {
       const versionParameters: Parameter[] = getInputParams('netcat') ?? []
       const netcat = (mode: string) =>
-        buildSaveData({ ...baseCtx, values: { host: 'h', port: 1, mode }, versionParameters, outputBindings: {} }).data?.values
+        buildSaveData({ ...baseCtx, elementType: 'netcat', values: { host: 'h', port: 1, mode }, versionParameters, outputBindings: {} }).data?.values
       const check = netcat('check')
       for (const name of ['crlf', 'close_after_send', 'send']) expect(check).not.toHaveProperty(name)
       expect(netcat('talk')).toMatchObject({ send: 'text', crlf: false, close_after_send: false })
@@ -1032,36 +1257,16 @@ describe('computeHasChanges', () => {
     elementTemplateFields: undefined as unknown,
     outputSecretFields: [],
     elementOutputSecretFields: undefined as unknown,
-    variableExpressionKeys: [],
-    elementVariableExpressionKeys: undefined as unknown,
-    variableTemplateKeys: [],
-    elementVariableTemplateKeys: undefined as unknown,
-    variableSecretKeys: [],
-    elementVariableSecretKeys: undefined as unknown,
-    variableTypes: {},
-    elementVariableTypes: undefined as unknown,
-    isAssert: false,
-    assertAssertions: [],
-    assertMode: 'split' as const,
-    assertFailCurrentScope: false,
-    isIfElse: false,
-    ifElseBranches: [],
-    isSwitch: false,
-    switchBranches: [],
-    isWhile: false,
-    whileConditions: [],
-    isWaitUntil: false,
-    waitConditions: [],
-    waitMode: 'retry' as const,
-    waitFailCurrentScope: false,
+    secretFields: [] as string[],
+    elementSecretFields: undefined as unknown,
   }
 
   it('reads a changed element type of a Setter row or a typed setting as a change', () => {
     expect(
       computeHasChanges({
         ...baseChangesCtx,
-        variableElementTypes: { m: { n: 'integer' } },
-        elementVariableElementTypes: { m: { n: 'string' } },
+        settingElementTypes: { 'variables.m': { n: 'integer' } },
+        elementSettingElementTypes: { 'variables.m': { n: 'string' } },
       } as never),
     ).toBe(true)
     expect(
@@ -1079,14 +1284,11 @@ describe('computeHasChanges', () => {
     ).toBe(false)
   })
 
-  // A parallel whose editors have not reported yet: every parallel field is
-  // absent, so the comparison has to fall back rather than report a change.
-  it('reports no change for a parallel whose branch list and join are absent', () => {
+  // A parallel that holds no lanes and no join mode yet opens unchanged.
+  it('reports no change for a parallel whose lanes and join are absent', () => {
     const ctx = {
       ...baseChangesCtx,
-      isParallel: true,
-      parallelBranches: undefined,
-      parallelJoin: undefined,
+      values: {},
       elementCurrentValues: {},
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(false)
@@ -1095,12 +1297,34 @@ describe('computeHasChanges', () => {
   it('reports a change when the join moved off the stored default', () => {
     const ctx = {
       ...baseChangesCtx,
-      isParallel: true,
-      parallelBranches: [],
-      parallelJoin: 'first' as const,
+      values: { join: 'first' },
       elementCurrentValues: {},
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(true)
+  })
+
+  it('reports a change when a lane limit or its {x} flag changed', () => {
+    const lanes = [
+      { id: 'branch_1', name: 'ingest', time_limit: 30000 },
+      { id: 'branch_2', name: 'probe' },
+    ]
+    const stored = { ...baseChangesCtx, elementCurrentValues: { branches: lanes }, elementExpressionFields: [] }
+    expect(
+      computeHasChanges({
+        ...stored,
+        values: { branches: [{ ...lanes[0], time_limit: 500 }, lanes[1]] },
+      } as unknown as Parameters<typeof computeHasChanges>[0]),
+    ).toBe(true)
+    expect(
+      computeHasChanges({
+        ...stored,
+        values: { branches: lanes },
+        expressionFields: ['branches.1.time_limit'],
+      } as unknown as Parameters<typeof computeHasChanges>[0]),
+    ).toBe(true)
+    expect(
+      computeHasChanges({ ...stored, values: { branches: lanes } } as unknown as Parameters<typeof computeHasChanges>[0]),
+    ).toBe(false)
   })
 
   it('treats both names as empty when undefined (no change reported)', () => {
@@ -1130,11 +1354,11 @@ describe('computeHasChanges', () => {
     expect(computeHasChanges(ctx)).toBe(true)
   })
 
-  it('reports a change when variableTemplateKeys differ (covers the template-keys branch)', () => {
+  it('reports a change when a Setter row became a Template (covers the template-fields branch)', () => {
     const ctx = {
       ...baseChangesCtx,
-      variableTemplateKeys: ['welcome'],
-      elementVariableTemplateKeys: [],
+      templateFields: ['variables.welcome'],
+      elementTemplateFields: [],
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(true)
   })
@@ -1148,13 +1372,22 @@ describe('computeHasChanges', () => {
     expect(computeHasChanges(ctx)).toBe(true)
   })
 
-  it('reports a change when variableSecretKeys differ (covers the setter-secret branch)', () => {
+  it('reports a change when a Setter row\'s secret mark differs (covers the secret-fields branch)', () => {
     const ctx = {
       ...baseChangesCtx,
-      variableSecretKeys: ['api_token'],
-      elementVariableSecretKeys: [],
+      secretFields: ['variables.api_token'],
+      elementSecretFields: [],
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(true)
+  })
+
+  it('reports no change when the Setter secret marks match the stored ones', () => {
+    const ctx = {
+      ...baseChangesCtx,
+      secretFields: ['variables.api_token'],
+      elementSecretFields: ['variables.api_token'],
+    } as unknown as Parameters<typeof computeHasChanges>[0]
+    expect(computeHasChanges(ctx)).toBe(false)
   })
 
   // REQ-3.1.3.16: revealing/hiding a block's credential field is an unsaved
@@ -1179,16 +1412,13 @@ describe('computeHasChanges', () => {
     expect(computeHasChanges(ctx)).toBe(true)
   })
 
-  // REQ-3.5.1.20: toggling Break on a case is an unsaved change, and the
-  // branch list never lives in `values` until save, so only the control-change
-  // branch can report it.
+  // REQ-3.5.1.20: toggling Break on a case is an unsaved change, read from the
+  // case list in values like every other field.
   it('reports a change when the switch branches differ from the saved config', () => {
     const ctx = {
       ...baseChangesCtx,
-      values: { branches: caseBranches },
+      values: { branches: [{ ...caseBranches[0], break: false }, caseBranches[1], caseBranches[2]] },
       elementCurrentValues: { branches: caseBranches },
-      isSwitch: true,
-      switchBranches: [{ ...caseBranches[0], break: false }, caseBranches[1], caseBranches[2]],
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(true)
   })
@@ -1198,8 +1428,6 @@ describe('computeHasChanges', () => {
       ...baseChangesCtx,
       values: { branches: caseBranches },
       elementCurrentValues: { branches: caseBranches },
-      isSwitch: true,
-      switchBranches: caseBranches,
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(false)
   })
@@ -1207,84 +1435,198 @@ describe('computeHasChanges', () => {
   it('reports a change when the element carries no saved branches yet', () => {
     const ctx = {
       ...baseChangesCtx,
-      isSwitch: true,
-      switchBranches: [caseBranches[0]],
+      values: { branches: [caseBranches[0]] },
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(true)
   })
 
-  it('reports no change when neither the editor nor the element has branches', () => {
+  it('reports no change when neither the window nor the element has branches', () => {
     const ctx = {
       ...baseChangesCtx,
-      isSwitch: true,
-      switchBranches: [],
-    } as unknown as Parameters<typeof computeHasChanges>[0]
-    expect(computeHasChanges(ctx)).toBe(false)
-  })
-
-  it('ignores the switch branches when the element is not a switch', () => {
-    const ctx = {
-      ...baseChangesCtx,
-      isSwitch: false,
-      switchBranches: caseBranches,
+      values: {},
+      elementCurrentValues: {},
     } as unknown as Parameters<typeof computeHasChanges>[0]
     expect(computeHasChanges(ctx)).toBe(false)
   })
 
   describe('Wait Until dirty detection', () => {
-    const waitConditions = [{ id: 'c-1', type: 'expression' as const, expression: 'ready' }]
+    const WAIT_CONDITIONS = [{ id: 'c-1', type: 'expression' as const, expression: 'ready' }]
 
-    const waitCtx = (overrides: Record<string, unknown> = {}) =>
+    const waitCtx = (values: Record<string, unknown>, elementCurrentValues: Record<string, unknown> = {}) =>
       ({
         ...baseChangesCtx,
-        isWaitUntil: true,
-        ...overrides,
+        values,
+        elementCurrentValues,
       }) as unknown as Parameters<typeof computeHasChanges>[0]
 
     it('reports a change when a condition is added', () => {
-      expect(computeHasChanges(waitCtx({ waitConditions }))).toBe(true)
+      expect(computeHasChanges(waitCtx({ conditions: WAIT_CONDITIONS }))).toBe(true)
     })
 
     it('reports a change when the wait mode is switched', () => {
-      expect(computeHasChanges(waitCtx({ waitMode: 'watch' }))).toBe(true)
+      expect(computeHasChanges(waitCtx({ mode: 'watch' }))).toBe(true)
     })
 
     it('reports a change when fail current scope is ticked', () => {
-      expect(computeHasChanges(waitCtx({ waitFailCurrentScope: true }))).toBe(true)
+      expect(computeHasChanges(waitCtx({ fail_current_scope: true }))).toBe(true)
     })
 
-    it('reports no change when the editors match the saved node', () => {
-      const ctx = waitCtx({
-        waitConditions,
-        waitMode: 'watch',
-        waitFailCurrentScope: true,
-        elementCurrentValues: {
-          conditions: waitConditions,
-          mode: 'watch',
-          fail_current_scope: true,
-        },
-        values: {
-          conditions: waitConditions,
-          mode: 'watch',
-          fail_current_scope: true,
-        },
-      })
-      expect(computeHasChanges(ctx)).toBe(false)
+    it('reports no change when the window matches the saved node', () => {
+      const saved = { conditions: WAIT_CONDITIONS, mode: 'watch', fail_current_scope: true }
+      expect(computeHasChanges(waitCtx({ ...saved }, saved))).toBe(false)
     })
 
-    it('treats an unsaved mode as Retry rather than dirty', () => {
+    it('opens a wait whose mode was never set unchanged', () => {
       // A node the author never touched must not open its sheet already dirty.
-      expect(computeHasChanges(waitCtx({ waitMode: 'retry' }))).toBe(false)
+      expect(computeHasChanges(waitCtx({}))).toBe(false)
     })
+  })
+})
 
-    it('ignores the wait editors when the element is not a wait', () => {
-      const ctx = waitCtx({
-        isWaitUntil: false,
-        waitConditions,
-        waitMode: 'watch',
-        waitFailCurrentScope: true,
-      })
-      expect(computeHasChanges(ctx)).toBe(false)
-    })
+// A compare value its operator hides goes at Save, at every list place a Block holds (REQ-3.5.1.5).
+describe('normalizeConditionLists', () => {
+  const UNARY = {
+    id: 'c-1',
+    type: 'literal',
+    variable: 'ready',
+    value_type: 'boolean',
+    operator: 'is_false',
+    reference_value: null,
+    reference_is_expression: false,
+  }
+  const UNARY_TEMPLATE = {
+    id: 'c-2',
+    type: 'literal',
+    variable: 'body',
+    value_type: 'string',
+    operator: 'is_not_null',
+    reference_value: 'Hello {{ name }}',
+    reference_is_template: true,
+  }
+  const BINARY = {
+    id: 'c-3',
+    type: 'literal',
+    variable: 'status',
+    value_type: 'integer',
+    operator: 'equals',
+    reference_value: 'expected_status',
+    reference_is_expression: true,
+  }
+  const NOT_SET = { id: 'c-4', type: 'literal', variable: 'region', value_type: 'string', operator: 'equals' }
+  const EXPRESSION = { id: 'c-5', type: 'expression', expression: 'status == 200' }
+  const AND = { type: 'operator', value: 'and' }
+
+  /** The row with none of the three compare value keys. */
+  function clean(row: Record<string, unknown>): Record<string, unknown> {
+    const { reference_value: _value, reference_is_expression: _expression, reference_is_template: _template, ...rest } = row
+    return rest
+  }
+
+  /** The Save step under test, read from its module inside each case; the Block type picks its condition lists. */
+  async function normalize(elementType: string, values: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const saveLogic = (await import('@/features/workbench/common/element-config/save-logic')) as unknown as {
+      normalizeConditionLists: (elementType: string, values: Record<string, unknown>) => Record<string, unknown>
+    }
+    return saveLogic.normalizeConditionLists(elementType, values)
+  }
+
+  it('drops the compare value and both flags under an operator that takes none', async () => {
+    const rows = (await normalize('assert', { assertions: [UNARY, UNARY_TEMPLATE] })).assertions as Record<string, unknown>[]
+
+    expect(rows).toEqual([clean(UNARY), clean(UNARY_TEMPLATE)])
+    for (const row of rows) {
+      expect(row).not.toHaveProperty('reference_value')
+      expect(row).not.toHaveProperty('reference_is_expression')
+      expect(row).not.toHaveProperty('reference_is_template')
+    }
+  })
+
+  it('keeps a row whose operator takes a value as it is, an unset compare value included', async () => {
+    const rows = (await normalize('while', { conditions: [BINARY, NOT_SET] })).conditions as Record<string, unknown>[]
+
+    expect(rows).toEqual([BINARY, NOT_SET])
+    expect(rows[1]).not.toHaveProperty('reference_value')
+  })
+
+  it('reaches rows inside groups at every depth', async () => {
+    const values = {
+      assertions: [{ id: 'g-1', type: 'group', items: [BINARY, AND, { id: 'g-2', type: 'group', items: [UNARY] }] }],
+    }
+
+    expect((await normalize('assert', values)).assertions).toEqual([
+      { id: 'g-1', type: 'group', items: [BINARY, AND, { id: 'g-2', type: 'group', items: [clean(UNARY)] }] },
+    ])
+  })
+
+  const FILTER = (rows: unknown[]) => ({
+    filters: [{ id: 'b1', column: { mode: 'name', value: 'ok' }, asType: 'boolean', conditions: rows }],
+  })
+  const FILTER_ROWS = (v: Record<string, unknown>) => (v.filters as { conditions?: unknown[] }[])[0].conditions
+
+  it.each([
+    ['an Assert list', 'assert', (rows: unknown[]) => ({ assertions: rows }), (v: Record<string, unknown>) => v.assertions],
+    ['a While list', 'while', (rows: unknown[]) => ({ conditions: rows }), (v: Record<string, unknown>) => v.conditions],
+    ['a Wait Until list', 'wait-until', (rows: unknown[]) => ({ conditions: rows }), (v: Record<string, unknown>) => v.conditions],
+    [
+      'an If/Else branch',
+      'if-else',
+      (rows: unknown[]) => ({
+        branches: [
+          { id: 'branch_0', type: 'if', label: '', conditions: rows },
+          { id: 'branch_1', type: 'else', label: '' },
+        ],
+      }),
+      (v: Record<string, unknown>) => (v.branches as { conditions?: unknown[] }[])[0].conditions,
+    ],
+    [
+      'a Switch case',
+      'switch-case',
+      (rows: unknown[]) => ({
+        branches: [
+          { id: 'branch_0', type: 'case', label: 'Fast', conditions: rows, break: true },
+          { id: 'branch_1', type: 'default', label: '' },
+        ],
+      }),
+      (v: Record<string, unknown>) => (v.branches as { conditions?: unknown[] }[])[0].conditions,
+    ],
+    ['a CSV filter', 'csv-parser', FILTER, FILTER_ROWS],
+    ['an Excel filter', 'excel-parser', FILTER, FILTER_ROWS],
+  ])('cleans the rows of %s', async (_place, elementType, build, read) => {
+    expect(read(await normalize(elementType, build([UNARY, AND, BINARY])))).toEqual([clean(UNARY), AND, BINARY])
+  })
+
+  it.each<[string, Record<string, unknown>]>([
+    ['wait-until', { conditions: [EXPRESSION, AND, BINARY], timeout: 30000, message: 'gave up' }],
+    [
+      'switch-case',
+      {
+        branches: [
+          { id: 'branch_0', type: 'case', label: '', conditions: [EXPRESSION], break: false },
+          { id: 'branch_1', type: 'default', label: '' },
+        ],
+      },
+    ],
+  ])('leaves expression rows, the default branch and every other value of a %s alone', async (elementType, values) => {
+    expect(await normalize(elementType, values)).toEqual(values)
+  })
+
+  it('leaves a stored group whose items are not a list as it is, cleaning the rows beside it', async () => {
+    const values = { assertions: [UNARY, AND, { id: 'g-1', type: 'group', items: 'ready' }, AND, { id: 'g-2', type: 'group' }] }
+
+    expect((await normalize('assert', values)).assertions).toEqual([
+      clean(UNARY),
+      AND,
+      { id: 'g-1', type: 'group', items: 'ready' },
+      AND,
+      { id: 'g-2', type: 'group' },
+    ])
+  })
+
+  it('leaves the values it is given as they were', async () => {
+    const values = { assertions: [UNARY, BINARY] }
+
+    await normalize('assert', values)
+
+    expect(values.assertions[0]).toEqual(UNARY)
   })
 })

@@ -9,7 +9,7 @@
  * 1. Var Setter can be dropped from palette onto canvas
  * 2. Config modal opens with custom inline editor (not generic ParameterTable)
  * 3. Empty state: one empty row with name field (VARSET-10)
- * 4. Each row: Name, Type (defaults string), Value, Expression toggle, Delete (VARSET-1)
+ * 4. Each row: Name, Type (defaults string), Value with expand, Expression toggle, Delete (VARSET-1)
  * 5. "+ Add" button inserts new empty row (VARSET-2)
  * 6. No scope selector - scope is automatic
  * 7. No outputs section (var setter has no outputs)
@@ -102,17 +102,18 @@ test.describe('V-PLUGIN-VARSET-01: Var Setter Config Modal', () => {
     const modal = await openConfigModal(page)
 
     // Per VARSET-1: Each row has Name, Type, Value editor, Expression toggle, Delete.
-    // The default (string) row's value affordance is the Edit-value button that
-    // opens the shared sheet.
+    // The value is the inline field with its expand button (VARSET-7).
     const nameInput = modal.locator('[data-testid="varset-name-input-0"]')
     const typeSelect = modal.locator('[data-testid="varset-type-select-0"]')
-    const valueField = modal.locator('[data-testid="varset-edit-value-0"]')
+    const valueField = modal.locator('[data-testid="param-input-varset-value-0"]')
+    const valueExpand = modal.locator('[data-testid="param-expand-varset-value-0"]')
     const exprToggle = modal.locator('[data-testid="varset-expression-toggle-0"]')
     const deleteBtn = modal.locator('[data-testid="varset-delete-0"]')
 
     await expect(nameInput).toBeVisible()
     await expect(typeSelect).toBeVisible()
     await expect(valueField).toBeVisible()
+    await expect(valueExpand).toBeVisible()
     await expect(exprToggle).toBeVisible()
     await expect(deleteBtn).toBeVisible()
   })
@@ -211,18 +212,16 @@ test.describe('V-PLUGIN-VARSET-01: Var Setter Config Modal', () => {
     // Type a variable name first
     const nameInput = modal.locator('[data-testid="varset-name-input-0"]')
     await nameInput.fill('myvar')
-    // Dismiss autocomplete by moving focus to a neutral control. Clicking the
-    // string row's Edit button would open the value sheet; Escape cancels the modal.
+    // Dismiss autocomplete by moving focus to a neutral control; Escape cancels the modal.
     await modal.locator('[data-testid="varset-add-button"]').focus()
 
     // Per VARSET-6: expression toggle per variable
     const exprToggle = modal.locator('[data-testid="varset-expression-toggle-0"]')
     await exprToggle.click()
 
-    // After toggle, the string row's Edit-value button is replaced by the inline
-    // expression field (no {x} badge).
-    await expect(modal.locator('[data-testid="varset-edit-value-0"]')).not.toBeVisible()
-    await expect(modal.locator('[data-testid="param-input-myvar"]')).toBeVisible()
+    // After toggle, the row's text box is replaced by the inline expression field.
+    await expect(modal.locator('input[data-testid="param-input-varset-value-0"]')).toHaveCount(0)
+    await expect(modal.locator('[data-testid="param-input-varset-value-0"] .cm-content')).toBeVisible()
   })
 
   // ==========================================================================

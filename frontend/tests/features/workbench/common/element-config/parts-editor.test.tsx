@@ -600,6 +600,13 @@ describe('parts Code codec (parse + serialize)', () => {
 })
 
 describe('sheet chrome', () => {
+  it('is a non-modal dialog named "Edit value"', () => {
+    renderSheet()
+    const sheet = screen.getByTestId('parts-editor-sheet')
+    expect(screen.getByRole('dialog', { name: 'Edit value' })).toBe(sheet)
+    expect(sheet).toHaveAttribute('aria-modal', 'false')
+  })
+
   it('saves the parts and then closes', async () => {
     const user = userEvent.setup()
     const { onSave, onClose } = renderSheet([PLAIN_PART])

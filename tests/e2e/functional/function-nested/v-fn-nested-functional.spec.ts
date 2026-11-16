@@ -58,7 +58,6 @@ async function seedLibraryEmitting(
               version: '1.0.0',
               expressionFields: ['message'],
               templateFields: [],
-              variableExpressionKeys: [],
               config: {
                 values: { message: `'${bodyLine}'`, level: 'INFO' },
                 outputBindings: {},
@@ -102,7 +101,6 @@ function buildNestedLocalInLocalTest(): Record<string, unknown> {
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Outer',
@@ -126,7 +124,6 @@ function buildNestedLocalInLocalTest(): Record<string, unknown> {
                       hasNewerVersion: false,
                       expressionFields: [],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: { values: {}, outputBindings: {}, profileBindings: [] },
                       localDefinition: {
                         name: 'Middle',
@@ -148,7 +145,6 @@ function buildNestedLocalInLocalTest(): Record<string, unknown> {
                                 version: '1.0.0',
                                 expressionFields: ['message'],
                                 templateFields: [],
-                                variableExpressionKeys: [],
                                 config: {
                                   values: {
                                     message: "'nested-deepest-line'",
@@ -202,7 +198,6 @@ function buildSharedInLocalTest(shared: SeededLibrary): Record<string, unknown> 
             hasNewerVersion: false,
             expressionFields: [],
             templateFields: [],
-            variableExpressionKeys: [],
             config: { values: {}, outputBindings: {}, profileBindings: [] },
             localDefinition: {
               name: 'Outer',
@@ -229,7 +224,6 @@ function buildSharedInLocalTest(shared: SeededLibrary): Record<string, unknown> 
                       hasNewerVersion: false,
                       expressionFields: [],
                       templateFields: [],
-                      variableExpressionKeys: [],
                       config: { values: {}, outputBindings: {}, profileBindings: [] },
                     },
                   },

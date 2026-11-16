@@ -52,7 +52,7 @@ const STRIP_FUNCTION = 'Secret value stays visible until you save the Function.'
 const MASK = '********'
 
 const strip = (scope: Locator): Locator => scope.getByTestId('inspect-secret-notice')
-const watcher = (page: Page, name: string): Locator => page.locator(`section[aria-label="Inspect variable ${name}"]`)
+const watcher = (page: Page, name: string): Locator => page.getByRole('dialog', { name: name, exact: true, includeHidden: true })
 const expandButton = (page: Page, name: string): Locator =>
   variableRow(page, name).locator('[data-testid^="expand-button-"]')
 const rowValue = (page: Page, name: string): Locator =>

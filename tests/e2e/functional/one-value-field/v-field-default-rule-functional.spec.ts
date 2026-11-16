@@ -22,8 +22,10 @@
  * 8. The run uses every default: `$0` is `/bin/sh` and no Input Variable is exported; ten redirects pass under Max
  *    Redirects 10; a 503 is retried under the default codes and delay (DEBUG line names them); the Function Block gets
  *    each input's default; the OpenSearch search with Query not set sends no filter and returns both documents.
- * 9. Code (OpenSearch Query, default empty text) follows the same rule: not set shows the gray `<empty string>`, the {x}
- *    hint is `''`, and Save stores nothing.
+ * 9. Code (OpenSearch Query, default empty text) follows the same rule. Not set, it opens on its Template face (a blank
+ *    Query starts as a Template) with the gray hint `''` and no reset icon; text typed there brings the reset icon, which
+ *    takes the row back to literal mode, not set: the gray `<empty string>`. The {x} hint is `''`, and Save stores
+ *    nothing.
  *
  * Phase: functional-workflow (imports its own fixtures and seeds its own OpenSearch index; deletes both after).
  */
@@ -55,9 +57,11 @@ import {
   selectAllAndDelete,
   storedFields,
   switchSilently,
+  typeExpression,
   typeKeys,
   type FreeEntryType,
 } from '../../helpers/default-rule'
+import { expectBlankTemplate, expectTemplateText } from './template-face'
 import { newToken, withToken } from '../shell-blocks/shell-helpers'
 
 interface BlockRef {
@@ -256,7 +260,18 @@ test.describe('V-FIELD-DEFAULT-RULE-FUNCTIONAL: the default rule on every free-e
     testId = await importValidateAndNavigate(page, fixture, { injectHttp: true, rejectRepairs: true })
 
     const sheet = await openBlockSheet(page, SEARCH.id)
-    await test.step('query: not set shows the gray <empty string>, Delete explains it', async () => {
+    await test.step("query: not set opens on the Template face with the gray hint ''; the reset icon takes typed text back", async () => {
+      await expectBlankTemplate(sheet, 'query', "''")
+      await typeExpression(page, sheet, 'query', 'msg:alpha')
+      await expectTemplateText(sheet, 'query', 'msg:alpha')
+      await resetButton(sheet, 'query').click()
+      // The reset takes the Template mark with the text, so the row is literal and not set.
+      await expectGrayEmptyDefault(sheet, 'query')
+    })
+    await test.step("query: {x} copies nothing in and hints ''; back shows the gray <empty string>, Delete explains it", async () => {
+      await switchSilently(page, sheet, 'query', true)
+      await expectExpression(sheet, 'query', '', "''")
+      await switchSilently(page, sheet, 'query', false)
       await expectGrayEmptyDefault(sheet, 'query')
       await expectDefaultKeyHint(page, sheet, 'query', 'Delete')
       await expectGrayEmptyDefault(sheet, 'query')

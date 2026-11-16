@@ -25,6 +25,19 @@ function nonStaticImportsOf(specifier) {
   ].join(', ');
 }
 
+const UNSAFE_VOID =
+  '`void` may only mark a navigate, fitView or setCenter call, an import(), or a chain that ends in .catch() or a two-argument .then().';
+
+// Navigation, viewport moves and preload imports have no failure to report; the chains handle theirs.
+const SAFE_VOID_ARGUMENTS = [
+  '[argument.type="ImportExpression"]',
+  '[argument.callee.name=/^(navigate|setCenter|fitView|\\w+FitView)$/]',
+  '[argument.callee.property.name=/^(setCenter|fitView)$/]',
+  '[argument.callee.property.name="catch"]',
+  '[argument.callee.property.name="then"][argument.arguments.1]',
+];
+const UNSAFE_VOID_SELECTOR = `UnaryExpression[operator="void"]${SAFE_VOID_ARGUMENTS.map((form) => `:not(${form})`).join('')}`;
+
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -51,8 +64,8 @@ export default [
     },
   },
   // ============================================================================
-  // Unhandled-promise enforcement. These two rules need the type checker, so
-  // this block is the only one that turns on the type-aware parser. A promise
+  // Unhandled-promise enforcement. The two promise rules need the type checker,
+  // so this block is the only one that turns on the type-aware parser. A promise
   // nobody awaits swallows its rejection, which is why every failure must be
   // awaited by a caller that reports it or carry its own reporting catch.
   // ============================================================================
@@ -65,25 +78,13 @@ export default [
       },
     },
     rules: {
-      // ignoreVoid: false - `void doThing()` discards the rejection just as
-      // silently as no operator at all.
-      '@typescript-eslint/no-floating-promises': [
-        'error',
-        {
-          ignoreVoid: false,
-          // Router navigation and viewport animation resolve when the gesture
-          // finishes; neither promise can carry a failure to report.
-          allowForKnownSafeCalls: [
-            { from: 'package', package: 'react-router', name: 'NavigateFunction' },
-            { from: 'package', package: '@xyflow/system', name: 'SetCenter' },
-            { from: 'package', package: '@xyflow/react', name: 'FitView' },
-          ],
-        },
-      ],
+      // `void` marks a promise nothing should handle; no-restricted-syntax limits where it may go.
+      '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
       '@typescript-eslint/no-misused-promises': [
         'error',
         { checksConditionals: true, checksSpreads: true, checksVoidReturn: true },
       ],
+      'no-restricted-syntax': ['error', { selector: UNSAFE_VOID_SELECTOR, message: UNSAFE_VOID }],
     },
   },
   // ============================================================================
@@ -110,6 +111,8 @@ export default [
         { selector: 'JSXElement, JSXFragment', message: LIB_NO_JSX },
         { selector: nonStaticImportsOf(COMPONENTS_SPECIFIER), message: LIB_NO_COMPONENTS },
         { selector: nonStaticImportsOf(PAGE_SPECIFIER), message: LIB_NO_PAGES },
+        // Flat config replaces rule options per block, so lib/ repeats the void guard.
+        { selector: UNSAFE_VOID_SELECTOR, message: UNSAFE_VOID },
       ],
     },
   },

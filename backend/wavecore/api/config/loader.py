@@ -12,15 +12,13 @@ Provides centralized configuration management with:
 - Read-only and controlled write access patterns
 - Environment variable integration (WAVE_* prefix)
 - Runtime management via API endpoints
-- Configuration reload without service restart
-- Audit trail for configuration changes
 """
 
 import copy
+import logging
 import os
 import threading
-from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Final
 
@@ -31,6 +29,8 @@ from ruamel.yaml.error import MarkedYAMLError, YAMLError
 import wavecore
 from wavecore.api.config import instance_settings
 from wavecore.api.exceptions import ValidationException
+
+logger = logging.getLogger(__name__)
 
 CONFIG_FILE_ENV: Final[str] = "WAVE_CONFIG_FILE"
 
@@ -165,17 +165,6 @@ class ConfigSection:
         else:
             self._data[name] = value
 
-    def __hasattr__(self, name: str) -> bool:
-        """Check if attribute exists.
-
-        Args:
-            name: Attribute name
-
-        Returns:
-            True if attribute exists
-        """
-        return name in self._data
-
 
 class ServerConfig(ConfigSection):
     """Server configuration section."""
@@ -295,8 +284,6 @@ class Config:
     def __init__(self, config_file: str | None = None) -> None:
         """Load the given config file, or the located one, and refuse it when unusable."""
         self._lock = threading.RLock()
-        self._change_listeners: list[Callable[[str, Any], None]] = []
-        self._audit_trail: list[dict[str, Any]] = []
         self._config_file = Path(config_file) if config_file else locate_config_file()
         # Folder of the config file that set the storage section; base_path starts here.
         self._storage_folder: Path | None = None
@@ -330,6 +317,9 @@ class Config:
         except ConfigFileProblem as error:
             raise ConfigValidationError(f"Config file {path} {error}") from error
         data = document or {}
+        for name in data:
+            if name not in _SECTION_NAMES:
+                logger.warning("Config file %s: unknown section %r is ignored", path, name)
         problem = instance_settings.section_problem(data, _SECTION_NAMES)
         if problem:
             raise ConfigValidationError(f"Config file {path}: {problem}")
@@ -609,13 +599,12 @@ class Config:
         else:
             setattr(parent, field_name, value)
 
-    def set(self, key: str, value: Any, user: str = "system", validate: bool = True) -> None:
+    def set(self, key: str, value: Any, validate: bool = True) -> None:
         """Set configuration value by dot-notation key.
 
         Args:
             key: Configuration key in dot notation (e.g., "server.port")
             value: New value to set
-            user: User making the change (for audit trail)
             validate: Whether to validate after setting
 
         Raises:
@@ -640,34 +629,7 @@ class Config:
                         self._set_field(parent, field_name, old_value)
                     raise
 
-            # Record audit entry
-            self._audit_trail.append(
-                {
-                    "timestamp": datetime.now(UTC),
-                    "key": key,
-                    "old_value": old_value,
-                    "new_value": value,
-                    "user": user,
-                }
-            )
-
-            # Notify listeners
-            for listener in self._change_listeners:
-                listener(key, value)
-
-    def get_computed(self, key: str) -> Any:
-        """Get computed configuration value derived from other config values.
-
-        Args:
-            key: Computed configuration key
-
-        Returns:
-            Computed value
-        """
-        # No computed keys remain; resolve via regular get
-        return self.get(key)
-
-    def save(self, changes: Mapping[str, Any], user: str = "settings") -> None:
+    def save(self, changes: Mapping[str, Any]) -> None:
         """Write the dotted keys to the config file, then make them the running values."""
         # Imported here: write_back imports this module.
         from wavecore.api.config import write_back
@@ -679,7 +641,7 @@ class Config:
             changes = instance_settings.realized_changes(changes)
             write_back.write_keys(self._config_file, changes)
             for key, value in changes.items():
-                self.set(key, value, user=user, validate=False)
+                self.set(key, value, validate=False)
 
     def section(self, prefix: str) -> dict[str, Any]:
         """The running values under a dotted prefix, for the keys the section's defaults name."""
@@ -707,46 +669,6 @@ class Config:
             if changes:
                 self.save(changes)
         return bool(changes)
-
-    def reload(self) -> None:
-        """Reload configuration from file without service restart."""
-        with self._lock:
-            self._load_from_file()
-            self._load_from_environment()
-            self._validate()
-
-    def add_change_listener(self, listener: Callable[[str, Any], None]) -> None:
-        """Add a change listener for configuration updates.
-
-        Args:
-            listener: Callback function(key, value) to call on changes
-        """
-        with self._lock:
-            self._change_listeners.append(listener)
-
-    def remove_change_listener(self, listener: Callable[[str, Any], None]) -> None:
-        """Remove a change listener.
-
-        Args:
-            listener: Listener to remove
-        """
-        with self._lock:
-            if listener in self._change_listeners:
-                self._change_listeners.remove(listener)
-
-    def get_audit_trail(self, key: str | None = None) -> list[dict[str, Any]]:
-        """Get audit trail of configuration changes.
-
-        Args:
-            key: Optional key to filter audit entries
-
-        Returns:
-            List of audit entries
-        """
-        with self._lock:
-            if key:
-                return [entry for entry in self._audit_trail if entry["key"] == key]
-            return list(self._audit_trail)
 
     def to_dict(self, include_secrets: bool = False) -> dict[str, Any]:
         """Convert configuration to dictionary.

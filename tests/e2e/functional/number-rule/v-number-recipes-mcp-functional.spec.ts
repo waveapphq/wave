@@ -223,7 +223,8 @@ test.describe('V-NUMBER-RECIPES-MCP-FUNCTIONAL: recipes and readbacks follow the
       ]) {
         expect(text, `the readback holds "${line.trim()}"`).toContain(line)
       }
-      expect(text, 'no number is written with an exponent').not.toMatch(EXPONENT)
+      // The random name can hold a digit, an "e" and a digit.
+      expect(text.replaceAll(name, ''), 'no number is written with an exponent').not.toMatch(EXPONENT)
 
       const amended = callTool(NUMBER_MCP_PORT, 'amend_test_from_recipe', { test_ref: testId, recipe: text })
       expect(amended.payload.amended, JSON.stringify(amended.payload)).toBe(true)
@@ -246,8 +247,8 @@ test.describe('V-NUMBER-RECIPES-MCP-FUNCTIONAL: recipes and readbacks follow the
       '  - for:\n      count: 1\n      body:\n        - break: {}\n          label: Leave\n' +
       '  - for:\n      count: 1\n      body:\n        - continue: {}\n          label: Next\n' +
       '  - block: log\n    settings: {message: labeled-done}\n' +
-      '  - halt: {}\n    label: Stop here\n' +
-      '  - note: {text: Reviewed}\n    label: Remark\n'
+      '  - note: {text: Reviewed}\n    label: Remark\n' +
+      '  - halt: {}\n    label: Stop here\n'
     const head = 'variables:\n  counter: {type: integer, value: 0}\n'
     const created = callTool(NUMBER_MCP_PORT, 'create_test_from_recipe', {
       recipe: recipe(`zz-11541-s8-recipe-labels-${runToken()}`, flow, head),

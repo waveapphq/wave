@@ -1175,8 +1175,7 @@ describe('SettingsContainer', () => {
             (call: unknown[]) => (call[0] as { search?: string })?.search === 'prod'
           )
           expect(hasSearchCall).toBe(true)
-        },
-        { timeout: 2000 } // Allow time for debounce
+        }
       )
     })
 

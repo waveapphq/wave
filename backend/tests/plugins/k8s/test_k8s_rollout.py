@@ -583,7 +583,7 @@ class TestOutputSchema:
     def test_there_are_exactly_five_outputs(self) -> None:
         assert len(K8sRolloutPlugin().metadata["output_schema"]) == 5
 
-    def test_the_sheet_carries_none_of_the_dropped_outputs(self) -> None:
+    def test_the_sheet_carries_none_of_the_forbidden_outputs(self) -> None:
         names = {o["name"] for o in K8sRolloutPlugin().metadata["output_schema"]}
 
         assert names & FORBIDDEN_OUTPUTS == set()

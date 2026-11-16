@@ -6,6 +6,7 @@ and must NOT be placed in production code.
 """
 
 import shutil
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -79,3 +80,20 @@ def set_version_attribute(suite_id: str, version: str, attr: str, value: Any) ->
             v[attr] = value
             break
     save_versions_file(suite_id, versions)
+
+
+def make_test_ids(count: int) -> list[str]:
+    """IDs of new real Tests, since a Suite refuses a Test that does not exist."""
+    from wavecore.api.services.tests import service as test_service
+
+    return [
+        test_service.create_test({"name": f"Member {uuid.uuid4().hex}"})["id"] for _ in range(count)
+    ]
+
+
+def store_suite_variables(suite_id: str, variables: dict[str, Any]) -> None:
+    """Write a Suite's variables straight to storage, past the checks a save runs."""
+    suite = load_suite_file(suite_id)
+    assert suite is not None
+    suite["variables"] = variables
+    save_suite_file(suite)

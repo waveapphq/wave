@@ -263,6 +263,11 @@ export function getOutputParams(nodeId: string): OutputParam[] | undefined {
   return ALL_OUTPUTS[nodeId]
 }
 
+/** The default a Block's field list declares for one field, the one default source (REQ-3.5.0.3). */
+export function controlDefault(elementType: string, name: string): unknown {
+  return getInputParams(elementType)?.find((param) => param.name === name)?.defaultValue
+}
+
 function isFunctionBlock(data: Record<string, unknown>): boolean {
   return data.nodeType === 'function' || data.functionLifecycle !== undefined
 }

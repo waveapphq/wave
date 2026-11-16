@@ -159,8 +159,7 @@ class TestHTTPPluginMetadata:
         assert "proxy_url" not in {f.name for f in fields(HTTPRequestConfig)}
 
     def test_map_and_parts_params_do_not_declare_templatable(self):
-        """Section 18: the templatable hybrid model is retired; values are
-        literal-or-expression via dotted expressionFields, never whole-map {{ }}."""
+        """Map and parts values use dotted expressionFields, never a whole-map {{ }}."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         params = {p["name"]: p for p in HTTPClientPlugin().metadata["parameters"]}
@@ -169,7 +168,7 @@ class TestHTTPPluginMetadata:
             assert "templatable" not in params[name]
 
     def test_headers_key_policy_drops_mode_conflicts_and_declares_generated_keys(self):
-        """Section 9: mode-conflict rules retired; generated rows drive the dup rule."""
+        """The key policy has no mode-conflict rules; generated rows drive the dup rule."""
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         params = {p["name"]: p for p in HTTPClientPlugin().metadata["parameters"]}
@@ -192,6 +191,29 @@ class TestHTTPPluginMetadata:
             },
             {"when": {"body_mode": ["multipart"]}, "key": "Content-Type"},
         ]
+
+    def test_auth_and_file_fields_are_required_by_the_mode_that_shows_them(self):
+        from wavecore.plugins.http_client import HTTPClientPlugin
+
+        params = {p["name"]: p for p in HTTPClientPlugin().metadata["parameters"]}
+        auth_on = {"field": "auth_enabled", "values": ["true"]}
+        basic = [auth_on, {"field": "auth_mode", "values": ["basic"]}]
+        api_key = [auth_on, {"field": "auth_mode", "values": ["api_key"]}]
+
+        conditional = {
+            name: param.get("required_when") or param.get("required_when_all")
+            for name, param in params.items()
+            if param.get("required_when") or param.get("required_when_all")
+        }
+
+        assert conditional == {
+            "auth_username": basic,
+            "auth_password": basic,
+            "auth_token": [auth_on, {"field": "auth_mode", "values": ["bearer"]}],
+            "auth_header_name": api_key,
+            "auth_key": api_key,
+            "file_source": {"field": "body_mode", "values": ["file"]},
+        }
 
     def test_metadata_outputs_are_the_contract_set(self):
         """Existing outputs keep name and type; size/sha256/trace join."""
