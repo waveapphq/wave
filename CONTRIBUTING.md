@@ -85,9 +85,9 @@ WAVE has three test suites. Each suite has a script that runs it in Podman conta
 
 | Script | What it runs |
 |---|---|
-| `./scripts/ci-backend-local.sh` | On the host: the text checks. In a `wave-ci` container: every backend test with pytest, which fails below 100% coverage, then mypy, `black --check` and ruff. On the host: the SonarQube scan of `backend/`. |
-| `./scripts/ci-frontend-local.sh` | On the host: the check for orphaned files and the text checks. In a `wave-ci` container: ESLint, the type check, every frontend test with Vitest, and the build. On the host: the SonarQube scan of `frontend/`. |
-| `./scripts/ci-playwright-local.sh` | On the host: the frontend build and the E2E services. In 8 `wave-e2e` containers: every Playwright spec, split between the containers. Each container has its own backend, frontend and data. |
+| `./scripts/ci-backend-local.sh` | On the host: the branch name check and the text checks. In a `wave-ci` container: every backend test with pytest, which fails below 100% coverage, then mypy, `black --check` and ruff. On the host: the SonarQube scan of `backend/`. |
+| `./scripts/ci-frontend-local.sh` | On the host: the branch name check, the check for orphaned files and the text checks. In a `wave-ci` container: ESLint, the type check, every frontend test with Vitest, and the build. On the host: the SonarQube scan of `frontend/`. |
+| `./scripts/ci-playwright-local.sh` | On the host: the branch name check, the frontend build and the E2E services. In 8 `wave-e2e` containers: every Playwright spec, split between the containers. Each container has its own backend, frontend and data. |
 
 The frontend tests fail below 100% coverage of lines, branches and statements. They also fail when a test writes unexpected output to stderr.
 
@@ -224,7 +224,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    If no release branch fits the change, ask in its issue which release the change is for. Go on to step 3 when the command lists the release branch.
 
-3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a fix `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name any other change `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. A `fix/` branch only fixes a bug of a released version, or of a change that is already merged. It holds nothing else.
+3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a fix `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name any other change `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. The short name has only lowercase letters, digits and single hyphens. A check enforces these names when you run the suites and on each pull request. A `fix/` branch only fixes a bug of a released version, or of a change that is already merged. It holds nothing else.
 
    ```sh
    git fetch origin

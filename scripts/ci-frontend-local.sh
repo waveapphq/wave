@@ -51,6 +51,8 @@ echo "Log file: $LOG_FILE"
 echo ""
 
 # Validate prerequisites upfront - these are hard blockers
+"$SCRIPT_DIR/check-branch-name.sh" || exit 1
+
 if ! command -v sonar-scanner &> /dev/null; then
   echo "❌ sonar-scanner binary not found in PATH"
   echo "   Install it or add its location to your PATH"

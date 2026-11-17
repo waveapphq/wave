@@ -1,0 +1,26 @@
+name: Branch name
+
+on:
+  pull_request:
+    # Edited covers a change of the base branch.
+    types: [opened, edited, synchronize, reopened]
+    branches: [master, 'release/**']
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    name: Branch name
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the branch names
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: ./scripts/check-branch-name.sh --pr "$HEAD" "$BASE"

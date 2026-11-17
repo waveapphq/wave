@@ -10,6 +10,7 @@
 /scripts/run-e2e-shard.sh @alx-ur
 /scripts/check-orphaned-files.sh @alx-ur
 /scripts/check-text.sh @alx-ur
+/scripts/check-branch-name.sh @alx-ur
 /scripts/e2e-stack.sh @alx-ur
 /scripts/e2e-config-with-key.sh @alx-ur
 /scripts/e2e-shard-plan.mjs @alx-ur
