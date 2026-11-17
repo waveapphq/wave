@@ -36,21 +36,36 @@ There is no framework to learn, and you do not have to write code. When you want
 
 ## What WAVE does
 
-**Debug a run step by step.** Set a breakpoint on any Block. When the run stops, you see every value it holds, and you can change one before you step on.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://waveapp.dev/media/workflow-clip.mp4"><img src="https://waveapp.dev/media/readme-debug.webp" width="400" alt="A WAVE test stopped at a breakpoint, with the Variable Manager showing the values the run holds"></a>
+      <p><b>Debug a run step by step.</b> Set a breakpoint on any Block. When the run stops, you see every value it holds, and you can change one before you step on.</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://waveapp.dev/media/shot-history.webp"><img src="https://waveapp.dev/media/shot-history.webp" width="400" alt="A saved WAVE run, read-only, with every Block on its path marked and the values the run ended with"></a>
+      <p><b>Look back at old runs.</b> Open a run from months ago and see the test as it ran: the path it took, its values, its logs and the files it wrote.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://waveapp.dev/media/report-clip.mp4"><img src="https://waveapp.dev/media/report-clip-poster.webp" width="400" alt="The top of an exported WAVE report: result, environment, who started it and how long it took"></a>
+      <p><b>Share the result.</b> Export a run as one HTML file that opens in any browser.</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://waveapp.dev/media/shot-publish.webp"><img src="https://waveapp.dev/media/shot-publish.webp" width="400" alt="The Publish Function dialog with a version, tags and a changelog"></a>
+      <p><b>Build it once, reuse it.</b> Build a Function once, publish it with a version and a changelog, and use it in any test as one Block.</p>
+    </td>
+  </tr>
+</table>
 
-[![A WAVE test stopped at a breakpoint, with the Variable Manager showing the values the run holds](https://waveapp.dev/media/readme-debug.webp)](https://waveapp.dev/media/workflow-clip.mp4)
+## Connect an AI assistant
 
-**Look back at old runs.** Open a run from months ago and see the test as it ran: the path it took, its values, its logs and the files it wrote.
+<p align="center"><a href="https://waveapp.dev/mcp.html"><img src="https://waveapp.dev/media/readme-mcp.gif" width="850" alt="A terminal chat asks for a WAVE test, the test builds in the WAVE Workbench, then runs and passes."></a></p>
 
-[![A saved WAVE run, read-only, with every Block on its path marked and the values the run ended with](https://waveapp.dev/media/shot-history.webp)](https://waveapp.dev/media/shot-history.webp)
+WAVE has an MCP server. An AI assistant connected to it can read your tests, write or change one, start a run, and read the results. If the test is open in WAVE, you see each change and each run as it happens.
 
-**Share the result.** Export a run as one HTML file that opens in any browser.
-
-<p align="center"><a href="https://waveapp.dev/media/report-clip.mp4"><img src="https://waveapp.dev/media/report-clip-poster.webp" width="560" alt="The top of an exported WAVE report: result, environment, who started it and how long it took"></a></p>
-
-**Build it once, reuse it.** Build a Function once, publish it with a version and a changelog, and use it in any test as one Block.
-
-<p align="center"><a href="https://waveapp.dev/media/shot-publish.webp"><img src="https://waveapp.dev/media/shot-publish.webp" width="560" alt="The Publish Function dialog with a version, tags and a changelog"></a></p>
+Turn the MCP server on in WAVE's Settings, connect your assistant and add WAVE's skill: [the MCP page](https://waveapp.dev/mcp.html) has the commands, and the skill is in [waveapphq/wave-skills](https://github.com/waveapphq/wave-skills). There is no AI model in WAVE, and WAVE calls none.
 
 ## What a test can reach
 
@@ -233,13 +248,6 @@ Each of these has its own page. You can export all of them, and import all of th
 - Import and export with validation and conflict handling, except Executions, which export only.
 - Admin mode, which logs a reason and can reset the data you pick
 - Change the log level while WAVE runs
-
-</details>
-
-<details>
-<summary>MCP server</summary>
-
-An MCP server lets an AI assistant build and run tests. It is off until you turn it on in Settings. For Claude Code, the wave-mcp skill in [waveapphq/wave-skills](https://github.com/waveapphq/wave-skills) teaches the assistant to use it: run `/plugin marketplace add waveapphq/wave-skills`, then `/plugin install wave-mcp@wave-skills`.
 
 </details>
 

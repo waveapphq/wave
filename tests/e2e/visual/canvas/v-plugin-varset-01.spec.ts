@@ -275,7 +275,7 @@ test.describe('V-PLUGIN-VARSET-01: Var Setter Config Modal', () => {
 
     // Should contain key entry about setting variables
     await expect(
-      changelogDialog.getByText(/Set variables in the execution context/)
+      changelogDialog.getByText(/Set variables in the flow the setter runs in, one row per variable name and its value/)
     ).toBeVisible()
 
     // Should show release date

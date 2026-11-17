@@ -17,6 +17,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import {
   dragPaletteItemToCanvas,
   mockInventedTestReads,
@@ -39,7 +40,7 @@ async function saveWithName(page: Page, name: string) {
   // name. Mock POST /tests to return a synthesized test so the FE save flow
   // closes the dialog and updates the breadcrumb path. (Mirrors the pattern
   // in v-save-01-S16.)
-  await page.route('**/tests', async (route) => {
+  await page.route(apiPathMatcher('/tests'), async (route) => {
     if (route.request().method() === 'POST') {
       await route.fulfill({
         status: 201,

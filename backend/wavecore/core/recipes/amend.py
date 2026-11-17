@@ -126,7 +126,7 @@ def revise(
     """
     matches = carry_canvas_state(previous, revised, key_anchors(previous, revised, step_map))
     final = _new_ids(previous, revised, _pairs(previous, revised, matches, step_map))
-    for workflow in list(_workflows(revised)):
+    for workflow in _workflows(revised):
         _rename(workflow, final)
     return {final.get(node_id, node_id): step for node_id, step in step_map.items()}
 

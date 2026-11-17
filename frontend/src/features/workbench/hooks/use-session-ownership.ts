@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ownershipApi,
   isHeldByAnother,
+  type HolderKind,
   type MirroredRun,
   type MirroredRunWire,
   type Ownership,
@@ -106,7 +107,7 @@ export interface SessionOwnership {
   isHolder: boolean
   isMirroring: boolean
   holderLabel: string | null
-  holderKind: 'person' | 'mcp' | null
+  holderKind: HolderKind | null
   mcpSessionId: string | null
   browserSessionId: string | null
   /** The holder's announced live run, if any (watchers attach to it). */
@@ -143,7 +144,7 @@ export function useSessionOwnership(): SessionOwnership {
   const [isHolder, setIsHolder] = useState(false)
   const [isMirroring, setIsMirroring] = useState(false)
   const [holderLabel, setHolderLabel] = useState<string | null>(null)
-  const [holderKind, setHolderKind] = useState<'person' | 'mcp' | null>(null)
+  const [holderKind, setHolderKind] = useState<HolderKind | null>(null)
   const [mcpSessionId, setMcpSessionId] = useState<string | null>(null)
   const [browserSessionId, setBrowserSessionId] = useState<string | null>(null)
   const [mirroredRun, setMirroredRun] = useState<MirroredRun | null>(null)
@@ -159,7 +160,7 @@ export function useSessionOwnership(): SessionOwnership {
 
   const isHolderRef = useRef(false)
   isHolderRef.current = isHolder
-  const holderKindRef = useRef<'person' | 'mcp' | null>(null)
+  const holderKindRef = useRef<HolderKind | null>(null)
   const isRequestingTakeoverRef = useRef(false)
   isRequestingTakeoverRef.current = isRequestingTakeover
   // The server retracts a request with the same event it denies one with, so
@@ -224,7 +225,7 @@ export function useSessionOwnership(): SessionOwnership {
     setIsMirroring(value)
   }, [])
 
-  const applyHolderKind = useCallback((kind: 'person' | 'mcp' | null) => {
+  const applyHolderKind = useCallback((kind: HolderKind | null) => {
     // The mirror carries the holder's run: a person taking the session from an assistant ends it in every tab.
     const run = mirroredRunRef.current
     if (holderKindRef.current === 'mcp' && kind === 'person' && run !== null) {

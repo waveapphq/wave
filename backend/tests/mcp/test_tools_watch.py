@@ -950,7 +950,8 @@ class TestAmendTestLiveFromRecipe:
                 recipe_of(after, "Live Twin", variables=changed, functions=functions),
             )
 
-        assert fast["amended"] is True and live["amended"] is True
+        assert fast["amended"] is True
+        assert live["amended"] is True
         fast_test, live_test = stored_test(fast_id), stored_test(live_id)
         assert live_test["workflow"] == fast_test["workflow"]
         assert live_test["variables"] == fast_test["variables"]
@@ -970,7 +971,8 @@ class TestAmendTestLiveFromRecipe:
             with patch.object(ownership, "_emit"):
                 live = await amend_live(monkeypatch, "Live Story", step_recipe(step, "Live Story"))
 
-            assert fast["amended"] is True and live["amended"] is True
+            assert fast["amended"] is True
+            assert live["amended"] is True
             fast_workflow = stored_test(fast_id)["workflow"]
             live_workflow = stored_test(live_id)["workflow"]
             assert positions_by_label(live_workflow) == positions_by_label(fast_workflow)
@@ -1174,12 +1176,12 @@ class TestAmendTestLiveFromRecipe:
 
         assert result == {"amended": False, "findings": [SAVED_MEANWHILE]}
         stored = stored_test(test_id)
-        assert (
+        assert kept == (
             stored["version"],
             stored["name"],
             stored["description"],
             stored["variables"]["v"]["value"],
-        ) == kept
+        )
         assert labels_of(stored["workflow"]) == ["Alpha", "Charlie"]
 
     async def test_a_test_deleted_while_the_change_played_is_answered_as_not_found(
@@ -1534,7 +1536,8 @@ class TestAmendTestLiveFromRecipe:
                 }
             ],
         }
-        assert streamed_work is not None and streamed_work["dirty"] is True
+        assert streamed_work is not None
+        assert streamed_work["dirty"] is True
         assert ownership.get_shared_draft() == streamed_work
 
 
@@ -1642,10 +1645,10 @@ class TestAStreamThatEndsUnexpectedly:
         with (
             patch.object(ownership, "_emit") as emitted,
             patch.object(ownership, "broadcast_draft", side_effect=end_on_second),
-            pytest.raises(ending),
         ):
             ownership.claim("h1", "Holder One")
-            await stream()
+            with pytest.raises(ending):
+                await stream()
 
         assert ownership.get_holder() is None
         assert emitted.call_args_list[-1] == call({"event": "holder_changed", "holder": None})
@@ -1664,13 +1667,14 @@ class TestAStreamThatEndsUnexpectedly:
             ownership.request_takeover("r1", "Ashley")
             raise asyncio.CancelledError
 
+        stream = change_of("Ended Asked", recipe_of(REVISED_FLOW, "Ended Asked"))
         with (
             patch.object(ownership, "_emit"),
             patch.object(ownership, "broadcast_draft", side_effect=ask_then_drop),
-            pytest.raises(asyncio.CancelledError),
         ):
             ownership.claim("h1", "Holder One")
-            await change_of("Ended Asked", recipe_of(REVISED_FLOW, "Ended Asked"))()
+            with pytest.raises(asyncio.CancelledError):
+                await stream()
 
         assert ownership.get_holder() == {"id": "r1", "label": "Ashley", "kind": "person"}
 
@@ -1913,7 +1917,8 @@ class TestAChangeOfATestSavedFromTheCanvas:
         fast = author.amend_test_from_recipe(fast_id, readback_changing(fast_id, 1, edit))
         live, _ = await streamed(monkeypatch, live_id, readback_changing(live_id, 1, edit))
 
-        assert fast["amended"] is True and live["amended"] is True
+        assert fast["amended"] is True
+        assert live["amended"] is True
         fast_test, live_test = stored_test(fast_id), stored_test(live_id)
         assert live_test["workflow"] == fast_test["workflow"]
         assert live_test["variables"] == fast_test["variables"]
@@ -2050,7 +2055,8 @@ class TestAnAmendKeepsWhatAPersonSetOnTheCanvas:
         fast = await amended("fast", monkeypatch, fast_id, readback_changing(fast_id, 1, edit))
         live = await amended("watched", monkeypatch, live_id, readback_changing(live_id, 1, edit))
 
-        assert fast["amended"] is True and live["amended"] is True
+        assert fast["amended"] is True
+        assert live["amended"] is True
         fast_test, live_test = stored_test(fast_id), stored_test(live_id)
         assert live_test["workflow"] == fast_test["workflow"]
         saved = saved_nodes(live_id)
@@ -2464,7 +2470,7 @@ class TestTheDraftAPersonContinuesKeepsItsSecrets:
 
         stored = stored_secrets(person_saves(shared, "Sealed Build"))
 
-        assert (stored["password"], stored["api_key"]) == SECRET_VALUES[1:]
+        assert SECRET_VALUES[1:] == (stored["password"], stored["api_key"])
 
     async def test_a_half_done_change_taken_over_and_saved_stores_the_recipes_new_secrets(
         self, monkeypatch: Any
@@ -2605,9 +2611,10 @@ class TestTheDraftAPersonContinuesKeepsItsSecrets:
             ownership.apply_draft("r2", {**surface, "test_id": other_id})
             tab = "r2"
         before = stored_test_ids()
+        payload = save_payload(shared, "Ended Build Again", {})
 
         with pytest.raises(SaveValidationError) as refused:
-            test_service.create_test(save_payload(shared, "Ended Build Again", {}), tab)
+            test_service.create_test(payload, tab)
 
         assert masked_findings(refused.value.errors) == MASKED_REFUSALS
         assert stored_test_ids() == before
@@ -2872,7 +2879,7 @@ class TestTheMaskIsNeverStoredAsABlockSecret:
         assert result["amended"] is True, result
         assert [sealed_masks_in(payload) for payload in payloads] == [[] for _ in payloads]
         stored = stored_secrets(test_id)
-        assert (stored["token"], stored["password"], stored["api_key"]) == SECRET_VALUES
+        assert SECRET_VALUES == (stored["token"], stored["password"], stored["api_key"])
 
     @pytest.mark.parametrize("frames", [1, 2], ids=["at step one", "after the turn"])
     async def test_a_person_who_takes_over_the_change_keeps_the_stored_secrets(
@@ -2885,7 +2892,7 @@ class TestTheMaskIsNeverStoredAsABlockSecret:
         person_saves(shared, "Taken Settings", test_id)
 
         stored = stored_secrets(test_id)
-        assert (stored["token"], stored["password"], stored["api_key"]) == SECRET_VALUES
+        assert SECRET_VALUES == (stored["token"], stored["password"], stored["api_key"])
 
     @pytest.mark.parametrize("mode", ["fast create", "build", "fast amend", "watched change"])
     async def test_a_block_secret_given_as_the_mask_with_none_stored_is_refused(

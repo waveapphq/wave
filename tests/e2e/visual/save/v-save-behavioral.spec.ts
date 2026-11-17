@@ -11,6 +11,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import { mockInventedTestReads, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
 import { resetOwnership } from '../../helpers/ownership'
@@ -71,7 +72,7 @@ test.describe('Save Button State (Section 1c)', () => {
 
   test('Save button disabled again after successful save', async ({ page }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,
@@ -496,7 +497,7 @@ test.describe('Switch Test Confirmation Dialog (Section 5)', () => {
 
   test('Save & Open New saves current and opens new test', async ({ page }) => {
     // Mock save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,

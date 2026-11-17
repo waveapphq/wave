@@ -17,6 +17,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import { mockInventedTestReads, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
 
@@ -242,7 +243,7 @@ test.describe('V-SAVE-02: Close Confirmation Dialog', () => {
     page,
   }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,
@@ -297,7 +298,7 @@ test.describe('V-SAVE-02: Close Confirmation Dialog', () => {
     page,
   }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,

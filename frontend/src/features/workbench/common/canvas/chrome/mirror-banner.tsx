@@ -9,13 +9,14 @@ import { Bot, Crosshair, Eye, EyeOff, Link2, Lock, type LucideIcon } from 'lucid
 
 import { Button } from '@/components/ui/button'
 import { ConditionalTooltip } from '@/components/ui/tooltip'
+import type { HolderKind } from '@/features/workbench/api/ownership'
 import type { WatchKind } from '@/features/workbench/hooks/use-session-ownership'
 import { cn } from '@/lib/utils'
 
 export interface MirrorBannerProps {
   holderLabel: string
   /** null once nobody holds the workbench. */
-  holderKind: 'person' | 'mcp' | null
+  holderKind: HolderKind | null
   /** True while the holder has a run in flight (mirrored or browsed past). */
   runActive?: boolean
   /** What the assistant streams: a watched build or a watched change. */
@@ -62,7 +63,7 @@ function bannerIcon(noHolder: boolean, isMcp: boolean): LucideIcon {
   return Eye
 }
 
-function holderKindAttribute(noHolder: boolean, holderKind: 'person' | 'mcp' | null): string {
+function holderKindAttribute(noHolder: boolean, holderKind: HolderKind | null): string {
   if (noHolder) return 'none'
   return holderKind ?? 'person'
 }

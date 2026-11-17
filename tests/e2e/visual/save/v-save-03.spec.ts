@@ -13,6 +13,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import { mockInventedTestReads, waitForCanvasLoad } from '../../helpers/canvas'
 
 const DRAFT_STORAGE_KEY = 'wave-workbench-draft'
@@ -162,7 +163,7 @@ test.describe('V-SAVE-03: Draft Persistence Verification', () => {
 
   test('V-SAVE-03-S6: successful save clears draft', async ({ page }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,

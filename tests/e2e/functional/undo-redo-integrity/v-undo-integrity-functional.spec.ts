@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import {
   publishLibraryFunction,
   createValidTest,
@@ -215,7 +216,8 @@ test.describe('V-UNDO-INTEGRITY (functional): gating, skip transience, dirty tru
 
     const drag = await dragNodeBy(page, 'log-1', { confirmTestId: 'toolbar-save-button' })
 
-    await page.route(`**/tests/${testId}`, async (route) => {
+    const saveRoute = apiPathMatcher(`/tests/${testId}`)
+    await page.route(saveRoute, async (route) => {
       if (route.request().method() === 'PUT') {
         await new Promise((resolve) => setTimeout(resolve, 1500))
       }
@@ -235,6 +237,6 @@ test.describe('V-UNDO-INTEGRITY (functional): gating, skip transience, dirty tru
     await expect(saveBtn(page)).toBeDisabled({ timeout: 15_000 })
     await expect(undoBtn(page)).toBeDisabled()
     expect(await readNodeTransform(page, 'log-1')).toBe(drag.after)
-    await page.unroute(`**/tests/${testId}`)
+    await page.unroute(saveRoute)
   })
 })
